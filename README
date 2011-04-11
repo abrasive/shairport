@@ -15,6 +15,7 @@ Setup
 -----
 * `make`
 * `perl -MCPAN -e 'install Crypt::OpenSSL::RSA'`
+* `sudo apt-get install libssl-dev libcrypt-openssl-rsa-perl libportaudio-dev`
 
 How to use it
 -------------
