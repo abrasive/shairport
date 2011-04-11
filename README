@@ -11,6 +11,11 @@ iTunes and compatible iPods. It implements a server for the Apple RAOP protocol.
 It probably supports multiple simultaneous streams, if your audio output chain
 (as detected by libao) does so.
 
+Setup
+-----
+* `make`
+* `perl -MCPAN -e 'install Crypt::OpenSSL::RSA'`
+
 How to use it
 -------------
 1. Make sure avahi-daemon is running and the prerequisites are installed (see
