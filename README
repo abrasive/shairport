@@ -11,12 +11,6 @@ iTunes and compatible iPods. It implements a server for the Apple RAOP protocol.
 It probably supports multiple simultaneous streams, if your audio output chain
 (as detected by libao) does so.
 
-Setup
------
-* `make`
-* `perl -MCPAN -e 'install Crypt::OpenSSL::RSA'`
-* `sudo apt-get install libssl-dev libcrypt-openssl-rsa-perl libportaudio-dev libhttp-request-ascgi-perl`
-
 How to use it
 -------------
 1. Make sure avahi-daemon is running and the prerequisites are installed (see
@@ -39,18 +33,6 @@ Thanks also to Apple for obfuscating the private key in the ROM image, using a
 scheme that made the deobfuscation code itself stand out like a flare.
 Thanks to Ten Thousand Free Men and their Families for having a computer and stuff.
 Thanks to wtbw.
-
-How to compile and install on Mac OSX 10.6
-------
-* install XCode
-* install homebrew (https://github.com/mxcl/homebrew)
-* brew install pkg-config libao
-* make
-* perl -MCPAN -e 'install Crypt::OpenSSL::RSA'
-* perl shairport.pl
-
-OSX 10.5 only bundles perl 5.8, which won't work with shairport. After getting a update
-here (http://www.perl.org/get.html), it worked.
 
 Changelog
 ---------
