@@ -64,8 +64,13 @@ if ($avahi_publish==0) {
         join('', map { sprintf "%02X", $_ } @hw_addr) . "\@$apname",
         "_raop._tcp",
         "5000",
-        "tp=UDP","sm=false","sv=false","ek=1","et=0,1","cn=0,1","ch=2","ss=16","sr=44100","pw=false","vn=3","txtvers=1"
-	or die "could not run avahi-publish-service";
+        "tp=UDP","sm=false","sv=false","ek=1","et=0,1","cn=0,1","ch=2","ss=16","sr=44100","pw=false","vn=3","txtvers=1";
+	exec 'dns-sd',
+		'-R', join('', map { sprintf "%02X", $_ } @hw_addr) . "\@$apname",
+		"_raop._tcp",
+		"local", "5000",
+		"tp=UDP","sm=false","sv=false","ek=1","et=0,1","cn=0,1","ch=2","ss=16","sr=44100","pw=false","vn=3","txtvers=1";
+	die "could not run avahi-publish-service nor dns-sd";
 }        
 
 sub REAP {
@@ -87,7 +92,7 @@ $SIG{TERM} = $SIG{INT} = $SIG{__DIE__} = sub {
 };
 
 my $airport_pem = join '', <DATA>;
-my $rsa = Crypt::OpenSSL::RSA->new_private_key($airport_pem) || die;
+my $rsa = Crypt::OpenSSL::RSA->new_private_key($airport_pem) || die "RSA private key import failed";
 
 my $listen = new IO::Socket::INET(Listen => 1,
                                 LocalPort => 5000,
@@ -219,7 +224,7 @@ sub conn_handle_request {
             die("no AESIV") unless my $aesiv = decode_base64($sdp{aesiv});
             die("no AESKEY") unless my $rsaaeskey = decode_base64($sdp{rsaaeskey});
             $rsa->use_pkcs1_oaep_padding;
-            my $aeskey = $rsa->decrypt($rsaaeskey) || die;
+            my $aeskey = $rsa->decrypt($rsaaeskey) || die "RSA decrypt failed";
 
             $conn->{aesiv} = $aesiv;
             $conn->{aeskey} = $aeskey;
