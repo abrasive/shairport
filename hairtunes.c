@@ -408,11 +408,7 @@ int init_rtp(void) {
     int type = AF_INET;
     short *sin_port = &si.sin_port;
 #endif
-    int sock, csock;    // data and control (we treat the streams the same here)
-
-    sock = socket(type, SOCK_DGRAM, IPPROTO_UDP);
-    if (sock==-1)
-        die("Can't create socket!");
+    int sock = -1, csock = -1;    // data and control (we treat the streams the same here)
 
     memset(&si, 0, sizeof(si));
 #ifdef AF_INET6
@@ -428,18 +424,29 @@ int init_rtp(void) {
     si.sin_addr.s_addr = htonl(INADDR_ANY);
 #endif
 
-    unsigned short port = 6000 - 3;
-    do {
-        port += 3;
-        *sin_port = htons(port);
-    } while (bind(sock, (struct sockaddr*)&si, sizeof(si))==-1);
+    unsigned short port = 6000;
+    while(1) {
+		if(sock < 0)
+			sock = socket(type, SOCK_DGRAM, IPPROTO_UDP);
+		if (sock==-1)
+			die("Can't create data socket!");
+		
+		if(csock < 0)
+			csock = socket(type, SOCK_DGRAM, IPPROTO_UDP);
+		if (csock==-1)
+			die("Can't create control socket!");
 
-    csock = socket(type, SOCK_DGRAM, IPPROTO_UDP);
-    if (csock==-1)
-        die("Can't create socket!");
-    *sin_port = htons(port + 1);
-    if (bind(csock, (struct sockaddr*)&si, sizeof(si))==-1)
-        die("can't bind control socket");
+        *sin_port = htons(port);
+		int bind1 = bind(sock, (struct sockaddr*)&si, sizeof(si));
+		*sin_port = htons(port + 1);
+		int bind2 = bind(csock, (struct sockaddr*)&si, sizeof(si));
+
+		if(bind1 != -1 && bind2 != -1) break;
+		if(bind1 != -1) { close(sock); sock = -1; }
+		if(bind2 != -1) { close(csock); csock = -1; }
+		
+		port += 3;
+	}
 
     printf("port: %d\n", port); // let our handler know where we end up listening
     printf("cport: %d\n", port+1);
