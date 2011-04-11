@@ -64,7 +64,8 @@ if ($avahi_publish==0) {
         join('', map { sprintf "%02X", $_ } @hw_addr) . "\@$apname",
         "_raop._tcp",
         "5000",
-        "tp=UDP","sm=false","sv=false","ek=1","et=0,1","cn=0,1","ch=2","ss=16","sr=44100","pw=false","vn=3","txtvers=1";
+        "tp=UDP","sm=false","sv=false","ek=1","et=0,1","cn=0,1","ch=2","ss=16","sr=44100","pw=false","vn=3","txtvers=1"
+	or die "could not run avahi-publish-service";
 }        
 
 sub REAP {
