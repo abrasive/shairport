@@ -1,0 +1,11 @@
+Type 'make' to build the packet decoder, 'hairtunes'.
+You need the following installed:
+
+openssl
+libao
+avahi (avahi-daemon running and avahi-publish-service on path)
+Perl
+
+Perl modules (install from CPAN):
+HTTP::Message
+Crypt::OpenSSL::RSA

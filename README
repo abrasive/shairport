@@ -1,0 +1,34 @@
+Shairport v0.01
+==============
+James Laird <jhl@mafipulation.org>
+April 5, 2011
+
+What it is
+----------
+This program emulates an Airport Express for the purpose of streaming music from
+iTunes and compatible iPods. It implements a server for the Apple RAOP protocol.
+
+It probably supports multiple simultaneous streams, if your audio output chain
+(as detected by libao) does so.
+
+How to use it
+-------------
+1. Make sure avahi-daemon is running and the prerequisites are installed (see
+INSTALL).
+2. Edit shairport.pl with your favourite text editor to set the access
+point name and/or password, if desired.
+3. `perl shairport.pl`
+
+The triangle-in-rectangle Airtunes logo will appear in the iTunes status bar of
+any machine on the network, or on iPod play controls screen. Choose your access
+point name to start streaming to the Shairport instance.
+
+Thanks
+------
+Big thanks to David Hammerton for releasing an ALAC decoder, which is reproduced
+here in full.
+Thanks to everyone who has worked to reverse engineer the RAOP protocol - after
+finding the keys, everything else was pretty much trivial.
+Thanks also to Apple for obfuscating the private key in the ROM image, using a
+scheme that made the deobfuscation code itself stand out like a flare.
+Thanks to wtbw.
