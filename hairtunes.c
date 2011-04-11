@@ -33,12 +33,16 @@
 #include <netinet/in.h>
 #include <pthread.h>
 #include <openssl/aes.h>
+#include <math.h>
+
+#if !defined(HAVE_AO)
+#define HAVE_AO 1
+#endif
 #if HAVE_AO
 #include <ao/ao.h>
 #else
 #include <portaudio.h>
 #endif
-#include <math.h>
 
 #ifdef FANCY_RESAMPLING
 #include <samplerate.h>
