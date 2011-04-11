@@ -661,7 +661,7 @@ int init_output(void) {
     fmt.rate = sampling_rate;
     fmt.channels = NUM_CHANNELS;
     fmt.byte_format = AO_FMT_LITTLE;
-    fmt.matrix = 0;
+//    fmt.matrix = 0;
     
     ao_device *dev = ao_open_live(driver, &fmt, 0);
 	void* arg = dev;
