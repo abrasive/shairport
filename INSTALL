@@ -1,5 +1,8 @@
 Type 'make' to build the packet decoder, 'hairtunes'.
 
+To Run make, you need pkg-config installed (mac):
+  brew install pkg-config
+
 You need the following installed:
   openssl
   libao (if you use homebrew, use brew install libao)
