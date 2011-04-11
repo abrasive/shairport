@@ -4,7 +4,7 @@
 # AP name - as will be shown in iTunes' menu
 # example:
 #  my $apname = "SteePort";
-my $apname = "HairPort $$ on " . `hostname`;
+my $apname = "ShairPort $$ on " . `hostname`;
 
 # password - required to connect
 # for no password, set:
@@ -45,7 +45,7 @@ use IPC::Open2;
 use Crypt::OpenSSL::RSA;
 use Digest::MD5 qw/md5_hex/;
 use POSIX ":sys_wait_h";
-
+eval "use IO::Socket::INET6;";
 
 chomp $apname;
 
@@ -85,8 +85,7 @@ $SIG{CHLD} = \&REAP;
 
 my %conns;
 
-$SIG{TERM} = $SIG{INT} = $SIG{__DIE__} = sub {
-	print "killed\n";
+$SIG{TERM} = $SIG{INT} = sub {
     map { eval { kill $_->{decoder_pid} } } keys %conns;
     kill 9, $avahi_publish;
     exit(0);
@@ -95,11 +94,42 @@ $SIG{TERM} = $SIG{INT} = $SIG{__DIE__} = sub {
 my $airport_pem = join '', <DATA>;
 my $rsa = Crypt::OpenSSL::RSA->new_private_key($airport_pem) || die "RSA private key import failed";
 
-my $listen = new IO::Socket::INET(Listen => 1,
-                                LocalPort => 5000,
-                                ReuseAddr => 1,
-                                Proto => 'tcp');
+my $listen;
+{
+    eval {
+            $listen = new IO::Socket::INET6(Listen => 1,
+                            Domain => AF_INET6,
+                            LocalPort => 5000,
+                            ReuseAddr => 1,
+                            Proto => 'tcp');
+    };
+    if ($@) {
+            print "**************************************\n\n",
+                  "* IO::Socket::INET6 not present!     *\n",
+                  "* Install this if iTunes won't play. *\n",
+                  "**************************************\n\n";
+
+            $listen = new IO::Socket::INET(Listen => 1,
+                            LocalPort => 5000,
+                            ReuseAddr => 1,
+                            Proto => 'tcp');
+    }
+}
 die "Can't listen on port 5000: $!" unless $listen;
+
+sub ip6bin {
+    my $ip = shift;
+    $ip =~ /((.*)::)?(.+)/;
+    my @left = split /:/, $2;
+    my @right = split /:/, $3;
+    my @mid;
+    my $pad = 8 - ($#left + $#right + 2);
+    if ($pad > 0) {
+        @mid = (0) x $pad;
+    }
+
+    pack('S>*', map { hex } (@left, @mid, @right));
+}    
 
 my $sel = new IO::Select($listen);
 
@@ -110,7 +140,8 @@ while (1) {
     foreach $fh (@waiting) {
         if ($fh==$listen) {
             my $new = $listen->accept;
-            print "new connection\n";
+            printf "new connection from %s\n", $new->sockhost;
+            
             $sel->add($new);
             $new->blocking(0);
             $conns{$new} = {fh => $fh};
@@ -192,7 +223,13 @@ sub conn_handle_request {
 
     if (my $chall = $req->header('Apple-Challenge')) {
         my $data = decode_base64($chall);
-        $data .= join '', map { chr } split(/\./, $fh->sockhost);
+        my $ip = $fh->sockhost;
+        if ($ip =~ /((\d+\.){3}\d+)$/) { # IPv4
+            $data .= join '', map { chr } split(/\./, $1);
+        } else {
+            $data .= ip6bin($ip);
+        }
+        
         $data .= join '', map { chr } @hw_addr;
         $data .= chr(0) x (0x20-length($data));
 
