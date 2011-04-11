@@ -33,11 +33,7 @@
 #include <netinet/in.h>
 #include <pthread.h>
 #include <openssl/aes.h>
-#if HAVE_AO
 #include <ao/ao.h>
-#else
-#include <portaudio.h>
-#endif
 #include <math.h>
 
 #ifdef FANCY_RESAMPLING
@@ -237,8 +233,6 @@ int main(int argc, char **argv) {
     }
     fprintf(stderr, "bye!\n");
     fflush(stderr);
-	
-	uninit_output();
 }
 
 void init_buffer(void) {
@@ -589,11 +583,7 @@ int stuff_buffer(double playback_rate, short *inptr, short *outptr) {
 }
 
 void *audio_thread_func(void *arg) {
-#if HAVE_AO
-    ao_device* dev = arg;
-#else
-	PaStream* stream = arg;
-#endif
+    ao_device *dev = arg;
     int i, play_samples;
 
     signed short buf_fill;
@@ -636,74 +626,25 @@ void *audio_thread_func(void *arg) {
 #endif
             play_samples = stuff_buffer(bf_playback_rate, inbuf, outbuf);
 
-#if HAVE_AO		
         ao_play(dev, (char *)outbuf, play_samples*4);
-#else
-		int err = Pa_WriteStream(stream, (char *)outbuf, play_samples*4);
-		if( err != paNoError ) {
-			printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
-			exit(1);
-		}
-#endif
     }
 }
 
-#define NUM_CHANNELS 2
-
 int init_output(void) {
-    int err;
-#if HAVE_AO
     ao_initialize();
     int driver = ao_default_driver_id();
 
     ao_sample_format fmt;
+    memset(&fmt, 0, sizeof(fmt));
+
     fmt.bits = 16;
     fmt.rate = sampling_rate;
-    fmt.channels = NUM_CHANNELS;
+    fmt.channels = 2;
     fmt.byte_format = AO_FMT_LITTLE;
-//    fmt.matrix = 0;
     
     ao_device *dev = ao_open_live(driver, &fmt, 0);
-	void* arg = dev;
-#else
-	err = Pa_Initialize();
-	if( err != paNoError ) {
-		printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
-		exit(1);
-	}
 
-	PaStreamParameters outputParameters;
-	outputParameters.device = Pa_GetDefaultOutputDevice(); /* default output device */
-    outputParameters.channelCount = NUM_CHANNELS;
-    outputParameters.sampleFormat = paInt16;
-    outputParameters.suggestedLatency = Pa_GetDeviceInfo( outputParameters.device )->defaultHighOutputLatency;
-    outputParameters.hostApiSpecificStreamInfo = NULL;
-	
-    /* -- setup stream -- */
-	PaStream* stream = NULL;
-    err = Pa_OpenStream(
-						&stream,
-						NULL,
-						&outputParameters,
-						sampling_rate,
-						OUTFRAME_BYTES,
-						paClipOff,      /* we won't output out of range samples so don't bother clipping them */
-						NULL, /* no callback, use blocking API */
-						NULL ); /* no callback, so no callback userData */
-    if( err != paNoError ) {
-		printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
-		exit(1);
-	}
-	
-	err = Pa_StartStream( stream );
-    if( err != paNoError ) {
-		printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
-		exit(1);
-	}
-	
-	void* arg = stream;
-#endif
-	
+    int err;
 #ifdef FANCY_RESAMPLING
     if (fancy_resampling)
         src = src_new(SRC_SINC_MEDIUM_QUALITY, 2, &err);
@@ -712,15 +653,5 @@ int init_output(void) {
 #endif
 
     pthread_t audio_thread;
-    pthread_create(&audio_thread, NULL, audio_thread_func, arg);
-}
-
-int uninit_output(void) {
-#if HAVE_AO
-#else
-	int err = Pa_Terminate();
-	if( err != paNoError )
-		printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );	
-#endif
-	return 0;
+    pthread_create(&audio_thread, NULL, audio_thread_func, dev);
 }
