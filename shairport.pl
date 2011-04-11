@@ -80,6 +80,7 @@ $SIG{CHLD} = \&REAP;
 my %conns;
 
 $SIG{TERM} = $SIG{INT} = $SIG{__DIE__} = sub {
+	print "killed\n";
     map { eval { kill $_->{decoder_pid} } } keys %conns;
     kill 9, $avahi_publish;
     exit(0);
