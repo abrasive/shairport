@@ -65,10 +65,11 @@ if ($avahi_publish==0) {
         "_raop._tcp",
         "5000",
         "tp=UDP","sm=false","sv=false","ek=1","et=0,1","cn=0,1","ch=2","ss=16","sr=44100","pw=false","vn=3","txtvers=1";
-	exec 'dns-sd',
-		'-R', join('', map { sprintf "%02X", $_ } @hw_addr) . "\@$apname",
+	exec 'dns-sd', '-R',
+		join('', map { sprintf "%02X", $_ } @hw_addr) . "\@$apname",
 		"_raop._tcp",
-		"local", "5000",
+		".",
+		"5000",
 		"tp=UDP","sm=false","sv=false","ek=1","et=0,1","cn=0,1","ch=2","ss=16","sr=44100","pw=false","vn=3","txtvers=1";
 	die "could not run avahi-publish-service nor dns-sd";
 }        
