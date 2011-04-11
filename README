@@ -38,3 +38,16 @@ finding the keys, everything else was pretty much trivial.
 Thanks also to Apple for obfuscating the private key in the ROM image, using a
 scheme that made the deobfuscation code itself stand out like a flare.
 Thanks to wtbw.
+
+How to compile and install on Mac OSX 10.6
+------
+* install XCode
+* install homebrew (https://github.com/mxcl/homebrew)
+* brew install pkg-config libao
+* make
+* perl -MCPAN -e 'install Crypt::OpenSSL::RSA'
+* perl shairport.pl
+
+OSX 10.5 only bundles perl 5.8, which won't work with shairport. After getting a update
+here (http://www.perl.org/get.html), it worked.
+
