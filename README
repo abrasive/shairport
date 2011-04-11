@@ -1,7 +1,7 @@
-Shairport v0.01
+Shairport v0.03
 ==============
 James Laird <jhl@mafipulation.org>
-April 5, 2011
+April 11, 2011
 
 What it is
 ----------
@@ -37,6 +37,7 @@ Thanks to everyone who has worked to reverse engineer the RAOP protocol - after
 finding the keys, everything else was pretty much trivial.
 Thanks also to Apple for obfuscating the private key in the ROM image, using a
 scheme that made the deobfuscation code itself stand out like a flare.
+Thanks to Ten Thousand Free Men and their Families for having a computer and stuff.
 Thanks to wtbw.
 
 How to compile and install on Mac OSX 10.6
@@ -50,4 +51,14 @@ How to compile and install on Mac OSX 10.6
 
 OSX 10.5 only bundles perl 5.8, which won't work with shairport. After getting a update
 here (http://www.perl.org/get.html), it worked.
+
+Changelog
+---------
+0.01  April 5, 2011
+        initial release
+0.02  April 11, 2011
+        bugfix: libao compatibility
+0.03  April 11, 2011
+        bugfix: ipv6 didn't work -
+		IO::Socket::INET6 is required too
 

@@ -328,7 +328,12 @@ void buffer_put_packet(seq_t seqno, char *data, int len) {
 }
 
 static int rtp_sockets[2];  // data, control
-struct sockaddr_in rtp_client;
+#ifdef AF_INET6
+    struct sockaddr_in6 rtp_client;
+#else
+    struct sockaddr_in rtp_client;
+#endif
+
 void *rtp_thread_func(void *arg) {
     socklen_t si_len = sizeof(rtp_client);
     char packet[MAX_PACKET];
@@ -384,33 +389,55 @@ void rtp_request_resend(seq_t first, seq_t last) {
     *(unsigned short *)(req+4) = htons(first);  // missed seqnum
     *(unsigned short *)(req+6) = htons(last-first+1);  // count
 
+#ifdef AF_INET6
+    rtp_client.sin6_port = htons(controlport);
+#else
     rtp_client.sin_port = htons(controlport);
+#endif
     sendto(rtp_sockets[1], req, sizeof(req), 0, (struct sockaddr *)&rtp_client, sizeof(struct sockaddr_in));
 }
 
 
 int init_rtp(void) {
+#ifdef AF_INET6
+    struct sockaddr_in6 si;
+    int type = AF_INET6;
+    short *sin_port = &si.sin6_port;
+#else
     struct sockaddr_in si;
+    int type = AF_INET;
+    short *sin_port = &si.sin_port;
+#endif
     int sock, csock;    // data and control (we treat the streams the same here)
 
-    sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    sock = socket(type, SOCK_DGRAM, IPPROTO_UDP);
     if (sock==-1)
         die("Can't create socket!");
 
     memset(&si, 0, sizeof(si));
+#ifdef AF_INET6
+    si.sin6_family = AF_INET6;
+    #ifdef SIN6_LEN
+        si.sin6_len = sizeof(si);
+    #endif
+    si.sin6_addr = in6addr_any;
+    si.sin6_flowinfo = 0;
+#else
     si.sin_family = AF_INET;
+    si.sin_len = sizeof(si);
     si.sin_addr.s_addr = htonl(INADDR_ANY);
+#endif
 
     unsigned short port = 6000 - 3;
     do {
         port += 3;
-        si.sin_port = htons(port);
+        *sin_port = htons(port);
     } while (bind(sock, (struct sockaddr*)&si, sizeof(si))==-1);
 
-    csock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    csock = socket(type, SOCK_DGRAM, IPPROTO_UDP);
     if (csock==-1)
         die("Can't create socket!");
-    si.sin_port = htons(port + 1);
+    *sin_port = htons(port + 1);
     if (bind(csock, (struct sockaddr*)&si, sizeof(si))==-1)
         die("can't bind control socket");
 
@@ -661,11 +688,12 @@ int init_output(void) {
     int driver = ao_default_driver_id();
 
     ao_sample_format fmt;
+    memset(&fmt, 0, sizeof(fmt));
+
     fmt.bits = 16;
     fmt.rate = sampling_rate;
     fmt.channels = NUM_CHANNELS;
     fmt.byte_format = AO_FMT_LITTLE;
-//    fmt.matrix = 0;
     
     ao_device *dev = ao_open_live(driver, &fmt, 0);
 	void* arg = dev;
