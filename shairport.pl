@@ -106,6 +106,7 @@ my $rsa = Crypt::OpenSSL::RSA->new_private_key($airport_pem) || die "RSA private
 my $listen;
 {
     eval {
+			local $SIG{'__DIE__'};
             $listen = new IO::Socket::INET6(Listen => 1,
                             Domain => AF_INET6,
                             LocalPort => 5000,
