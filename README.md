@@ -13,9 +13,9 @@ It probably supports multiple simultaneous streams, if your audio output chain
 
 Setup
 -----
-* `make`
-* `perl -MCPAN -e 'install Crypt::OpenSSL::RSA'`
-* `sudo apt-get install libssl-dev libcrypt-openssl-rsa-perl libportaudio-dev libhttp-request-ascgi-perl`
+    $ make
+    $ perl -MCPAN -e 'install Crypt::OpenSSL::RSA'`
+    $ sudo apt-get install libssl-dev libcrypt-openssl-rsa-perl libportaudio-dev libhttp-request-ascgi-perl`
 
 How to use it
 -------------
@@ -40,9 +40,9 @@ scheme that made the deobfuscation code itself stand out like a flare.
 Thanks to Ten Thousand Free Men and their Families for having a computer and stuff.
 Thanks to wtbw.
 
-=======
 Changelog
 ---------
+
 0.01  April 5, 2011
         initial release
 0.02  April 11, 2011
@@ -51,7 +51,6 @@ Changelog
         bugfix: ipv6 didn't work -
 		IO::Socket::INET6 is required too
 
-=== Add by rjyo ===
 
 How to compile and install on Mac OSX 10.6
 ------
@@ -66,11 +65,16 @@ How to compile and install on Mac OSX 10.6
 OSX 10.5 only bundles perl 5.8, which won't work with shairport. After getting a update
 here (http://www.perl.org/get.html), it worked.
 
-How to run as a daemon on Mac 10.6
+Available launch options for 
 ------
-* cp hairtunes shairport.pl /usr/local/bin
-* vi /usr/local/bin/shairport.pl, change the path of hairtunes from ./hairtunes to /usr/local/bin/hairtunes
-* cp org.mafipulation.shairport.plist ~/Library/LaunchAgents/
-* launchctl load org.mafipulation.shairport.plist
-* launchctl unload org.mafipulation.shairport.plist (to remove)
+    $ shairport.pl --apname=My Name --password=secret
+    
 
+How to run as a daemon on Mac OSX 10.6
+------
+    $ cp hairtunes shairport.pl /usr/local/bin
+    $ vi /usr/local/bin/shairport.pl # change the path of hairtunes from ./hairtunes to /usr/local/bin/hairtunes
+    $ mkdir -p ~/Library/LaunchAgents
+    $ cp org.mafipulation.shairport.plist ~/Library/LaunchAgents/ # you may want to change AP name in this file
+    $ launchctl load -w ~/Library/LaunchAgents/org.mafipulation.shairport.plist
+    $ launchctl unload -w ~/Library/LaunchAgents/org.mafipulation.shairport.plist # to remove
