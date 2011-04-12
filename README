@@ -34,4 +34,3 @@ Changelog
 0.03  April 11, 2011
         bugfix: ipv6 didn't work -
 		IO::Socket::INET6 is required too
-
