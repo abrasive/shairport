@@ -43,24 +43,24 @@ Thanks to wtbw.
 Changelog
 ---------
 
-0.01  April 5, 2011
-        initial release
-0.02  April 11, 2011
-        bugfix: libao compatibility
-0.03  April 11, 2011
-        bugfix: ipv6 didn't work -
-		IO::Socket::INET6 is required too
+* 0.01  April 5, 2011
+    * initial release
+* 0.02  April 11, 2011
+    * bugfix: libao compatibility
+* 0.03  April 11, 2011
+    * bugfix: ipv6 didn't work -
+	* IO::Socket::INET6 is required too
 
 
 How to compile and install on Mac OSX 10.6
 ------
-* install XCode
-* install homebrew (https://github.com/mxcl/homebrew)
-* brew install pkg-config libao
-* make
-* perl -MCPAN -e 'install Crypt::OpenSSL::RSA'
-* perl -MCPAN -e 'install IO::Socket::INET6'
-* perl shairport.pl
+prerequisite: install XCode, install homebrew (https://github.com/mxcl/homebrew)
+
+    $ brew install pkg-config libao
+    $ make
+    $ perl -MCPAN -e 'install Crypt::OpenSSL::RSA'
+    $ perl -MCPAN -e 'install IO::Socket::INET6'
+    $ perl shairport.pl
 
 OSX 10.5 only bundles perl 5.8, which won't work with shairport. After getting a update
 here (http://www.perl.org/get.html), it worked.
