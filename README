@@ -65,3 +65,11 @@ How to compile and install on Mac OSX 10.6
 
 OSX 10.5 only bundles perl 5.8, which won't work with shairport. After getting a update
 here (http://www.perl.org/get.html), it worked.
+
+How to run as a daemon on Mac
+------
+* cp hairtunes shairport.pl /usr/local/bin
+* vi /usr/loca/bin/shairport.pl, change the path of hairtunes from ./hairtunes to /usr/loca/bin/hairtunes
+* cp org.mafipulation.shairport.plist ~/Library/LaunchAgents/
+* launchctl load org.mafipulation.shairport
+* launchctl start org.mafipulation.shairport
