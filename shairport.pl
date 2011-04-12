@@ -93,7 +93,8 @@ $SIG{CHLD} = \&REAP;
 
 my %conns;
 
-$SIG{TERM} = $SIG{INT} = sub {
+$SIG{TERM} = $SIG{INT} = $SIG{__DIE__} = sub {
+	print "killed\n";
     map { eval { kill $_->{decoder_pid} } } keys %conns;
     kill 9, $avahi_publish;
     exit(0);
@@ -105,6 +106,7 @@ my $rsa = Crypt::OpenSSL::RSA->new_private_key($airport_pem) || die "RSA private
 my $listen;
 {
     eval {
+			local $SIG{'__DIE__'};
             $listen = new IO::Socket::INET6(Listen => 1,
                             Domain => AF_INET6,
                             LocalPort => 5000,
