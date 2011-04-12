@@ -69,7 +69,7 @@ here (http://www.perl.org/get.html), it worked.
 How to run as a daemon on Mac
 ------
 * cp hairtunes shairport.pl /usr/local/bin
-* vi /usr/loca/bin/shairport.pl, change the path of hairtunes from ./hairtunes to /usr/loca/bin/hairtunes
+* vi /usr/local/bin/shairport.pl, change the path of hairtunes from ./hairtunes to /usr/local/bin/hairtunes
 * cp org.mafipulation.shairport.plist ~/Library/LaunchAgents/
 * launchctl load org.mafipulation.shairport
 * launchctl start org.mafipulation.shairport
