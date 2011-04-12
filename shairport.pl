@@ -1,18 +1,5 @@
 #!/usr/bin/perl
 
-# Configure the following two options:
-# AP name - as will be shown in iTunes' menu
-# example:
-#  my $apname = "SteePort";
-my $apname = "ShairPort $$ on " . `hostname`;
-
-# password - required to connect
-# for no password, set:
-#  my $password = '';
-my $password = '';
-
-# that's all!
-
 #   ShairPort - Airtunes compatible server
 #   Copyright (c) 2011 James Laird
 #   All rights reserved.
@@ -36,6 +23,9 @@ my $password = '';
 #        FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 #        OTHER DEALINGS IN THE SOFTWARE.
 
+use Getopt::Long;
+use FindBin;
+
 use IO::Select;
 use IO::Socket;
 use MIME::Base64;
@@ -46,6 +36,24 @@ use Crypt::OpenSSL::RSA;
 use Digest::MD5 qw/md5_hex/;
 use POSIX ":sys_wait_h";
 eval "use IO::Socket::INET6;";
+
+
+# Configure the following two options:
+# AP name - as will be shown in iTunes' menu
+# example:
+#  my $apname = "SteePort";
+
+my $apname = "ShairPort $$ on " . `hostname`;
+# password - required to connect
+# for no password, set:
+my $password = '';
+# suppose hairtunes is under same directory
+my $hairtunes_cli = $FindBin::Bin . '/hairtunes';
+
+GetOptions("apname=s" => \$apname,
+          "password=s"  => \$password);
+
+# use --apname MyName --password secret as arguments
 
 chomp $apname;
 
@@ -72,7 +80,7 @@ if ($avahi_publish==0) {
 		"5000",
 		"tp=UDP","sm=false","sv=false","ek=1","et=0,1","cn=0,1","ch=2","ss=16","sr=44100","pw=false","vn=3","txtvers=1";
 	die "could not run avahi-publish-service nor dns-sd";
-}        
+}
 
 sub REAP {
     if ($avahi_publish == waitpid(-1, WNOHANG)) {
@@ -281,7 +289,7 @@ sub conn_handle_request {
             $resp->header('Session', 'DEADBEEF');
 
 
-            my $dec = sprintf("./hairtunes iv %s key %s fmtp %s cport %s tport %s dport %s host %s",
+            my $dec = sprintf("$hairtunes_cli iv %s key %s fmtp %s cport %s tport %s dport %s host %s",
                     map { "'$_'" } (
                         unpack('H*', $conn->{aesiv}),
                         unpack('H*', $conn->{aeskey}),
