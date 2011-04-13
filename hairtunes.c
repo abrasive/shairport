@@ -57,7 +57,7 @@ int debug = 0;
 //Changed these values to make sound synchronized with airport express during multi-room broadcast.
 
 #define BUFFER_FRAMES  512 
-#define START_FILL    398
+#define START_FILL    282 
 
 
 #define MAX_PACKET      2048
