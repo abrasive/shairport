@@ -1,4 +1,4 @@
-Shairport v0.03
+Shairport v0.04
 ==============
 James Laird <jhl@mafipulation.org>
 April 11, 2011
@@ -38,8 +38,9 @@ Changelog
 * 0.02  April 11, 2011
     * bugfix: libao compatibility
 * 0.03  April 11, 2011
-    * bugfix: ipv6 didn't work -
-	* IO::Socket::INET6 is required too
+    * bugfix: ipv6 didn't work - IO::Socket::INET6 is required too
+* 0.04  April 12, 2011
+    * cross-platform count_leading_zeros under GCC - will now compile cleanly on ARM and other platforms
 
 
 How to compile and install on Mac OSX 10.6
@@ -55,10 +56,10 @@ prerequisite: install XCode, install homebrew (https://github.com/mxcl/homebrew)
 OSX 10.5 only bundles perl 5.8, which won't work with shairport. After getting a update
 here (http://www.perl.org/get.html), it worked.
 
-Available launch options for 
+Available launch options for
 ------
     $ shairport.pl --apname=My Name --password=secret
-    
+
 
 How to run as a daemon on Mac OSX 10.6
 ------

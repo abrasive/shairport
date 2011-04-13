@@ -1,5 +1,5 @@
 PKGFLAGS:=$(shell pkg-config --cflags --libs openssl ao)
-CFLAGS:=-D__i386 -O2
+CFLAGS:=-O2
 LDFLAGS:=-lm -lpthread
 PAUFLAGS:=-lportaudio
 
