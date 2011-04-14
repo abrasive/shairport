@@ -13,5 +13,11 @@ clean:
 
 .PTHONY: all clean
 
+prefix=/usr/local
+install: hairtunes
+	install -m 0755 hairtunes $(prefix)/bin
+	install -m 0755 shairport.pl $(prefix)/bin
+.PHONY: install
+
 .SILENT: clean
 
