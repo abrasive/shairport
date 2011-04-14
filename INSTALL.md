@@ -20,7 +20,7 @@ Perl modules (install from CPAN if needed e.g. `perl -MCPAN -e 'install X'`):
 MacOSX:
 
   * install XCode
-  * install homebrew (https://github.com/mxcl/homebrew)
+  * install [Homebrew](https://github.com/mxcl/homebrew)
   * type:
 
         $ export ARCHFLAGS="-arch x86_64"
@@ -30,14 +30,15 @@ MacOSX:
         $ perl -MCPAN -e 'install IO::Socket::INET6'
         $ perl shairport.pl
 
-  OSX 10.5 only bundles perl 5.8, which won't work with shairport.
-  After getting a update here (http://www.perl.org/get.html), it worked.
+  OSX 10.5 only bundles Perl 5.8, which won't work with shairport.
+  After getting a update [here](http://www.perl.org/get.html), it worked.
 
 How to run as a daemon on Mac 10.6
 ------
-* cp hairtunes shairport.pl /usr/local/bin
-* vi /usr/local/bin/shairport.pl, change the path of hairtunes from ./hairtunes to /usr/local/bin/hairtunes
-* mkdir -p ~/Library/LaunchAgents
-* cp org.mafipulation.shairport.plist ~/Library/LaunchAgents/
-* launchctl load org.mafipulation.shairport.plist
-* launchctl unload org.mafipulation.shairport.plist (to remove)
+
+    $ cp hairtunes shairport.pl /usr/local/bin
+    $ vi /usr/local/bin/shairport.pl, change the path of hairtunes from ./hairtunes to /usr/local/bin/hairtunes
+    $ mkdir -p ~/Library/LaunchAgents
+    $ cp org.mafipulation.shairport.plist ~/Library/LaunchAgents/
+    $ launchctl load org.mafipulation.shairport.plist
+    $ launchctl unload org.mafipulation.shairport.plist (to remove)
