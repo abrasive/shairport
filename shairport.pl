@@ -114,10 +114,10 @@ my $listen;
                             Proto => 'tcp');
     };
     if ($@) {
-            print "**************************************\n\n",
-                  "* IO::Socket::INET6 not present!     *\n",
-                  "* Install this if iTunes won't play. *\n",
-                  "**************************************\n\n";
+        print "**************************************\n",
+              "* IO::Socket::INET6 not present!     *\n",
+              "* Install this if iTunes won't play. *\n",
+              "**************************************\n\n";
 
             $listen = new IO::Socket::INET(Listen => 1,
                             LocalPort => 5000,

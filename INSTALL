@@ -7,9 +7,9 @@ You need the following installed:
   Perl
 
 Debian/Ubuntu users need:
-  libssl-dev libcrypt-openssl-rsa-perl libao2 libao-dev libio-socket-inet6-perl
+  libssl-dev libcrypt-openssl-rsa-perl libao2 libao-dev libio-socket-inet6-perl libwww-perl avahi-utils
 
-Perl modules (e.g. `perl -MCPAN -e 'install X'`):
+Perl modules (install from CPAN if needed e.g. `perl -MCPAN -e 'install X'`):
   HTTP::Message
   Crypt::OpenSSL::RSA
   IO::Socket::INET6

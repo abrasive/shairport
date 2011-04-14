@@ -1,5 +1,17 @@
-#CFLAGS = `pkg-config --cflags --libs openssl` -lportaudio
-CFLAGS = `pkg-config --cflags --libs openssl ao`
+PKGFLAGS:=$(shell pkg-config --cflags --libs openssl ao)
+CFLAGS:=-O2
+LDFLAGS:=-lm -lpthread
+PAUFLAGS:=-lportaudio
+
+all: hairtunes
 
 hairtunes: hairtunes.c alac.c
-	gcc hairtunes.c alac.c -D__i386 -lm $(CFLAGS) -o hairtunes
+	$(CC) $(CFLAGS) $(PKGFLAGS) $(LDFLAGS) $? -o $@
+
+clean:
+	-@rm -rf hairtunes
+
+.PTHONY: all clean
+
+.SILENT: clean
+
