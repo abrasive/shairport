@@ -1,7 +1,7 @@
-Shairport v0.04
+Shairport v0.05
 ==============
 James Laird <jhl@mafipulation.org>
-April 11, 2011
+April 13, 2011
 
 What it is
 ----------
@@ -41,6 +41,8 @@ Changelog
     * bugfix: ipv6 didn't work - IO::Socket::INET6 is required too
 * 0.04  April 12, 2011
     * cross-platform count_leading_zeros under GCC - will now compile cleanly on ARM and other platforms
+* 0.05  April 13, 2011
+    * error-handling cleanup in the Perl script including more meaningful error messages, based on common problems seen
 
 
 How to compile and install on Mac OSX 10.6
