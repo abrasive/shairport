@@ -47,11 +47,13 @@ my $apname = "ShairPort $$ on " . `hostname`;
 # password - required to connect
 # for no password, set:
 my $password = '';
+my $daemon;
 # suppose hairtunes is under same directory
 my $hairtunes_cli = $FindBin::Bin . '/hairtunes';
 
 GetOptions("apname=s" => \$apname,
-          "password=s"  => \$password);
+          "password=s"  => \$password,
+          "d" => \$daemon);
 
 # use --apname MyName --password secret as arguments
 
@@ -151,6 +153,24 @@ sub ip6bin {
 my $sel = new IO::Select($listen);
 
 print "listening...\n";
+
+
+if ($daemon) { 
+   use POSIX;
+   POSIX::setsid or die "setsid: $!";
+   my $pid = fork();
+   if ($pid < 0) {
+      die "fork: $!";
+   } elsif ($pid) {
+      exit 0;
+   }
+   chdir "/";
+   umask 0;
+   open (STDIN, "</dev/null");
+   open (STDOUT, ">/dev/null");
+   open (STDERR, ">&STDOUT");
+};
+
 
 while (1) {
     my @waiting = $sel->can_read;
