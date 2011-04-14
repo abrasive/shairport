@@ -58,6 +58,12 @@ prerequisite: install XCode, install homebrew (https://github.com/mxcl/homebrew)
 OSX 10.5 only bundles perl 5.8, which won't work with shairport. After getting a update
 here (http://www.perl.org/get.html), it worked.
 
+If XCode 4 was installed instead of XCode 3, it will probably be neccesary to do:
+
+    $ ARCHFLAGS="-arch i386 -arch x86_64" perl -MCPAN -e 'install Crypt::OpenSSL::RSA'
+    $ ARCHFLAGS="-arch i386 -arch x86_64" perl -MCPAN -e 'install IO::Socket::INET6'
+
+
 Available launch options for
 ------
     $ shairport.pl --apname=My Name --password=secret
