@@ -21,13 +21,14 @@ MacOSX:
 
   * install XCode
   * install homebrew (https://github.com/mxcl/homebrew)
+  * type:
 
-      $ export ARCHFLAGS="-arch x86_64"
-      $ brew install pkg-config libao
-      $ make
-      $ perl -MCPAN -e 'install Crypt::OpenSSL::RSA'
-      $ perl -MCPAN -e 'install IO::Socket::INET6'
-      $ perl shairport.pl
+        $ export ARCHFLAGS="-arch x86_64"
+        $ brew install pkg-config libao
+        $ make
+        $ perl -MCPAN -e 'install Crypt::OpenSSL::RSA'
+        $ perl -MCPAN -e 'install IO::Socket::INET6'
+        $ perl shairport.pl
 
   OSX 10.5 only bundles perl 5.8, which won't work with shairport.
   After getting a update here (http://www.perl.org/get.html), it worked.
