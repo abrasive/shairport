@@ -22,6 +22,7 @@ MacOSX:
   * install XCode
   * install homebrew (https://github.com/mxcl/homebrew)
 
+
     $ export ARCHFLAGS="-arch x86_64"
     $ brew install pkg-config libao
     $ make
