@@ -9,7 +9,7 @@ You need the following installed:
 
 Debian/Ubuntu users need:
 
-    libssl-dev libcrypt-openssl-rsa-perl libao2 libao-dev libio-socket-inet6-perl libwww-perl avahi-utils
+      libssl-dev libcrypt-openssl-rsa-perl libao2 libao-dev libio-socket-inet6-perl libwww-perl avahi-utils
 
 Perl modules (install from CPAN if needed e.g. `perl -MCPAN -e 'install X'`):
 
