@@ -1,28 +1,33 @@
-Type 'make' to build the packet decoder, 'hairtunes'.
+Type `make` to build the packet decoder, `hairtunes`.
 
 You need the following installed:
-  openssl
-  libao (if you use homebrew, use brew install libao)
-  avahi (avahi-daemon running and avahi-publish-service on path, no need on Mac OSX)
-  Perl
+
+ * openssl
+ * libao (if you use homebrew, use brew install libao)
+ * avahi (avahi-daemon running and avahi-publish-service on path, no need on Mac OSX)
+ * Perl
 
 Debian/Ubuntu users need:
+
   libssl-dev libcrypt-openssl-rsa-perl libao2 libao-dev libio-socket-inet6-perl libwww-perl avahi-utils
 
 Perl modules (install from CPAN if needed e.g. `perl -MCPAN -e 'install X'`):
-  HTTP::Message
-  Crypt::OpenSSL::RSA
-  IO::Socket::INET6
+
+ * HTTP::Message
+ * Crypt::OpenSSL::RSA
+ * IO::Socket::INET6
 
 MacOSX:
+
   * install XCode
   * install homebrew (https://github.com/mxcl/homebrew)
-  * export ARCHFLAGS="-arch x86_64"
-  * brew install pkg-config libao
-  * make
-  * perl -MCPAN -e 'install Crypt::OpenSSL::RSA'
-  * perl -MCPAN -e 'install IO::Socket::INET6'
-  * perl shairport.pl
+
+    $ export ARCHFLAGS="-arch x86_64"
+    $ brew install pkg-config libao
+    $ make
+    $ perl -MCPAN -e 'install Crypt::OpenSSL::RSA'
+    $ perl -MCPAN -e 'install IO::Socket::INET6'
+    $ perl shairport.pl
 
   OSX 10.5 only bundles perl 5.8, which won't work with shairport.
   After getting a update here (http://www.perl.org/get.html), it worked.

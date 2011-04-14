@@ -11,7 +11,7 @@ It probably supports multiple simultaneous streams, if your audio output chain (
 
 How to use it
 -------------
-`perl shairport.pl`. See INSTALL for further information.
+`perl shairport.pl`. See INSTALL.md for further information.
 
 The triangle-in-rectangle Airtunes logo will appear in the iTunes status bar of any machine on the network, or on iPod play controls screen. Choose your access point name to start streaming to the Shairport instance.
 
