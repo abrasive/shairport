@@ -218,18 +218,10 @@ static int count_leading_zeros(int32_t input)
     }
     return i;
 }
-#elif defined(__GNUC__) && (defined(_X86) || defined(__i386) || defined(i386))
-/* for some reason the unrolled version (below) is
- * actually faster than this. yay intel!
- */
+#elif defined(__GNUC__)
 static int count_leading_zeros(int input)
 {
-    int output = 0;
-    if (!input) return 32;
-    __asm("bsr %1, %0\n"
-        : "=r" (output)
-        : "r" (input));
-    return (0x1f - output);
+    return __builtin_clz(input);
 }
 #elif defined(_MSC_VER) && defined(_M_IX86)
 static int count_leading_zeros(int input)

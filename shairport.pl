@@ -58,18 +58,11 @@ sub POPE {
 $SIG{PIPE} = \&POPE;
 
 
-my $avahi_publish = fork();
-if ($avahi_publish==0) {
-    exec 'avahi-publish-service',
-        join('', map { sprintf "%02X", $_ } @hw_addr) . "\@$apname",
-        "_raop._tcp",
-        "5000",
-        "tp=UDP","sm=false","sv=false","ek=1","et=0,1","cn=0,1","ch=2","ss=16","sr=44100","pw=false","vn=3","txtvers=1";
-}        
+our $avahi_publish;
 
 sub REAP {
     if ($avahi_publish == waitpid(-1, WNOHANG)) {
-        die("Avahi publishing failed!");
+        die("Avahi publishing failed! Do you have avahi-publish-service on your PATH?");
     }
     printf("***CHILD EXITED***\n");
     $SIG{CHLD} = \&REAP;
@@ -81,8 +74,21 @@ my %conns;
 $SIG{TERM} = $SIG{INT} = sub {
     map { eval { kill $_->{decoder_pid} } } keys %conns;
     kill 9, $avahi_publish;
-    exit(0);
+    exit 0;
 };
+$SIG{__DIE__} = sub {
+    map { eval { kill $_->{decoder_pid} } } keys %conns;
+    kill 9, $avahi_publish;
+};
+
+$avahi_publish = fork();
+if ($avahi_publish==0) {
+    exec 'avahi-publish-service',
+        join('', map { sprintf "%02X", $_ } @hw_addr) . "\@$apname",
+        "_raop._tcp",
+        "5000",
+        "tp=UDP","sm=false","sv=false","ek=1","et=0,1","cn=0,1","ch=2","ss=16","sr=44100","pw=false","vn=3","txtvers=1";
+}
 
 my $airport_pem = join '', <DATA>;
 my $rsa = Crypt::OpenSSL::RSA->new_private_key($airport_pem) || die;
@@ -90,23 +96,24 @@ my $rsa = Crypt::OpenSSL::RSA->new_private_key($airport_pem) || die;
 my $listen;
 {
     eval {
-            $listen = new IO::Socket::INET6(Listen => 1,
+        local $SIG{__DIE__};
+        $listen = new IO::Socket::INET6(Listen => 1,
                             Domain => AF_INET6,
                             LocalPort => 5000,
                             ReuseAddr => 1,
                             Proto => 'tcp');
     };
     if ($@) {
-            print "**************************************\n\n",
-                  "* IO::Socket::INET6 not present!     *\n",
-                  "* Install this if iTunes won't play. *\n",
-                  "**************************************\n\n";
-
-            $listen = new IO::Socket::INET(Listen => 1,
-                            LocalPort => 5000,
-                            ReuseAddr => 1,
-                            Proto => 'tcp');
+        print "**************************************\n",
+              "* IO::Socket::INET6 not present!     *\n",
+              "* Install this if iTunes won't play. *\n",
+              "**************************************\n\n";
     }
+
+    $listen ||= new IO::Socket::INET(Listen => 1,
+            LocalPort => 5000,
+            ReuseAddr => 1,
+            Proto => 'tcp');
 }
 die "Can't listen on port 5000: $!" unless $listen;
 
