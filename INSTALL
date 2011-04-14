@@ -31,6 +31,7 @@ How to run as a daemon on Mac 10.6
 ------
 * cp hairtunes shairport.pl /usr/local/bin
 * vi /usr/local/bin/shairport.pl, change the path of hairtunes from ./hairtunes to /usr/local/bin/hairtunes
+* mkdir -p ~/Library/LaunchAgents
 * cp org.mafipulation.shairport.plist ~/Library/LaunchAgents/
 * launchctl load org.mafipulation.shairport.plist
 * launchctl unload org.mafipulation.shairport.plist (to remove)

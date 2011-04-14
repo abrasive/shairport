@@ -9,17 +9,9 @@ This program emulates an Airport Express for the purpose of streaming music from
 
 It probably supports multiple simultaneous streams, if your audio output chain (as detected by libao) does so.
 
-Setup
------
-    $ make
-    $ perl -MCPAN -e 'install Crypt::OpenSSL::RSA'`
-    $ sudo apt-get install libssl-dev libcrypt-openssl-rsa-perl libportaudio-dev libhttp-request-ascgi-perl`
-
 How to use it
 -------------
-1. Make sure avahi-daemon is running and the prerequisites are installed (see INSTALL).
-2. Edit shairport.pl with your favourite text editor to set the access point name and/or password, if desired.
-3. `perl shairport.pl`
+`perl shairport.pl`. See INSTALL for further information.
 
 The triangle-in-rectangle Airtunes logo will appear in the iTunes status bar of any machine on the network, or on iPod play controls screen. Choose your access point name to start streaming to the Shairport instance.
 
@@ -44,36 +36,3 @@ Changelog
 * 0.05  April 13, 2011
     * error-handling cleanup in the Perl script including more meaningful error messages, based on common problems seen
 
-
-How to compile and install on Mac OSX 10.6
-------
-prerequisite: install XCode, install homebrew (https://github.com/mxcl/homebrew)
-
-    $ brew install pkg-config libao
-    $ make
-    $ perl -MCPAN -e 'install Crypt::OpenSSL::RSA'
-    $ perl -MCPAN -e 'install IO::Socket::INET6'
-    $ perl shairport.pl
-
-OSX 10.5 only bundles perl 5.8, which won't work with shairport. After getting a update
-here (http://www.perl.org/get.html), it worked.
-
-If XCode 4 was installed instead of XCode 3, it will probably be neccesary to do:
-
-    $ ARCHFLAGS="-arch i386 -arch x86_64" perl -MCPAN -e 'install Crypt::OpenSSL::RSA'
-    $ ARCHFLAGS="-arch i386 -arch x86_64" perl -MCPAN -e 'install IO::Socket::INET6'
-
-
-Available launch options for
-------
-    $ shairport.pl --apname=My Name --password=secret
-
-
-How to run as a daemon on Mac OSX 10.6
-------
-    $ cp hairtunes shairport.pl /usr/local/bin
-    $ vi /usr/local/bin/shairport.pl # change the path of hairtunes from ./hairtunes to /usr/local/bin/hairtunes
-    $ mkdir -p ~/Library/LaunchAgents
-    $ cp org.mafipulation.shairport.plist ~/Library/LaunchAgents/ # you may want to change AP name in this file
-    $ launchctl load -w ~/Library/LaunchAgents/org.mafipulation.shairport.plist
-    $ launchctl unload -w ~/Library/LaunchAgents/org.mafipulation.shairport.plist # to remove
