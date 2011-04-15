@@ -424,7 +424,9 @@ int init_rtp(void) {
     si.sin6_flowinfo = 0;
 #else
     si.sin_family = AF_INET;
-    si.sin_len = sizeof(si);
+    #ifdef SIN_LEN
+        si.sin_len = sizeof(si);
+    #endif
     si.sin_addr.s_addr = htonl(INADDR_ANY);
 #endif
 
