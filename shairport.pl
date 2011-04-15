@@ -10,10 +10,10 @@
 #        copy, modify, merge, publish, distribute, sublicense, and/or
 #        sell copies of the Software, and to permit persons to whom the
 #        Software is furnished to do so, subject to the following conditions:
-#       
+#
 #        The above copyright notice and this permission notice shall be
 #        included in all copies or substantial portions of the Software.
-#       
+#
 #        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 #        EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
 #        OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -82,13 +82,13 @@ $SIG{CHLD} = \&REAP;
 my %conns;
 
 $SIG{TERM} = $SIG{INT} = sub {
-	print "killed\n";
+    print "killed\n";
     map { eval { kill $_->{decoder_pid} } } keys %conns;
     kill 9, $avahi_publish;
     exit 0;
 };
 $SIG{__DIE__} = sub {
-	print "died\n";
+    print "died\n";
     map { eval { kill $_->{decoder_pid} } } keys %conns;
     kill 9, $avahi_publish;
 };
@@ -100,13 +100,13 @@ if ($avahi_publish==0) {
         "_raop._tcp",
         "5000",
         "tp=UDP","sm=false","sv=false","ek=1","et=0,1","cn=0,1","ch=2","ss=16","sr=44100","pw=false","vn=3","txtvers=1";
-	exec 'dns-sd', '-R',
-		join('', map { sprintf "%02X", $_ } @hw_addr) . "\@$apname",
-		"_raop._tcp",
-		".",
-		"5000",
-		"tp=UDP","sm=false","sv=false","ek=1","et=0,1","cn=0,1","ch=2","ss=16","sr=44100","pw=false","vn=3","txtvers=1";
-	die "could not run avahi-publish-service nor dns-sd";
+    exec 'dns-sd', '-R',
+        join('', map { sprintf "%02X", $_ } @hw_addr) . "\@$apname",
+        "_raop._tcp",
+        ".",
+        "5000",
+        "tp=UDP","sm=false","sv=false","ek=1","et=0,1","cn=0,1","ch=2","ss=16","sr=44100","pw=false","vn=3","txtvers=1";
+    die "could not run avahi-publish-service nor dns-sd";
 }
 
 my $airport_pem = join '', <DATA>;
@@ -148,14 +148,14 @@ sub ip6bin {
     }
 
     pack('S>*', map { hex } (@left, @mid, @right));
-}    
+}
 
 my $sel = new IO::Select($listen);
 
 print "listening...\n";
 
 
-if ($daemon) { 
+if ($daemon) {
    use POSIX;
    POSIX::setsid or die "setsid: $!";
    my $pid = fork();
@@ -178,7 +178,7 @@ while (1) {
         if ($fh==$listen) {
             my $new = $listen->accept;
             printf "new connection from %s\n", $new->sockhost;
-            
+
             $sel->add($new);
             $new->blocking(0);
             $conns{$new} = {fh => $fh};
@@ -210,7 +210,7 @@ sub conn_handle_data {
         undef $conn->{req_need};
         return;
     }
-    
+
     read $fh, my $data, 4096;
     $conn->{data} .= $data;
 
@@ -266,7 +266,7 @@ sub conn_handle_request {
         } else {
             $data .= ip6bin($ip);
         }
-        
+
         $data .= join '', map { chr } @hw_addr;
         $data .= chr(0) x (0x20-length($data));
 
@@ -328,7 +328,7 @@ sub conn_handle_request {
                     ));
             #    print "decode command: $dec\n";
             my $decoder = open2(my $dec_out, my $dec_in, $dec);
-            
+
             $conn->{decoder_pid} = $decoder;
             $conn->{decoder_fh} = $dec_in;
             my $portdesc = <$dec_out>;

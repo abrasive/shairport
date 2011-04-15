@@ -27,9 +27,9 @@ struct alac_file
 
     int32_t *outputsamples_buffer_a;
     int32_t *outputsamples_buffer_b;
-	
-	int32_t *uncompressed_bytes_buffer_a;
-	int32_t *uncompressed_bytes_buffer_b;
+
+    int32_t *uncompressed_bytes_buffer_a;
+    int32_t *uncompressed_bytes_buffer_b;
 
 
 

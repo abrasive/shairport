@@ -5,7 +5,7 @@
 ### BEGIN INIT INFO
 # Provides:          shairport
 # Required-Start:    $network
-# Required-Stop:     
+# Required-Stop:
 # Short-Description: shairport - Airtunes emulator!
 # Description:       Airtunes emulator!
 # Default-Start:     2 3 4 5

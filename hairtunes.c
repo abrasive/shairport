@@ -57,8 +57,8 @@ int debug = 0;
 // default buffer - about half a second
 //Changed these values to make sound synchronized with airport express during multi-room broadcast.
 
-#define BUFFER_FRAMES  512 
-#define START_FILL    282 
+#define BUFFER_FRAMES  512
+#define START_FILL    282
 
 
 #define MAX_PACKET      2048
@@ -137,7 +137,7 @@ int init_decoder(void) {
     int sample_size = fmtp[3];
     if (sample_size != 16)
         die("only 16-bit samples supported!");
-    
+
     alac = create_alac(sample_size, 2);
     if (!alac)
         return 1;
@@ -215,7 +215,7 @@ int main(int argc, char **argv) {
     init_rtp();      // open a UDP listen port and start a listener; decode into ring buffer
     fflush(stdout);
     init_output();              // resample and output from ring buffer
-    
+
     char line[128];
     int in_line = 0;
     int n;
@@ -249,8 +249,8 @@ int main(int argc, char **argv) {
     }
     fprintf(stderr, "bye!\n");
     fflush(stderr);
-	
-	uninit_output();
+
+    uninit_output();
 
     return EXIT_SUCCESS;
 }
@@ -372,7 +372,7 @@ void *rtp_thread_func(void *arg) {
         if (plen < 0)
             continue;
         assert(plen<=MAX_PACKET);
-            
+
         type = packet[1] & ~0x80;
         if (type == 0x60 || type == 0x56) {   // audio data / resend
             pktp = packet;
@@ -440,27 +440,27 @@ int init_rtp(void) {
 
     unsigned short port = 6000;
     while(1) {
-		if(sock < 0)
-			sock = socket(type, SOCK_DGRAM, IPPROTO_UDP);
-		if (sock==-1)
-			die("Can't create data socket!");
-		
-		if(csock < 0)
-			csock = socket(type, SOCK_DGRAM, IPPROTO_UDP);
-		if (csock==-1)
-			die("Can't create control socket!");
+        if(sock < 0)
+            sock = socket(type, SOCK_DGRAM, IPPROTO_UDP);
+        if (sock==-1)
+            die("Can't create data socket!");
+
+        if(csock < 0)
+            csock = socket(type, SOCK_DGRAM, IPPROTO_UDP);
+        if (csock==-1)
+            die("Can't create control socket!");
 
         *sin_port = htons(port);
-		int bind1 = bind(sock, (struct sockaddr*)&si, sizeof(si));
-		*sin_port = htons(port + 1);
-		int bind2 = bind(csock, (struct sockaddr*)&si, sizeof(si));
+        int bind1 = bind(sock, (struct sockaddr*)&si, sizeof(si));
+        *sin_port = htons(port + 1);
+        int bind2 = bind(csock, (struct sockaddr*)&si, sizeof(si));
 
-		if(bind1 != -1 && bind2 != -1) break;
-		if(bind1 != -1) { close(sock); sock = -1; }
-		if(bind2 != -1) { close(csock); csock = -1; }
-		
-		port += 3;
-	}
+        if(bind1 != -1 && bind2 != -1) break;
+        if(bind1 != -1) { close(sock); sock = -1; }
+        if(bind2 != -1) { close(csock); csock = -1; }
+
+        port += 3;
+    }
 
     printf("port: %d\n", port); // let our handler know where we end up listening
     printf("cport: %d\n", port+1);
@@ -525,7 +525,7 @@ static double biquad_filt(biquad_t *bq, double in) {
 
 double bf_playback_rate = 1.0;
 
-static double bf_est_drift = 0.0;   // local clock is slower by 
+static double bf_est_drift = 0.0;   // local clock is slower by
 static biquad_t bf_drift_lpf;
 static double bf_est_err = 0.0, bf_last_err;
 static biquad_t bf_err_lpf, bf_err_deriv_lpf;
@@ -560,7 +560,7 @@ void bf_est_update(short fill) {
     if (debug)
         fprintf(stderr, "bf %d err %f drift %f desiring %f ed %f estd %f\r", fill, bf_est_err, bf_est_drift, desired_fill, err_deriv, err_deriv + CONTROL_A*bf_est_err);
     bf_playback_rate = 1.0 + CONTROL_A*bf_est_err + bf_est_drift;
-    
+
     bf_last_err = bf_est_err;
 }
 
@@ -570,7 +570,7 @@ short *buffer_get_frame(void) {
     seq_t read;
 
     pthread_mutex_lock(&ab_mutex);
-    
+
     buf_fill = ab_write - ab_read;
     if (buf_fill < 1 || !ab_synced) {    // init or underrun. stop and wait
         if (ab_synced)
@@ -648,7 +648,7 @@ void *audio_thread_func(void *arg) {
 #if HAVE_AO
     ao_device* dev = arg;
 #else
-	PaStream* stream = arg;
+    PaStream* stream = arg;
 #endif
     int i __attribute__((unused)), play_samples;
 
@@ -662,7 +662,7 @@ void *audio_thread_func(void *arg) {
     if (fancy_resampling) {
         frame = malloc(frame_size*2*sizeof(float));
         outframe = malloc(2*frame_size*2*sizeof(float));
-        
+
         srcdat.data_in = frame;
         srcdat.data_out = outframe;
         srcdat.input_frames = FRAME_BYTES;
@@ -692,18 +692,18 @@ void *audio_thread_func(void *arg) {
 #endif
             play_samples = stuff_buffer(bf_playback_rate, inbuf, outbuf);
 
-#if HAVE_AO		
+#if HAVE_AO
         ao_play(dev, (char *)outbuf, play_samples*4);
 #else
-		int err = Pa_WriteStream(stream, (char *)outbuf, play_samples*4);
-		if( err != paNoError ) {
-			printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
-			exit(1);
-		}
+        int err = Pa_WriteStream(stream, (char *)outbuf, play_samples*4);
+        if( err != paNoError ) {
+            printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
+            exit(1);
+        }
 #endif
     }
-	
-	return 0;
+
+    return 0;
 }
 
 #define NUM_CHANNELS 2
@@ -721,48 +721,48 @@ int init_output(void) {
     fmt.rate = sampling_rate;
     fmt.channels = NUM_CHANNELS;
     fmt.byte_format = AO_FMT_LITTLE;
-    
-    ao_device *dev = ao_open_live(driver, &fmt, 0);
-	void* arg = dev;
-#else
-	err = Pa_Initialize();
-	if( err != paNoError ) {
-		printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
-		exit(1);
-	}
 
-	PaStreamParameters outputParameters;
-	outputParameters.device = Pa_GetDefaultOutputDevice(); /* default output device */
+    ao_device *dev = ao_open_live(driver, &fmt, 0);
+    void* arg = dev;
+#else
+    err = Pa_Initialize();
+    if( err != paNoError ) {
+        printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
+        exit(1);
+    }
+
+    PaStreamParameters outputParameters;
+    outputParameters.device = Pa_GetDefaultOutputDevice(); /* default output device */
     outputParameters.channelCount = NUM_CHANNELS;
     outputParameters.sampleFormat = paInt16;
     outputParameters.suggestedLatency = Pa_GetDeviceInfo( outputParameters.device )->defaultHighOutputLatency;
     outputParameters.hostApiSpecificStreamInfo = NULL;
-	
+
     /* -- setup stream -- */
-	PaStream* stream = NULL;
+    PaStream* stream = NULL;
     err = Pa_OpenStream(
-						&stream,
-						NULL,
-						&outputParameters,
-						sampling_rate,
-						OUTFRAME_BYTES,
-						paClipOff,      /* we won't output out of range samples so don't bother clipping them */
-						NULL, /* no callback, use blocking API */
-						NULL ); /* no callback, so no callback userData */
+                        &stream,
+                        NULL,
+                        &outputParameters,
+                        sampling_rate,
+                        OUTFRAME_BYTES,
+                        paClipOff,      /* we won't output out of range samples so don't bother clipping them */
+                        NULL, /* no callback, use blocking API */
+                        NULL ); /* no callback, so no callback userData */
     if( err != paNoError ) {
-		printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
-		exit(1);
-	}
-	
-	err = Pa_StartStream( stream );
+        printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
+        exit(1);
+    }
+
+    err = Pa_StartStream( stream );
     if( err != paNoError ) {
-		printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
-		exit(1);
-	}
-	
-	void* arg = stream;
+        printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
+        exit(1);
+    }
+
+    void* arg = stream;
 #endif
-	
+
 #ifdef FANCY_RESAMPLING
     if (fancy_resampling)
         src = src_new(SRC_SINC_MEDIUM_QUALITY, 2, &err);
@@ -779,9 +779,10 @@ int init_output(void) {
 int uninit_output(void) {
 #if HAVE_AO
 #else
-	int err = Pa_Terminate();
-	if( err != paNoError )
-		printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );	
+    int err = Pa_Terminate();
+    if( err != paNoError )
+        printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
 #endif
-	return 0;
+    return 0;
 }
+
