@@ -26,6 +26,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/select.h>
@@ -84,8 +85,11 @@ int fancy_resampling = 1;
 SRC_STATE *src;
 #endif
 
-void rtp_request_resend(seq_t first, seq_t last);
+int  init_rtp(void);
 void init_buffer(void);
+int  init_output(void);
+int  uninit_output(void);
+void rtp_request_resend(seq_t first, seq_t last);
 void ab_resync(void);
 
 // interthread variables
@@ -160,7 +164,7 @@ int main(int argc, char **argv) {
     char *arg;
     int i;
     assert(RAND_MAX >= 0x10000);    // XXX move this to compile time
-    while (arg = *++argv) {
+    while ( (arg = *++argv) ) {
         if (!strcasecmp(arg, "iv")) {
             hexaesiv = *++argv;
             argc--;
@@ -203,7 +207,7 @@ int main(int argc, char **argv) {
 
     memset(fmtp, 0, sizeof(fmtp));
     i = 0;
-    while (arg = strsep(&fmtpstr, " \t"))
+    while ( (arg = strsep(&fmtpstr, " \t")) )
         fmtp[i++] = atoi(arg);
 
     init_decoder();
@@ -247,6 +251,8 @@ int main(int argc, char **argv) {
     fflush(stderr);
 	
 	uninit_output();
+
+    return EXIT_SUCCESS;
 }
 
 void init_buffer(void) {
@@ -271,14 +277,14 @@ static inline int seq_order(seq_t a, seq_t b) {
 }
 
 void alac_decode(short *dest, char *buf, int len) {
-    char packet[MAX_PACKET];
+    unsigned char packet[MAX_PACKET];
     assert(len<=MAX_PACKET);
 
-    char iv[16];
+    unsigned char iv[16];
     int i;
     memcpy(iv, aesiv, sizeof(iv));
     for (i=0; i+16<=len; i += 16)
-        AES_cbc_encrypt(buf+i, packet+i, 0x10, &aes, iv, AES_DECRYPT);
+        AES_cbc_encrypt((unsigned char*)buf+i, packet+i, 0x10, &aes, iv, AES_DECRYPT);
     if (len & 0xf)
         memcpy(packet+i, buf+i, len & 0xf);
 
@@ -378,6 +384,8 @@ void *rtp_thread_func(void *arg) {
             buffer_put_packet(seqno, pktp+12, plen-12);
         }
     }
+
+    return 0;
 }
 
 void rtp_request_resend(seq_t first, seq_t last) {
@@ -406,7 +414,7 @@ int init_rtp(void) {
 #ifdef AF_INET6
     struct sockaddr_in6 si;
     int type = AF_INET6;
-    short *sin_port = &si.sin6_port;
+    unsigned short *sin_port = &si.sin6_port;
 #else
     struct sockaddr_in si;
     int type = AF_INET;
@@ -508,9 +516,11 @@ static void biquad_lpf(biquad_t *bq, double freq, double Q) {
 
 static double biquad_filt(biquad_t *bq, double in) {
     double w = in - bq->a[0]*bq->hist[0] - bq->a[1]*bq->hist[1];
-    double out = bq->b[1]*bq->hist[0] + bq->b[2]*bq->hist[1] + bq->b[0]*w;
+    double out __attribute__((unused)) = bq->b[1]*bq->hist[0] + bq->b[2]*bq->hist[1] + bq->b[0]*w;
     bq->hist[1] = bq->hist[0];
     bq->hist[0] = w;
+
+    return w;
 }
 
 double bf_playback_rate = 1.0;
@@ -640,9 +650,9 @@ void *audio_thread_func(void *arg) {
 #else
 	PaStream* stream = arg;
 #endif
-    int i, play_samples;
+    int i __attribute__((unused)), play_samples;
 
-    signed short buf_fill;
+    signed short buf_fill __attribute__((unused));
     signed short *inbuf, *outbuf;
     outbuf = malloc(OUTFRAME_BYTES);
 
@@ -697,7 +707,7 @@ void *audio_thread_func(void *arg) {
 #define NUM_CHANNELS 2
 
 int init_output(void) {
-    int err;
+    int err __attribute__((unused));
 #if HAVE_AO
     ao_initialize();
     int driver = ao_default_driver_id();
@@ -760,6 +770,8 @@ int init_output(void) {
 
     pthread_t audio_thread;
     pthread_create(&audio_thread, NULL, audio_thread_func, arg);
+
+    return 0;
 }
 
 int uninit_output(void) {
