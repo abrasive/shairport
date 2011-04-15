@@ -628,6 +628,8 @@ int stuff_buffer(double playback_rate, short *inptr, short *outptr) {
             *outptr++ = dithered_vol(*inptr++);
         }
     }
+
+    return stuffsamp;
 }
 
 void *audio_thread_func(void *arg) {
