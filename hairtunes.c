@@ -702,6 +702,8 @@ void *audio_thread_func(void *arg) {
 		}
 #endif
     }
+	
+	return 0;
 }
 
 #define NUM_CHANNELS 2
