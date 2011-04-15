@@ -411,37 +411,50 @@ void rtp_request_resend(seq_t first, seq_t last) {
 
 
 int init_rtp(void) {
-#ifdef AF_INET6
-    struct sockaddr_in6 si;
-    int type = AF_INET6;
-    unsigned short *sin_port = &si.sin6_port;
-#else
     struct sockaddr_in si;
     int type = AF_INET;
-    short *sin_port = &si.sin_port;
-#endif
-    int sock = -1, csock = -1;    // data and control (we treat the streams the same here)
-
+	struct sockaddr* si_p = (struct sockaddr*)&si;
+	socklen_t si_len = sizeof(si);
+    unsigned short *sin_port = &si.sin_port;
     memset(&si, 0, sizeof(si));
 #ifdef AF_INET6
-    si.sin6_family = AF_INET6;
-    #ifdef SIN6_LEN
-        si.sin6_len = sizeof(si);
-    #endif
-    si.sin6_addr = in6addr_any;
-    si.sin6_flowinfo = 0;
-#else
-    si.sin_family = AF_INET;
-    #ifdef SIN_LEN
-        si.sin_len = sizeof(si);
-    #endif
-    si.sin_addr.s_addr = htonl(INADDR_ANY);
+    struct sockaddr_in6 si6;
+    type = AF_INET6;
+	si_p = (struct sockaddr*)&si6;
+	si_len = sizeof(si6);
+    sin_port = &si6.sin6_port;
+    memset(&si6, 0, sizeof(si6));
 #endif
 
+    si.sin_family = AF_INET;
+#ifdef SIN_LEN
+	si.sin_len = sizeof(si);
+#endif
+    si.sin_addr.s_addr = htonl(INADDR_ANY);
+#ifdef AF_INET6
+    si6.sin6_family = AF_INET6;
+    #ifdef SIN6_LEN
+        si6.sin6_len = sizeof(si);
+    #endif
+    si6.sin6_addr = in6addr_any;
+    si6.sin6_flowinfo = 0;
+#endif
+
+    int sock = -1, csock = -1;    // data and control (we treat the streams the same here)
     unsigned short port = 6000;
     while(1) {
         if(sock < 0)
             sock = socket(type, SOCK_DGRAM, IPPROTO_UDP);
+#ifdef AF_INET6
+		if(sock==-1 && type == AF_INET6) {
+			// try fallback to IPv4
+			type = AF_INET;
+			si_p = (struct sockaddr*)&si;
+			si_len = sizeof(si);
+			sin_port = &si.sin_port;
+			continue;
+		}
+#endif
         if (sock==-1)
             die("Can't create data socket!");
 
@@ -451,9 +464,9 @@ int init_rtp(void) {
             die("Can't create control socket!");
 
         *sin_port = htons(port);
-        int bind1 = bind(sock, (struct sockaddr*)&si, sizeof(si));
+        int bind1 = bind(sock, si_p, si_len);
         *sin_port = htons(port + 1);
-        int bind2 = bind(csock, (struct sockaddr*)&si, sizeof(si));
+        int bind2 = bind(csock, si_p, si_len);
 
         if(bind1 != -1 && bind2 != -1) break;
         if(bind1 != -1) { close(sock); sock = -1; }
