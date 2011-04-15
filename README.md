@@ -23,6 +23,20 @@ Thanks also to Apple for obfuscating the private key in the ROM image, using a s
 Thanks to Ten Thousand Free Men and their Families for having a computer and stuff.
 Thanks to wtbw.
 
+Contributors
+------------
+* [jhl](mailto:jhl@axdf.net)
+* [David Hammerton](http://craz.net/)
+* [Albert Zeyer](mailto:albert.zeyer@rwth-aachen.de)
+* [Preston Marshall](mailto:preston@synergyeoc.com)
+* [Mads Mætzke Tandrup](mailto:mads@tandrup.org)
+* [Martin Spasov](mailto:mspasov@gmail.com)
+* [Oleg Kertanov](mailto:okertanov@gmail.com)
+* [Rafał Kwaśny](mailto:mag@entropy.be)
+* [Rakuraku Jyo](mailto:jyo.rakuraku@gmail.com)
+* [Vincent Gijsen](mailto:vtj.gijsen@gmail.com)
+* [lars](mailto:lars@namsral.com)
+
 Changelog
 ---------
 * 0.01  April 5, 2011
