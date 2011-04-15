@@ -631,7 +631,7 @@ int stuff_buffer(double playback_rate, short *inptr, short *outptr) {
         }
     }
 
-    return stuffsamp;
+    return frame_size + stuff;
 }
 
 void *audio_thread_func(void *arg) {
