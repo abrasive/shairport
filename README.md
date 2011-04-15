@@ -27,7 +27,7 @@ Contributors
 ------------
 * [jhl](mailto:jhl@axdf.net)
 * [David Hammerton](http://craz.net/)
-* [Albert Zeyer](mailto:albert.zeyer@rwth-aachen.de)
+* [Albert Zeyer](http://www.az2000.de)
 * [Preston Marshall](mailto:preston@synergyeoc.com)
 * [Mads Mætzke Tandrup](mailto:mads@tandrup.org)
 * [Martin Spasov](mailto:mspasov@gmail.com)
