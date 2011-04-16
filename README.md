@@ -25,7 +25,6 @@ Thanks to wtbw.
 
 Contributors
 ------------
-* [jhl](mailto:jhl@axdf.net)
 * [David Hammerton](http://craz.net/)
 * [Albert Zeyer](http://www.az2000.de)
 * [Preston Marshall](mailto:preston@synergyeoc.com)
