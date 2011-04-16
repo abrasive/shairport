@@ -20,11 +20,12 @@ Perl modules (install from CPAN if needed e.g. `perl -MCPAN -e 'install X'`):
 MacOSX:
 
   * install XCode
-  * install [Homebrew](https://github.com/mxcl/homebrew)
+  * install [Homebrew](https://github.com/mxcl/homebrew) or [MacPorts](http://www.macports.org/)
   * type:
 
         $ export ARCHFLAGS="-arch x86_64"
-        $ brew install pkg-config libao
+        $ brew install pkg-config libao # for [Homebrew](https://github.com/mxcl/homebrew)
+        $ port install libao # for [MacPorts](http://www.macports.org/)
         $ make
         $ perl -MCPAN -e 'install Crypt::OpenSSL::RSA'
         $ perl -MCPAN -e 'install IO::Socket::INET6'
