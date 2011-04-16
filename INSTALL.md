@@ -26,7 +26,7 @@ Perl modules (install from CPAN if needed e.g. `perl -MCPAN -e 'install X'`):
   * install [Homebrew](https://github.com/mxcl/homebrew) or [Macports](http://www.macports.org/)
   * type:
 
-        $ export ARCHFLAGS="-arch x86_64"
+        $ export ARCHFLAGS="-arch $HOSTTYPE"
         $ brew/port install pkg-config libao
         $ make
         $ perl -MCPAN -e 'install Crypt::OpenSSL::RSA'
