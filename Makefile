@@ -6,7 +6,7 @@ PAUFLAGS:=-lportaudio
 all: hairtunes
 
 hairtunes: hairtunes.c alac.c
-	$(CC) $(CFLAGS) $(PKGFLAGS) $(LDFLAGS) hairtunes.c alac.c -o $@
+	$(CC) $(CFLAGS) hairtunes.c alac.c -o $@ $(PKGFLAGS) $(LDFLAGS)
 
 clean:
 	-@rm -rf hairtunes
