@@ -1,19 +1,20 @@
-Shairport v0.05
+ShairPort v0.05
 ==============
 James Laird <jhl@mafipulation.org>
 April 13, 2011
 
 What it is
 ----------
-This program emulates an Airport Express for the purpose of streaming music from iTunes and compatible iPods. It implements a server for the Apple RAOP protocol.
+This program emulates an AirPort Express for the purpose of streaming music from iTunes and compatible iPods. It implements a server for the Apple RAOP protocol.
+ShairPort does not support AirPlay v2 (video and photo streaming).
 
-It probably supports multiple simultaneous streams, if your audio output chain (as detected by libao) does so.
+It supports multiple simultaneous streams, if your audio output chain (as detected by libao) does so.
 
 How to use it
 -------------
 `perl shairport.pl`. See INSTALL.md for further information.
 
-The triangle-in-rectangle Airtunes logo will appear in the iTunes status bar of any machine on the network, or on iPod play controls screen. Choose your access point name to start streaming to the Shairport instance.
+The triangle-in-rectangle AirTunes (now AirPlay) logo will appear in the iTunes status bar of any machine on the network, or on iPod play controls screen. Choose your access point name to start streaming to the ShairPort instance.
 
 Thanks
 ------

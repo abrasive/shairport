@@ -58,7 +58,7 @@ GetOptions("a|apname=s" => \$apname,
           "h|help" => \$help);
 
 sub usage {
-	print "Shairport version $shairportversion - Airport Express emulator\n".
+	print "ShairPort version $shairportversion - Airport Express emulator\n".
           "Usage:\n".
           "$0 [OPTION...]\n".
           "\n".
