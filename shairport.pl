@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 #   ShairPort - Airtunes compatible server
 #   Copyright (c) 2011 James Laird
