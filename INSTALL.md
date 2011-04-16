@@ -1,5 +1,10 @@
 Type `make` to build the packet decoder, `hairtunes`.
 
+The default output destination is libAO. Alternative destinations are PortAudio and named pipe. For those, type:
+
+ * make OUTPUT=-DOUTPUT_PORTAUDIO or
+ * make OUTPUT=-DOUTPUT_PIPE
+
 You need the following installed:
 
  * openssl

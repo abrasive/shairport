@@ -36,13 +36,20 @@
 #include <openssl/aes.h>
 #include <math.h>
 
-#if !defined(HAVE_AO)
-#define HAVE_AO 1
+#if !defined(OUTPUT_AO) && !defined(OUTPUT_PORTAUDIO) && !defined(OUTPUT_PIPE)
+#warning No explicit output defined
+#define OUTPUT_AO 1
 #endif
-#if HAVE_AO
+#if OUTPUT_AO
+#warning Building for output to AO
 #include <ao/ao.h>
-#else
+#elif OUTPUT_PORTAUDIO
+#warning Building for output to PortAudio
 #include <portaudio.h>
+#elif OUTPUT_PIPE
+#warning Building for output to named pipe
+#include <sys/stat.h>
+#include <fcntl.h>
 #endif
 
 #ifdef FANCY_RESAMPLING
@@ -658,10 +665,12 @@ int stuff_buffer(double playback_rate, short *inptr, short *outptr) {
 }
 
 void *audio_thread_func(void *arg) {
-#if HAVE_AO
+#if OUTPUT_AO
     ao_device* dev = arg;
-#else
+#elif OUTPUT_PORTAUDIO
     PaStream* stream = arg;
+#elif OUTPUT_PIPE
+	int fd = -1;
 #endif
     int i __attribute__((unused)), play_samples;
 
@@ -703,16 +712,34 @@ void *audio_thread_func(void *arg) {
             play_samples = srcdat.output_frames_gen;
         } else
 #endif
+#if OUTPUT_PIPE
+            if (fd == -1) {
+				// attempt to open the pipe, but don't block if there are no readers
+				fd = open("rawpipe", O_WRONLY | O_NDELAY);
+				if (fd != -1) {
+					fprintf(stderr, "[open]");
+				}   
+			}   
+
+#endif
             play_samples = stuff_buffer(bf_playback_rate, inbuf, outbuf);
 
-#if HAVE_AO
+#if OUTPUT_AO
         ao_play(dev, (char *)outbuf, play_samples*4);
-#else
+#elif OUTPUT_PORTAUDIO
         int err = Pa_WriteStream(stream, (char *)outbuf, play_samples*4);
         if( err != paNoError ) {
             printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
             exit(1);
         }
+#elif OUTPUT_PIPE
+		if (fd != -1) {
+			int ret = write(fd, outbuf, play_samples*4);
+			if (!ret) {
+				printf( "Pipe write error" );
+				exit(1);
+			}
+		}
 #endif
     }
 
@@ -723,7 +750,7 @@ void *audio_thread_func(void *arg) {
 
 int init_output(void) {
     int err __attribute__((unused));
-#if HAVE_AO
+#if OUTPUT_AO
     ao_initialize();
     int driver = ao_default_driver_id();
 
@@ -737,7 +764,7 @@ int init_output(void) {
 
     ao_device *dev = ao_open_live(driver, &fmt, 0);
     void* arg = dev;
-#else
+#elif OUTPUT_PORTAUDIO
     err = Pa_Initialize();
     if( err != paNoError ) {
         printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
@@ -774,6 +801,9 @@ int init_output(void) {
     }
 
     void* arg = stream;
+#elif OUTPUT_PIPE
+	mknod("rawpipe", S_IFIFO | 0644, 0);
+	void* arg = NULL;
 #endif
 
 #ifdef FANCY_RESAMPLING
@@ -790,8 +820,7 @@ int init_output(void) {
 }
 
 int uninit_output(void) {
-#if HAVE_AO
-#else
+#if OUTPUT_PORTAUDIO
     int err = Pa_Terminate();
     if( err != paNoError )
         printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );

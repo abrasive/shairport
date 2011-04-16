@@ -3,10 +3,12 @@ CFLAGS:=-O2 -Wall
 LDFLAGS:=-lm -lpthread
 PAUFLAGS:=-lportaudio
 
+OUTPUT:=
+
 all: hairtunes
 
 hairtunes: hairtunes.c alac.c
-	$(CC) $(CFLAGS) hairtunes.c alac.c -o $@ $(PKGFLAGS) $(LDFLAGS)
+	$(CC) $(OUTPUT) $(CFLAGS) hairtunes.c alac.c -o $@ $(PKGFLAGS) $(LDFLAGS)
 
 clean:
 	-@rm -rf hairtunes
