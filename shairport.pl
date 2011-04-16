@@ -37,6 +37,7 @@ use Digest::MD5 qw/md5_hex/;
 use POSIX ":sys_wait_h";
 eval "use IO::Socket::INET6;";
 
+my $shairportversion = "0.05";
 
 # Configure the following two options:
 # AP name - as will be shown in iTunes' menu
@@ -51,11 +52,26 @@ my $daemon;
 # suppose hairtunes is under same directory
 my $hairtunes_cli = $FindBin::Bin . '/hairtunes';
 
-GetOptions("apname=s" => \$apname,
-          "password=s"  => \$password,
-          "d" => \$daemon);
+GetOptions("a|apname=s" => \$apname,
+          "p|password=s"  => \$password,
+          "d" => \$daemon,
+          "h|help" => \$help);
 
-# use --apname MyName --password secret as arguments
+sub usage {
+	print "Shairport version $shairportversion - Airport Express emulator\n".
+          "Usage:\n".
+          "$0 [OPTION...]\n".
+          "\n".
+          "Options:\n".
+          "  -a, --apname=AirPort    Sets AirPort name\n".
+          "  -p, --password=secret   Sets password\n",
+          "  -d                      Daemon mode\n",
+          "  -h, --help              This help\n",
+          "\n";
+    exit;
+}
+
+if (defined($help) && $help == 1) { usage(); }
 
 chomp $apname;
 
