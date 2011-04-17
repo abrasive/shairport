@@ -4,7 +4,7 @@ You need the following installed:
 
  * openssl
  * libao
- * Perl
+ * Perl 5.10 or higher
  * Linux: avahi
  * Windows/Mac OS X: Bonjour
 

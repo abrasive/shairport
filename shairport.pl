@@ -23,6 +23,8 @@
 #        FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 #        OTHER DEALINGS IN THE SOFTWARE.
 
+use 5.10.0;
+
 use Getopt::Long;
 use FindBin;
 
