@@ -36,6 +36,7 @@
 #include <openssl/aes.h>
 #include <math.h>
 #include <sys/stat.h>
+#include <sys/signal.h>
 #include <fcntl.h>
 #include <ao/ao.h>
 
@@ -67,7 +68,11 @@ int dataport = 0, controlport = 0, timingport = 0;
 int fmtp[32];
 int sampling_rate;
 int frame_size;
+
+// FIFO name and file handle
 char *pipename = 0;
+int pipe_handle = -1;
+
 #define FRAME_BYTES (4*frame_size)
 // maximal resampling shift - conservative
 #define OUTFRAME_BYTES (4*(frame_size+3))
@@ -182,9 +187,9 @@ int main(int argc, char **argv) {
         if (!strcasecmp(arg, "host")) {
             rtphost = *++argv;
         } else
-		if (!strcasecmp(arg, "pipe")) {
-			pipename = *++argv;
-		}
+        if (!strcasecmp(arg, "pipe")) {
+            pipename = *++argv;
+        }
 #ifdef FANCY_RESAMPLING
         else
         if (!strcasecmp(arg, "resamp")) {
@@ -441,14 +446,14 @@ int init_rtp(void) {
         if(sock < 0)
             sock = socket(type, SOCK_DGRAM, IPPROTO_UDP);
 #ifdef AF_INET6
-		if(sock==-1 && type == AF_INET6) {
-			// try fallback to IPv4
-			type = AF_INET;
-			si_p = (struct sockaddr*)&si;
-			si_len = sizeof(si);
-			sin_port = &si.sin_port;
-			continue;
-		}
+	    if(sock==-1 && type == AF_INET6) {
+	        // try fallback to IPv4
+	        type = AF_INET;
+	        si_p = (struct sockaddr*)&si;
+	        si_len = sizeof(si);
+	        sin_port = &si.sin_port;
+	        continue;
+	    }
 #endif
         if (sock==-1)
             die("Can't create data socket!");
@@ -654,20 +659,11 @@ int stuff_buffer(double playback_rate, short *inptr, short *outptr) {
 
 void *audio_thread_func(void *arg) {
 	ao_device* dev = arg;
-	int fd = -1; // file handle for named pipe
     int play_samples;
 
     signed short buf_fill __attribute__((unused));
     signed short *inbuf, *outbuf;
     outbuf = malloc(OUTFRAME_BYTES);
-
-	if (pipename) {
-		fd = open(pipename, O_WRONLY);
-		if (fd == -1) {
-			printf(  "Pipe open failure: %s\n", pipename );
-			exit(1);
-		}
-	}
 
 #ifdef FANCY_RESAMPLING
     float *frame, *outframe;
@@ -692,7 +688,7 @@ void *audio_thread_func(void *arg) {
 
 #ifdef FANCY_RESAMPLING
         if (fancy_resampling) {
-			int i;
+	        int i;
             for (i=0; i<2*FRAME_BYTES; i++) {
                 frame[i] = (float)inbuf[i] / 32768.0;
                 frame[i] *= volume;
@@ -707,15 +703,22 @@ void *audio_thread_func(void *arg) {
 
             play_samples = stuff_buffer(bf_playback_rate, inbuf, outbuf);
 
-		if (pipename) {
-			int ret = write(fd, outbuf, play_samples*4);
-			if (!ret) {
-				printf( "Pipe write error" );
-				exit(1);
-			}
-		} else {
-			ao_play(dev, (char *)outbuf, play_samples*4);
-		}
+        if (pipename) {
+            if (pipe_handle == -1) {
+                // attempt to open pipe, don't block
+                pipe_handle = open(pipename, O_WRONLY | O_NDELAY);
+            }
+
+            // only write if pipe open (there's a reader)
+            if (pipe_handle != -1) {
+                 if (write(pipe_handle, outbuf, play_samples*4) == -1) {
+                    // write failed - do anything here?
+                    // SIGPIPE is handled elsewhere...
+                 }
+            }
+        } else {
+            ao_play(dev, (char *)outbuf, play_samples*4);
+        }
     }
 
     return 0;
@@ -723,9 +726,15 @@ void *audio_thread_func(void *arg) {
 
 #define NUM_CHANNELS 2
 
-void* init_pipe(char* pipe) {
-	mknod(pipe, S_IFIFO | 0644, 0);
-	return NULL;
+void handle_broken_fifo() {
+    close(pipe_handle);
+    pipe_handle = -1;
+}
+
+void init_pipe(char* pipe) {
+    // make the FIFO and catch the broken pipe signal
+    mknod(pipe, S_IFIFO | 0644, 0);
+    signal(SIGPIPE, handle_broken_fifo);
 }
 
 void* init_ao() {
@@ -747,11 +756,11 @@ void* init_ao() {
 int init_output(void) {
 	void* arg = 0;
 
-	if (pipename) {
-		arg = init_pipe(pipename);
-	} else {
-		arg = init_ao();
-	}
+    if (pipename) {
+        init_pipe(pipename);
+    } else {
+        arg = init_ao();
+    }
 
 #ifdef FANCY_RESAMPLING
     if (fancy_resampling)
