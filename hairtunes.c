@@ -705,8 +705,8 @@ void *audio_thread_func(void *arg) {
 
         if (pipename) {
             if (pipe_handle == -1) {
-                // attempt to open pipe, don't block
-                pipe_handle = open(pipename, O_WRONLY | O_NDELAY);
+                // attempt to open pipe - block if there are no readers
+                pipe_handle = open(pipename, O_WRONLY);
             }
 
             // only write if pipe open (there's a reader)
