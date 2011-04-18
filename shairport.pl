@@ -23,6 +23,8 @@
 #        FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 #        OTHER DEALINGS IN THE SOFTWARE.
 
+use 5.10.0;
+
 use Getopt::Long;
 use FindBin;
 
@@ -61,7 +63,7 @@ GetOptions("a|apname=s" => \$apname,
           "h|help" => \$help);
 
 sub usage {
-	print "Shairport version $shairportversion - Airport Express emulator\n".
+	print "ShairPort version $shairportversion - Airport Express emulator\n".
           "Usage:\n".
           "$0 [OPTION...]\n".
           "\n".
@@ -265,7 +267,7 @@ sub conn_handle_request {
     my ($fh, $conn) = @_;
 
     my $req = $conn->{req};;
-    my $clen = $req->header('content-length') || 0;
+    my $clen = $req->header('content-length') // 0;
     if ($clen > 0 && !length($req->content)) {
         $conn->{req_need} = $clen;
         return; # need more!
