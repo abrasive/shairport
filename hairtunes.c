@@ -83,7 +83,6 @@ SRC_STATE *src;
 int  init_rtp(void);
 void init_buffer(void);
 int  init_output(void);
-int  uninit_output(void);
 void rtp_request_resend(seq_t first, seq_t last);
 void ab_resync(void);
 
@@ -247,8 +246,6 @@ int main(int argc, char **argv) {
     }
     fprintf(stderr, "bye!\n");
     fflush(stderr);
-
-    uninit_output();
 
     return EXIT_SUCCESS;
 }
@@ -767,10 +764,6 @@ int init_output(void) {
     pthread_t audio_thread;
     pthread_create(&audio_thread, NULL, audio_thread_func, arg);
 
-    return 0;
-}
-
-int uninit_output(void) {
     return 0;
 }
 
