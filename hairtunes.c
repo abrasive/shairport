@@ -37,15 +37,7 @@
 #include <math.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-
-#if !defined(HAVE_AO)
-#define HAVE_AO 1
-#endif
-#if HAVE_AO
 #include <ao/ao.h>
-#else
-#include <portaudio.h>
-#endif
 
 #ifdef FANCY_RESAMPLING
 #include <samplerate.h>
@@ -664,11 +656,7 @@ int stuff_buffer(double playback_rate, short *inptr, short *outptr) {
 }
 
 void *audio_thread_func(void *arg) {
-#if HAVE_AO
-		ao_device* dev = arg;
-#else
-		PaStream* stream = arg;
-#endif
+	ao_device* dev = arg;
 	// file handle for named pipe
 	int fd = -1;
 
@@ -730,15 +718,7 @@ void *audio_thread_func(void *arg) {
 				exit(1);
 			}
 		} else {
-#if HAVE_AO
 			ao_play(dev, (char *)outbuf, play_samples*4);
-#else
-			int err = Pa_WriteStream(stream, (char *)outbuf, play_samples*4);
-			if( err != paNoError ) {
-				printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
-				exit(1);
-			}
-#endif
 		}
     }
 
@@ -752,7 +732,6 @@ void* init_pipe(char* pipe) {
 	return NULL;
 }
 
-#if HAVE_AO
 void* init_ao() {
     ao_initialize();
     int driver = ao_default_driver_id();
@@ -768,47 +747,6 @@ void* init_ao() {
     ao_device *dev = ao_open_live(driver, &fmt, 0);
     return dev;
 }
-#else
-void* init_portaudio() {
-    int err __attribute__((unused));
-    err = Pa_Initialize();
-    if( err != paNoError ) {
-        printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
-        exit(1);
-    }
-
-    PaStreamParameters outputParameters;
-    outputParameters.device = Pa_GetDefaultOutputDevice(); /* default output device */
-    outputParameters.channelCount = NUM_CHANNELS;
-    outputParameters.sampleFormat = paInt16;
-    outputParameters.suggestedLatency = Pa_GetDeviceInfo( outputParameters.device )->defaultHighOutputLatency;
-    outputParameters.hostApiSpecificStreamInfo = NULL;
-
-    /* -- setup stream -- */
-    PaStream* stream = NULL;
-    err = Pa_OpenStream(
-                        &stream,
-                        NULL,
-                        &outputParameters,
-                        sampling_rate,
-                        OUTFRAME_BYTES,
-                        paClipOff,      /* we won't output out of range samples so don't bother clipping them */
-                        NULL, /* no callback, use blocking API */
-                        NULL ); /* no callback, so no callback userData */
-    if( err != paNoError ) {
-        printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
-        exit(1);
-    }
-
-    err = Pa_StartStream( stream );
-    if( err != paNoError ) {
-        printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
-        exit(1);
-    }
-
-	return stream;
-}
-#endif
 
 int init_output(void) {
 	void* arg = 0;
@@ -816,11 +754,7 @@ int init_output(void) {
 	if (pipename) {
 		arg = init_pipe(pipename);
 	} else {
-#if HAVE_AO
 		arg = init_ao();
-#else
-		arg = init_portaudio();
-#endif
 	}
 
 #ifdef FANCY_RESAMPLING
@@ -837,12 +771,6 @@ int init_output(void) {
 }
 
 int uninit_output(void) {
-#if HAVE_AO
-#else
-    int err = Pa_Terminate();
-    if( err != paNoError )
-        printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
-#endif
     return 0;
 }
 
