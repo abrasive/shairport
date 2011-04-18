@@ -232,7 +232,7 @@ int main(int argc, char **argv) {
             assert(f<=0);
             if (debug)
                 fprintf(stderr, "VOL: %lf\n", f);
-            volume = pow(10.0,0.1*f);
+            volume = pow(10.0,0.05*f);
             fix_volume = 65536.0 * volume;
             continue;
         }
