@@ -50,12 +50,15 @@ my $apname = "ShairPort $$ on " . `hostname`;
 # password - required to connect
 # for no password, set:
 my $password = '';
+# output to a pipe?
+my $pipepath;
 my $daemon;
 # suppose hairtunes is under same directory
 my $hairtunes_cli = $FindBin::Bin . '/hairtunes';
 
 GetOptions("a|apname=s" => \$apname,
           "p|password=s"  => \$password,
+          "i|pipe=s"  => \$pipepath,
           "d" => \$daemon,
           "h|help" => \$help);
 
@@ -67,6 +70,7 @@ sub usage {
           "Options:\n".
           "  -a, --apname=AirPort    Sets AirPort name\n".
           "  -p, --password=secret   Sets password\n",
+          "  -i, --pipe=pipepath     Sets the path to a named pipe for output\n",
           "  -d                      Daemon mode\n",
           "  -h, --help              This help\n",
           "\n";
@@ -336,14 +340,26 @@ sub conn_handle_request {
             $resp->header('Session', 'DEADBEEF');
 
 
-            my $dec = sprintf("$hairtunes_cli iv %s key %s fmtp %s cport %s tport %s dport %s host %s",
-                    map { "'$_'" } (
-                        unpack('H*', $conn->{aesiv}),
-                        unpack('H*', $conn->{aeskey}),
-                        $conn->{fmtp},
-                        $cport, $tport, $dport,
-                        'unused'
-                    ));
+            my $dec;
+			if (defined($pipepath)) {
+				$dec = sprintf("$hairtunes_cli iv %s key %s fmtp %s cport %s tport %s dport %s host %s pipe %s",
+						map { "'$_'" } (
+							unpack('H*', $conn->{aesiv}),
+							unpack('H*', $conn->{aeskey}),
+							$conn->{fmtp},
+							$cport, $tport, $dport,
+							'unused', $pipepath
+						));
+			} else {
+				$dec = sprintf("$hairtunes_cli iv %s key %s fmtp %s cport %s tport %s dport %s host %s",
+						map { "'$_'" } (
+							unpack('H*', $conn->{aesiv}),
+							unpack('H*', $conn->{aeskey}),
+							$conn->{fmtp},
+							$cport, $tport, $dport,
+							'unused'
+						));
+			}
             #    print "decode command: $dec\n";
             my $decoder = open2(my $dec_out, my $dec_in, $dec);
 
