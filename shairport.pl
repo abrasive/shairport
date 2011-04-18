@@ -63,7 +63,7 @@ GetOptions("a|apname=s" => \$apname,
           "h|help" => \$help);
 
 sub usage {
-	print "ShairPort version $shairportversion - Airport Express emulator\n".
+    print "ShairPort version $shairportversion - Airport Express emulator\n".
           "Usage:\n".
           "$0 [OPTION...]\n".
           "\n".
@@ -339,27 +339,19 @@ sub conn_handle_request {
             my $dport = $1;
             $resp->header('Session', 'DEADBEEF');
 
+            my %dec_args = (
+                iv      =>  unpack('H*', $conn->{aesiv}),
+                key     =>  unpack('H*', $conn->{aeskey}),
+                fmtp    => $conn->{fmtp},
+                cport   => $cport,
+                tport   => $tport,
+                dport   => $dport,
+#                host    => 'unused',
+            );
+            $dec_args{pipe} = $pipepath if defined $pipepath;
 
-            my $dec;
-			if (defined($pipepath)) {
-				$dec = sprintf("$hairtunes_cli iv %s key %s fmtp %s cport %s tport %s dport %s host %s pipe %s",
-						map { "'$_'" } (
-							unpack('H*', $conn->{aesiv}),
-							unpack('H*', $conn->{aeskey}),
-							$conn->{fmtp},
-							$cport, $tport, $dport,
-							'unused', $pipepath
-						));
-			} else {
-				$dec = sprintf("$hairtunes_cli iv %s key %s fmtp %s cport %s tport %s dport %s host %s",
-						map { "'$_'" } (
-							unpack('H*', $conn->{aesiv}),
-							unpack('H*', $conn->{aeskey}),
-							$conn->{fmtp},
-							$cport, $tport, $dport,
-							'unused'
-						));
-			}
+            my $dec = $hairtunes_cli . join(' ', '', map { sprintf "%s '%s'", $_, $dec_args{$_} } keys(%dec_args));
+
             #    print "decode command: $dec\n";
             my $decoder = open2(my $dec_out, my $dec_in, $dec);
 
