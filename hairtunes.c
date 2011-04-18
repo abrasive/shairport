@@ -654,10 +654,8 @@ int stuff_buffer(double playback_rate, short *inptr, short *outptr) {
 
 void *audio_thread_func(void *arg) {
 	ao_device* dev = arg;
-	// file handle for named pipe
-	int fd = -1;
-
-    int i __attribute__((unused)), play_samples;
+	int fd = -1; // file handle for named pipe
+    int play_samples;
 
     signed short buf_fill __attribute__((unused));
     signed short *inbuf, *outbuf;
@@ -694,6 +692,7 @@ void *audio_thread_func(void *arg) {
 
 #ifdef FANCY_RESAMPLING
         if (fancy_resampling) {
+			int i;
             for (i=0; i<2*FRAME_BYTES; i++) {
                 frame[i] = (float)inbuf[i] / 32768.0;
                 frame[i] *= volume;
