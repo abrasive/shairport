@@ -754,7 +754,7 @@ void* init_ao() {
     fmt.bits = 16;
     fmt.rate = sampling_rate;
     fmt.channels = NUM_CHANNELS;
-    fmt.byte_format = AO_FMT_LITTLE;
+    fmt.byte_format = AO_FMT_NATIVE;
 	
 	if(audiodriver!=0){
 		driver = ao_driver_id(audiodriver);
