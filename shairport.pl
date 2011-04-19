@@ -106,13 +106,12 @@ my %conns;
 $SIG{TERM} = $SIG{INT} = sub {
     print "killed\n";
     map { eval { kill $_->{decoder_pid} } } keys %conns;
-    kill 9, $avahi_publish;
+    kill 9, $avahi_publish if $avahi_publish;
     exit 0;
 };
 $SIG{__DIE__} = sub {
-    print "died\n";
     map { eval { kill $_->{decoder_pid} } } keys %conns;
-    kill 9, $avahi_publish;
+    kill 9, $avahi_publish if $avahi_publish;
 };
 
 $avahi_publish = fork();
