@@ -69,6 +69,12 @@ int fmtp[32];
 int sampling_rate;
 int frame_size;
 
+//Audio Device/driver variables
+// Max num of chars "                               " - 32 character string, 1 reserved for null
+char *audiodevice = "Speakers (Realtek High Definiti";
+char *audiodriver = "wmm";
+char *audiodeviceid = 0;
+
 // FIFO name and file handle
 char *pipename = 0;
 int pipe_handle = -1;
@@ -740,16 +746,31 @@ void init_pipe(char* pipe) {
 void* init_ao() {
     ao_initialize();
     int driver = ao_default_driver_id();
-
     ao_sample_format fmt;
-    memset(&fmt, 0, sizeof(fmt));
-
+    ao_option aoo;
+	ao_option *ao_opts=0;
+	memset(&fmt, 0, sizeof(fmt));
+	
     fmt.bits = 16;
     fmt.rate = sampling_rate;
     fmt.channels = NUM_CHANNELS;
     fmt.byte_format = AO_FMT_NATIVE;
-
-    ao_device *dev = ao_open_live(driver, &fmt, 0);
+	
+	if(audiodriver!=0){
+		driver = ao_driver_id(audiodriver);
+	}
+	if(audiodeviceid!=0){
+		aoo.key="id";
+		aoo.value=audiodeviceid;
+		aoo.next=NULL;
+		ao_opts=&aoo;
+	} else if(audiodevice!=0){
+		aoo.key="dev";
+		aoo.value=audiodevice;
+		aoo.next=NULL;
+		ao_opts=&aoo;
+	} 
+    ao_device *dev = ao_open_live(driver, &fmt, ao_opts);
     return dev;
 }
 
