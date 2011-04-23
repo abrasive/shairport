@@ -53,6 +53,10 @@ my $password = '';
 # output to a pipe?
 my $pipepath;
 my $daemon;
+# ao options
+my $libao_driver;
+my $libao_devicename;
+my $libao_deviceid;
 # suppose hairtunes is under same directory
 my $hairtunes_cli = $FindBin::Bin . '/hairtunes';
 
@@ -68,6 +72,9 @@ GetOptions("a|apname=s" => \$apname,
           "p|password=s"  => \$password,
           "i|pipe=s"  => \$pipepath,
           "d" => \$daemon,
+          "ao_driver=s" => \$libao_driver,
+          "ao_devicename=s" => \$libao_devicename,
+          "ao_deviceid=s" => \$libao_deviceid,
           "h|help" => \$help);
 
 sub usage {
@@ -76,11 +83,14 @@ sub usage {
           "$0 [OPTION...]\n".
           "\n".
           "Options:\n".
-          "  -a, --apname=AirPort    Sets AirPort name\n".
-          "  -p, --password=secret   Sets password\n",
-          "  -i, --pipe=pipepath     Sets the path to a named pipe for output\n",
-          "  -d                      Daemon mode\n",
-          "  -h, --help              This help\n",
+          "  -a, --apname=AirPort            Sets AirPort name\n".
+          "  -p, --password=secret           Sets password\n",
+          "  -i, --pipe=pipepath             Sets the path to a named pipe for output\n",
+          "      --ao_driver=driver          Sets the ao driver (optional)\n",
+          "      --ao_devicename=devicename  Sets the ao device name (optional)\n",
+          "      --ao_deviceid=id            Sets the ao device id (optional)\n",
+          "  -d                              Daemon mode\n",
+          "  -h, --help                      This help\n",
           "\n";
     exit;
 }
@@ -356,6 +366,9 @@ sub conn_handle_request {
 #                host    => 'unused',
             );
             $dec_args{pipe} = $pipepath if defined $pipepath;
+            $dec_args{ao_driver} = $libao_driver if defined $libao_driver;
+            $dec_args{ao_devicename} = $libao_devicename if defined $libao_devicename;
+            $dec_args{ao_deviceid} = $libao_deviceid if defined $libao_deviceid;
 
             my $dec = $hairtunes_cli . join(' ', '', map { sprintf "%s '%s'", $_, $dec_args{$_} } keys(%dec_args));
 

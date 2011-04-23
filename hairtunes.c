@@ -69,14 +69,12 @@ int fmtp[32];
 int sampling_rate;
 int frame_size;
 
-//Audio Device/driver variables
-// Max num of chars "                               " - 32 character string, 1 reserved for null
-char *audiodevice = "Speakers (Realtek High Definiti";
-char *audiodriver = "wmm";
-char *audiodeviceid = 0;
+char *libao_driver = NULL;
+char *libao_devicename = NULL;
+char *libao_deviceid = NULL; // ao_options expects "char*"
 
 // FIFO name and file handle
-char *pipename = 0;
+char *pipename = NULL;
 int pipe_handle = -1;
 
 #define FRAME_BYTES (4*frame_size)
@@ -194,7 +192,32 @@ int main(int argc, char **argv) {
             rtphost = *++argv;
         } else
         if (!strcasecmp(arg, "pipe")) {
+            if (libao_driver || libao_devicename || libao_deviceid ) {
+                die("Option 'pipe' may not be combined with 'ao_driver', 'ao_devicename' or 'ao_deviceid'");
+            }
+
             pipename = *++argv;
+        } else
+        if (!strcasecmp(arg, "ao_driver")) {
+            if (pipename) {
+                die("Option 'ao_driver' may not be combined with 'pipe'");
+            }
+
+            libao_driver = *++argv;
+        } else
+        if (!strcasecmp(arg, "ao_devicename")) {
+            if (pipename || libao_deviceid ) {
+                die("Option 'ao_devicename' may not be combined with 'pipe' or 'ao_deviceid'");
+            }
+
+            libao_devicename = *++argv;
+        } else
+        if (!strcasecmp(arg, "ao_deviceid")) {
+            if (pipename || libao_devicename) {
+                die("Option 'ao_deviceid' may not be combined with 'pipe' or 'ao_devicename'");
+            }
+
+            libao_deviceid = *++argv;
         }
 #ifdef FANCY_RESAMPLING
         else
@@ -745,32 +768,39 @@ void init_pipe(char* pipe) {
 
 void* init_ao() {
     ao_initialize();
-    int driver = ao_default_driver_id();
+
+    int driver;
+    if (libao_driver) {
+        // if a libao driver is specified on the command line, use that
+        driver = ao_driver_id(libao_driver);
+        if (driver == -1) {
+            die("Could not find requested ao driver");
+        }
+    } else {
+        // otherwise choose the default
+        driver = ao_default_driver_id();
+    }
+
     ao_sample_format fmt;
-    ao_option aoo;
-	ao_option *ao_opts=0;
-	memset(&fmt, 0, sizeof(fmt));
+    memset(&fmt, 0, sizeof(fmt));
 	
     fmt.bits = 16;
     fmt.rate = sampling_rate;
     fmt.channels = NUM_CHANNELS;
     fmt.byte_format = AO_FMT_NATIVE;
 	
-	if(audiodriver!=0){
-		driver = ao_driver_id(audiodriver);
-	}
-	if(audiodeviceid!=0){
-		aoo.key="id";
-		aoo.value=audiodeviceid;
-		aoo.next=NULL;
-		ao_opts=&aoo;
-	} else if(audiodevice!=0){
-		aoo.key="dev";
-		aoo.value=audiodevice;
-		aoo.next=NULL;
-		ao_opts=&aoo;
-	} 
+    ao_option *ao_opts = NULL;
+    if(libao_deviceid) {
+        ao_append_option(&ao_opts, "id", libao_deviceid);
+    } else if(libao_devicename){
+        ao_append_option(&ao_opts, "dev", libao_devicename);
+    }
+
     ao_device *dev = ao_open_live(driver, &fmt, ao_opts);
+    if (dev == NULL) {
+        die("Could not open ao device");
+    }
+
     return dev;
 }
 
