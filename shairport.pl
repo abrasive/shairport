@@ -56,6 +56,14 @@ my $daemon;
 # suppose hairtunes is under same directory
 my $hairtunes_cli = $FindBin::Bin . '/hairtunes';
 
+unless (-x $hairtunes_cli) {
+    say "Can't find the 'hairtunes' decoder binary, you need to build this before using Shairport.";
+    say "Trying to build it for you anyway...";
+    system("cd ${FindBin::Bin}; make || gmake");
+    die("Nope, didn't work out. Read the INSTALL instructions!") unless -x $hairtunes_cli;
+    say "Phew! Worked out okay, by the looks of it.";
+}
+
 GetOptions("a|apname=s" => \$apname,
           "p|password=s"  => \$password,
           "i|pipe=s"  => \$pipepath,
