@@ -763,6 +763,7 @@ int init_output(void) {
     }
 
 #ifdef FANCY_RESAMPLING
+    int err;
     if (fancy_resampling)
         src = src_new(SRC_SINC_MEDIUM_QUALITY, 2, &err);
     else
