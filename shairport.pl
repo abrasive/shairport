@@ -1,4 +1,18 @@
-#!/usr/bin/env perl
+#!/bin/sh
+if test -n "`perl -V | grep "5\.0"`"
+then
+   echo -n "FATAL: You appear to have perl "
+   for WORD in `perl -v | grep "^This is "`
+   do
+       echo $WORD
+   done | grep "5" | xargs echo -n
+   echo ", but at least version 5.10.0 is required."
+   exit 1
+fi
+exec perl -wx $0 "$@"
+   if 0;
+#!perl -w
+#line 16
 
 #   ShairPort - Airtunes compatible server
 #   Copyright (c) 2011 James Laird
@@ -24,6 +38,8 @@
 #        OTHER DEALINGS IN THE SOFTWARE.
 
 use 5.10.0;
+
+use strict;
 
 use Getopt::Long;
 use FindBin;
@@ -59,13 +75,15 @@ my $libao_devicename;
 my $libao_deviceid;
 # suppose hairtunes is under same directory
 my $hairtunes_cli = $FindBin::Bin . '/hairtunes';
+my $help;
 
 unless (-x $hairtunes_cli) {
-    say "Can't find the 'hairtunes' decoder binary, you need to build this before using Shairport.";
-    say "Trying to build it for you anyway...";
-    system("cd ${FindBin::Bin}; make || gmake");
-    die("Nope, didn't work out. Read the INSTALL instructions!") unless -x $hairtunes_cli;
-    say "Phew! Worked out okay, by the looks of it.";
+    die "Can't find the 'hairtunes' decoder binary, you need to build this before using Shairport.";
+    #say "Can't find the 'hairtunes' decoder binary, you need to build this before using Shairport.";
+    #say "Trying to build it for you anyway...";
+    #system("cd ${FindBin::Bin}; make || gmake");
+    #die("Nope, didn't work out. Read the INSTALL instructions!") unless -x $hairtunes_cli;
+    #say "Phew! Worked out okay, by the looks of it.";
 }
 
 GetOptions("a|apname=s" => \$apname,
@@ -134,17 +152,17 @@ $SIG{__DIE__} = sub {
 
 $avahi_publish = fork();
 if ($avahi_publish==0) {
-    exec 'avahi-publish-service',
+    { exec 'avahi-publish-service',
         join('', map { sprintf "%02X", $_ } @hw_addr) . "\@$apname",
         "_raop._tcp",
         "5000",
-        "tp=UDP","sm=false","sv=false","ek=1","et=0,1","cn=0,1","ch=2","ss=16","sr=44100","pw=false","vn=3","txtvers=1";
-    exec 'dns-sd', '-R',
+        "tp=UDP","sm=false","sv=false","ek=1","et=0,1","cn=0,1","ch=2","ss=16","sr=44100","pw=false","vn=3","txtvers=1"; };
+    { exec 'dns-sd', '-R',
         join('', map { sprintf "%02X", $_ } @hw_addr) . "\@$apname",
         "_raop._tcp",
         ".",
         "5000",
-        "tp=UDP","sm=false","sv=false","ek=1","et=0,1","cn=0,1","ch=2","ss=16","sr=44100","pw=false","vn=3","txtvers=1";
+        "tp=UDP","sm=false","sv=false","ek=1","et=0,1","cn=0,1","ch=2","ss=16","sr=44100","pw=false","vn=3","txtvers=1"; };
     die "could not run avahi-publish-service nor dns-sd";
 }
 
@@ -213,7 +231,7 @@ if ($daemon) {
 
 while (1) {
     my @waiting = $sel->can_read;
-    foreach $fh (@waiting) {
+    foreach my $fh (@waiting) {
         if ($fh==$listen) {
             my $new = $listen->accept;
             printf "new connection from %s\n", $new->sockhost;
