@@ -20,6 +20,12 @@ Perl modules (install from CPAN if needed e.g. `perl -MCPAN -e 'install X'`):
     make
     perl shairport.pl
 
+## Redhat/Fedora:
+
+    yum install openssl-devel libao libao-devel perl-Crypt-OpenSSL-RSA perl-IO-Socket-INET6 perl-libwww-perl avahi-tools
+    make
+    perl shairport.pl
+
 ## Mac OS X:
 
   * install XCode
