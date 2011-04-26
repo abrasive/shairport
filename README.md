@@ -37,6 +37,10 @@ Contributors
 * [Vincent Gijsen](mailto:vtj.gijsen@gmail.com)
 * [lars](mailto:lars@namsral.com)
 
+See also
+--------
+There is a Java port [here](https://github.com/bencall/RPlay).
+
 Changelog
 ---------
 * 0.01  April 5, 2011
