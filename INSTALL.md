@@ -41,7 +41,7 @@ Perl modules (install from CPAN if needed e.g. `perl -MCPAN -e 'install X'`):
         $ perl -MCPAN -e 'install IO::Socket::INET6'
         $ perl shairport.pl
 
-  Users of OS X 10.5 and below will need to install a newer perl by running `port/brew install perl`
+  Users of OS X 10.5 and below will need to install a newer Perl (via `port`/`brew`).
 
 ### How to run as a daemon on Mac 10.6
 
