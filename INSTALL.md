@@ -35,7 +35,7 @@ Perl modules (install from CPAN if needed e.g. `perl -MCPAN -e 'install X'`):
 
         $ export ARCHFLAGS="-arch x86_64" (replace x86_64 by your arch)
         $ brew install pkg-config libao # for [Homebrew](https://github.com/mxcl/homebrew)
-        $ port install libao # for [MacPorts](http://www.macports.org/)
+        $ port install pkgconfig libao # for [MacPorts](http://www.macports.org/)
         $ make
         $ perl -MCPAN -e 'install Crypt::OpenSSL::RSA'
         $ perl -MCPAN -e 'install IO::Socket::INET6'
