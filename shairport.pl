@@ -62,10 +62,8 @@ my $hairtunes_cli = $FindBin::Bin . '/hairtunes';
 
 unless (-x $hairtunes_cli) {
     say "Can't find the 'hairtunes' decoder binary, you need to build this before using Shairport.";
-    say "Trying to build it for you anyway...";
-    system("cd ${FindBin::Bin}; make || gmake");
-    die("Nope, didn't work out. Read the INSTALL instructions!") unless -x $hairtunes_cli;
-    say "Phew! Worked out okay, by the looks of it.";
+    say "Read the INSTALL instructions!";
+    exit(1);
 }
 
 GetOptions("a|apname=s" => \$apname,
