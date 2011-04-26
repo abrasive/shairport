@@ -1,18 +1,4 @@
-#!/bin/sh
-if test -n "`perl -V | grep "5\.0"`"
-then
-   echo -n "FATAL: You appear to have perl "
-   for WORD in `perl -v | grep "^This is "`
-   do
-       echo $WORD
-   done | grep "5" | xargs echo -n
-   echo ", but at least version 5.10.0 is required."
-   exit 1
-fi
-exec perl -wx $0 "$@"
-   if 0;
-#!perl -w
-#line 16
+#!/usr/bin/env perl
 
 #   ShairPort - Airtunes compatible server
 #   Copyright (c) 2011 James Laird
