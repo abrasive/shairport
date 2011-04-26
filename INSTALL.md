@@ -10,6 +10,7 @@ You need the following installed:
 
 Perl modules (install from CPAN if needed e.g. `perl -MCPAN -e 'install X'`):
 
+ * HTTP::Request
  * HTTP::Message
  * Crypt::OpenSSL::RSA
  * IO::Socket::INET6
