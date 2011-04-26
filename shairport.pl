@@ -64,7 +64,7 @@ my $hairtunes_cli = $FindBin::Bin . '/hairtunes';
 my $help;
 
 unless (-x $hairtunes_cli) {
-    say "Can't find the 'hairtunes' decoder binary, you need to build this before using Shairport.";
+    say "Can't find the 'hairtunes' decoder binary, you need to build this before using ShairPort.";
     say "Read the INSTALL instructions!";
     exit(1);
 }
