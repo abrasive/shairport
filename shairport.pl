@@ -27,8 +27,11 @@ use 5.10.0;
 
 use strict;
 
+use constant PORT => 5000;
+
 use Getopt::Long;
 use FindBin;
+use File::Basename;
 
 use IO::Select;
 use IO::Socket;
@@ -43,17 +46,13 @@ eval "use IO::Socket::INET6;";
 
 my $shairportversion = "0.05";
 
-# Configure the following two options:
-# AP name - as will be shown in iTunes' menu
-# example:
-#  my $apname = "SteePort";
-
 my $apname = "ShairPort $$ on " . `hostname`;
 # password - required to connect
 # for no password, set:
 my $password = '';
 # output to a pipe?
 my $pipepath;
+# detach
 my $daemon;
 # ao options
 my $libao_driver;
@@ -61,6 +60,11 @@ my $libao_devicename;
 my $libao_deviceid;
 # suppose hairtunes is under same directory
 my $hairtunes_cli = $FindBin::Bin . '/hairtunes';
+# output debugging information
+my $verbose;
+# where to write PID
+my $writepid;
+# show help
 my $help;
 
 unless (-x $hairtunes_cli) {
@@ -76,12 +80,14 @@ GetOptions("a|apname=s" => \$apname,
           "ao_driver=s" => \$libao_driver,
           "ao_devicename=s" => \$libao_devicename,
           "ao_deviceid=s" => \$libao_deviceid,
+          "v|verbose" => \$verbose,
+          "w|writepid=s" => \$writepid,
           "h|help" => \$help);
 
 sub usage {
     print "ShairPort version $shairportversion - Airport Express emulator\n".
           "Usage:\n".
-          "$0 [OPTION...]\n".
+          basename($0) . " [OPTION...]\n".
           "\n".
           "Options:\n".
           "  -a, --apname=AirPort            Sets AirPort name\n".
@@ -91,19 +97,27 @@ sub usage {
           "      --ao_devicename=devicename  Sets the ao device name (optional)\n",
           "      --ao_deviceid=id            Sets the ao device id (optional)\n",
           "  -d                              Daemon mode\n",
+          "  -w  --writepid=path             Write PID to this location\n",
+          "  -v  --verbose                   Print debugging messages\n",
           "  -h, --help                      This help\n",
           "\n";
     exit;
 }
 
 if (defined($help) && $help == 1) { usage(); }
+# ensure that $verbose is set, one way or another...
+if (defined($verbose) && $verbose) {
+    $verbose = 1;
+} else {
+    $verbose = 0;
+}
 
 chomp $apname;
 
 my @hw_addr = (0, map { int rand 256 } 1..5);
 
 sub POPE {
-    print "broken pipe\n";
+    print "Broken pipe\n" if $verbose;
     $SIG{PIPE} = \&POPE;
 }
 $SIG{PIPE} = \&POPE;
@@ -113,9 +127,9 @@ our $avahi_publish;
 
 sub REAP {
     if ($avahi_publish == waitpid(-1, WNOHANG)) {
-        die("Avahi publishing failed! Do you have avahi-publish-service on your PATH?");
+        die("avahi daemon terminated or 'avahi-publish-service' binary not found");
     }
-    printf("***CHILD EXITED***\n");
+    print("Child exited\n") if $verbose;
     $SIG{CHLD} = \&REAP;
 };
 $SIG{CHLD} = \&REAP;
@@ -123,7 +137,7 @@ $SIG{CHLD} = \&REAP;
 my %conns;
 
 $SIG{TERM} = $SIG{INT} = sub {
-    print "killed\n";
+    print basename($0) . " killed\n";
     map { eval { kill $_->{decoder_pid} } } keys %conns;
     kill 9, $avahi_publish if $avahi_publish;
     exit 0;
@@ -138,13 +152,13 @@ if ($avahi_publish==0) {
     { exec 'avahi-publish-service',
         join('', map { sprintf "%02X", $_ } @hw_addr) . "\@$apname",
         "_raop._tcp",
-        "5000",
+         PORT,
         "tp=UDP","sm=false","sv=false","ek=1","et=0,1","cn=0,1","ch=2","ss=16","sr=44100","pw=false","vn=3","txtvers=1"; };
     { exec 'dns-sd', '-R',
         join('', map { sprintf "%02X", $_ } @hw_addr) . "\@$apname",
         "_raop._tcp",
         ".",
-        "5000",
+         PORT,
         "tp=UDP","sm=false","sv=false","ek=1","et=0,1","cn=0,1","ch=2","ss=16","sr=44100","pw=false","vn=3","txtvers=1"; };
     die "could not run avahi-publish-service nor dns-sd";
 }
@@ -158,7 +172,7 @@ my $listen;
         local $SIG{__DIE__};
         $listen = new IO::Socket::INET6(Listen => 1,
                             Domain => AF_INET6,
-                            LocalPort => 5000,
+                            LocalPort => PORT,
                             ReuseAddr => 1,
                             Proto => 'tcp');
     };
@@ -170,11 +184,11 @@ my $listen;
     }
 
     $listen ||= new IO::Socket::INET(Listen => 1,
-            LocalPort => 5000,
+            LocalPort => PORT,
             ReuseAddr => 1,
             Proto => 'tcp');
 }
-die "Can't listen on port 5000: $!" unless $listen;
+die "Can't listen on port " . PORT . ": $!" unless $listen;
 
 sub ip6bin {
     my $ip = shift;
@@ -192,42 +206,44 @@ sub ip6bin {
 
 my $sel = new IO::Select($listen);
 
-print "listening...\n";
-
-
 if ($daemon) {
-   use POSIX;
-   POSIX::setsid or die "setsid: $!";
-   my $pid = fork();
-   if ($pid < 0) {
-      die "fork: $!";
-   } elsif ($pid) {
-      exit 0;
-   }
-   chdir "/";
-   umask 0;
-   open (STDIN, "</dev/null");
-   open (STDOUT, ">/dev/null");
-   open (STDERR, ">&STDOUT");
-};
+    chdir "/" or die "Could not chdir to '/': $!";
+    umask 0;
+    open STDIN, "/dev/null" or die "Could not redirect /dev/null to STDIN(0): $!";
+    open STDOUT, ">/dev/null" or die "Could not redirect STDOUT(1) to /dev/null: $!";
+    defined( my $pid = fork() ) or die "Could not fork: $!";
+    exit 0 if $pid;
+    setsid() or die "Could not start new session: $!";
+    open STDERR, ">&STDOUT" or die "Could not dup STDOUT(1)";
+}
+if (defined($writepid) && $writepid) {
+    open PID, ">$writepid" or die "Could not create PID file '$writepid': $!";
+    print PID $$;
+    close PID;
+}
 
+print "Listening...\n" if $verbose;
 
 while (1) {
     my @waiting = $sel->can_read;
     foreach my $fh (@waiting) {
         if ($fh==$listen) {
             my $new = $listen->accept;
-            printf "new connection from %s\n", $new->sockhost;
+            printf "New connection from %s\n", $new->sockhost if $verbose;
 
             $sel->add($new);
             $new->blocking(0);
             $conns{$new} = {fh => $fh};
         } else {
             if (eof($fh)) {
-                print "closed: $fh\n";
+                print "Closed: $fh\n" if $verbose;
                 $sel->remove($fh);
                 close $fh;
-                eval { kill $conns{$fh}{decoder_pid} };
+                # Prevent warnings when decoder_pid isn't defined
+                # (e.g. client connected, but playback not started)
+                if (defined($conns{$fh}{decoder_pid})) {
+                    eval { kill $conns{$fh}{decoder_pid} };
+                }
                 delete $conns{$fh};
                 next;
             }
@@ -237,6 +253,9 @@ while (1) {
         }
     }
 }
+
+exit(1); # Unreachable
+
 
 sub conn_handle_data {
     my $fh = shift;
@@ -257,7 +276,7 @@ sub conn_handle_data {
     if ($conn->{data} =~ /(\r\n\r\n|\n\n|\r\r)/) {
         my $req_data = substr($conn->{data}, 0, $+[0], '');
         $conn->{req} = HTTP::Request->parse($req_data);
-        printf "REQ: %s\n", $conn->{req}->method;
+        printf "REQ: %s\n", $conn->{req}->method if $verbose;
         conn_handle_request($fh, $conn);
         conn_handle_data($fh) if length($conn->{data});
     }
@@ -381,7 +400,7 @@ sub conn_handle_request {
             my $portdesc = <$dec_out>;
             die("Expected port number from decoder; got $portdesc") unless $portdesc =~ /^port: (\d+)/;
             my $port = $1;
-            print "launched decoder: $decoder on port: $port\n";
+            print "launched decoder: $decoder on port: $port\n" if $verbose;
             $resp->header('Transport', $req->header('Transport') . ";server_port=$port");
             last;
         };
