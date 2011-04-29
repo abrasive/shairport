@@ -23,18 +23,24 @@
 #        FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 #        OTHER DEALINGS IN THE SOFTWARE.
 
-use 5.10.0;
-
 use strict;
+
+use 5.10.0;
+# For given() { when() { } ... }
+use feature ":5.10";
+
+use constant PORT => 5000;
 
 use Getopt::Long;
 use FindBin;
+use File::Basename;
 
 use IO::Select;
 use IO::Socket;
 use MIME::Base64;
 use HTTP::Request;
 use HTTP::Response;
+use URI::Escape;
 use IPC::Open2;
 use Crypt::OpenSSL::RSA;
 use Digest::MD5 qw/md5_hex/;
@@ -43,17 +49,13 @@ eval "use IO::Socket::INET6;";
 
 my $shairportversion = "0.05";
 
-# Configure the following two options:
-# AP name - as will be shown in iTunes' menu
-# example:
-#  my $apname = "SteePort";
-
 my $apname = "ShairPort $$ on " . `hostname`;
 # password - required to connect
 # for no password, set:
 my $password = '';
 # output to a pipe?
 my $pipepath;
+# detach
 my $daemon;
 # ao options
 my $libao_driver;
@@ -61,6 +63,19 @@ my $libao_devicename;
 my $libao_deviceid;
 # suppose hairtunes is under same directory
 my $hairtunes_cli = $FindBin::Bin . '/hairtunes';
+# Integrate with Squeezebox Server
+my $squeeze;
+# SBS CLI port
+my $cliport;
+# SB target
+my $mac;
+# SB volume
+my $volume;
+# output debugging information
+my $verbose;
+# where to write PID
+my $writepid;
+# show help
 my $help;
 
 unless (-x $hairtunes_cli) {
@@ -76,12 +91,18 @@ GetOptions("a|apname=s" => \$apname,
           "ao_driver=s" => \$libao_driver,
           "ao_devicename=s" => \$libao_devicename,
           "ao_deviceid=s" => \$libao_deviceid,
+          "v|verbose" => \$verbose,
+          "w|writepid=s" => \$writepid,
+          "s|squeezebox" => \$squeeze,
+          "c|cliport=s" => \$cliport,
+          "m|mac=s" => \$mac,
+          "l|volume=s" => \$volume,
           "h|help" => \$help);
 
 sub usage {
     print "ShairPort version $shairportversion - Airport Express emulator\n".
           "Usage:\n".
-          "$0 [OPTION...]\n".
+          basename($0) . " [OPTION...]\n".
           "\n".
           "Options:\n".
           "  -a, --apname=AirPort            Sets AirPort name\n".
@@ -90,32 +111,126 @@ sub usage {
           "      --ao_driver=driver          Sets the ao driver (optional)\n",
           "      --ao_devicename=devicename  Sets the ao device name (optional)\n",
           "      --ao_deviceid=id            Sets the ao device id (optional)\n",
+          "  -s  --squeezebox                Enables local Squeezebox Server integration\n",
+          "  -c  --cliport=port              Sets the SBS CLI port\n",
+          "  -m  --mac=address               Sets the SB target device\n",
+          "  -l  --volume=level              Sets the SB volume level (in %)\n",
           "  -d                              Daemon mode\n",
+          "  -w  --writepid=path             Write PID to this location\n",
+          "  -v  --verbose                   Print debugging messages\n",
           "  -h, --help                      This help\n",
           "\n";
     exit;
 }
 
 if (defined($help) && $help == 1) { usage(); }
+# ensure that $verbose is set, one way or another...
+if (defined($verbose) && $verbose) {
+    $verbose = 1;
+} else {
+    $verbose = 0;
+}
 
+$cliport = ( (defined( $cliport ) && $cliport && $cliport =~ m/^[0-9]+/ && $cliport > 1023 && $cliport < 65536 ) ? $cliport : 9090 );
+
+$volume = ( (defined( $volume ) && $volume && $volume =~ m/^[0-9]+/ && $volume >= 0 && $volume <= 101 ) ? $volume : undef );
+
+if (defined($squeeze) && $squeeze) {
+    my $players;
+    my @details;
+
+    my $response;
+    my $socket = IO::Socket::INET -> new (
+          PeerAddr => "127.0.0.1"
+        , PeerPort => $cliport
+        , Proto    => 'tcp'
+        , Timeout  => 1
+    );
+    if( !( $socket ) ) {
+        print "ERROR: Could not create socket to interface with SqueezeBox Server on port $cliport: $!\n";
+        print "WARN:  Disabling Squeezebox Server integration\n";
+        undef $squeeze;
+    }
+    if( $squeeze ) {
+        print $socket "player count ?\n";
+        $response = <$socket>;
+        if( !( defined( $response ) ) ) {
+            print "ERROR: Could not communicate with SqueezeBox Server on port $cliport\n";
+            print "WARN:  Disabling Squeezebox Server integration\n";
+            undef $squeeze;
+        } else {
+            $players = ( $response =~ m/^player count ([0-9]+)$/ );
+            print $socket "players 0 $players\n";
+            $response = <$socket>;
+            @details = split( /playerindex%3A/ , $response );
+            close( $socket );
+            shift( @details );
+            for( my $n = 0; $n <= scalar( @details ); $n++ ) {
+                if( defined( $details[ $n ] ) ) {
+                    my $address = $details[ $n ];
+                    $address =~ s/^.*playerid%3A([[:xdigit:]%]+)\s.*$/$1/;
+                    $address =~ s/%3A/:/g;
+                    chomp $address;
+                    $details[ $n ] = $address;
+                }
+            }
+            print "Discovered players: $players\n" if $verbose;
+            print "Player MAC addresses:\n" if $verbose;
+            foreach my $address (@details) {
+                print "\t$address\n" if( ( defined( $address ) && $address ) && $verbose );
+            }
+        
+            if( defined( $mac ) && $mac ) {
+                chomp $mac;
+                if( !( grep { lc( $_ ) eq lc( $mac ) } @details ) ) {
+                    print "ERROR: Invalid or non-present MAC specified.\n\n";
+                    print "Please select a target MAC address from:\n";
+                    foreach my $address (@details) {
+                        print "\t$address\n" if( defined( $address ) && $address );
+                    }
+                    exit(1);
+                }
+            } else {
+                if( 1 == $players ) {
+                    $mac = $details[ 0 ];
+                    print "WARN: No Squeezebox player specified, using $mac.\n";
+                } else {
+                    print "ERROR: No Squeezebox player specified, please select a target MAC address with the '--mac' option with a value from:\n";
+                    foreach my $address (@details) {
+                        print "\t$address\n" if( defined( $address ) && $address );
+                    }
+                    exit(1);
+                }
+            }
+            $mac = uri_escape( $mac ) if( defined( $mac ) && $mac );
+        }
+    }
+};
 chomp $apname;
 
 my @hw_addr = (0, map { int rand 256 } 1..5);
 
 sub POPE {
-    print "broken pipe\n";
+    print "Broken pipe\n" if $verbose;
     $SIG{PIPE} = \&POPE;
 }
 $SIG{PIPE} = \&POPE;
 
 
 our $avahi_publish;
+our $squeezebox_setup;
 
 sub REAP {
-    if ($avahi_publish == waitpid(-1, WNOHANG)) {
-        die("Avahi publishing failed! Do you have avahi-publish-service on your PATH?");
+    my $pid = waitpid( -1, WNOHANG );
+    given( $pid ) {
+        when( $avahi_publish ) {
+            die( "avahi daemon terminated or 'avahi-publish-service' binary not found" );
+        }
+        when( $squeezebox_setup ) {
+            print( "Squeezebox configuration routine completed\n" ) if $verbose;
+        }
     }
-    printf("***CHILD EXITED***\n");
+    print("Child exited\n") if $verbose;
     $SIG{CHLD} = \&REAP;
 };
 $SIG{CHLD} = \&REAP;
@@ -123,14 +238,24 @@ $SIG{CHLD} = \&REAP;
 my %conns;
 
 $SIG{TERM} = $SIG{INT} = sub {
-    print "killed\n";
+    print basename($0) . " killed\n";
     map { eval { kill $_->{decoder_pid} } } keys %conns;
     kill 9, $avahi_publish if $avahi_publish;
+    # Clean up any running squeezebox_setup processes...
+    my $child;
+    do {
+        $child = waitpid( -1, WNOHANG );
+    } while $child > 0;
     exit 0;
 };
 $SIG{__DIE__} = sub {
     map { eval { kill $_->{decoder_pid} } } keys %conns;
     kill 9, $avahi_publish if $avahi_publish;
+    # Clean up any running squeezebox_setup processes...
+    my $child;
+    do {
+        $child = waitpid( -1, WNOHANG );
+    } while $child > 0;
 };
 
 $avahi_publish = fork();
@@ -138,13 +263,13 @@ if ($avahi_publish==0) {
     { exec 'avahi-publish-service',
         join('', map { sprintf "%02X", $_ } @hw_addr) . "\@$apname",
         "_raop._tcp",
-        "5000",
+         PORT,
         "tp=UDP","sm=false","sv=false","ek=1","et=0,1","cn=0,1","ch=2","ss=16","sr=44100","pw=false","vn=3","txtvers=1"; };
     { exec 'dns-sd', '-R',
         join('', map { sprintf "%02X", $_ } @hw_addr) . "\@$apname",
         "_raop._tcp",
         ".",
-        "5000",
+         PORT,
         "tp=UDP","sm=false","sv=false","ek=1","et=0,1","cn=0,1","ch=2","ss=16","sr=44100","pw=false","vn=3","txtvers=1"; };
     die "could not run avahi-publish-service nor dns-sd";
 }
@@ -158,7 +283,7 @@ my $listen;
         local $SIG{__DIE__};
         $listen = new IO::Socket::INET6(Listen => 1,
                             Domain => AF_INET6,
-                            LocalPort => 5000,
+                            LocalPort => PORT,
                             ReuseAddr => 1,
                             Proto => 'tcp');
     };
@@ -170,11 +295,11 @@ my $listen;
     }
 
     $listen ||= new IO::Socket::INET(Listen => 1,
-            LocalPort => 5000,
+            LocalPort => PORT,
             ReuseAddr => 1,
             Proto => 'tcp');
 }
-die "Can't listen on port 5000: $!" unless $listen;
+die "Can't listen on port " . PORT . ": $!" unless $listen;
 
 sub ip6bin {
     my $ip = shift;
@@ -192,42 +317,189 @@ sub ip6bin {
 
 my $sel = new IO::Select($listen);
 
-print "listening...\n";
-
-
 if ($daemon) {
-   use POSIX;
-   POSIX::setsid or die "setsid: $!";
-   my $pid = fork();
-   if ($pid < 0) {
-      die "fork: $!";
-   } elsif ($pid) {
-      exit 0;
-   }
-   chdir "/";
-   umask 0;
-   open (STDIN, "</dev/null");
-   open (STDOUT, ">/dev/null");
-   open (STDERR, ">&STDOUT");
-};
+    chdir "/" or die "Could not chdir to '/': $!";
+    umask 0;
+    open STDIN, "/dev/null" or die "Could not redirect /dev/null to STDIN(0): $!";
+    open STDOUT, ">/dev/null" or die "Could not redirect STDOUT(1) to /dev/null: $!";
+    defined( my $pid = fork() ) or die "Could not fork: $!";
+    exit 0 if $pid;
+    setsid() or die "Could not start new session: $!";
+    open STDERR, ">&STDOUT" or die "Could not dup STDOUT(1)";
+}
+if (defined($writepid) && $writepid) {
+    open PID, ">$writepid" or die "Could not create PID file '$writepid': $!";
+    print PID $$;
+    close PID;
+}
 
+print "Listening...\n" if $verbose;
+
+sub performSqueezeboxSetup {
+    $squeezebox_setup = fork();
+    if( 0 == $squeezebox_setup ) {
+        my $items;
+        my @favourites;
+        my @ids;
+        my $index;
+
+        my $response;
+
+        my $findFavourites = sub {
+            my ( $socket ) = @_;
+            print $socket "favorites items\n";
+            $response = <$socket>;
+            $response =~ s/^\s*favorites\s+items\s+count%3A([0-9]+)\s*$/$1/;
+            $items = $response;
+            print "Found $items favourites...\n" if $verbose;
+
+            print $socket "favorites items 0 $items want_url%3A1\n";
+            $response = <$socket>;
+            undef( @favourites );
+            @favourites = split( /id%3A/ , $response );
+            @ids = split( /id%3A/ , $response );
+            shift( @favourites );
+            shift( @ids );
+            for( my $n = 0; $n <= scalar( @favourites ); $n++ ) {
+                if( defined( $favourites[ $n ] ) ) {
+                    my $url = $favourites[ $n ];
+                    $url =~ s/^.*url%3A([^ ]+)\s.*$/$1/;
+                    $url = uri_unescape( $url );
+                    chomp $url;
+                    print "\tFavourite with URL '$url' " if $verbose;
+                    $favourites[ $n ] = $url;
+                }
+                if( defined( $ids[ $n ] ) ) {
+                    my $id = $ids[ $n ];
+                    $id =~ s/^([^ ]+)\s.*$/$1/;
+                    chomp $id;
+                    my @components = split( /\./, $id );
+                    shift ( @components );
+                    $id = join( '.', @components );
+                    print "and ID '$id'\n" if $verbose;
+                    $ids[ $n ] = $id;
+                }
+            }
+        };
+
+        my $socket = IO::Socket::INET -> new (
+              PeerAddr => "127.0.0.1"
+            , PeerPort => ( (defined( $cliport ) and $cliport ) ? $cliport : 9090 )
+            , Proto    => 'tcp'
+            , Timeout  => 1
+        ) or die "Could not create socket: $!";
+
+        &$findFavourites( $socket );
+
+        print "Favourites URLs:\n" if $verbose;
+        foreach my $url (@favourites) {
+            print "\t$url\n" if( ( defined( $url ) && $url ) && $verbose );
+        }
+        my $okay = 1;
+        if( !( grep { $_ =~ m/^wavin:/ } @favourites ) ) {
+            $okay = 0;
+            print "INFO: AirPlay 'wavin' Favourite does not exist - creating... ";
+            print $socket "favorites add url%3Awavin%3Aairplay title%3AAirPlay\n";
+            $response = <$socket>;
+            if( $response =~ m/\scount%3A1/ ) {
+                print "done\nINFO: AirPlay 'wavin' favourite successfully created.\n";
+                $okay = 1;
+            } else {
+                print "failed\nWARN: Could not create AirPlay favourite\n";
+                print "      Server response was $response\n";
+            }
+            if( $okay ) {
+                &$findFavourites( $socket );
+
+                print "Updated Favourites URLs:\n" if $verbose;
+                foreach my $url (@favourites) {
+                    print "\t$url\n" if( ( defined( $url ) && $url ) && $verbose );
+                }
+                if( !( grep { $_ =~ m/^wavin:/ } @favourites ) ) {
+                    print "WARN: Cloud not identify AirPlay Favourite, even after creating it - disabling SqueezeBox integration\n";
+                    $squeeze = 0;
+                    $okay = 0;
+                }
+            }
+        }
+        if( $okay ) {
+            for ( my $n = 0 ; !( defined( $index ) ) && $n <= scalar( @favourites ) ; $n++ ) {
+                if( $favourites[ $n ] =~ m/^wavin:/ ) {
+                    $index = $n;
+                    print "Found favourite '" . $favourites[ $index ] . "' with ID '" . $ids[ $index ] . "' at position $index.\n" if $verbose;
+                }
+            }
+            #print "Turning on player... " if $verbose;
+            # For some reason, this one dies...
+            #eval {
+            #    local $SIG{ALRM} = sub { die "Socket Operation Timed Out" };
+            #    print $socket "$mac power 1\n";
+            #    alarm 1;
+            #    $response = <$socket>;
+            #    print "$response\n" if $verbose;
+            #    alarm 0;
+            #};
+            #... even within an eval{} loop?!
+
+            print "Showing message... " if $verbose;
+            print $socket "$mac show line2%3AStarting%20AirPlay duration%3A5 brightness%3ApowerOn font%3Ahuge\n";
+            $response = <$socket>;
+            print "$response\n" if $verbose;
+
+            if( defined( $volume ) ) {
+                print "Setting player volume... " if $verbose;
+                print $socket "$mac mixer volume $volume\n";
+                $response = <$socket>;
+                print "$response\n" if $verbose;
+            }
+
+            print "Unmuting player... " if $verbose;
+            print $socket "$mac mixer muting 0\n";
+            $response = <$socket>;
+            print "$response\n" if $verbose;
+
+            if( defined( $index ) ) {
+                print "Playing favourite... " if $verbose;
+                my $id = uri_escape( $ids[ $index ] );
+                print $socket "$mac favorites playlist play item_id%3A$id\n";
+                $response = <$socket>;
+            } else {
+                print "Resuming play... " if $verbose;
+                print $socket "$mac play\n";
+                $response = <$socket>;
+            }
+            print "$response\n" if $verbose;
+        }
+        close( $socket );
+
+        exit(0);
+    }
+};
 
 while (1) {
     my @waiting = $sel->can_read;
     foreach my $fh (@waiting) {
         if ($fh==$listen) {
             my $new = $listen->accept;
-            printf "new connection from %s\n", $new->sockhost;
+            printf "New connection from %s\n", $new->sockhost if $verbose;
 
             $sel->add($new);
             $new->blocking(0);
             $conns{$new} = {fh => $fh};
+
+            if (defined($squeeze) && $squeeze) {
+                &performSqueezeboxSetup();
+            }
         } else {
             if (eof($fh)) {
-                print "closed: $fh\n";
+                print "Closed: $fh\n" if $verbose;
                 $sel->remove($fh);
                 close $fh;
-                eval { kill $conns{$fh}{decoder_pid} };
+                # Prevent warnings when decoder_pid isn't defined
+                # (e.g. client connected, but playback not started)
+                if (defined($conns{$fh}{decoder_pid})) {
+                    eval { kill $conns{$fh}{decoder_pid} };
+                }
                 delete $conns{$fh};
                 next;
             }
@@ -237,6 +509,9 @@ while (1) {
         }
     }
 }
+
+exit(1); # Unreachable
+
 
 sub conn_handle_data {
     my $fh = shift;
@@ -257,7 +532,7 @@ sub conn_handle_data {
     if ($conn->{data} =~ /(\r\n\r\n|\n\n|\r\r)/) {
         my $req_data = substr($conn->{data}, 0, $+[0], '');
         $conn->{req} = HTTP::Request->parse($req_data);
-        printf "REQ: %s\n", $conn->{req}->method;
+        printf "REQ: %s\n", $conn->{req}->method if $verbose;
         conn_handle_request($fh, $conn);
         conn_handle_data($fh) if length($conn->{data});
     }
@@ -381,7 +656,7 @@ sub conn_handle_request {
             my $portdesc = <$dec_out>;
             die("Expected port number from decoder; got $portdesc") unless $portdesc =~ /^port: (\d+)/;
             my $port = $1;
-            print "launched decoder: $decoder on port: $port\n";
+            print "launched decoder: $decoder on port: $port\n" if $verbose;
             $resp->header('Transport', $req->header('Transport') . ";server_port=$port");
             last;
         };
