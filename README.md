@@ -36,6 +36,7 @@ Contributors
 * [Rakuraku Jyo](mailto:jyo.rakuraku@gmail.com)
 * [Vincent Gijsen](mailto:vtj.gijsen@gmail.com)
 * [lars](mailto:lars@namsral.com)
+* [Stuart Shelton](https://blog.stuart.shelton.me/)
 
 See also
 --------
