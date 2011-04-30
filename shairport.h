@@ -1,15 +1,18 @@
-#include "stdio.h"
-#include "string.h"
-#include "unistd.h"
-#include "openssl/bio.h"
-#include "openssl/ssl.h"
-#include "openssl/err.h"
+#ifndef __SHAIRPORT_H__
+#define __SHAIRPORT_H__
+
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <openssl/bio.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
 #include "socketlib.h"
-#include "regex.h"
+#include <regex.h>
 #include <sys/types.h>
 #include <regex.h>
 
-#define DONT_USE_HAIRTUNES_MAIN
+
 #define HWID_SIZE 6
 #define SHAIRPORT_LOG 1
 #define LOG_INFO     1
@@ -77,3 +80,5 @@ int buildAppleResponse(struct connection *pConn, char *pIpStr, char *pHwAddr);
 void sim(int pLevel, char *pValue1, char *pValue2);
 void slog(int pLevel, char *pFormat, ...);
 int  isLogEnabledFor(int pLevel);
+
+#endif
