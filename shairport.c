@@ -24,10 +24,20 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "fcntl.h"
+#include <fcntl.h>
 #include "socketlib.h"
 #include "shairport.h"
+
+#define DONT_USE_HAIRTUNES_MAIN
 #include "hairtunes.c" // couldn't figure out how to allow both mains.
+
+
+#ifndef TRUE
+#define TRUE (-1)
+#endif
+#ifndef FALSE
+#define FALSE (0)
+#endif
 
 // TEMP
 
