@@ -44,7 +44,7 @@ use URI::Escape;
 use IPC::Open2;
 use Crypt::OpenSSL::RSA;
 use Digest::MD5 qw/md5_hex/;
-use POSIX ":sys_wait_h";
+use POSIX qw/sys_wait_h setsid/;
 eval "use IO::Socket::INET6;";
 
 my $shairportversion = "0.05";
