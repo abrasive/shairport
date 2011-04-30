@@ -36,6 +36,8 @@
 #include <openssl/aes.h>
 #include <math.h>
 #include <sys/stat.h>
+
+#include "hairtunes.h"
 #include <sys/signal.h>
 #include <fcntl.h>
 #include <ao/ao.h>
@@ -161,11 +163,84 @@ int init_decoder(void) {
     return 0;
 }
 
+int hairtunes_init(char *pAeskey, char *pAesiv, char *fmtpstr, int pCtrlPort, int pTimingPort,
+         int pDataPort, char *pRtpHost, char*pPipeName, char *pLibaoDriver, char *pLibaoDeviceName, char *pLibaoDeviceId)
+{
+    if(pAeskey != NULL)    
+        memcpy(aeskey, pAeskey, sizeof(aeskey));
+    if(pAesiv != NULL)
+        memcpy(aesiv, pAesiv, sizeof(aesiv));
+    if(pRtpHost != NULL)
+        rtphost = pRtpHost;
+    if(pPipeName != NULL)
+        pipename = pPipeName;
+    if(pLibaoDriver != NULL)
+        libao_driver = pLibaoDriver;
+    if(pLibaoDeviceName != NULL)
+        libao_devicename = pLibaoDeviceName;
+    if(pLibaoDeviceId != NULL)
+        libao_deviceid = pLibaoDeviceId;
+    
+    controlport = pCtrlPort;
+    timingport = pTimingPort;
+    dataport = pDataPort;
+
+    AES_set_decrypt_key(aeskey, 128, &aes);
+
+    memset(fmtp, 0, sizeof(fmtp));
+    int i = 0;
+    char *arg;
+    while ( (arg = strsep(&fmtpstr, " \t")) )
+        fmtp[i++] = atoi(arg);
+
+    init_decoder();
+    init_buffer();
+    init_rtp();      // open a UDP listen port and start a listener; decode into ring buffer
+    fflush(stdout);
+    init_output();              // resample and output from ring buffer
+
+    char line[128];
+    int in_line = 0;
+    int n;
+    double f;
+    while (fgets(line + in_line, sizeof(line) - in_line, stdin)) {
+        n = strlen(line);
+        if (line[n-1] != '\n') {
+            in_line = strlen(line) - 1;
+            if (n == sizeof(line)-1)
+                in_line = 0;
+            continue;
+        }
+        if (sscanf(line, "vol: %lf\n", &f)) {
+            assert(f<=0);
+            if (debug)
+                fprintf(stderr, "VOL: %lf\n", f);
+            volume = pow(10.0,0.05*f);
+            fix_volume = 65536.0 * volume;
+            continue;
+        }
+        if (!strcmp(line, "exit\n")) {
+            exit(0);
+        }
+        if (!strcmp(line, "flush\n")) {
+            pthread_mutex_lock(&ab_mutex);
+            ab_resync();
+            pthread_mutex_unlock(&ab_mutex);
+            if (debug)
+                fprintf(stderr, "FLUSH\n");
+        }
+    }
+    fprintf(stderr, "bye!\n");
+    fflush(stderr);
+
+    return EXIT_SUCCESS;
+}
+
+#ifndef DONT_USE_HAIRTUNES_MAIN
 int main(int argc, char **argv) {
     char *hexaeskey = 0, *hexaesiv = 0;
     char *fmtpstr = 0;
     char *arg;
-    int i;
     assert(RAND_MAX >= 0x10000);    // XXX move this to compile time
     while ( (arg = *++argv) ) {
         if (!strcasecmp(arg, "iv")) {
@@ -234,55 +309,10 @@ int main(int argc, char **argv) {
         die("can't understand IV");
     if (hex2bin(aeskey, hexaeskey))
         die("can't understand key");
-    AES_set_decrypt_key(aeskey, 128, &aes);
-
-    memset(fmtp, 0, sizeof(fmtp));
-    i = 0;
-    while ( (arg = strsep(&fmtpstr, " \t")) )
-        fmtp[i++] = atoi(arg);
-
-    init_decoder();
-    init_buffer();
-    init_rtp();      // open a UDP listen port and start a listener; decode into ring buffer
-    fflush(stdout);
-    init_output();              // resample and output from ring buffer
-
-    char line[128];
-    int in_line = 0;
-    int n;
-    double f;
-    while (fgets(line + in_line, sizeof(line) - in_line, stdin)) {
-        n = strlen(line);
-        if (line[n-1] != '\n') {
-            in_line = strlen(line) - 1;
-            if (n == sizeof(line)-1)
-                in_line = 0;
-            continue;
-        }
-        if (sscanf(line, "vol: %lf\n", &f)) {
-            assert(f<=0);
-            if (debug)
-                fprintf(stderr, "VOL: %lf\n", f);
-            volume = pow(10.0,0.05*f);
-            fix_volume = 65536.0 * volume;
-            continue;
-        }
-        if (!strcmp(line, "exit\n")) {
-            exit(0);
-        }
-        if (!strcmp(line, "flush\n")) {
-            pthread_mutex_lock(&ab_mutex);
-            ab_resync();
-            pthread_mutex_unlock(&ab_mutex);
-            if (debug)
-                fprintf(stderr, "FLUSH\n");
-        }
-    }
-    fprintf(stderr, "bye!\n");
-    fflush(stderr);
-
-    return EXIT_SUCCESS;
+    return hairtunes_init(NULL, NULL, fmtpstr, controlport, timingport, dataport,
+                    NULL, NULL, NULL, NULL, NULL);
 }
+#endif
 
 void init_buffer(void) {
     int i;
