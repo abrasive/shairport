@@ -38,10 +38,18 @@ Contributors
 * [lars](mailto:lars@namsral.com)
 * [Stuart Shelton](https://blog.stuart.shelton.me/)
 
-See also
---------
-There is a Java port [here](https://github.com/bencall/RPlay).
-And an OSX GUI wrapper for ShairPort as a menu widget [here](https://github.com/rcarlsen/ShairPortMenu).
+Known Ports and Tools
+---------------------
+Java:
+    [JAirPort](https://github.com/froks/JAirPort)
+    [RPlay](https://github.com/bencall/RPlay).
+
+Windows:
+    [shairport4w](http://sf.net/projects/shairport4w)
+
+OS X:
+    [ShairportMenu](https://github.com/rcarlsen/ShairPortMenu), a GUI wrapper as a menu widget
+    [MacShairport](https://github.com/joshaber/MacShairport)
 
 Changelog
 ---------
