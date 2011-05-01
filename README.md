@@ -41,7 +41,7 @@ Contributors
 See also
 --------
 There is a Java port [here](https://github.com/bencall/RPlay).
-And an OSX GUI wrapper for ShairPort as a menu widget [here](https://github.com/rcarlsen/ShairPortMenu).
+And an OSX GUI wrapper for ShairPort as a menu widget [here](https://github.com/rcarlsen/ShairPortMenu) and a native Cocoa implementation is available [here](https://github.com/joshaber/MacShairport).
 
 Changelog
 ---------
