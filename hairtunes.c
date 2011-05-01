@@ -51,10 +51,9 @@ int debug = 0;
 
 #include "alac.h"
 
-// default buffer - about half a second
-//Changed these values to make sound synchronized with airport express during multi-room broadcast.
-
-#define BUFFER_FRAMES  512
+// default buffer size
+#define BUFFER_FRAMES  320
+// and how full it needs to be to begin (must be <BUFFER_FRAMES)
 #define START_FILL    282
 
 
