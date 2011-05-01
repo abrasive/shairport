@@ -465,7 +465,7 @@ void rtp_request_resend(seq_t first, seq_t last) {
 #else
     rtp_client.sin_port = htons(controlport);
 #endif
-    sendto(rtp_sockets[1], req, sizeof(req), 0, (struct sockaddr *)&rtp_client, sizeof(struct sockaddr_in));
+    sendto(rtp_sockets[1], req, sizeof(req), 0, (struct sockaddr *)&rtp_client, sizeof(rtp_client));
 }
 
 
