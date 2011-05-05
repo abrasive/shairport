@@ -174,6 +174,28 @@ void delay(long pMillisecs, struct timeval *pRes)
   select(0,NULL,NULL,NULL,pRes);
 }
 
+int getCorrectedEncodeSize(int pSize)
+{
+  if(pSize % 4 == 0)
+  {
+    return pSize;
+  }
+  else if((pSize + 1) % 4 == 0)
+  {
+    return pSize+1;
+  }
+  else if((pSize + 2) % 4 == 0)
+  {
+    return pSize+2;
+  }
+  else
+  {
+    // Invalid encoded data, no other cases are possible.
+    printf("Unrecoverable error....base64 values are incorrectly encoded\n");
+    return pSize;
+  }
+}
+
 // From http://www.ioncannon.net/programming/34/howto-base64-encode-with-cc-and-openssl/
 
 //int main(int argc, char **argv)
@@ -183,11 +205,20 @@ void delay(long pMillisecs, struct timeval *pRes)
 //  free(output);/
 //}
 
-char *decode_base64(unsigned char *input, int length, int *pActualLength)
+char *decode_base64(unsigned char *pInput, int pLength, int *pActualLength)
 {
-  // Needs All no_no flags for proper RSA AES KEY Descrypt
+  // Needs All NO_NL flags for proper RSA AES KEY Descrypt
   BIO *b64, *bmem;
-
+  unsigned char *input = pInput;
+  int length = getCorrectedEncodeSize(pLength);
+  if(pLength != length)
+  {
+    input = malloc(length * sizeof(unsigned char));
+    memset(input, 0, length);
+    memcpy(input, pInput, pLength);
+    memset(input+pLength, '=', length-pLength);
+    printf("Fixed value: [%.*s]\n", length, input);
+  }
   char *buffer = (char *)malloc(length);
   memset(buffer, 0, length);
 
@@ -204,6 +235,10 @@ char *decode_base64(unsigned char *input, int length, int *pActualLength)
 
   BIO_free_all(bmem);
 
+  if(pLength != length)
+  {
+    free(input);
+  }
   return buffer;
 }
 

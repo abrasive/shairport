@@ -73,7 +73,7 @@ int main(int argc, char **argv)
        strncpy(tServerName, *++argv, 55);
        argc--;
     }
-    else if(!strcmp(arg, "--apname="))
+    else if(!strncmp(arg, "--apname=", 9))
     {
       strncpy(tServerName, arg+9, 55);
     }
@@ -82,7 +82,7 @@ int main(int argc, char **argv)
       strncpy(tPassword, *++argv, 55);
       argc--;
     }
-    else if(!strcmp(arg, "--password="))
+    else if(!strncmp(arg, "--password=",11 ))
     {
       strncpy(tPassword, arg+11, 55);
     }
@@ -91,7 +91,7 @@ int main(int argc, char **argv)
       tPort = atoi(*++argv);
       argc--;
     }
-    else if(!strcmp(arg, "--server_port="))
+    else if(!strncmp(arg, "--server_port=", 14))
     {
       tPort = atoi(arg+14);
     }
@@ -99,7 +99,7 @@ int main(int argc, char **argv)
     {
       tUseKnownHWID = TRUE;
     }
-    else if(!strcmp(arg, "-q") || !strcmp(arg, "--quiet"))
+    else if(!strcmp(arg, "-q") || !strncmp(arg, "--quiet", 7))
     {
       kCurrentLogLevel = 0;
     }
@@ -315,7 +315,7 @@ void handleClient(int pSock, char *pPassword, char *pHWADDR)
   slog(LOG_DEBUG_V, "Peer IP address: %s\n", ipstr);
   slog(LOG_DEBUG_V, "Peer port      : %d\n", port);
 
-  int tMoreDataNeeded = TRUE;
+  int tMoreDataNeeded = 1;
   struct keyring     tKeys;
   struct comms       tComms;
   struct connection  tConn;
@@ -323,13 +323,13 @@ void handleClient(int pSock, char *pPassword, char *pHWADDR)
 
   while(1)
   {
-    tMoreDataNeeded = TRUE;
+    tMoreDataNeeded = 1;
 
     initBuffer(&tConn.recv, 80); // Just a random, small size to seed the buffer with.
     initBuffer(&tConn.resp, 80);
     
     int tError = FALSE;
-    while(TRUE == tMoreDataNeeded)
+    while(1 == tMoreDataNeeded)
     {
       tError = readDataFromClient(pSock, &(tConn.recv));
       if(!tError)
@@ -337,7 +337,7 @@ void handleClient(int pSock, char *pPassword, char *pHWADDR)
         slog(LOG_DEBUG_VV, "Finished Reading some data from client\n");
         // parse client request
         tMoreDataNeeded = parseMessage(&tConn, ipstr, pHWADDR);
-        if(TRUE == tMoreDataNeeded)
+        if(1 == tMoreDataNeeded)
         {
           slog(LOG_DEBUG_VV, "\n\nNeed to read more data\n");
         }
@@ -417,7 +417,7 @@ int readDataFromClient(int pSock, struct shairbuffer *pClientBuffer)
 {
   char tReadBuf[MAX_SIZE];
 
-  int tRetval = TRUE;
+  int tRetval = 1;
   int tEnd = -1;
   while(tRetval > 0 && tEnd < 0)
   {
@@ -590,7 +590,7 @@ int buildAppleResponse(struct connection *pConn, char *pIpStr, char *pHWID)
     // Append to current response
     addToShairBuffer(&(pConn->resp), "Apple-Response: ");
     addToShairBuffer(&(pConn->resp), tResponse);
-    addToShairBuffer(&(pConn->resp), "\n");
+    addToShairBuffer(&(pConn->resp), "\r\n");
     free(tResponse);
     return TRUE;
   }
@@ -631,7 +631,7 @@ int parseMessage(struct connection *pConn, char *pIpStr, char *pHWID)
   }
 
   // "Creates" a new Response Header for our response message
-  addToShairBuffer(&(pConn->resp), "RTSP/1.0 200 OK\n");
+  addToShairBuffer(&(pConn->resp), "RTSP/1.0 200 OK\r\n");
 
   if(isLogEnabledFor(LOG_INFO))
   {
@@ -658,7 +658,7 @@ int parseMessage(struct connection *pConn, char *pIpStr, char *pHWID)
   {
     propogateCSeq(pConn);
     addToShairBuffer(&(pConn->resp),
-      "Public: ANNOUNCE, SETUP, RECORD, PAUSE, FLUSH, TEARDOWN, OPTIONS, GET_PARAMETER, SET_PARAMETER\n");
+      "Public: ANNOUNCE, SETUP, RECORD, PAUSE, FLUSH, TEARDOWN, OPTIONS, GET_PARAMETER, SET_PARAMETER\r\n");
   }
   else if(!strncmp(pConn->recv.data, "ANNOUNCE", 8))
   {
@@ -808,7 +808,7 @@ int parseMessage(struct connection *pConn, char *pIpStr, char *pHWID)
       // Append server port:
       addToShairBuffer(&(pConn->resp), ";server_port=");
       addToShairBuffer(&(pConn->resp), tPort);
-      addToShairBuffer(&(pConn->resp), "\nSession: DEADBEEF\n");
+      addToShairBuffer(&(pConn->resp), "\r\nSession: DEADBEEF\r\n");
     }
     else
     {
@@ -819,7 +819,7 @@ int parseMessage(struct connection *pConn, char *pIpStr, char *pHWID)
   else if(!strncmp(pConn->recv.data, "TEARDOWN", 8))
   {
     // Be smart?  Do more finish up stuff...
-    addToShairBuffer(&(pConn->resp), "Connection: close\n");
+    addToShairBuffer(&(pConn->resp), "Connection: close\r\n");
     propogateCSeq(pConn);
     close(pConn->hairtunes->in[1]);
     slog(LOG_DEBUG, "Tearing down connection, closing pipes\n");
@@ -848,7 +848,7 @@ int parseMessage(struct connection *pConn, char *pIpStr, char *pHWID)
     slog(LOG_DEBUG, "\n\nUn-Handled recv: %s\n", pConn->recv.data);
     propogateCSeq(pConn);
   }
-  addToShairBuffer(&(pConn->resp), "\n");
+  addToShairBuffer(&(pConn->resp), "\r\n");
   return tReturn;
 }
 
@@ -857,10 +857,10 @@ void propogateCSeq(struct connection *pConn) //char *pRecvBuffer, struct shairbu
 {
   int tSize=0;
   char *tRecPtr = getFromHeader(pConn->recv.data, "CSeq", &tSize);
-  addToShairBuffer(&(pConn->resp), "Audio-Jack-Status: connected; type=analog\n");
+  addToShairBuffer(&(pConn->resp), "Audio-Jack-Status: connected; type=analog\r\n");
   addToShairBuffer(&(pConn->resp), "CSeq: ");
   addNToShairBuffer(&(pConn->resp), tRecPtr, tSize);
-  addToShairBuffer(&(pConn->resp), "\n");
+  addToShairBuffer(&(pConn->resp), "\r\n");
 }
 
 void cleanupBuffers(struct connection *pConn)
