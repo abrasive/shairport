@@ -235,7 +235,7 @@ int hairtunes_init(char *pAeskey, char *pAesiv, char *fmtpstr, int pCtrlPort, in
     return EXIT_SUCCESS;
 }
 
-#ifndef DONT_USE_HAIRTUNES_MAIN
+#ifdef HAIRTUNES_STANDALONE
 int main(int argc, char **argv) {
     char *hexaeskey = 0, *hexaesiv = 0;
     char *fmtpstr = 0;
