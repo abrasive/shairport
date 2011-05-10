@@ -27,9 +27,7 @@
 #include <fcntl.h>
 #include "socketlib.h"
 #include "shairport.h"
-
-#define DONT_USE_HAIRTUNES_MAIN
-#include "hairtunes.c" // couldn't figure out how to allow both mains.
+#include "hairtunes.h"
 
 #ifndef TRUE
 #define TRUE (-1)
