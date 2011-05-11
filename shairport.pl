@@ -137,7 +137,7 @@ $volume = ( (defined( $volume ) && $volume && $volume =~ m/^[0-9]+/ && $volume >
 
 if (defined($squeeze) && $squeeze) {
     my $players;
-    my @details;
+    my @details = ();
 
     my $response;
     my $socket = IO::Socket::INET -> new (
@@ -159,19 +159,19 @@ if (defined($squeeze) && $squeeze) {
             print "WARN:  Disabling Squeezebox Server integration\n";
             undef $squeeze;
         } else {
-            $players = ( $response =~ m/^player count ([0-9]+)$/ );
+            $response =~ m/^player count ([0-9]+)$/;
+            $players = $1;
             print $socket "players 0 $players\n";
             $response = <$socket>;
-            @details = split( /playerindex%3A/ , $response );
+            my @responseArray = split( / / , $response );
             close( $socket );
-            shift( @details );
-            for( my $n = 0; $n <= scalar( @details ); $n++ ) {
-                if( defined( $details[ $n ] ) ) {
-                    my $address = $details[ $n ];
-                    $address =~ s/^.*playerid%3A([[:xdigit:]%]+)\s.*$/$1/;
-                    $address =~ s/%3A/:/g;
-                    chomp $address;
-                    $details[ $n ] = $address;
+            for( my $n = 0; $n <= scalar( @responseArray ); $n++ ) {
+                if ( $responseArray[ $n ] =~ m/playerid%3A/) {
+                     my $address = $responseArray[ $n ];
+                     $address =~ s/^playerid%3A([[:xdigit:]%]+)$/$1/;
+                     $address =~ s/%3A/:/g;
+                     chomp $address;
+                     $details[@details] = $address;
                 }
             }
             print "Discovered players: $players\n" if $verbose;
