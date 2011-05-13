@@ -55,8 +55,8 @@ int main(int argc, char **argv)
   char tHWID[HWID_SIZE] = {0,51,52,53,54,55};
   char tHWID_Hex[HWID_SIZE * 2];
 
-  char tServerName[56] = "ShairPort";
   char tPassword[56] = "";
+  char tServerName[56];
 
   struct addrinfo *tAddrInfo;
   int  tSimLevel = 0;
@@ -65,6 +65,8 @@ int main(int argc, char **argv)
   int  tPort = PORT;
 
   char *arg;
+
+  strcpy(tServerName, "Shairport");
   while ( (arg = *++argv) ) {
     if(!strcmp(arg, "-a"))
     {
