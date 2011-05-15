@@ -823,6 +823,9 @@ void* init_ao() {
         ao_append_option(&ao_opts, "id", libao_deviceid);
     } else if(libao_devicename){
         ao_append_option(&ao_opts, "dev", libao_devicename);
+        // Old libao versions (for example, 0.8.8) only support
+        // "dsp" instead of "dev".
+        ao_append_option(&ao_opts, "dsp", libao_devicename);
     }
 
     ao_device *dev = ao_open_live(driver, &fmt, ao_opts);
