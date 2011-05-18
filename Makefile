@@ -1,3 +1,4 @@
+CC=gcc
 CFLAGS:=-O2 -Wall $(shell pkg-config --cflags openssl ao)
 LDFLAGS:=-lm -lpthread $(shell pkg-config --libs openssl ao)
 OBJS=socketlib.o shairport.o alac.o hairtunes.o
