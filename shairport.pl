@@ -24,6 +24,7 @@
 #        OTHER DEALINGS IN THE SOFTWARE.
 
 use strict;
+use warnings;
 
 use 5.10.0;
 # For given() { when() { } ... }
@@ -43,8 +44,8 @@ use HTTP::Response;
 use URI::Escape;
 use IPC::Open2;
 use Crypt::OpenSSL::RSA;
-use Digest::MD5 qw/md5_hex/;
-use POSIX qw/sys_wait_h setsid/;
+use Digest::MD5 qw(md5_hex);
+use POSIX qw(:sys_wait_h setsid);
 eval "use IO::Socket::INET6;";
 
 my $shairportversion = "0.05";
@@ -137,7 +138,7 @@ $volume = ( (defined( $volume ) && $volume && $volume =~ m/^[0-9]+/ && $volume >
 
 if (defined($squeeze) && $squeeze) {
     my $players;
-    my @details = ();
+    my @details;
 
     my $response;
     my $socket = IO::Socket::INET -> new (
@@ -159,19 +160,19 @@ if (defined($squeeze) && $squeeze) {
             print "WARN:  Disabling Squeezebox Server integration\n";
             undef $squeeze;
         } else {
-            $response =~ m/^player count ([0-9]+)$/;
-            $players = $1;
+            ( $players ) = ( $response =~ m/^player count ([0-9]+)$/ );
             print $socket "players 0 $players\n";
             $response = <$socket>;
-            my @responseArray = split( / / , $response );
+            @details = split( /playerindex%3A/ , $response );
             close( $socket );
-            for( my $n = 0; $n <= scalar( @responseArray ); $n++ ) {
-                if ( $responseArray[ $n ] =~ m/playerid%3A/) {
-                     my $address = $responseArray[ $n ];
-                     $address =~ s/^playerid%3A([[:xdigit:]%]+)$/$1/;
-                     $address =~ s/%3A/:/g;
-                     chomp $address;
-                     $details[@details] = $address;
+            shift( @details );
+            for( my $n = 0; $n <= scalar( @details ); $n++ ) {
+                if( defined( $details[ $n ] ) ) {
+                    my $address = $details[ $n ];
+                    $address =~ s/^.*playerid%3A([[:xdigit:]%]+)\s.*$/$1/;
+                    $address =~ s/%3A/:/g;
+                    chomp $address;
+                    $details[ $n ] = $address;
                 }
             }
             print "Discovered players: $players\n" if $verbose;
@@ -429,32 +430,31 @@ sub performSqueezeboxSetup {
                     print "Found favourite '" . $favourites[ $index ] . "' with ID '" . $ids[ $index ] . "' at position $index.\n" if $verbose;
                 }
             }
-            #print "Turning on player... " if $verbose;
-            # For some reason, this one dies...
-            #eval {
-            #    local $SIG{ALRM} = sub { die "Socket Operation Timed Out" };
-            #    print $socket "$mac power 1\n";
-            #    alarm 1;
-            #    $response = <$socket>;
-            #    print "$response\n" if $verbose;
-            #    alarm 0;
-            #};
-            #... even within an eval{} loop?!
 
-            print "Showing message... " if $verbose;
-            print $socket "$mac show line2%3AStarting%20AirPlay duration%3A5 brightness%3ApowerOn font%3Ahuge\n";
+            print "Turning on player (if off)... " if $verbose;
+            print $socket "$mac power 1\n";
+            $response = <$socket>;
+            print "$response\n" if $verbose;
+
+            print "Stopping player (if playing)... " if $verbose;
+            print $socket "$mac stop\n";
+            $response = <$socket>;
+            print "$response\n" if $verbose;
+
+            print "Unmuting player (if muted)... " if $verbose;
+            print $socket "$mac mixer muting 0\n";
             $response = <$socket>;
             print "$response\n" if $verbose;
 
             if( defined( $volume ) ) {
-                print "Setting player volume... " if $verbose;
+                print "Setting player volume to $volume... " if $verbose;
                 print $socket "$mac mixer volume $volume\n";
                 $response = <$socket>;
                 print "$response\n" if $verbose;
             }
 
-            print "Unmuting player... " if $verbose;
-            print $socket "$mac mixer muting 0\n";
+            print "Showing message... " if $verbose;
+            print $socket "$mac show line2%3AStarting%20AirPlay duration%3A5 brightness%3ApowerOn font%3Ahuge\n";
             $response = <$socket>;
             print "$response\n" if $verbose;
 
@@ -462,12 +462,11 @@ sub performSqueezeboxSetup {
                 print "Playing favourite... " if $verbose;
                 my $id = uri_escape( $ids[ $index ] );
                 print $socket "$mac favorites playlist play item_id%3A$id\n";
-                $response = <$socket>;
             } else {
                 print "Resuming play... " if $verbose;
                 print $socket "$mac play\n";
-                $response = <$socket>;
             }
+            $response = <$socket>;
             print "$response\n" if $verbose;
         }
         close( $socket );
