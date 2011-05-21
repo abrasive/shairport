@@ -53,7 +53,8 @@ int kCurrentLogLevel = LOG_INFO;
 int main(int argc, char **argv)
 {
   char tHWID[HWID_SIZE] = {0,51,52,53,54,55};
-  char tHWID_Hex[HWID_SIZE * 2];
+  char tHWID_Hex[HWID_SIZE * 2 + 1];
+  memset(tHWID_Hex, 0, sizeof(tHWID_Hex));
 
   char tServerName[56] = "ShairPort";
   char tPassword[56] = "";
