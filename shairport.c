@@ -39,6 +39,7 @@
 // TEMP
 
 int kCurrentLogLevel = LOG_INFO;
+extern int buffer_start_fill;
 
 #ifdef _WIN32
 #define DEVNULL "nul"
@@ -94,6 +95,15 @@ int main(int argc, char **argv)
     {
       tPort = atoi(arg+14);
     }
+    else if(!strcmp(arg, "-b")) 
+    {
+      buffer_start_fill = atoi(*++argv);
+      argc--;
+    }
+    else if(!strncmp(arg, "--buffer=", 9))
+    {
+      buffer_start_fill = atoi(arg + 9);
+    }
     else if(!strcmp(arg, "-k"))
     {
       tUseKnownHWID = TRUE;
@@ -126,12 +136,18 @@ int main(int argc, char **argv)
       slog(LOG_INFO, "  -a, --apname=AirPort    Sets Airport name\n");
       slog(LOG_INFO, "  -p, --password=secret   Sets Password (not working)\n");
       slog(LOG_INFO, "  -o, --server_port=5000  Sets Port for Avahi/dns-sd\n");
+      slog(LOG_INFO, "  -b, --buffer=282        Sets Number of frames to buffer before beginning playback\n");
       slog(LOG_INFO, "  -d                      Daemon mode\n");
       slog(LOG_INFO, "  -q, --quiet             Supresses all output.\n");
       slog(LOG_INFO, "  -v,-v2,-v3,-vv          Various debugging levels\n");
       slog(LOG_INFO, "\n");
       return 0;
     }    
+  }
+
+  if ( buffer_start_fill < 30 || buffer_start_fill > BUFFER_FRAMES ) { 
+     fprintf(stderr, "buffer value must be > 30 and < %d\n", BUFFER_FRAMES);
+     return(0);
   }
 
   if(tDaemonize)

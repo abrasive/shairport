@@ -52,11 +52,8 @@ int debug = 0;
 
 #include "alac.h"
 
-// default buffer size
-#define BUFFER_FRAMES  320
 // and how full it needs to be to begin (must be <BUFFER_FRAMES)
 #define START_FILL    282
-
 
 #define MAX_PACKET      2048
 
@@ -70,6 +67,8 @@ int dataport = 0, controlport = 0, timingport = 0;
 int fmtp[32];
 int sampling_rate;
 int frame_size;
+
+int buffer_start_fill = START_FILL;
 
 char *libao_driver = NULL;
 char *libao_devicename = NULL;
@@ -386,7 +385,7 @@ void buffer_put_packet(seq_t seqno, char *data, int len) {
         abuf->ready = 1;
     }
 
-    if (ab_buffering && buf_fill >= START_FILL) {
+    if (ab_buffering && buf_fill >= buffer_start_fill) {
         ab_buffering = 0;
         pthread_cond_signal(&ab_buffer_ready);
     }
