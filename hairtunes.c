@@ -326,6 +326,7 @@ void ab_resync(void) {
     for (i=0; i<BUFFER_FRAMES; i++)
         audio_buffer[i].ready = 0;
     ab_synced = 0;
+    ab_buffering = 1;
 }
 
 // the sequence numbers will wrap pretty often.
@@ -385,8 +386,10 @@ void buffer_put_packet(seq_t seqno, char *data, int len) {
         abuf->ready = 1;
     }
 
-    if (ab_buffering && buf_fill >= START_FILL)
+    if (ab_buffering && buf_fill >= START_FILL) {
+        ab_buffering = 0;
         pthread_cond_signal(&ab_buffer_ready);
+    }
     if (!ab_buffering) {
         // check if the t+10th packet has arrived... last-chance resend
         read = ab_read + 10;
@@ -644,7 +647,7 @@ short *buffer_get_frame(void) {
     pthread_mutex_lock(&ab_mutex);
 
     buf_fill = ab_write - ab_read;
-    if (buf_fill < 1 || !ab_synced) {    // init or underrun. stop and wait
+    if (buf_fill < 1 || !ab_synced || ab_buffering) {    // init or underrun. stop and wait
         if (ab_synced)
             fprintf(stderr, "\nunderrun.\n");
 
