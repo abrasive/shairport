@@ -400,6 +400,7 @@ void writeDataToClient(int pSock, struct shairbuffer *pResponse)
 int readDataFromClient(int pSock, struct shairbuffer *pClientBuffer)
 {
   char tReadBuf[MAX_SIZE];
+  tReadBuf[0] = '\0';
 
   int tRetval = 1;
   int tEnd = -1;
