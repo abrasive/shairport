@@ -18,10 +18,10 @@ clean:
 
 
 prefix=/usr/local
-install: hairtunes
-	install -m 0755 hairtunes $(prefix)/bin
-	install -m 0755 shairport.pl $(prefix)/bin
-	install -m 0755 shairport $(prefix)/bin
+install: hairtunes shairport
+	install -D -m 0755 hairtunes $(DESTDIR)$(prefix)/bin/hairtunes
+	install -D -m 0755 shairport.pl $(DESTDIR)$(prefix)/bin/shairport.pl
+	install -D -m 0755 shairport $(DESTDIR)$(prefix)/bin/shairport
 
 .PTHONY: all clean install
 
