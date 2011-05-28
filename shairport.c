@@ -174,7 +174,7 @@ int main(int argc, char **argv)
       dup(tIdx);
     }
   }
-  srand ( time(NULL) );
+  srandom ( time(NULL) );
   // Copy over empty 00's
   //tPrintHWID[tIdx] = tAddr[0];
 
@@ -1004,15 +1004,15 @@ char *getTrimmed(char *pChar, int pSize, int pEndStr, int pAddNL, char *pTrimDes
 
 void slog(int pLevel, char *pFormat, ...)
 {
-  #ifdef SHAIRPORT_LOG
-  if(isLogEnabledFor(pLevel))
+  //#ifdef SHAIRPORT_LOG
+  //if(isLogEnabledFor(pLevel))
   {
     va_list argp;
     va_start(argp, pFormat);
     vprintf(pFormat, argp);
     va_end(argp);
   }
-  #endif
+  //#endif
 }
 
 int isLogEnabledFor(int pLevel)
