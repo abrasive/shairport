@@ -353,7 +353,7 @@ void handleClient(int pSock, char *pPassword, char *pHWADDR)
     while(1 == tMoreDataNeeded)
     {
       tError = readDataFromClient(pSock, &(tConn.recv));
-      if(!tError)
+      if(!tError && strlen(tConn.recv.data) > 0)
       {
         slog(LOG_DEBUG_VV, "Finished Reading some data from client\n");
         // parse client request
