@@ -174,7 +174,7 @@ int main(int argc, char **argv)
       dup(tIdx);
     }
   }
-  srand ( time(NULL) );
+  srandom ( time(NULL) );
   // Copy over empty 00's
   //tPrintHWID[tIdx] = tAddr[0];
 
