@@ -329,8 +329,24 @@ void handleClient(int pSock, char *pPassword, char *pHWADDR)
       struct sockaddr_in6 *s = (struct sockaddr_in6 *)&addr;
       port = ntohs(s->sin6_port);
       inet_ntop(AF_INET6, &s->sin6_addr, ipstr, sizeof ipstr);
-      memcpy(ipbin, &s->sin6_addr, 16);
-      ipbinlen = 16;
+
+#ifndef __APPLE__
+#define __u6_addr __in6_u
+#endif
+
+      if (s->sin6_addr.__u6_addr.__u6_addr32[0] == 0 &&
+          s->sin6_addr.__u6_addr.__u6_addr32[1] == 0 &&
+          s->sin6_addr.__u6_addr.__u6_addr32[2] == 0xffff0000)
+      {
+        // its ipv4...
+        memcpy(ipbin, &s->sin6_addr.__u6_addr.__u6_addr32[3], 4);
+        ipbinlen = 4;
+      }
+      else
+      {
+        memcpy(ipbin, &s->sin6_addr, 16);
+        ipbinlen = 16;
+      }
   }
 
   slog(LOG_DEBUG_V, "Peer IP address: %s\n", ipstr);
