@@ -66,7 +66,7 @@ void addToShairBuffer(struct shairbuffer *pBuf, char *pNewBuf);
 void addNToShairBuffer(struct shairbuffer *pBuf, char *pNewBuf, int pNofNewBuf);
 
 int readDataFromClient(int pSock, struct shairbuffer *pClientBuffer);
-int  parseMessage(struct connection *pConn, char *pIpStr, char *pHWADDR);
+int  parseMessage(struct connection *pConn,unsigned char *pIpBin, unsigned int pIpBinLen, char *pHWADDR);
 
 void closePipe(int *pPipe);
 void setKeys(struct keyring *pKeys, char *pIV, char* pAESKey, char *pFmtp);
@@ -75,8 +75,7 @@ void initConnection(struct connection *pConn, struct keyring *pKeys,
 
 void writeDataToClient(int pSock, struct shairbuffer *pResponse);
 void propogateCSeq(struct connection *pConn);
-void convertIpToBinary(char *pIpAddress, int pIsIPv6, char *pBinaryOutput);
-int buildAppleResponse(struct connection *pConn, char *pIpStr, char *pHwAddr);
+int buildAppleResponse(struct connection *pConn, unsigned char *pIpBin, unsigned int pIpBinLen, char *pHwAddr);
 void sim(int pLevel, char *pValue1, char *pValue2);
 void slog(int pLevel, char *pFormat, ...);
 int  isLogEnabledFor(int pLevel);

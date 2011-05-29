@@ -174,7 +174,7 @@ int main(int argc, char **argv)
       dup(tIdx);
     }
   }
-  srand ( time(NULL) );
+  srandom ( time(NULL) );
   // Copy over empty 00's
   //tPrintHWID[tIdx] = tAddr[0];
 
@@ -305,11 +305,13 @@ void handleClient(int pSock, char *pPassword, char *pHWADDR)
   socklen_t len;
   struct sockaddr_storage addr;
   #ifdef AF_INET6
-  char ipstr[INET6_ADDRSTRLEN];
+  unsigned char ipbin[INET6_ADDRSTRLEN];
   #else
-  char ipstr[INET_ADDRSTRLEN];
+  unsigned char ipbin[INET_ADDRSTRLEN];
   #endif
+  unsigned int ipbinlen;
   int port;
+  char ipstr[64];
 
   len = sizeof addr;
   getsockname(pSock, (struct sockaddr*)&addr, &len);
@@ -320,11 +322,15 @@ void handleClient(int pSock, char *pPassword, char *pHWADDR)
       struct sockaddr_in *s = (struct sockaddr_in *)&addr;
       port = ntohs(s->sin_port);
       inet_ntop(AF_INET, &s->sin_addr, ipstr, sizeof ipstr);
+      memcpy(ipbin, &s->sin_addr, 4);
+      ipbinlen = 4;
   } else { // AF_INET6
       slog(LOG_DEBUG_V, "Constructing ipv6 address\n");
       struct sockaddr_in6 *s = (struct sockaddr_in6 *)&addr;
       port = ntohs(s->sin6_port);
       inet_ntop(AF_INET6, &s->sin6_addr, ipstr, sizeof ipstr);
+      memcpy(ipbin, &s->sin6_addr, 16);
+      ipbinlen = 16;
   }
 
   slog(LOG_DEBUG_V, "Peer IP address: %s\n", ipstr);
@@ -347,11 +353,11 @@ void handleClient(int pSock, char *pPassword, char *pHWADDR)
     while(1 == tMoreDataNeeded)
     {
       tError = readDataFromClient(pSock, &(tConn.recv));
-      if(!tError)
+      if(!tError && strlen(tConn.recv.data) > 0)
       {
         slog(LOG_DEBUG_VV, "Finished Reading some data from client\n");
         // parse client request
-        tMoreDataNeeded = parseMessage(&tConn, ipstr, pHWADDR);
+        tMoreDataNeeded = parseMessage(&tConn, ipbin, ipbinlen, pHWADDR);
         if(1 == tMoreDataNeeded)
         {
           slog(LOG_DEBUG_VV, "\n\nNeed to read more data\n");
@@ -391,46 +397,10 @@ void writeDataToClient(int pSock, struct shairbuffer *pResponse)
   slog(LOG_DEBUG_VV, "----Send Response Header----\n");
 }
 
-void convertIpToBinary(char *tSockethost, int pIsIPv6, char* pIpBinary)
-{
-  if(pIsIPv6)
-  {
-    // do something different
-    slog(LOG_INFO, " Must implement ipv6 signature portion in convertIpToBinary...sorry.\n");
-  }
-  else
-  {
-    // Takes care of ipv4 addresses like ::ffff:192.168.1.3
-    char *tStartOfV4 = strrchr(tSockethost, ':');
-    if(NULL == tStartOfV4)
-    {
-      tStartOfV4 = tSockethost;
-    }
-    else
-    {
-      tStartOfV4+=1;
-    }
-
-    char tIp[strlen(tStartOfV4)+1];
-    memset(tIp, 0, (strlen(tStartOfV4)+1));
-    strncpy(tIp, tStartOfV4, strlen(tStartOfV4));
-
-    char *tIpTokens = strtok (tIp, ".");
-
-    int tIdx = 0;
-    // if ipv4, discard prefill
-    while(tIpTokens != NULL)
-    {
-      slog(LOG_DEBUG_VV, "%s\n", tIpTokens);
-      pIpBinary[tIdx++] = atoi(tIpTokens);
-      tIpTokens = strtok(NULL, " .");
-    }
-  }
-}
-
 int readDataFromClient(int pSock, struct shairbuffer *pClientBuffer)
 {
   char tReadBuf[MAX_SIZE];
+  tReadBuf[0] = '\0';
 
   int tRetval = 1;
   int tEnd = -1;
@@ -466,7 +436,7 @@ int readDataFromClient(int pSock, struct shairbuffer *pClientBuffer)
       }
       else
       {
-        slog(LOG_DEBUG, "Error reading data from socket.\n");
+        slog(LOG_DEBUG, "Error reading data from socket, got: %d bytes", tRetval);
         return tRetval;
       }
   }
@@ -533,53 +503,42 @@ char *getFromSetup(char *pContentPtr, const char* pField, int *pReturnSize)
 
 // Handles compiling the Apple-Challenge, HWID, and Server IP Address
 // Into the response the airplay client is expecting.
-int buildAppleResponse(struct connection *pConn, char *pIpStr, char *pHWID)
+int buildAppleResponse(struct connection *pConn, unsigned char *pIpBin, unsigned int pIpBinLen, char *pHWID)
 {
   // Find Apple-Challenge
   char *tResponse = NULL;
 
   int tFoundSize = 0;
   char* tFound = getFromHeader(pConn->recv.data, "Apple-Challenge", &tFoundSize);
-  
   if(tFound != NULL)
   {
     char tTrim[tFoundSize + 2];
     getTrimmed(tFound, tFoundSize, TRUE, TRUE, tTrim);
     slog(LOG_DEBUG_VV, "HeaderChallenge:  [%s] len: %d  sizeFound: %d\n", tTrim, strlen(tTrim), tFoundSize);
     int tChallengeDecodeSize = 16;
-    char *tTmp = NULL;    
     char *tChallenge = decode_base64((unsigned char *)tTrim, tFoundSize, &tChallengeDecodeSize);
     slog(LOG_DEBUG_VV, "Challenge Decode size: %d  expected 16\n", tChallengeDecodeSize);
 
-    char tIpAddress[4];
-    convertIpToBinary(pIpStr, FALSE, tIpAddress);
-    int tIpSize = 4;
-    if(FALSE)
-    {
-      // TODO - Handle/Test on IPV6
-      tIpSize = 6; // IPV6
-    }
-
-    tTmp = encode_base64((unsigned char *) tIpAddress, tIpSize);
-    slog(LOG_DEBUG_VV, "IPDATA: %s => %s\n", pIpStr, tTmp);
-    free(tTmp);
-
     int tCurSize = 0;
-    unsigned char tChalResp[32];
+    unsigned char tChalResp[38];
 
     memcpy(tChalResp, tChallenge, tChallengeDecodeSize);
     tCurSize += tChallengeDecodeSize;
     
-    memcpy(tChalResp+tCurSize, tIpAddress, tIpSize);
-    tCurSize += tIpSize;
+    memcpy(tChalResp+tCurSize, pIpBin, pIpBinLen);
+    tCurSize += pIpBinLen;
 
     memcpy(tChalResp+tCurSize, pHWID, HWID_SIZE);
     tCurSize += HWID_SIZE;
 
     int tPad = 32 - tCurSize;
-    memset(tChalResp+tCurSize, 0, tPad);
+    if (tPad > 0)
+    {
+      memset(tChalResp+tCurSize, 0, tPad);
+      tCurSize += tPad;
+    }
 
-    tTmp = encode_base64((unsigned char *)tChalResp, 32);
+    char *tTmp = encode_base64((unsigned char *)tChalResp, tCurSize);
     slog(LOG_DEBUG_VV, "Full sig: %s\n", tTmp);
     free(tTmp);
 
@@ -587,7 +546,7 @@ int buildAppleResponse(struct connection *pConn, char *pIpStr, char *pHWID)
     RSA *rsa = loadKey();  // Free RSA
     int tSize = RSA_size(rsa);
     unsigned char tTo[tSize];
-    RSA_private_encrypt(32, (unsigned char *)tChalResp, tTo, rsa, RSA_PKCS1_PADDING);
+    RSA_private_encrypt(tCurSize, (unsigned char *)tChalResp, tTo, rsa, RSA_PKCS1_PADDING);
     
     // Wrap RSA Encrypted binary in Base64 encoding
     tResponse = encode_base64(tTo, tSize);
@@ -613,7 +572,7 @@ int buildAppleResponse(struct connection *pConn, char *pIpStr, char *pHWID)
 }
 
 //parseMessage(tConn->recv.data, tConn->recv.mark, &tConn->resp, ipstr, pHWADDR, tConn->keys);
-int parseMessage(struct connection *pConn, char *pIpStr, char *pHWID)
+int parseMessage(struct connection *pConn, unsigned char *pIpBin, unsigned int pIpBinLen, char *pHWID)
 {
   int tReturn = 0; // 0 = good, 1 = Needs More Data, -1 = close client socket.
   if(pConn->resp.data == NULL)
@@ -663,7 +622,7 @@ int parseMessage(struct connection *pConn, char *pIpStr, char *pHWID)
     
   }
 
-  if(buildAppleResponse(pConn, pIpStr, pHWID)) // need to free sig
+  if(buildAppleResponse(pConn, pIpBin, pIpBinLen, pHWID)) // need to free sig
   {
     slog(LOG_DEBUG_V, "Added AppleResponse to Apple-Challenge request\n");
   }
