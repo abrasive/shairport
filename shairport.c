@@ -330,6 +330,10 @@ void handleClient(int pSock, char *pPassword, char *pHWADDR)
       port = ntohs(s->sin6_port);
       inet_ntop(AF_INET6, &s->sin6_addr, ipstr, sizeof ipstr);
 
+#ifndef __APPLE__
+#define __u6_addr __in6_u
+#endif
+
       if (s->sin6_addr.__u6_addr.__u6_addr32[0] == 0 &&
           s->sin6_addr.__u6_addr.__u6_addr32[1] == 0 &&
           s->sin6_addr.__u6_addr.__u6_addr32[2] == 0xffff0000)
