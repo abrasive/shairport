@@ -135,7 +135,7 @@ int main(int argc, char **argv)
       slog(LOG_INFO, "Usage:\nshairport [OPTION...]\n\nOptions:\n");
       slog(LOG_INFO, "  -a, --apname=AirPort    Sets Airport name\n");
       slog(LOG_INFO, "  -p, --password=secret   Sets Password (not working)\n");
-      slog(LOG_INFO, "  -o, --server_port=5000  Sets Port for Avahi/dns-sd\n");
+      slog(LOG_INFO, "  -o, --server_port=5002  Sets Port for Avahi/dns-sd\n");
       slog(LOG_INFO, "  -b, --buffer=282        Sets Number of frames to buffer before beginning playback\n");
       slog(LOG_INFO, "  -d                      Daemon mode\n");
       slog(LOG_INFO, "  -q, --quiet             Supresses all output.\n");

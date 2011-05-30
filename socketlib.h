@@ -14,7 +14,7 @@
 
 
 #define  MAX_SIZE 8192
-#define  PORT 5000
+#define  PORT 5002
 #define  RETRY_COUNT 7
 #define  SERVLEN 80
 #define  RETRY_DELAY 1000

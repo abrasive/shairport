@@ -30,7 +30,7 @@ use 5.10.0;
 # For given() { when() { } ... }
 use feature ":5.10";
 
-use constant PORT => 5000;
+use constant PORT => 5002;
 
 use Getopt::Long;
 use FindBin;
