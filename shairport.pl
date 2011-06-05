@@ -30,8 +30,6 @@ use 5.10.0;
 # For given() { when() { } ... }
 use feature ":5.10";
 
-use constant PORT => 5002;
-
 use Getopt::Long;
 use FindBin;
 use File::Basename;
@@ -51,6 +49,7 @@ eval "use IO::Socket::INET6;";
 my $shairportversion = "0.05";
 
 my $apname = "ShairPort $$ on " . `hostname`;
+my $port = 5002;
 # password - required to connect
 # for no password, set:
 my $password = '';
@@ -87,6 +86,7 @@ unless (-x $hairtunes_cli) {
 
 GetOptions("a|apname=s" => \$apname,
           "p|password=s"  => \$password,
+          "o|server_port=s" => \$port,
           "i|pipe=s"  => \$pipepath,
           "d" => \$daemon,
           "ao_driver=s" => \$libao_driver,
@@ -108,6 +108,7 @@ sub usage {
           "Options:\n".
           "  -a, --apname=AirPort            Sets AirPort name\n".
           "  -p, --password=secret           Sets password\n",
+          "  -o, --server_port=5002          Sets Port for Avahi/dns-sd\n",
           "  -i, --pipe=pipepath             Sets the path to a named pipe for output\n",
           "      --ao_driver=driver          Sets the ao driver (optional)\n",
           "      --ao_devicename=devicename  Sets the ao device name (optional)\n",
@@ -264,13 +265,13 @@ if ($avahi_publish==0) {
     { exec 'avahi-publish-service',
         join('', map { sprintf "%02X", $_ } @hw_addr) . "\@$apname",
         "_raop._tcp",
-         PORT,
+         $port,
         "tp=UDP","sm=false","sv=false","ek=1","et=0,1","cn=0,1","ch=2","ss=16","sr=44100","pw=false","vn=3","txtvers=1"; };
     { exec 'dns-sd', '-R',
         join('', map { sprintf "%02X", $_ } @hw_addr) . "\@$apname",
         "_raop._tcp",
         ".",
-         PORT,
+         $port,
         "tp=UDP","sm=false","sv=false","ek=1","et=0,1","cn=0,1","ch=2","ss=16","sr=44100","pw=false","vn=3","txtvers=1"; };
     die "could not run avahi-publish-service nor dns-sd";
 }
@@ -284,7 +285,7 @@ my $listen;
         local $SIG{__DIE__};
         $listen = new IO::Socket::INET6(Listen => 1,
                             Domain => AF_INET6,
-                            LocalPort => PORT,
+                            LocalPort => $port,
                             ReuseAddr => 1,
                             Proto => 'tcp');
     };
@@ -296,11 +297,11 @@ my $listen;
     }
 
     $listen ||= new IO::Socket::INET(Listen => 1,
-            LocalPort => PORT,
+            LocalPort => $port,
             ReuseAddr => 1,
             Proto => 'tcp');
 }
-die "Can't listen on port " . PORT . ": $!" unless $listen;
+die "Can't listen on port " . $port . ": $!" unless $listen;
 
 sub ip6bin {
     my $ip = shift;
