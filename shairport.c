@@ -336,7 +336,7 @@ void handleClient(int pSock, char *pPassword, char *pHWADDR)
 	  } addr;
 	  memcpy(&addr.s, &s->sin6_addr, sizeof(struct sockaddr_in6));
 	  
-	  if(memcmp(&addr.bin[0], "\x00\x00\x00\x00" "\x00\x00\x00\x00" "\xff\xff\x00\x00", 12) == 0)
+	  if(memcmp(&addr.bin[0], "\x00\x00\x00\x00" "\x00\x00\x00\x00" "\x00\x00\xff\xff", 12) == 0)
       {
         // its ipv4...
         memcpy(ipbin, &addr.bin[12], 4);
