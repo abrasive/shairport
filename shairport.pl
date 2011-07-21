@@ -261,7 +261,7 @@ $SIG{__DIE__} = sub {
 };
 
 $avahi_publish = fork();
-$pw_clause = (length $password) ? "pw=true" : "pw=false";
+my $pw_clause = (length $password) ? "pw=true" : "pw=false";
 if ($avahi_publish==0) {
     { exec 'avahi-publish-service',
         join('', map { sprintf "%02X", $_ } @hw_addr) . "\@$apname",
