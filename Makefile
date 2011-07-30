@@ -23,7 +23,7 @@ install: hairtunes shairport
 	install -D -m 0755 shairport.pl $(DESTDIR)$(prefix)/bin/shairport.pl
 	install -D -m 0755 shairport $(DESTDIR)$(prefix)/bin/shairport
 
-.PTHONY: all clean install
+.PHONY: all clean install
 
 .SILENT: clean
 
