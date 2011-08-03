@@ -17,7 +17,7 @@ Perl modules (install from CPAN if needed e.g. `perl -MCPAN -e 'install X'`):
 
 ## Debian/Ubuntu:
 
-    apt-get install libssl-dev libcrypt-openssl-rsa-perl libao2 libao-dev libio-socket-inet6-perl libwww-perl avahi-utils pkg-config
+    apt-get install libssl-dev libcrypt-openssl-rsa-perl libao-dev libio-socket-inet6-perl libwww-perl avahi-utils pkg-config
     make
     perl shairport.pl
 
