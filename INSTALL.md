@@ -33,12 +33,12 @@ Perl modules (install from CPAN if needed e.g. `perl -MCPAN -e 'install X'`):
   * install [Homebrew](https://github.com/mxcl/homebrew) or [MacPorts](http://www.macports.org/)
   * type:
 
-        $ export ARCHFLAGS="-arch x86_64" (replace x86_64 by your arch)
+        $ export ARCHFLAGS="-arch x86_64" # (replace x86_64 by your arch)
         $ brew install pkg-config libao # for [Homebrew](https://github.com/mxcl/homebrew)
         $ port install pkgconfig libao # for [MacPorts](http://www.macports.org/)
         $ make
-        $ perl -MCPAN -e 'install Crypt::OpenSSL::RSA'
-        $ perl -MCPAN -e 'install IO::Socket::INET6'
+        $ perl -MCPAN -e 'install Crypt::OpenSSL::RSA' # (may require sudo)
+        $ perl -MCPAN -e 'install IO::Socket::INET6' # (may require sudo)
         $ perl shairport.pl
 
   Users of OS X 10.5 and below will need to install a newer Perl (via `port`/`brew`).
@@ -46,11 +46,11 @@ Perl modules (install from CPAN if needed e.g. `perl -MCPAN -e 'install X'`):
 ### How to run as a daemon on Mac 10.6
 
     $ cp hairtunes shairport.pl /usr/local/bin
-    $ vi /usr/local/bin/shairport.pl, change the path of hairtunes from ./hairtunes to /usr/local/bin/hairtunes
+    $ vi /usr/local/bin/shairport.pl # change the path of hairtunes from ./hairtunes to /usr/local/bin/hairtunes
     $ mkdir -p ~/Library/LaunchAgents
     $ cp org.mafipulation.shairport.plist ~/Library/LaunchAgents/
     $ launchctl load org.mafipulation.shairport.plist
-    $ launchctl unload org.mafipulation.shairport.plist (to remove)
+    $ launchctl unload org.mafipulation.shairport.plist # (to remove)
 
 ## Windows
 
