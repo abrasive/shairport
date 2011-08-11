@@ -37,8 +37,8 @@ Perl modules (install from CPAN if needed e.g. `perl -MCPAN -e 'install X'`):
         $ brew install pkg-config libao # for [Homebrew](https://github.com/mxcl/homebrew)
         $ port install pkgconfig libao # for [MacPorts](http://www.macports.org/)
         $ make
-        $ perl -MCPAN -e 'install Crypt::OpenSSL::RSA'
-        $ perl -MCPAN -e 'install IO::Socket::INET6'
+        $ perl -MCPAN -e 'install Crypt::OpenSSL::RSA' # (may require sudo)
+        $ perl -MCPAN -e 'install IO::Socket::INET6' # (may require sudo)
         $ perl shairport.pl
 
   Users of OS X 10.5 and below will need to install a newer Perl (via `port`/`brew`).
