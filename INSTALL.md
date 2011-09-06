@@ -27,6 +27,22 @@ Perl modules (install from CPAN if needed e.g. `perl -MCPAN -e 'install X'`):
     make
     perl shairport.pl
 
+## Gentoo/Funtoo
+
+    echo "media-libs/libao  alsa" >> /etc/portage/package.use
+    echo "net-dns/avahi  mdnsresponder-compat" >> /etc/portage/package.use
+    echo "dev-perl/HTTP-Message  ~x86" >> /etc/portage/package.keywords
+    echo "dev-perl/HTTP-Date  ~x86" >> /etc/portage/package.keywords
+    echo "dev-perl/Encode-Locale  ~x86" >> /etc/portage/package.keywords
+    echo "dev-perl/LWP-MediaTypes  ~x86" >> /etc/portage/package.keywords
+    emerge libao avahi dev-perl/HTTP-Message dev-perl/Crypt-OpenSSL-RSA dev-perl/IO-Socket-INET6
+    rc-update add dbus default
+    rc-update add avahi-daemon default
+    /etc/init.d/dbus start
+    /etc/init.d/avahi-daemon start
+    make
+    perl shairport.pl
+
 ## Mac OS X:
 
   * install XCode
