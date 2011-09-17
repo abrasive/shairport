@@ -18,8 +18,8 @@
 
 NAME=shairport
 DAEMON="/usr/local/bin/shairport.pl"
-DAEMON_ARGS=""
 PIDFILE=/var/run/$NAME.pid
+DAEMON_ARGS="-w $PIDFILE"
 
 [ -x $binary ] || exit 0
 
