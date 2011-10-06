@@ -42,7 +42,7 @@ use HTTP::Response;
 use URI::Escape;
 use IPC::Open2;
 use Crypt::OpenSSL::RSA;
-use Digest::MD5 qw(md5_hex);
+use Digest::MD5 qw(md5 md5_hex);
 use POSIX qw(:sys_wait_h setsid);
 eval "use IO::Socket::INET6;";
 
@@ -210,7 +210,7 @@ if (defined($squeeze) && $squeeze) {
 };
 chomp $apname;
 
-my @hw_addr = (0..5);
+my @hw_addr = +(map(ord, split(//, md5($apname))))[0..5];
 
 sub POPE {
     print "Broken pipe\n" if $verbose;
