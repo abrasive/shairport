@@ -210,7 +210,7 @@ if (defined($squeeze) && $squeeze) {
 };
 chomp $apname;
 
-my @hw_addr = (0, map { int rand 256 } 1..5);
+my @hw_addr = (0..5);
 
 sub POPE {
     print "Broken pipe\n" if $verbose;
