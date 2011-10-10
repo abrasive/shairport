@@ -393,8 +393,10 @@ void buffer_put_packet(seq_t seqno, char *data, int len) {
         // check if the t+10th packet has arrived... last-chance resend
         read = ab_read + 10;
         abuf = audio_buffer + BUFIDX(read);
-        if (!abuf->ready)
+        if (abuf->ready != 1) {
             rtp_request_resend(read, read);
+            abuf->ready = -1;
+        }
     }
 }
 
@@ -671,7 +673,7 @@ short *buffer_get_frame(void) {
     bf_est_update(buf_fill);
 
     volatile abuf_t *curframe = audio_buffer + BUFIDX(read);
-    if (!curframe->ready) {
+    if (curframe->ready != 1) {
         fprintf(stderr, "\nmissing frame.\n");
         memset(curframe->data, 0, FRAME_BYTES);
     }
