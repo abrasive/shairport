@@ -71,6 +71,9 @@ my $cliport;
 my $mac;
 # SB volume
 my $volume;
+# custom play and stop program
+my $play_prog;
+my $stop_prog;
 # output debugging information
 my $verbose;
 # where to write PID
@@ -97,6 +100,8 @@ GetOptions("a|apname=s" => \$apname,
           "s|squeezebox" => \$squeeze,
           "c|cliport=s" => \$cliport,
           "m|mac=s" => \$mac,
+          "play_prog=s" => \$play_prog,
+          "stop_prog=s" => \$stop_prog,
           "l|volume=s" => \$volume,
           "h|help" => \$help);
 
@@ -117,6 +122,8 @@ sub usage {
           "  -c  --cliport=port              Sets the SBS CLI port\n",
           "  -m  --mac=address               Sets the SB target device\n",
           "  -l  --volume=level              Sets the SB volume level (in %)\n",
+          "      --play_prog=cmdline         Program to start on 1st connection\n",
+          "      --stop_prog=cmdline         Program to start on last disconnection\n",
           "  -d                              Daemon mode\n",
           "  -w  --writepid=path             Write PID to this location\n",
           "  -v  --verbose                   Print debugging messages\n",
@@ -491,6 +498,11 @@ while (1) {
             if (defined($squeeze) && $squeeze) {
                 &performSqueezeboxSetup();
             }
+
+            # the 2nd connection is a player connection
+            if (defined($play_prog) && $sel->count() == 2) {
+                system($play_prog);
+            }
         } else {
             if (eof($fh)) {
                 print "Closed: $fh\n" if $verbose;
@@ -502,6 +514,11 @@ while (1) {
                     eval { kill $conns{$fh}{decoder_pid} };
                 }
                 delete $conns{$fh};
+
+                # 1 connection means no connection
+                if (defined($stop_prog) && $sel->count() == 1) {
+                    system($stop_prog);
+                }
                 next;
             }
             if (exists $conns{$fh}) {
