@@ -356,7 +356,6 @@ void alac_decode(short *dest, char *buf, int len) {
 
 void buffer_put_packet(seq_t seqno, char *data, int len) {
     volatile abuf_t *abuf = 0;
-    short read;
     short buf_fill;
 
     pthread_mutex_lock(&ab_mutex);
@@ -369,7 +368,7 @@ void buffer_put_packet(seq_t seqno, char *data, int len) {
         abuf = audio_buffer + BUFIDX(seqno);
         ab_write = seqno;
     } else if (seq_order(ab_write, seqno)) {    // newer than expected
-        rtp_request_resend(ab_write, seqno-1);
+        rtp_request_resend(ab_write+1, seqno-1);
         abuf = audio_buffer + BUFIDX(seqno);
         ab_write = seqno;
     } else if (seq_order(ab_read, seqno)) {     // late but not yet played
@@ -388,15 +387,6 @@ void buffer_put_packet(seq_t seqno, char *data, int len) {
     if (ab_buffering && buf_fill >= buffer_start_fill) {
         ab_buffering = 0;
         pthread_cond_signal(&ab_buffer_ready);
-    }
-    if (!ab_buffering) {
-        // check if the t+10th packet has arrived... last-chance resend
-        read = ab_read + 10;
-        abuf = audio_buffer + BUFIDX(read);
-        if (abuf->ready != 1) {
-            rtp_request_resend(read, read);
-            abuf->ready = -1;
-        }
     }
 }
 
@@ -644,6 +634,9 @@ void bf_est_update(short fill) {
 short *buffer_get_frame(void) {
     short buf_fill;
     seq_t read;
+    volatile abuf_t *abuf = 0;
+    unsigned short next;
+    int i;
 
     pthread_mutex_lock(&ab_mutex);
 
@@ -672,8 +665,19 @@ short *buffer_get_frame(void) {
     buf_fill = ab_write - ab_read;
     bf_est_update(buf_fill);
 
+    // check if t+16, t+32, t+64, t+128, ... (START_FILL / 2)  packets have arrived... last-chance resend
+    if (!ab_buffering) {
+        for (i = 16; i < (START_FILL / 2); i = (i * 2)) {
+            next = ab_read + i;
+            abuf = audio_buffer + BUFIDX(next);
+            if (!abuf->ready) {
+                rtp_request_resend(next, next);
+            }
+        }
+    }
+
     volatile abuf_t *curframe = audio_buffer + BUFIDX(read);
-    if (curframe->ready != 1) {
+    if (!curframe->ready) {
         fprintf(stderr, "\nmissing frame.\n");
         memset(curframe->data, 0, FRAME_BYTES);
     }
