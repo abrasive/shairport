@@ -340,12 +340,10 @@ void alac_decode(short *dest, char *buf, int len) {
     assert(len<=MAX_PACKET);
 
     unsigned char iv[16];
-    int i;
+    int aeslen = len & ~0xf;
     memcpy(iv, aesiv, sizeof(iv));
-    for (i=0; i+16<=len; i += 16)
-        AES_cbc_encrypt((unsigned char*)buf+i, packet+i, 0x10, &aes, iv, AES_DECRYPT);
-    if (len & 0xf)
-        memcpy(packet+i, buf+i, len & 0xf);
+    AES_cbc_encrypt((unsigned char*)buf, packet, aeslen, &aes, iv, AES_DECRYPT);
+    memcpy(packet+aeslen, buf+aeslen, len-aeslen);
 
     int outsize;
 
