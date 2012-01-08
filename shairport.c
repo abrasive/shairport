@@ -25,6 +25,7 @@
  */
 
 #include <fcntl.h>
+#include <signal.h>
 #include "socketlib.h"
 #include "shairport.h"
 #include "hairtunes.h"
@@ -51,8 +52,23 @@ extern int buffer_start_fill;
 #define HEADER_LOG_LEVEL LOG_DEBUG
 #define AVAHI_LOG_LEVEL LOG_DEBUG
 
+void handle_sigchld(int signo) {
+    int status;
+    waitpid(-1, &status, WNOHANG);
+}
+
 int main(int argc, char **argv)
 {
+  // unfortunately we can't just IGN on non-SysV systems
+  struct sigaction sa;
+  sa.sa_handler = handle_sigchld;
+  sa.sa_flags = 0;
+  sigemptyset(&sa.sa_mask);
+  if (sigaction(SIGCHLD, &sa, NULL) < 0) {
+      perror("sigaction");
+      return 1;
+  }
+
   char tHWID[HWID_SIZE] = {0,51,52,53,54,55};
   char tHWID_Hex[HWID_SIZE * 2 + 1];
   memset(tHWID_Hex, 0, sizeof(tHWID_Hex));
