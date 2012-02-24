@@ -48,7 +48,7 @@
 #endif
 
 #include <assert.h>
-int debug = 0;
+static int debug = 0;
 
 #include "alac.h"
 
@@ -60,41 +60,41 @@ int debug = 0;
 typedef unsigned short seq_t;
 
 // global options (constant after init)
-unsigned char aeskey[16], aesiv[16];
-AES_KEY aes;
-char *rtphost = 0;
-int dataport = 0, controlport = 0, timingport = 0;
-int fmtp[32];
-int sampling_rate;
-int frame_size;
+static unsigned char aeskey[16], aesiv[16];
+static AES_KEY aes;
+static char *rtphost = 0;
+static int dataport = 0, controlport = 0, timingport = 0;
+static int fmtp[32];
+static int sampling_rate;
+static int frame_size;
 
-int buffer_start_fill = START_FILL;
+static int buffer_start_fill;
 
-char *libao_driver = NULL;
-char *libao_devicename = NULL;
-char *libao_deviceid = NULL; // ao_options expects "char*"
+static char *libao_driver = NULL;
+static char *libao_devicename = NULL;
+static char *libao_deviceid = NULL; // ao_options expects "char*"
 
 // FIFO name and file handle
-char *pipename = NULL;
-int pipe_handle = -1;
+static char *pipename = NULL;
+static int pipe_handle = -1;
 
 #define FRAME_BYTES (4*frame_size)
 // maximal resampling shift - conservative
 #define OUTFRAME_BYTES (4*(frame_size+3))
 
 
-alac_file *decoder_info;
+static alac_file *decoder_info;
 
 #ifdef FANCY_RESAMPLING
-int fancy_resampling = 1;
-SRC_STATE *src;
+static int fancy_resampling = 1;
+static SRC_STATE *src;
 #endif
 
-int  init_rtp(void);
-void init_buffer(void);
-int  init_output(void);
-void rtp_request_resend(seq_t first, seq_t last);
-void ab_resync(void);
+static int  init_rtp(void);
+static void init_buffer(void);
+static int  init_output(void);
+static void rtp_request_resend(seq_t first, seq_t last);
+static void ab_resync(void);
 
 // interthread variables
   // stdin->decoder
@@ -114,12 +114,13 @@ int ab_buffering = 1, ab_synced = 0;
 pthread_mutex_t ab_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t ab_buffer_ready = PTHREAD_COND_INITIALIZER;
 
-void die(char *why) {
+static void die(char *why) {
     fprintf(stderr, "FATAL: %s\n", why);
     exit(1);
 }
 
-int hex2bin(unsigned char *buf, char *hex) {
+#ifdef HAIRTUNES_STANDALONE
+static int hex2bin(unsigned char *buf, char *hex) {
     int i, j;
     if (strlen(hex) != 0x20)
         return 1;
@@ -131,8 +132,9 @@ int hex2bin(unsigned char *buf, char *hex) {
     }
     return 0;
 }
+#endif
 
-int init_decoder(void) {
+static int init_decoder(void) {
     alac_file *alac;
 
     frame_size = fmtp[1]; // stereo samples
@@ -317,14 +319,14 @@ int main(int argc, char **argv) {
 }
 #endif
 
-void init_buffer(void) {
+static void init_buffer(void) {
     int i;
     for (i=0; i<BUFFER_FRAMES; i++)
         audio_buffer[i].data = malloc(OUTFRAME_BYTES);
     ab_resync();
 }
 
-void ab_resync(void) {
+static void ab_resync(void) {
     int i;
     for (i=0; i<BUFFER_FRAMES; i++)
         audio_buffer[i].ready = 0;
@@ -339,7 +341,7 @@ static inline int seq_order(seq_t a, seq_t b) {
     return d > 0;
 }
 
-void alac_decode(short *dest, char *buf, int len) {
+static void alac_decode(short *dest, char *buf, int len) {
     unsigned char packet[MAX_PACKET];
     assert(len<=MAX_PACKET);
 
@@ -356,8 +358,8 @@ void alac_decode(short *dest, char *buf, int len) {
     assert(outsize == FRAME_BYTES);
 }
 
-void buffer_put_packet(seq_t seqno, char *data, int len) {
-    volatile abuf_t *abuf = 0;
+static void buffer_put_packet(seq_t seqno, char *data, int len) {
+    abuf_t *abuf = 0;
     short buf_fill;
 
     pthread_mutex_lock(&ab_mutex);
@@ -394,12 +396,12 @@ void buffer_put_packet(seq_t seqno, char *data, int len) {
 
 static int rtp_sockets[2];  // data, control
 #ifdef AF_INET6
-    struct sockaddr_in6 rtp_client;
+static struct sockaddr_in6 rtp_client;
 #else
-    struct sockaddr_in rtp_client;
+static struct sockaddr_in rtp_client;
 #endif
 
-void *rtp_thread_func(void *arg) {
+static void *rtp_thread_func(void *arg) {
     socklen_t si_len = sizeof(rtp_client);
     char packet[MAX_PACKET];
     char *pktp;
@@ -443,7 +445,7 @@ void *rtp_thread_func(void *arg) {
     return 0;
 }
 
-void rtp_request_resend(seq_t first, seq_t last) {
+static void rtp_request_resend(seq_t first, seq_t last) {
     if (seq_order(last, first))
         return;
 
@@ -465,25 +467,25 @@ void rtp_request_resend(seq_t first, seq_t last) {
 }
 
 
-int init_rtp(void) {
+static int init_rtp(void) {
     struct sockaddr_in si;
     int type = AF_INET;
-	struct sockaddr* si_p = (struct sockaddr*)&si;
-	socklen_t si_len = sizeof(si);
+    struct sockaddr* si_p = (struct sockaddr*)&si;
+    socklen_t si_len = sizeof(si);
     unsigned short *sin_port = &si.sin_port;
     memset(&si, 0, sizeof(si));
 #ifdef AF_INET6
     struct sockaddr_in6 si6;
     type = AF_INET6;
-	si_p = (struct sockaddr*)&si6;
-	si_len = sizeof(si6);
+    si_p = (struct sockaddr*)&si6;
+    si_len = sizeof(si6);
     sin_port = &si6.sin6_port;
     memset(&si6, 0, sizeof(si6));
 #endif
 
     si.sin_family = AF_INET;
 #ifdef SIN_LEN
-	si.sin_len = sizeof(si);
+    si.sin_len = sizeof(si);
 #endif
     si.sin_addr.s_addr = htonl(INADDR_ANY);
 #ifdef AF_INET6
@@ -501,14 +503,14 @@ int init_rtp(void) {
         if(sock < 0)
             sock = socket(type, SOCK_DGRAM, IPPROTO_UDP);
 #ifdef AF_INET6
-	    if(sock==-1 && type == AF_INET6) {
-	        // try fallback to IPv4
-	        type = AF_INET;
-	        si_p = (struct sockaddr*)&si;
-	        si_len = sizeof(si);
-	        sin_port = &si.sin_port;
-	        continue;
-	    }
+        if(sock==-1 && type == AF_INET6) {
+            // try fallback to IPv4
+            type = AF_INET;
+            si_p = (struct sockaddr*)&si;
+            si_len = sizeof(si);
+            sin_port = &si.sin_port;
+            continue;
+        }
 #endif
         if (sock==-1)
             die("Can't create data socket!");
@@ -591,7 +593,7 @@ static double biquad_filt(biquad_t *bq, double in) {
     return w;
 }
 
-double bf_playback_rate = 1.0;
+static double bf_playback_rate = 1.0;
 
 static double bf_est_drift = 0.0;   // local clock is slower by
 static biquad_t bf_drift_lpf;
@@ -600,7 +602,7 @@ static biquad_t bf_err_lpf, bf_err_deriv_lpf;
 static double desired_fill;
 static int fill_count;
 
-void bf_est_reset(short fill) {
+static void bf_est_reset(short fill) {
     biquad_lpf(&bf_drift_lpf, 1.0/180.0, 0.3);
     biquad_lpf(&bf_err_lpf, 1.0/10.0, 0.25);
     biquad_lpf(&bf_err_deriv_lpf, 1.0/2.0, 0.2);
@@ -609,7 +611,7 @@ void bf_est_reset(short fill) {
     bf_est_err = bf_last_err = 0;
     desired_fill = fill_count = 0;
 }
-void bf_est_update(short fill) {
+static void bf_est_update(short fill) {
     if (fill_count < 1000) {
         desired_fill += (double)fill/1000.0;
         fill_count++;
@@ -633,7 +635,7 @@ void bf_est_update(short fill) {
 }
 
 // get the next frame, when available. return 0 if underrun/stream reset.
-short *buffer_get_frame(void) {
+static short *buffer_get_frame(void) {
     short buf_fill;
     seq_t read;
     volatile abuf_t *abuf = 0;
@@ -687,7 +689,7 @@ short *buffer_get_frame(void) {
     return curframe->data;
 }
 
-int stuff_buffer(double playback_rate, short *inptr, short *outptr) {
+static int stuff_buffer(double playback_rate, short *inptr, short *outptr) {
     int i;
     int stuffsamp = frame_size;
     int stuff = 0;
@@ -726,8 +728,8 @@ int stuff_buffer(double playback_rate, short *inptr, short *outptr) {
     return frame_size + stuff;
 }
 
-void *audio_thread_func(void *arg) {
-	ao_device* dev = arg;
+static void *audio_thread_func(void *arg) {
+    ao_device* dev = arg;
     int play_samples;
 
     signed short buf_fill __attribute__((unused));
@@ -795,18 +797,18 @@ void *audio_thread_func(void *arg) {
 
 #define NUM_CHANNELS 2
 
-void handle_broken_fifo() {
+static void handle_broken_fifo() {
     close(pipe_handle);
     pipe_handle = -1;
 }
 
-void init_pipe(char* pipe) {
+static void init_pipe(const char* pipe) {
     // make the FIFO and catch the broken pipe signal
     mknod(pipe, S_IFIFO | 0644, 0);
     signal(SIGPIPE, handle_broken_fifo);
 }
 
-void* init_ao() {
+static void* init_ao(void) {
     ao_initialize();
 
     int driver;
@@ -823,12 +825,12 @@ void* init_ao() {
 
     ao_sample_format fmt;
     memset(&fmt, 0, sizeof(fmt));
-	
+
     fmt.bits = 16;
     fmt.rate = sampling_rate;
     fmt.channels = NUM_CHANNELS;
     fmt.byte_format = AO_FMT_NATIVE;
-	
+
     ao_option *ao_opts = NULL;
     if(libao_deviceid) {
         ao_append_option(&ao_opts, "id", libao_deviceid);
@@ -847,8 +849,8 @@ void* init_ao() {
     return dev;
 }
 
-int init_output(void) {
-	void* arg = 0;
+static int init_output(void) {
+    void* arg = 0;
 
     if (pipename) {
         init_pipe(pipename);
