@@ -4,7 +4,7 @@ OBJS=socketlib.o shairport.o alac.o hairtunes.o
 all: hairtunes shairport
 
 hairtunes: hairtunes.c alac.o
-	$(CC) $(CFLAGS) -DHAIRTUNES_STANDALONE hairtunes.c alac.c -o $@ $(LDFLAGS)
+	$(CC) $(CFLAGS) -DHAIRTUNES_STANDALONE hairtunes.c alac.o -o $@ $(LDFLAGS)
 
 shairport: $(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) -o $@ $(LDFLAGS)
