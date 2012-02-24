@@ -551,11 +551,11 @@ static int init_rtp(void) {
 static inline short dithered_vol(short sample) {
     static short rand_a, rand_b;
     long out;
-    rand_b = rand_a;
-    rand_a = rand() & 0xffff;
 
     out = (long)sample * fix_volume;
     if (fix_volume < 0x10000) {
+        rand_b = rand_a;
+        rand_a = rand() & 0xffff;
         out += rand_a;
         out -= rand_b;
     }
@@ -616,6 +616,7 @@ static void bf_est_reset(short fill) {
     bf_est_err = bf_last_err = 0;
     desired_fill = fill_count = 0;
 }
+
 static void bf_est_update(short fill) {
     if (fill_count < 1000) {
         desired_fill += (double)fill/1000.0;
@@ -629,12 +630,14 @@ static void bf_est_update(short fill) {
     double buf_delta = fill - desired_fill;
     bf_est_err = biquad_filt(&bf_err_lpf, buf_delta);
     double err_deriv = biquad_filt(&bf_err_deriv_lpf, bf_est_err - bf_last_err);
+    double adj_error = CONTROL_A * bf_est_err;
 
-    bf_est_drift = biquad_filt(&bf_drift_lpf, CONTROL_B*(bf_est_err*CONTROL_A + err_deriv) + bf_est_drift);
+    bf_est_drift = biquad_filt(&bf_drift_lpf, CONTROL_B*(adj_error + err_deriv) + bf_est_drift);
 
     if (debug)
-        fprintf(stderr, "bf %d err %f drift %f desiring %f ed %f estd %f\r", fill, bf_est_err, bf_est_drift, desired_fill, err_deriv, err_deriv + CONTROL_A*bf_est_err);
-    bf_playback_rate = 1.0 + CONTROL_A*bf_est_err + bf_est_drift;
+        fprintf(stderr, "bf %d err %f drift %f desiring %f ed %f estd %f\n",
+                fill, bf_est_err, bf_est_drift, desired_fill, err_deriv, err_deriv + adj_error);
+    bf_playback_rate = 1.0 + adj_error + bf_est_drift;
 
     bf_last_err = bf_est_err;
 }
@@ -672,7 +675,8 @@ static short *buffer_get_frame(void) {
     buf_fill = ab_write - ab_read;
     bf_est_update(buf_fill);
 
-    // check if t+16, t+32, t+64, t+128, ... (START_FILL / 2)  packets have arrived... last-chance resend
+    // check if t+16, t+32, t+64, t+128, ... (START_FILL / 2)
+    // packets have arrived... last-chance resend
     if (!ab_buffering) {
         for (i = 16; i < (START_FILL / 2); i = (i * 2)) {
             next = ab_read + i;
