@@ -586,11 +586,11 @@ static void biquad_lpf(biquad_t *bq, double freq, double Q) {
 
 static double biquad_filt(biquad_t *bq, double in) {
     double w = in - bq->a[0]*bq->hist[0] - bq->a[1]*bq->hist[1];
-    double out __attribute__((unused)) = bq->b[1]*bq->hist[0] + bq->b[2]*bq->hist[1] + bq->b[0]*w;
+    double out = bq->b[1]*bq->hist[0] + bq->b[2]*bq->hist[1] + bq->b[0]*w;
     bq->hist[1] = bq->hist[0];
     bq->hist[0] = w;
 
-    return w;
+    return out;
 }
 
 static double bf_playback_rate = 1.0;
