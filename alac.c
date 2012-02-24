@@ -109,7 +109,6 @@ void alac_set_info(alac_file *alac, char *inputbuffer)
   alac->setinfo_8a_rate = *(uint32_t*)ptr;
   if (!host_bigendian)
       _Swap32(alac->setinfo_8a_rate);
-  ptr += 4;
 
   allocate_buffers(alac);
 
