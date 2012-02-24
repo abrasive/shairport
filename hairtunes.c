@@ -97,9 +97,10 @@ static void rtp_request_resend(seq_t first, seq_t last);
 static void ab_resync(void);
 
 // interthread variables
-  // stdin->decoder
-volatile double volume = 1.0;
-volatile long fix_volume = 0x10000;
+// stdin->decoder
+static double volume = 1.0;
+static int fix_volume = 0x10000;
+static pthread_mutex_t vol_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 typedef struct audio_buffer_entry {   // decoded audio packets
     int ready;
@@ -220,8 +221,10 @@ int hairtunes_init(char *pAeskey, char *pAesiv, char *fmtpstr, int pCtrlPort, in
             assert(f<=0);
             if (debug)
                 fprintf(stderr, "VOL: %lf\n", f);
+            pthread_mutex_lock(&vol_mutex);
             volume = pow(10.0,0.05*f);
             fix_volume = 65536.0 * volume;
+            pthread_mutex_unlock(&vol_mutex);
             continue;
         }
         if (!strcmp(line, "exit\n")) {
@@ -702,6 +705,7 @@ static int stuff_buffer(double playback_rate, short *inptr, short *outptr) {
         stuffsamp = rand() % (frame_size - 1);
     }
 
+    pthread_mutex_lock(&vol_mutex);
     for (i=0; i<stuffsamp; i++) {   // the whole frame, if no stuffing
         *outptr++ = dithered_vol(*inptr++);
         *outptr++ = dithered_vol(*inptr++);
@@ -724,6 +728,7 @@ static int stuff_buffer(double playback_rate, short *inptr, short *outptr) {
             *outptr++ = dithered_vol(*inptr++);
         }
     }
+    pthread_mutex_unlock(&vol_mutex);
 
     return frame_size + stuff;
 }
@@ -759,11 +764,13 @@ static void *audio_thread_func(void *arg) {
 
 #ifdef FANCY_RESAMPLING
         if (fancy_resampling) {
-	        int i;
+            int i;
+            pthread_mutex_lock(&vol_mutex);
             for (i=0; i<2*FRAME_BYTES; i++) {
                 frame[i] = (float)inbuf[i] / 32768.0;
                 frame[i] *= volume;
             }
+            pthread_mutex_unlock(&vol_mutex);
             srcdat.src_ratio = bf_playback_rate;
             src_process(src, &srcdat);
             assert(srcdat.input_frames_used == FRAME_BYTES);
