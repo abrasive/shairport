@@ -376,13 +376,13 @@ static void handleClient(int pSock, char *pPassword, char *pHWADDR)
       port = ntohs(s->sin6_port);
       inet_ntop(AF_INET6, &s->sin6_addr, ipstr, sizeof ipstr);
 
-	  union {
-		  struct sockaddr_in6 s;
-		  unsigned char bin[sizeof(struct sockaddr_in6)];
-	  } addr;
-	  memcpy(&addr.s, &s->sin6_addr, sizeof(struct sockaddr_in6));
-	  
-	  if(memcmp(&addr.bin[0], "\x00\x00\x00\x00" "\x00\x00\x00\x00" "\x00\x00\xff\xff", 12) == 0)
+      union {
+          struct sockaddr_in6 s;
+          unsigned char bin[sizeof(struct sockaddr_in6)];
+      } addr;
+      memcpy(&addr.s, &s->sin6_addr, sizeof(struct sockaddr_in6));
+
+      if(memcmp(&addr.bin[0], "\x00\x00\x00\x00" "\x00\x00\x00\x00" "\x00\x00\xff\xff", 12) == 0)
       {
         // its ipv4...
         memcpy(ipbin, &addr.bin[12], 4);
