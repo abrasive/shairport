@@ -289,7 +289,7 @@ found:
 
 #define RICE_THRESHOLD 8 // maximum number of bits for a rice prefix.
 
-int32_t entropy_decode_value(alac_file* alac,
+static int32_t entropy_decode_value(alac_file* alac,
                              int readSampleSize,
                              int k,
                              int rice_kmodifier_mask)
@@ -333,7 +333,7 @@ int32_t entropy_decode_value(alac_file* alac,
     return x;
 }
 
-void entropy_rice_decode(alac_file* alac,
+static void entropy_rice_decode(alac_file* alac,
                          int32_t* outputBuffer,
                          int outputSize,
                          int readSampleSize,
@@ -550,7 +550,7 @@ static void predictor_decompress_fir_adapt(int32_t *error_buffer,
     }
 }
 
-void deinterlace_16(int32_t *buffer_a, int32_t *buffer_b,
+static void deinterlace_16(int32_t *buffer_a, int32_t *buffer_b,
                     int16_t *buffer_out,
                     int numchannels, int numsamples,
                     uint8_t interlacing_shift,
@@ -609,7 +609,7 @@ void deinterlace_16(int32_t *buffer_a, int32_t *buffer_b,
     }
 }
 
-void deinterlace_24(int32_t *buffer_a, int32_t *buffer_b,
+static void deinterlace_24(int32_t *buffer_a, int32_t *buffer_b,
                     int uncompressed_bytes,
                     int32_t *uncompressed_bytes_buffer_a, int32_t *uncompressed_bytes_buffer_b,
                     void *buffer_out,
