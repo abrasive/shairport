@@ -106,14 +106,14 @@ typedef struct audio_buffer_entry {   // decoded audio packets
     int ready;
     signed short *data;
 } abuf_t;
-volatile abuf_t audio_buffer[BUFFER_FRAMES];
+static abuf_t audio_buffer[BUFFER_FRAMES];
 #define BUFIDX(seqno) ((seq_t)(seqno) % BUFFER_FRAMES)
 
 // mutex-protected variables
-volatile seq_t ab_read, ab_write;
-int ab_buffering = 1, ab_synced = 0;
-pthread_mutex_t ab_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t ab_buffer_ready = PTHREAD_COND_INITIALIZER;
+static seq_t ab_read, ab_write;
+static int ab_buffering = 1, ab_synced = 0;
+static pthread_mutex_t ab_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t ab_buffer_ready = PTHREAD_COND_INITIALIZER;
 
 static void die(char *why) {
     fprintf(stderr, "FATAL: %s\n", why);
@@ -391,10 +391,12 @@ static void buffer_put_packet(seq_t seqno, char *data, int len) {
         abuf->ready = 1;
     }
 
+    pthread_mutex_lock(&ab_mutex);
     if (ab_buffering && buf_fill >= buffer_start_fill) {
         ab_buffering = 0;
         pthread_cond_signal(&ab_buffer_ready);
     }
+    pthread_mutex_unlock(&ab_mutex);
 }
 
 static int rtp_sockets[2];  // data, control
@@ -641,7 +643,7 @@ static void bf_est_update(short fill) {
 static short *buffer_get_frame(void) {
     short buf_fill;
     seq_t read;
-    volatile abuf_t *abuf = 0;
+    abuf_t *abuf = 0;
     unsigned short next;
     int i;
 
@@ -656,9 +658,9 @@ static short *buffer_get_frame(void) {
         pthread_cond_wait(&ab_buffer_ready, &ab_mutex);
         ab_read++;
         buf_fill = ab_write - ab_read;
+        bf_est_reset(buf_fill);
         pthread_mutex_unlock(&ab_mutex);
 
-        bf_est_reset(buf_fill);
         return 0;
     }
     if (buf_fill >= BUFFER_FRAMES) {   // overrunning! uh-oh. restart at a sane distance
@@ -667,8 +669,6 @@ static short *buffer_get_frame(void) {
     }
     read = ab_read;
     ab_read++;
-    pthread_mutex_unlock(&ab_mutex);
-
     buf_fill = ab_write - ab_read;
     bf_est_update(buf_fill);
 
@@ -683,12 +683,14 @@ static short *buffer_get_frame(void) {
         }
     }
 
-    volatile abuf_t *curframe = audio_buffer + BUFIDX(read);
+    abuf_t *curframe = audio_buffer + BUFIDX(read);
     if (!curframe->ready) {
         fprintf(stderr, "\nmissing frame.\n");
         memset(curframe->data, 0, FRAME_BYTES);
     }
     curframe->ready = 0;
+    pthread_mutex_unlock(&ab_mutex);
+
     return curframe->data;
 }
 
