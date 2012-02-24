@@ -40,7 +40,7 @@
 // TEMP
 
 int kCurrentLogLevel = LOG_INFO;
-extern int buffer_start_fill;
+int bufferStartFill = -1;
 
 #ifdef _WIN32
 #define DEVNULL "nul"
@@ -113,12 +113,12 @@ int main(int argc, char **argv)
     }
     else if(!strcmp(arg, "-b")) 
     {
-      buffer_start_fill = atoi(*++argv);
+      bufferStartFill = atoi(*++argv);
       argc--;
     }
     else if(!strncmp(arg, "--buffer=", 9))
     {
-      buffer_start_fill = atoi(arg + 9);
+      bufferStartFill = atoi(arg + 9);
     }
     else if(!strcmp(arg, "-k"))
     {
@@ -161,7 +161,7 @@ int main(int argc, char **argv)
     }    
   }
 
-  if ( buffer_start_fill < 30 || buffer_start_fill > BUFFER_FRAMES ) { 
+  if ( bufferStartFill < 30 || bufferStartFill > BUFFER_FRAMES ) {
      fprintf(stderr, "buffer value must be > 30 and < %d\n", BUFFER_FRAMES);
      return(0);
   }
@@ -774,7 +774,8 @@ int parseMessage(struct connection *pConn, unsigned char *pIpBin, unsigned int p
       }
       cleanupBuffers(pConn);
       hairtunes_init(tKeys->aeskey, tKeys->aesiv, tKeys->fmt, tControlport, tTimingport,
-                      tDataport, tRtp, tPipe, tAoDriver, tAoDeviceName, tAoDeviceId);
+                      tDataport, tRtp, tPipe, tAoDriver, tAoDeviceName, tAoDeviceId,
+                      bufferStartFill);
 
       // Quit when finished.
       slog(LOG_DEBUG, "Returned from hairtunes init....returning -1, should close out this whole side of the fork\n");

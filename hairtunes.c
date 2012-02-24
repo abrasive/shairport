@@ -163,7 +163,8 @@ int init_decoder(void) {
 }
 
 int hairtunes_init(char *pAeskey, char *pAesiv, char *fmtpstr, int pCtrlPort, int pTimingPort,
-         int pDataPort, char *pRtpHost, char*pPipeName, char *pLibaoDriver, char *pLibaoDeviceName, char *pLibaoDeviceId)
+         int pDataPort, char *pRtpHost, char*pPipeName, char *pLibaoDriver, char *pLibaoDeviceName, char *pLibaoDeviceId,
+         int bufStartFill)
 {
     if(pAeskey != NULL)    
         memcpy(aeskey, pAeskey, sizeof(aeskey));
@@ -183,6 +184,9 @@ int hairtunes_init(char *pAeskey, char *pAesiv, char *fmtpstr, int pCtrlPort, in
     controlport = pCtrlPort;
     timingport = pTimingPort;
     dataport = pDataPort;
+    if(bufStartFill < 0)
+        bufStartFill = START_FILL;
+    buffer_start_fill = bufStartFill;
 
     AES_set_decrypt_key(aeskey, 128, &aes);
 
@@ -309,7 +313,7 @@ int main(int argc, char **argv) {
     if (hex2bin(aeskey, hexaeskey))
         die("can't understand key");
     return hairtunes_init(NULL, NULL, fmtpstr, controlport, timingport, dataport,
-                    NULL, NULL, NULL, NULL, NULL);
+                    NULL, NULL, NULL, NULL, NULL, START_FILL);
 }
 #endif
 
@@ -654,7 +658,7 @@ short *buffer_get_frame(void) {
     }
     if (buf_fill >= BUFFER_FRAMES) {   // overrunning! uh-oh. restart at a sane distance
         fprintf(stderr, "\noverrun.\n");
-        ab_read = ab_write - START_FILL;
+        ab_read = ab_write - buffer_start_fill;
     }
     read = ab_read;
     ab_read++;
