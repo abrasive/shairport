@@ -575,7 +575,7 @@ static void biquad_init(biquad_t *bq, double a[], double b[]) {
 }
 
 static void biquad_lpf(biquad_t *bq, double freq, double Q) {
-    double w0 = 2*M_PI*freq/((float)sampling_rate/(float)frame_size);
+    double w0 = 2.0 * M_PI * freq * frame_size / (double)sampling_rate;
     double alpha = sin(w0)/(2.0*Q);
 
     double a_0 = 1.0 + alpha;
@@ -706,7 +706,7 @@ static int stuff_buffer(double playback_rate, short *inptr, short *outptr) {
 
     p_stuff = 1.0 - pow(1.0 - fabs(playback_rate-1.0), frame_size);
 
-    if ((float)rand()/((float)RAND_MAX) < p_stuff) {
+    if (rand() < p_stuff * RAND_MAX) {
         stuff = playback_rate > 1.0 ? -1 : 1;
         stuffsamp = rand() % (frame_size - 1);
     }
