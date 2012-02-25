@@ -548,6 +548,12 @@ static int init_rtp(void) {
     return port;
 }
 
+static short lcg_rand(void) {
+	static unsigned long lcg_prev = 12345;
+	lcg_prev = lcg_prev * 69069 + 3;
+	return lcg_prev & 0xffff;
+}
+
 static inline short dithered_vol(short sample) {
     static short rand_a, rand_b;
     long out;
@@ -555,7 +561,7 @@ static inline short dithered_vol(short sample) {
     out = (long)sample * fix_volume;
     if (fix_volume < 0x10000) {
         rand_b = rand_a;
-        rand_a = rand() & 0xffff;
+        rand_a = lcg_rand();
         out += rand_a;
         out -= rand_b;
     }
