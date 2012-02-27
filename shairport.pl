@@ -113,7 +113,7 @@ sub usage {
           "Options:\n".
           "  -a, --apname=AirPort            Sets AirPort name\n".
           "  -p, --password=secret           Sets password\n",
-          "  -o, --server_port=5002          Sets Port for Avahi/dns-sd\n",
+          "  -o, --server_port=5002          Sets Port for Avahi/dns-sd/howl\n",
           "  -i, --pipe=pipepath             Sets the path to a named pipe for output\n",
           "      --ao_driver=driver          Sets the ao driver (optional)\n",
           "      --ao_devicename=devicename  Sets the ao device name (optional)\n",
@@ -281,7 +281,12 @@ if ($avahi_publish==0) {
         ".",
          $port,
         "tp=UDP","sm=false","sv=false","ek=1","et=0,1","cn=0,1","ch=2","ss=16","sr=44100",$pw_clause,"vn=3","txtvers=1"; };
-    die "could not run avahi-publish-service nor dns-sd";
+    { exec 'mDNSPublish',
+        join('', map { sprintf "%02X", $_ } @hw_addr) . "\@$apname",
+        "_raop._tcp",
+         $port,
+        "tp=UDP","sm=false","sv=false","ek=1","et=0,1","cn=0,1","ch=2","ss=16","sr=44100",$pw_clause,"vn=3","txtvers=1"; };
+    die "could not run avahi-publish-service nor dns-sd nor mDNSPublish";
 }
 
 my $airport_pem = join '', <DATA>;

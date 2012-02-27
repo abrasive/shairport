@@ -5,7 +5,7 @@ You need the following installed:
  * openssl
  * libao
  * Perl 5.10 or higher
- * Linux: avahi
+ * Linux: avahi (or, for embedded systems, howl)
  * Windows/Mac OS X: Bonjour
 
 Perl modules (install from CPAN if needed e.g. `perl -MCPAN -e 'install X'`):
