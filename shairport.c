@@ -181,7 +181,7 @@ int main(int argc, char **argv)
       slog(LOG_INFO, "Usage:\nshairport [OPTION...]\n\nOptions:\n");
       slog(LOG_INFO, "  -a, --apname=AirPort    Sets Airport name\n");
       slog(LOG_INFO, "  -p, --password=secret   Sets Password (not working)\n");
-      slog(LOG_INFO, "  -o, --server_port=5002  Sets Port for Avahi/dns-sd\n");
+      slog(LOG_INFO, "  -o, --server_port=5002  Sets Port for Avahi/dns-sd/howl\n");
       slog(LOG_INFO, "  -b, --buffer=282        Sets Number of frames to buffer before beginning playback\n");
       slog(LOG_INFO, "  -d                      Daemon mode\n");
       slog(LOG_INFO, "  -q, --quiet             Supresses all output.\n");
@@ -975,11 +975,14 @@ static int startAvahi(const char *pHWStr, const char *pServerName, int pPort)
     execlp("dns-sd", "dns-sd", "-R", tName,
          "_raop._tcp", ".", tPort, "tp=UDP","sm=false","sv=false","ek=1","et=0,1",
          "cn=0,1","ch=2","ss=16","sr=44100","pw=false","vn=3","txtvers=1", NULL);
+    execlp("mDNSPublish", "mDNSPublish", tName,
+         "_raop._tcp", tPort, "tp=UDP","sm=false","sv=false","ek=1","et=0,1",
+         "cn=0,1","ch=2","ss=16","sr=44100","pw=false","vn=3","txtvers=1", NULL);
     if(errno == -1) {
             perror("error");
     }
 
-    slog(LOG_INFO, "Bad error... couldn't find or failed to run: avahi-publish-service OR dns-sd\n");
+    slog(LOG_INFO, "Bad error... couldn't find or failed to run: avahi-publish-service OR dns-sd OR mDNSPublish\n");
     exit(1);
   }
   else
