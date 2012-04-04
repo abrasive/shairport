@@ -829,7 +829,6 @@ static void *audio_thread_func(void *arg) {
             }
         } else {
 #ifdef ALSA
-            play_samples = stuff_buffer(bf_playback_rate, inbuf, outbuf);
             snd_pcm_writei(alsa_handle, (char *)outbuf, play_samples);
 #else
             ao_play(dev, (char *)outbuf, play_samples*4);
