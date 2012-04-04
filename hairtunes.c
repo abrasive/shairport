@@ -41,7 +41,12 @@
 #include "hairtunes.h"
 #include <sys/signal.h>
 #include <fcntl.h>
+#ifdef ALSA
+#define ALSA_PCM_NEW_HW_PARAMS_API
+#include <alsa/asoundlib.h>
+#else
 #include <ao/ao.h>
+#endif
 
 #ifdef FANCY_RESAMPLING
 #include <samplerate.h>
@@ -70,9 +75,15 @@ static int frame_size;
 
 static int buffer_start_fill;
 
+#ifdef ALSA
+static snd_pcm_t *alsa_handle = NULL;
+static snd_pcm_hw_params_t *alsa_params = NULL;
+//static snd_pcm_uframes_t alsa_frames = NULL;
+#else
 static char *libao_driver = NULL;
 static char *libao_devicename = NULL;
 static char *libao_deviceid = NULL; // ao_options expects "char*"
+#endif
 
 // FIFO name and file handle
 static char *pipename = NULL;
@@ -93,6 +104,7 @@ static SRC_STATE *src;
 static int  init_rtp(void);
 static void init_buffer(void);
 static int  init_output(void);
+static void deinit_output(void);
 static void rtp_request_resend(seq_t first, seq_t last);
 static void ab_resync(void);
 
@@ -177,12 +189,14 @@ int hairtunes_init(char *pAeskey, char *pAesiv, char *fmtpstr, int pCtrlPort, in
         rtphost = pRtpHost;
     if(pPipeName != NULL)
         pipename = pPipeName;
+#ifndef ALSA
     if(pLibaoDriver != NULL)
         libao_driver = pLibaoDriver;
     if(pLibaoDeviceName != NULL)
         libao_devicename = pLibaoDeviceName;
     if(pLibaoDeviceId != NULL)
         libao_deviceid = pLibaoDeviceId;
+#endif
     
     controlport = pCtrlPort;
     timingport = pTimingPort;
@@ -238,6 +252,7 @@ int hairtunes_init(char *pAeskey, char *pAesiv, char *fmtpstr, int pCtrlPort, in
                 fprintf(stderr, "FLUSH\n");
         }
     }
+    deinit_output();
     fprintf(stderr, "bye!\n");
     fflush(stderr);
 
@@ -275,12 +290,15 @@ int main(int argc, char **argv) {
             rtphost = *++argv;
         } else
         if (!strcasecmp(arg, "pipe")) {
+#ifndef ALSA
             if (libao_driver || libao_devicename || libao_deviceid ) {
                 die("Option 'pipe' may not be combined with 'ao_driver', 'ao_devicename' or 'ao_deviceid'");
             }
-
+#endif
             pipename = *++argv;
-        } else
+        }
+#ifndef ALSA
+        else
         if (!strcasecmp(arg, "ao_driver")) {
             if (pipename) {
                 die("Option 'ao_driver' may not be combined with 'pipe'");
@@ -302,6 +320,7 @@ int main(int argc, char **argv) {
 
             libao_deviceid = *++argv;
         }
+#endif
 #ifdef FANCY_RESAMPLING
         else
         if (!strcasecmp(arg, "resamp")) {
@@ -746,7 +765,9 @@ static int stuff_buffer(double playback_rate, short *inptr, short *outptr) {
 }
 
 static void *audio_thread_func(void *arg) {
+#ifndef ALSA
     ao_device* dev = arg;
+#endif
     int play_samples;
 
     signed short buf_fill __attribute__((unused));
@@ -807,7 +828,12 @@ static void *audio_thread_func(void *arg) {
                  }
             }
         } else {
+#ifdef ALSA
+            play_samples = stuff_buffer(bf_playback_rate, inbuf, outbuf);
+            snd_pcm_writei(alsa_handle, (char *)outbuf, play_samples);
+#else
             ao_play(dev, (char *)outbuf, play_samples*4);
+#endif
         }
     }
 
@@ -827,6 +853,34 @@ static void init_pipe(const char* pipe) {
     signal(SIGPIPE, handle_broken_fifo);
 }
 
+#ifdef ALSA
+void init_alsa() {
+    int rc, dir = 0;
+    snd_pcm_uframes_t frames = 32;
+    rc = snd_pcm_open(&alsa_handle, "default", SND_PCM_STREAM_PLAYBACK, 0);
+    if (rc < 0) {
+        fprintf(stderr, "unable to open pcm device: %s\n", snd_strerror(rc));
+        return;
+    }
+    snd_pcm_hw_params_alloca(&alsa_params);
+    snd_pcm_hw_params_any(alsa_handle, alsa_params);
+    snd_pcm_hw_params_set_access(alsa_handle, alsa_params, SND_PCM_ACCESS_RW_INTERLEAVED);
+    snd_pcm_hw_params_set_format(alsa_handle, alsa_params, SND_PCM_FORMAT_S16);
+    snd_pcm_hw_params_set_channels(alsa_handle, alsa_params, NUM_CHANNELS);
+    snd_pcm_hw_params_set_rate_near(alsa_handle, alsa_params, (unsigned int *)&sampling_rate, &dir);
+    snd_pcm_hw_params_set_period_size_near(alsa_handle, alsa_params, &frames, &dir);
+    rc = snd_pcm_hw_params(alsa_handle, alsa_params);
+    if (rc < 0) {
+        fprintf(stderr, "unable to set hw parameters: %s\n", snd_strerror(rc));
+        return;
+    }
+}
+
+void deinit_alsa() {
+	snd_pcm_drain(alsa_handle);
+	snd_pcm_close(alsa_handle);
+}
+#else
 static void* init_ao(void) {
     ao_initialize();
 
@@ -867,6 +921,7 @@ static void* init_ao(void) {
 
     return dev;
 }
+#endif
 
 static int init_output(void) {
     void* arg = 0;
@@ -874,7 +929,11 @@ static int init_output(void) {
     if (pipename) {
         init_pipe(pipename);
     } else {
+#ifdef ALSA
+        init_alsa();
+#else
         arg = init_ao();
+#endif
     }
 
 #ifdef FANCY_RESAMPLING
@@ -891,3 +950,9 @@ static int init_output(void) {
     return 0;
 }
 
+static void deinit_output(void) {
+#ifdef ALSA
+    if (alsa_handle)
+        deinit_alsa();
+#endif
+}
