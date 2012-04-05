@@ -46,7 +46,7 @@ void* audio_init(int sampling_rate)
     rc = snd_pcm_open(&alsa_handle, "default", SND_PCM_STREAM_PLAYBACK, 0);
     if (rc < 0) {
         fprintf(stderr, "unable to open pcm device: %s\n", snd_strerror(rc));
-        return NULL;
+        die("alsa initialization failed");
     }
     snd_pcm_hw_params_alloca(&alsa_params);
     snd_pcm_hw_params_any(alsa_handle, alsa_params);
@@ -58,6 +58,7 @@ void* audio_init(int sampling_rate)
     rc = snd_pcm_hw_params(alsa_handle, alsa_params);
     if (rc < 0) {
         fprintf(stderr, "unable to set hw parameters: %s\n", snd_strerror(rc));
+        die("alsa initialization failed");
     }
     return NULL;
 }
