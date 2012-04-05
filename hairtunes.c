@@ -823,7 +823,7 @@ static int init_output(void) {
     if (pipename) {
         init_pipe(pipename);
     } else {
-        audio_init(sampling_rate);
+        arg = audio_init(sampling_rate);
     }
 
 #ifdef FANCY_RESAMPLING
