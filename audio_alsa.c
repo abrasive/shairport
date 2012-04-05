@@ -36,7 +36,11 @@ char* audio_get_device_id(void)
 
 void audio_play(char* outbuf, int samples, void* priv_data)
 {
-    snd_pcm_writei(alsa_handle, outbuf, samples);
+    int err = snd_pcm_writei(alsa_handle, outbuf, samples);
+    if (err < 0)
+        err = snd_pcm_recover(alsa_handle, err, 0);
+    if (err < 0)
+        fprintf(stderr, "snd_pcm_writei failed: %s\n", snd_strerror(err));
 }
 
 void* audio_init(int sampling_rate)
