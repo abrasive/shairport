@@ -102,6 +102,8 @@ static double volume = 1.0;
 static int fix_volume = 0x10000;
 static pthread_mutex_t vol_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+
+
 typedef struct audio_buffer_entry {   // decoded audio packets
     int ready;
     signed short *data;
@@ -750,8 +752,14 @@ static void *audio_thread_func(void *arg) {
     int play_samples;
 
     signed short buf_fill __attribute__((unused));
-    signed short *inbuf, *outbuf;
+    signed short *inbuf, *outbuf, *silence;
     outbuf = malloc(OUTFRAME_BYTES);
+    silence = malloc(OUTFRAME_BYTES);
+    int i;
+
+    for (i=0; i<OUTFRAME_BYTES/2; i++) {
+        silence[i] = 0;
+    }
 
 #ifdef FANCY_RESAMPLING
     float *frame, *outframe;
@@ -770,9 +778,13 @@ static void *audio_thread_func(void *arg) {
 #endif
 
     while (1) {
-        do {
-            inbuf = buffer_get_frame();
-        } while (!inbuf);
+       if (ab_buffering) {
+           inbuf = silence;
+       } else {
+            do {
+                inbuf = buffer_get_frame();
+            } while (!inbuf);
+       }
 
 #ifdef FANCY_RESAMPLING
         if (fancy_resampling) {
