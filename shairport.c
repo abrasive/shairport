@@ -87,6 +87,10 @@ static void handle_sigchld(int signo) {
     waitpid(-1, &status, WNOHANG);
 }
 
+char tAoDriver[56] = "";
+char tAoDeviceName[56] = "";
+char tAoDeviceId[56] = "";
+
 int main(int argc, char **argv)
 {
   // unfortunately we can't just IGN on non-SysV systems
@@ -118,6 +122,22 @@ int main(int argc, char **argv)
     {
        strncpy(tServerName, *++argv, 55);
        argc--;
+    }
+    else if(!strncmp(arg, "--apname=", 9))
+    {
+      strncpy(tServerName, arg+9, 55);
+    }
+    else if(!strncmp(arg, "--ao_driver=",12 ))
+    {
+      strncpy(tAoDriver, arg+12, 55);
+    }
+    else if(!strncmp(arg, "--ao_devicename=",16 ))
+    {
+      strncpy(tAoDeviceName, arg+16, 55);
+    }
+    else if(!strncmp(arg, "--ao_deviceid=",14 ))
+    {
+      strncpy(tAoDeviceId, arg+14, 55);
     }
     else if(!strncmp(arg, "--apname=", 9))
     {
@@ -776,9 +796,6 @@ static int parseMessage(struct connection *pConn, unsigned char *pIpBin, unsigne
       slog(LOG_DEBUG_V, "Got %d for CPort and %d for TPort\n", tControlport, tTimingport);
       char *tRtp = NULL;
       char *tPipe = NULL;
-      char *tAoDriver = NULL;
-      char *tAoDeviceName = NULL;
-      char *tAoDeviceId = NULL;
 
       // *************************************************
       // ** Setting up Pipes, AKA no more debug/output  **
