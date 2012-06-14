@@ -630,20 +630,41 @@ sub conn_handle_request {
             last;
         };
 
-        /^ANNOUNCE$/ && do {
-            my $sdptext = $req->content;
-            my @sdplines = split /[\r\n]+/, $sdptext;
-            my %sdp = map { ($1, $2) if /^a=([^:]+):(.+)/ } @sdplines;
-            die("no AESIV") unless my $aesiv = decode_base64($sdp{aesiv});
-            die("no AESKEY") unless my $rsaaeskey = decode_base64($sdp{rsaaeskey});
-            $rsa->use_pkcs1_oaep_padding;
-            my $aeskey = $rsa->decrypt($rsaaeskey) || die "RSA decrypt failed";
+		/^ANNOUNCE$/ && do {
+			my $sdptext = $req->content;
+			my @sdplines = split /[\r\n ]+/, $sdptext;
+			print "@sdplines";
+			my %sdp = map { ($1, $2) if /^a=([^:]+):([^=]+)/ } @sdplines;
+			die("no AESIV") unless my $aesiv = decode_base64($sdp{aesiv});
+			die("no AESKEY") unless my $rsaaeskey = decode_base64($sdp{rsaaeskey});
+			$rsa->use_pkcs1_oaep_padding;
+			my $aeskey = $rsa->decrypt($rsaaeskey) || die "RSA decrypt failed";
 
-            $conn->{aesiv} = $aesiv;
-            $conn->{aeskey} = $aeskey;
-            $conn->{fmtp} = $sdp{fmtp};
-            last;
-        };
+			my $fmtp = "";
+			my $began = 0;
+			my $line;
+			foreach $line (@sdplines) {
+				if ($line =~ /a=fmtp:/) {
+					$fmtp=substr($line,7,length($line)-7);
+					$began = 1;
+					next;
+				}
+				if ($began) {
+					if ($line =~ /^.*=.*/) {
+						$began = 0;
+					}
+					else{
+						$fmtp = "$fmtp $line";
+					}
+				}
+			}
+
+			$conn->{aesiv} = $aesiv;
+			$conn->{aeskey} = $aeskey;
+#$conn->{fmtp} = $sdp{fmtp};
+			$conn->{fmtp} = $fmtp;
+			last;
+		};
 
         /^SETUP$/ && do {
             my $transport = $req->header('Transport');
