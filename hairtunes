@@ -1,0 +1,6 @@
+#!/bin/bash
+timeout 10s killall -w -u "$USER" hairtunes-bin
+timeout 10s killall -SIGKILL -w -u "$USER" hairtunes-bin
+
+exec "`dirname "$0"`"/hairtunes-bin "$@"
+
