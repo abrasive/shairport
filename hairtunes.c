@@ -445,7 +445,16 @@ static void *rtp_thread_func(void *arg) {
                 plen -= 4;
             }
             seqno = ntohs(*(unsigned short *)(pktp+2));
-            buffer_put_packet(seqno, pktp+12, plen-12);
+
+            // adjust pointer and length
+            pktp += 12;
+            plen -= 12;
+
+            // check if packet contains enough content to be reasonable
+            if (plen < 16)
+                continue;
+
+            buffer_put_packet(seqno, pktp, plen);
         }
     }
 
