@@ -445,7 +445,23 @@ static void *rtp_thread_func(void *arg) {
                 plen -= 4;
             }
             seqno = ntohs(*(unsigned short *)(pktp+2));
-            buffer_put_packet(seqno, pktp+12, plen-12);
+
+            // adjust pointer and length
+            pktp += 12;
+            plen -= 12;
+
+            // check if packet contains enough content to be reasonable
+            if (plen >= 16) {
+                buffer_put_packet(seqno, pktp, plen);
+            } else {
+                // resync?
+                if (type == 0x56 && seqno == 0) {
+                    fprintf(stderr, "Suspected resync request packet received. Initiating resync.\n");
+                    pthread_mutex_lock(&ab_mutex);
+                    ab_resync();
+                    pthread_mutex_unlock(&ab_mutex);
+                }
+            }
         }
     }
 
