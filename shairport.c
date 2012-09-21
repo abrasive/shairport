@@ -236,7 +236,7 @@ int main(int argc, char **argv)
       }
       //tPrintHWID[tIdx] = tAddr[tIdx];
     }
-    sprintf(tHWID_Hex+(tIdx*2), "%02X",tHWID[tIdx]);
+    snprintf(tHWID_Hex+(tIdx*2), sizeof(tHWID_Hex)-(tIdx*2), "%02X", tHWID[tIdx]);
   }
   //tPrintHWID[HWID_SIZE] = '\0';
 
@@ -949,7 +949,8 @@ static void cleanup(struct connection *pConn)
 
 static int startAvahi(const char *pHWStr, const char *pServerName, int pPort)
 {
-  int tMaxServerName = 25; // Something reasonable?  iPad showed 21, iphone 25
+  static const int tMaxServerName = 25; // Something reasonable?  iPad showed 21, iphone 25
+  char serverName[tMaxServerName + 1];
   int tPid = fork();
   if(tPid == 0)
   {
@@ -957,16 +958,17 @@ static int startAvahi(const char *pHWStr, const char *pServerName, int pPort)
     if(strlen(pServerName) > tMaxServerName)
     {
       slog(LOG_INFO,"Hey dog, we see you like long server names, "
-              "so we put a strncat in our command so we don't buffer overflow, while you listen to your flow.\n"
+              "so we put a strlcat in our command so we don't buffer overflow, while you listen to your flow.\n"
               "We just used the first %d characters.  Pick something shorter if you want\n", tMaxServerName);
     }
     
     tName[0] = '\0';
     char tPort[SERVLEN];
-    sprintf(tPort, "%d", pPort);
-    strcat(tName, pHWStr);
-    strcat(tName, "@");
-    strncat(tName, pServerName, tMaxServerName);
+    snprintf(tPort, sizeof(tPort), "%d", pPort);
+    strlcat(tName, pHWStr, sizeof(tName));
+    strlcat(tName, "@", sizeof(tName));
+    strlcpy(serverName, pServerName, sizeof(serverName));
+    strlcat(tName, serverName, sizeof(tName));
     slog(AVAHI_LOG_LEVEL, "Avahi/DNS-SD Name: %s\n", tName);
     
     execlp("avahi-publish-service", "avahi-publish-service", tName,

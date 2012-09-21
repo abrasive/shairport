@@ -155,7 +155,7 @@ int acceptClient(int pSock, struct addrinfo *server_addr)
 int setupListenServer(struct addrinfo **pAddrInfo, int pPort)
 {
     char tService[SERVLEN];
-    sprintf(tService, "%d", pPort); // copies port to string
+    snprintf(tService, sizeof(tService), "%d", pPort); // copies port to string
     int tFamily = AF_INET;
     #ifdef AF_INET6
     //printf("Listening on IPv6 Socket\n");
