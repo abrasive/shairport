@@ -16,10 +16,10 @@
 # Source function library.
 . /lib/lsb/init-functions
 
-NAME=shairport
+NAME=ShairPort
 DAEMON="/usr/local/bin/shairport.pl"
 PIDFILE=/var/run/$NAME.pid
-DAEMON_ARGS="-w $PIDFILE"
+DAEMON_ARGS="-w $PIDFILE -a $NAME"
 
 [ -x $binary ] || exit 0
 
