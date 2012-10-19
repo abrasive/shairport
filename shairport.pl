@@ -673,7 +673,7 @@ sub conn_handle_request {
             $dec_args{ao_devicename} = $libao_devicename if defined $libao_devicename;
             $dec_args{ao_deviceid} = $libao_deviceid if defined $libao_deviceid;
 
-            my $dec = $hairtunes_cli . join(' ', '', map { sprintf "%s '%s'", $_, $dec_args{$_} } keys(%dec_args));
+            my $dec = '"' . $hairtunes_cli . '"' . join(' ', '', map { sprintf "%s '%s'", $_, $dec_args{$_} } keys(%dec_args));
 
             #    print "decode command: $dec\n";
             my $decoder = open2(my $dec_out, my $dec_in, $dec);
