@@ -495,7 +495,7 @@ while (1) {
     foreach my $fh (@waiting) {
         if ($fh==$listen) {
             my $new = $listen->accept;
-            printf "New connection from %s\n", $new->sockhost if $verbose;
+            printf "New connection from %s\n", $new->peerhost if $verbose;
 
             $sel->add($new);
             $new->blocking(0);
