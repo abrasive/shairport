@@ -50,6 +50,12 @@ Perl modules (install from CPAN if needed e.g. `perl -MCPAN -e 'install X'`):
     gmake
     perl shairport.pl
 
+## FreeBSD
+
+    pkg_add -r gmake libao avahi p5-libwww p5-Crypt-OpenSSL-RSA p5-Net-SDP p5-IO-Socket-INET6
+    gmake
+    perl shairport.pl
+
 ## Mac OS X:
 
   * install XCode
