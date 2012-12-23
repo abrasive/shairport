@@ -54,7 +54,10 @@ Perl modules (install from CPAN if needed e.g. `perl -MCPAN -e 'install X'`):
 
     pkg_add -r gmake libao avahi p5-libwww p5-Crypt-OpenSSL-RSA p5-Net-SDP p5-IO-Socket-INET6
     gmake
-    perl shairport.pl
+    # ipv6 does not work for me, but maybe works for you?  might be due to not
+    # having local ipv6 working dns names?
+    # force ipv4 on FreeBSD with '-4' on the command line.
+    perl shairport.pl -4
 
 ## Mac OS X:
 
