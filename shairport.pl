@@ -83,7 +83,7 @@ my $writepid;
 my $help;
 
 
-my $ipv4;
+my $ipv4_only;
 
 unless (-x $hairtunes_cli) {
     say "Can't find the 'hairtunes' decoder binary, you need to build this before using ShairPort.";
@@ -100,7 +100,7 @@ GetOptions("a|apname=s" => \$apname,
           "ao_devicename=s" => \$libao_devicename,
           "ao_deviceid=s" => \$libao_deviceid,
           "v|verbose" => \$verbose,
-	  "4" => \$ipv4,
+	  "4" => \$ipv4_only,
           "w|writepid=s" => \$writepid,
           "s|squeezebox" => \$squeeze,
           "c|cliport=s" => \$cliport,
@@ -299,7 +299,7 @@ my $rsa = Crypt::OpenSSL::RSA->new_private_key($airport_pem) || die "RSA private
 
 my $listen;
 {
-    if (!defined($ipv4)) {
+    if (!defined($ipv4_only)) {
     eval {
         local $SIG{__DIE__};
         $listen = new IO::Socket::INET6(Listen => 1,
@@ -684,6 +684,10 @@ sub conn_handle_request {
             $dec_args{ao_deviceid} = $libao_deviceid if defined $libao_deviceid;
 
             my $dec = $hairtunes_cli . join(' ', '', map { sprintf "%s '%s'", $_, $dec_args{$_} } keys(%dec_args));
+
+	    if ($ipv4_only) {
+		$dec .= " ipv4_only";
+	    }
 
             print "decode command: $dec\n" if ($verbose);
             my $decoder = open2(my $dec_out, my $dec_in, $dec);
