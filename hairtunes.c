@@ -100,6 +100,8 @@ static double volume = 1.0;
 static int fix_volume = 0x10000;
 static pthread_mutex_t vol_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+
+
 typedef struct audio_buffer_entry {   // decoded audio packets
     int ready;
     signed short *data;
@@ -436,7 +438,23 @@ static void *rtp_thread_func(void *arg) {
                 plen -= 4;
             }
             seqno = ntohs(*(unsigned short *)(pktp+2));
-            buffer_put_packet(seqno, pktp+12, plen-12);
+
+            // adjust pointer and length
+            pktp += 12;
+            plen -= 12;
+
+            // check if packet contains enough content to be reasonable
+            if (plen >= 16) {
+                buffer_put_packet(seqno, pktp, plen);
+            } else {
+                // resync?
+                if (type == 0x56 && seqno == 0) {
+                    fprintf(stderr, "Suspected resync request packet received. Initiating resync.\n");
+                    pthread_mutex_lock(&ab_mutex);
+                    ab_resync();
+                    pthread_mutex_unlock(&ab_mutex);
+                }
+            }
         }
     }
 
@@ -742,8 +760,14 @@ static void *audio_thread_func(void *arg) {
     int play_samples;
 
     signed short buf_fill __attribute__((unused));
-    signed short *inbuf, *outbuf;
+    signed short *inbuf, *outbuf, *silence;
     outbuf = malloc(OUTFRAME_BYTES);
+    silence = malloc(OUTFRAME_BYTES);
+    int i;
+
+    for (i=0; i<OUTFRAME_BYTES/2; i++) {
+        silence[i] = 0;
+    }
 
 #ifdef FANCY_RESAMPLING
     float *frame, *outframe;
@@ -762,9 +786,13 @@ static void *audio_thread_func(void *arg) {
 #endif
 
     while (1) {
-        do {
-            inbuf = buffer_get_frame();
-        } while (!inbuf);
+       if (ab_buffering) {
+           inbuf = silence;
+       } else {
+            do {
+                inbuf = buffer_get_frame();
+            } while (!inbuf);
+       }
 
 #ifdef FANCY_RESAMPLING
         if (fancy_resampling) {

@@ -44,6 +44,7 @@ use Crypt::OpenSSL::RSA;
 use Digest::MD5 qw(md5 md5_hex);
 use POSIX qw(:sys_wait_h setsid);
 eval "use IO::Socket::INET6;";
+use Net::SDP;
 
 my $shairportversion = "0.05";
 
@@ -633,20 +634,23 @@ sub conn_handle_request {
             last;
         };
 
-        /^ANNOUNCE$/ && do {
-            my $sdptext = $req->content;
-            my @sdplines = split /[\r\n]+/, $sdptext;
-            my %sdp = map { ($1, $2) if /^a=([^:]+):(.+)/ } @sdplines;
-            die("no AESIV") unless my $aesiv = decode_base64($sdp{aesiv});
-            die("no AESKEY") unless my $rsaaeskey = decode_base64($sdp{rsaaeskey});
-            $rsa->use_pkcs1_oaep_padding;
-            my $aeskey = $rsa->decrypt($rsaaeskey) || die "RSA decrypt failed";
+                /^ANNOUNCE$/ && do {
+                        my $sdp = Net::SDP->new($req->content);
+                        my $audio = $sdp->media_desc_of_type('audio');
 
-            $conn->{aesiv} = $aesiv;
-            $conn->{aeskey} = $aeskey;
-            $conn->{fmtp} = $sdp{fmtp};
-            last;
-        };
+                        print $audio->as_string();
+                        print $audio->attribute('aesiv');
+
+                        die("no AESIV") unless my $aesiv = decode_base64($audio->attribute('aesiv'));
+                        die("no AESKEY") unless my $rsaaeskey = decode_base64($audio->attribute('rsaaeskey'));
+                        $rsa->use_pkcs1_oaep_padding;
+                        my $aeskey = $rsa->decrypt($rsaaeskey) || die "RSA decrypt failed";
+
+                        $conn->{aesiv} = $aesiv;
+                        $conn->{aeskey} = $aeskey;
+                        $conn->{fmtp} = $audio->attribute('fmtp');
+                        last;
+                };
 
         /^SETUP$/ && do {
             my $transport = $req->header('Transport');

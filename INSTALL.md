@@ -14,6 +14,7 @@ Perl modules (install from CPAN if needed e.g. `perl -MCPAN -e 'install X'`):
  * HTTP::Message
  * Crypt::OpenSSL::RSA
  * IO::Socket::INET6
+ * Net::SDP
 
 ## Debian/Ubuntu:
 
