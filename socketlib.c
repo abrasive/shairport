@@ -39,9 +39,11 @@
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
 
-int common_setup(struct addrinfo *pAddrInfo)
-{  
+int common_setup(struct addrinfo **ppAddrInfo, int pPort)
+{
   int tSock;
+  struct addrinfo *pAddrInfo = *ppAddrInfo;
+
   //printAddrs(pAddrInfo);
   tSock = socket(pAddrInfo->ai_family, pAddrInfo->ai_socktype, 0);
 #ifdef AF_INET6
@@ -49,7 +51,17 @@ int common_setup(struct addrinfo *pAddrInfo)
   {
     //Fallback to ipv4
     perror("Failed to create ipv6 socket. Trying ipv4");
-    pAddrInfo->ai_family = AF_INET;
+    (*ppAddrInfo)->ai_family = AF_INET;
+    if (pPort != -1)
+    {
+       char tService[SERVLEN];
+       sprintf(tService, "%d", pPort); // copies port to string
+       int tFamily = AF_INET;
+       if(getAddr(NULL, tService, tFamily, SOCK_STREAM, ppAddrInfo))
+       {
+           return ERROR; // getAddr prints out error message
+       }
+    }
     tSock = socket(pAddrInfo->ai_family, pAddrInfo->ai_socktype, 0);
   }
 #endif
@@ -63,7 +75,7 @@ int setup_client(struct addrinfo *server_host)
 
   while(tIdx++ < RETRY_COUNT)
   {
-    tSockDesc = common_setup(server_host);
+    tSockDesc = common_setup(&server_host, -1);
     if (tSockDesc < 0 && tIdx >= RETRY_COUNT)
     {
       perror("Error: Could not create socket");
@@ -107,9 +119,23 @@ int getAddr(char *pHostname, char *pService, int pFamily, int pSockType, struct 
   return tError;
 }
 
-int setup_server(struct addrinfo *server_addr)
+int setup_server(struct addrinfo *server_addr, int pPort)
 {
-  int tSock = common_setup(server_addr);
+  char tService[SERVLEN];
+  sprintf(tService, "%d", pPort); // copies port to string
+  int tFamily = AF_INET;
+  #ifdef AF_INET6
+  //printf("Listening on IPv6 Socket\n");
+  tFamily = AF_INET6;
+  #else
+  //printf("Listening on IPv4 Socket");
+  #endif
+  if(getAddr(NULL, tService, tFamily, SOCK_STREAM, &server_addr))
+  {
+     return ERROR; // getAddr prints out error message
+  }
+
+  int tSock = common_setup(&server_addr, pPort);
   if (tSock < 0)
   {
     perror("Error: Could not create server socket");
@@ -154,21 +180,7 @@ int acceptClient(int pSock, struct addrinfo *server_addr)
 
 int setupListenServer(struct addrinfo **pAddrInfo, int pPort)
 {
-    char tService[SERVLEN];
-    sprintf(tService, "%d", pPort); // copies port to string
-    int tFamily = AF_INET;
-    #ifdef AF_INET6
-    //printf("Listening on IPv6 Socket\n");
-    tFamily = AF_INET6;
-    #else
-    //printf("Listening on IPv4 Socket");
-    #endif
-    if(getAddr(NULL, tService, tFamily, SOCK_STREAM, pAddrInfo))
-    {
-      return ERROR; // getAddr prints out error message
-    }
-
-    int tSocketDescriptor = setup_server(*pAddrInfo);
+    int tSocketDescriptor = setup_server(*pAddrInfo, pPort);
     char tAddr[INET6_ADDRSTRLEN];
     socklen_t tSize = INET6_ADDRSTRLEN;
     inet_ntop((*pAddrInfo)->ai_family, (*pAddrInfo)->ai_addr, tAddr, tSize);
