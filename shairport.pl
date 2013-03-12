@@ -495,7 +495,7 @@ while (1) {
     foreach my $fh (@waiting) {
         if ($fh==$listen) {
             my $new = $listen->accept;
-            printf "New connection from %s\n", $new->sockhost if $verbose;
+            printf "New connection from %s\n", $new->peerhost if $verbose;
 
             $sel->add($new);
             $new->blocking(0);
@@ -673,7 +673,7 @@ sub conn_handle_request {
             $dec_args{ao_devicename} = $libao_devicename if defined $libao_devicename;
             $dec_args{ao_deviceid} = $libao_deviceid if defined $libao_deviceid;
 
-            my $dec = $hairtunes_cli . join(' ', '', map { sprintf "%s '%s'", $_, $dec_args{$_} } keys(%dec_args));
+            my $dec = '"' . $hairtunes_cli . '"' . join(' ', '', map { sprintf "%s '%s'", $_, $dec_args{$_} } keys(%dec_args));
 
             #    print "decode command: $dec\n";
             my $decoder = open2(my $dec_out, my $dec_in, $dec);
