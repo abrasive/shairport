@@ -1,10 +1,10 @@
-CFLAGS:=-O2 -Wall $(shell pkg-config --cflags openssl ao)
-LDFLAGS:=-lm -lpthread $(shell pkg-config --libs openssl ao)
-OBJS=socketlib.o shairport.o alac.o hairtunes.o audio_ao.o
+CFLAGS:=-O2 -Wall $(shell pkg-config --cflags openssl)
+LDFLAGS:=-lm -lpthread -lasound $(shell pkg-config --libs openssl)
+OBJS=socketlib.o shairport.o alac.o hairtunes.o audio_alsa.o
 all: hairtunes shairport
 
-hairtunes: hairtunes.c alac.o audio_ao.o
-	$(CC) $(CFLAGS) -DHAIRTUNES_STANDALONE hairtunes.c alac.o audio_ao.o -o $@ $(LDFLAGS)
+hairtunes: hairtunes.c alac.o audio_alsa.o
+	$(CC) $(CFLAGS) -DHAIRTUNES_STANDALONE hairtunes.c alac.o audio_alsa.o -o $@ $(LDFLAGS)
 
 shairport: $(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) -o $@ $(LDFLAGS)

@@ -41,7 +41,6 @@
 #include "hairtunes.h"
 #include <sys/signal.h>
 #include <fcntl.h>
-#include <ao/ao.h>
 
 #ifdef FANCY_RESAMPLING
 #include <samplerate.h>
@@ -51,6 +50,8 @@
 static int debug = 0;
 
 #include "alac.h"
+#include "audio.h"
+#include "common.h"
 
 // and how full it needs to be to begin (must be <BUFFER_FRAMES)
 #define START_FILL    282
@@ -69,10 +70,6 @@ static int sampling_rate;
 static int frame_size;
 
 static int buffer_start_fill;
-
-static char *libao_driver = NULL;
-static char *libao_devicename = NULL;
-static char *libao_deviceid = NULL; // ao_options expects "char*"
 
 // FIFO name and file handle
 static char *pipename = NULL;
@@ -93,6 +90,7 @@ static SRC_STATE *src;
 static int  init_rtp(void);
 static void init_buffer(void);
 static int  init_output(void);
+static void deinit_output(void);
 static void rtp_request_resend(seq_t first, seq_t last);
 static void ab_resync(void);
 
@@ -116,11 +114,6 @@ static seq_t ab_read, ab_write;
 static int ab_buffering = 1, ab_synced = 0;
 static pthread_mutex_t ab_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t ab_buffer_ready = PTHREAD_COND_INITIALIZER;
-
-static void die(char *why) {
-    fprintf(stderr, "FATAL: %s\n", why);
-    exit(1);
-}
 
 #ifdef HAIRTUNES_STANDALONE
 static int hex2bin(unsigned char *buf, char *hex) {
@@ -180,11 +173,11 @@ int hairtunes_init(char *pAeskey, char *pAesiv, char *fmtpstr, int pCtrlPort, in
     if(pPipeName != NULL)
         pipename = pPipeName;
     if(pLibaoDriver != NULL)
-        libao_driver = pLibaoDriver;
+        audio_set_driver(pLibaoDriver);
     if(pLibaoDeviceName != NULL)
-        libao_devicename = pLibaoDeviceName;
+        audio_set_device_name(pLibaoDeviceName);
     if(pLibaoDeviceId != NULL)
-        libao_deviceid = pLibaoDeviceId;
+        audio_set_device_id(pLibaoDeviceId);
     
     controlport = pCtrlPort;
     timingport = pTimingPort;
@@ -240,6 +233,7 @@ int hairtunes_init(char *pAeskey, char *pAesiv, char *fmtpstr, int pCtrlPort, in
                 fprintf(stderr, "FLUSH\n");
         }
     }
+    deinit_output();
     fprintf(stderr, "bye!\n");
     fflush(stderr);
 
@@ -277,10 +271,9 @@ int main(int argc, char **argv) {
             rtphost = *++argv;
         } else
         if (!strcasecmp(arg, "pipe")) {
-            if (libao_driver || libao_devicename || libao_deviceid ) {
+            if (audio_get_driver() || audio_get_device_name() || audio_get_device_id()) {
                 die("Option 'pipe' may not be combined with 'ao_driver', 'ao_devicename' or 'ao_deviceid'");
             }
-
             pipename = *++argv;
         } else
         if (!strcasecmp(arg, "ao_driver")) {
@@ -288,21 +281,21 @@ int main(int argc, char **argv) {
                 die("Option 'ao_driver' may not be combined with 'pipe'");
             }
 
-            libao_driver = *++argv;
+            audio_set_driver(*++argv);
         } else
         if (!strcasecmp(arg, "ao_devicename")) {
-            if (pipename || libao_deviceid ) {
+            if (pipename || audio_get_device_id() ) {
                 die("Option 'ao_devicename' may not be combined with 'pipe' or 'ao_deviceid'");
             }
 
-            libao_devicename = *++argv;
+            audio_set_device_name(*++argv);
         } else
         if (!strcasecmp(arg, "ao_deviceid")) {
-            if (pipename || libao_devicename) {
+            if (pipename || audio_get_device_name()) {
                 die("Option 'ao_deviceid' may not be combined with 'pipe' or 'ao_devicename'");
             }
 
-            libao_deviceid = *++argv;
+            audio_set_device_id(*++argv);
         }
 #ifdef FANCY_RESAMPLING
         else
@@ -764,7 +757,6 @@ static int stuff_buffer(double playback_rate, short *inptr, short *outptr) {
 }
 
 static void *audio_thread_func(void *arg) {
-    ao_device* dev = arg;
     int play_samples;
 
     signed short buf_fill __attribute__((unused));
@@ -835,14 +827,12 @@ static void *audio_thread_func(void *arg) {
                  }
             }
         } else {
-            ao_play(dev, (char *)outbuf, play_samples*4);
+            audio_play((char *)outbuf, play_samples, arg);
         }
     }
 
     return 0;
 }
-
-#define NUM_CHANNELS 2
 
 static void handle_broken_fifo() {
     close(pipe_handle);
@@ -855,54 +845,13 @@ static void init_pipe(const char* pipe) {
     signal(SIGPIPE, handle_broken_fifo);
 }
 
-static void* init_ao(void) {
-    ao_initialize();
-
-    int driver;
-    if (libao_driver) {
-        // if a libao driver is specified on the command line, use that
-        driver = ao_driver_id(libao_driver);
-        if (driver == -1) {
-            die("Could not find requested ao driver");
-        }
-    } else {
-        // otherwise choose the default
-        driver = ao_default_driver_id();
-    }
-
-    ao_sample_format fmt;
-    memset(&fmt, 0, sizeof(fmt));
-
-    fmt.bits = 16;
-    fmt.rate = sampling_rate;
-    fmt.channels = NUM_CHANNELS;
-    fmt.byte_format = AO_FMT_NATIVE;
-
-    ao_option *ao_opts = NULL;
-    if(libao_deviceid) {
-        ao_append_option(&ao_opts, "id", libao_deviceid);
-    } else if(libao_devicename){
-        ao_append_option(&ao_opts, "dev", libao_devicename);
-        // Old libao versions (for example, 0.8.8) only support
-        // "dsp" instead of "dev".
-        ao_append_option(&ao_opts, "dsp", libao_devicename);
-    }
-
-    ao_device *dev = ao_open_live(driver, &fmt, ao_opts);
-    if (dev == NULL) {
-        die("Could not open ao device");
-    }
-
-    return dev;
-}
-
 static int init_output(void) {
     void* arg = 0;
 
     if (pipename) {
         init_pipe(pipename);
     } else {
-        arg = init_ao();
+        arg = audio_init(sampling_rate);
     }
 
 #ifdef FANCY_RESAMPLING
@@ -919,3 +868,6 @@ static int init_output(void) {
     return 0;
 }
 
+static void deinit_output(void) {
+    audio_deinit();
+}

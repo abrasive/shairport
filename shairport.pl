@@ -26,9 +26,8 @@
 use strict;
 use warnings;
 
-use 5.10.0;
+use 5.8.0;
 # For given() { when() { } ... }
-use feature ":5.10";
 
 use Getopt::Long;
 use FindBin;
@@ -83,8 +82,8 @@ my $writepid;
 my $help;
 
 unless (-x $hairtunes_cli) {
-    say "Can't find the 'hairtunes' decoder binary, you need to build this before using ShairPort.";
-    say "Read the INSTALL instructions!";
+    print "Can't find the 'hairtunes' decoder binary, you need to build this before using ShairPort.";
+    print "Read the INSTALL instructions!";
     exit(1);
 }
 
@@ -232,13 +231,11 @@ our $squeezebox_setup;
 
 sub REAP {
     my $pid = waitpid( -1, WNOHANG );
-    given( $pid ) {
-        when( $avahi_publish ) {
-            die( "avahi daemon terminated or 'avahi-publish-service' binary not found" );
-        }
-        when( $squeezebox_setup ) {
-            print( "Squeezebox configuration routine completed\n" ) if $verbose;
-        }
+    if ( $pid == $avahi_publish) {
+        die( "avahi daemon terminated or 'avahi-publish-service' binary not found" );
+    }
+    elsif($pid == $squeezebox_setup) {
+        print( "Squeezebox configuration routine completed\n" ) if $verbose;
     }
     print("Child exited\n") if $verbose;
     $SIG{CHLD} = \&REAP;
@@ -584,7 +581,13 @@ sub conn_handle_request {
     my ($fh, $conn) = @_;
 
     my $req = $conn->{req};;
-    my $clen = $req->header('content-length') // 0;
+	my $clen = 0;
+    $clen = $req->header('content-length');
+	
+	if (not defined $clen) {
+		$clen = 0;
+	}
+	
     if ($clen > 0 && !length($req->content)) {
         $conn->{req_need} = $clen;
         return; # need more!
