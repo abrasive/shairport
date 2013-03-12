@@ -24,7 +24,7 @@
 #define DEFAULT_UNIX "/unix"
 
 int setup_client(struct addrinfo *server_info);
-int setup_server(struct addrinfo *server_address);
+int setup_server(struct addrinfo *server_address, int pPort);
 int setupListenServer(struct addrinfo **pAddrInfo, int pPort);
 int acceptClient(int pSock, struct addrinfo *server_addr);
 void delay(long pMillisecs, struct timeval *pRes);
