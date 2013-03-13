@@ -82,6 +82,9 @@ my $writepid;
 # show help
 my $help;
 
+
+my $ipv4_only;
+
 unless (-x $hairtunes_cli) {
     say "Can't find the 'hairtunes' decoder binary, you need to build this before using ShairPort.";
     say "Read the INSTALL instructions!";
@@ -97,6 +100,7 @@ GetOptions("a|apname=s" => \$apname,
           "ao_devicename=s" => \$libao_devicename,
           "ao_deviceid=s" => \$libao_deviceid,
           "v|verbose" => \$verbose,
+	  "4" => \$ipv4_only,
           "w|writepid=s" => \$writepid,
           "s|squeezebox" => \$squeeze,
           "c|cliport=s" => \$cliport,
@@ -295,6 +299,7 @@ my $rsa = Crypt::OpenSSL::RSA->new_private_key($airport_pem) || die "RSA private
 
 my $listen;
 {
+    if (!defined($ipv4_only)) {
     eval {
         local $SIG{__DIE__};
         $listen = new IO::Socket::INET6(Listen => 1,
@@ -308,6 +313,7 @@ my $listen;
               "* IO::Socket::INET6 not present!     *\n",
               "* Install this if iTunes won't play. *\n",
               "**************************************\n\n";
+    }
     }
 
     $listen ||= new IO::Socket::INET(Listen => 1,
@@ -491,6 +497,7 @@ sub performSqueezeboxSetup {
 };
 
 while (1) {
+    printf "about to select\n" if $verbose;
     my @waiting = $sel->can_read;
     foreach my $fh (@waiting) {
         if ($fh==$listen) {
@@ -507,6 +514,7 @@ while (1) {
 
             # the 2nd connection is a player connection
             if (defined($play_prog) && $sel->count() == 2) {
+		printf "play prog: $play_prog\n" if ($verbose);
                 system($play_prog);
             }
         } else {
@@ -540,6 +548,8 @@ exit(1); # Unreachable
 sub conn_handle_data {
     my $fh = shift;
     my $conn = $conns{$fh};
+
+    printf "handle data 1\n" if ($verbose);
 
     if ($conn->{req_need}) {
         if (length($conn->{data}) >= $conn->{req_need}) {
@@ -675,7 +685,11 @@ sub conn_handle_request {
 
             my $dec = '"' . $hairtunes_cli . '"' . join(' ', '', map { sprintf "%s '%s'", $_, $dec_args{$_} } keys(%dec_args));
 
-            #    print "decode command: $dec\n";
+	    if ($ipv4_only) {
+		$dec .= " ipv4_only";
+	    }
+
+            print "decode command: $dec\n" if ($verbose);
             my $decoder = open2(my $dec_out, my $dec_in, $dec);
 
             $conn->{decoder_pid} = $decoder;
@@ -701,10 +715,15 @@ sub conn_handle_request {
         };
         /^SET_PARAMETER$/ && do {
             my @lines = split /[\r\n]+/, $req->content;
+                printf("SET_PARAMETER req: " . $req->content . "\n") if ($verbose);
             my %content = map { /^(\S+): (.+)/; (lc $1, $2) } @lines;
             my $cfh = $conn->{decoder_fh};
             if (exists $content{volume}) {
+                printf("sending-> vol: %f\n", $content{volume}) if ($verbose);
                 printf $cfh "vol: %f\n", $content{volume};
+            } else {
+                printf("unable to perform content for req: " . $req->content . "\n") if ($verbose);
+
             }
             last;
         };
@@ -713,6 +732,7 @@ sub conn_handle_request {
         die("Unknown method: $_");
     }
 
+    printf("%s", $resp->as_string("\r\n")) if ($verbose);
     print $fh $resp->as_string("\r\n");
     $fh->flush;
 }

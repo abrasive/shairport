@@ -246,6 +246,12 @@ int hairtunes_init(char *pAeskey, char *pAesiv, char *fmtpstr, int pCtrlPort, in
     return EXIT_SUCCESS;
 }
 
+#ifdef AF_INET6
+static int ipv4_only = 0;
+#else
+static int ipv4_only = 1;
+#endif
+
 #ifdef HAIRTUNES_STANDALONE
 int main(int argc, char **argv) {
     char *hexaeskey = 0, *hexaesiv = 0;
@@ -257,6 +263,9 @@ int main(int argc, char **argv) {
             hexaesiv = *++argv;
             argc--;
         } else
+	if (!strcasecmp(arg, "ipv4_only")) {
+		ipv4_only = 1;
+	} else
         if (!strcasecmp(arg, "key")) {
             hexaeskey = *++argv;
             argc--;
@@ -403,13 +412,33 @@ static void buffer_put_packet(seq_t seqno, char *data, int len) {
 
 static int rtp_sockets[2];  // data, control
 #ifdef AF_INET6
-static struct sockaddr_in6 rtp_client;
-#else
-static struct sockaddr_in rtp_client;
+static struct sockaddr_in6 rtp_client6;
 #endif
+static struct sockaddr_in rtp_client4;
+
+struct sockaddr * get_rtp_client_sockaddr(void) {
+
+#ifdef AF_INET6
+    if (!ipv4_only) {
+	    return ((struct sockaddr*)&rtp_client6);
+    }
+#endif
+    return ((struct sockaddr*)&rtp_client4);
+}
+
+socklen_t get_rtp_sockaddr_len(void) {
+#ifdef AF_INET6
+    if (!ipv4_only) {
+	    return (sizeof(&rtp_client6));
+    }
+#endif
+    return (sizeof(rtp_client4));
+}
+
+
 
 static void *rtp_thread_func(void *arg) {
-    socklen_t si_len = sizeof(rtp_client);
+    socklen_t si_len;
     char packet[MAX_PACKET];
     char *pktp;
     seq_t seqno;
@@ -417,6 +446,10 @@ static void *rtp_thread_func(void *arg) {
     int sock = rtp_sockets[0], csock = rtp_sockets[1];
     int readsock;
     char type;
+    struct sockaddr *rtp_client;
+
+    rtp_client = get_rtp_client_sockaddr();
+    si_len = get_rtp_sockaddr_len();
 
     fd_set fds;
     FD_ZERO(&fds);
@@ -432,7 +465,7 @@ static void *rtp_thread_func(void *arg) {
         FD_SET(sock, &fds);
         FD_SET(csock, &fds);
 
-        plen = recvfrom(readsock, packet, sizeof(packet), 0, (struct sockaddr*)&rtp_client, &si_len);
+        plen = recvfrom(readsock, packet, sizeof(packet), 0, rtp_client, &si_len);
         if (plen < 0)
             continue;
         assert(plen<=MAX_PACKET);
@@ -481,12 +514,17 @@ static void rtp_request_resend(seq_t first, seq_t last) {
     *(unsigned short *)(req+4) = htons(first);  // missed seqnum
     *(unsigned short *)(req+6) = htons(last-first+1);  // count
 
+    struct sockaddr *rtp_client = get_rtp_client_sockaddr();
+
+    if (ipv4_only) {
+	((struct sockaddr_in *)rtp_client)->sin_port = htons(controlport);
+    }
 #ifdef AF_INET6
-    rtp_client.sin6_port = htons(controlport);
-#else
-    rtp_client.sin_port = htons(controlport);
+    else {
+	((struct sockaddr_in6 *)rtp_client)->sin6_port = htons(controlport);
+    }
 #endif
-    sendto(rtp_sockets[1], req, sizeof(req), 0, (struct sockaddr *)&rtp_client, sizeof(rtp_client));
+    sendto(rtp_sockets[1], req, sizeof(req), 0, rtp_client, get_rtp_sockaddr_len());
 }
 
 
@@ -499,11 +537,14 @@ static int init_rtp(void) {
     memset(&si, 0, sizeof(si));
 #ifdef AF_INET6
     struct sockaddr_in6 si6;
-    type = AF_INET6;
-    si_p = (struct sockaddr*)&si6;
-    si_len = sizeof(si6);
-    sin_port = &si6.sin6_port;
-    memset(&si6, 0, sizeof(si6));
+
+    if (!ipv4_only) {
+	type = AF_INET6;
+	si_p = (struct sockaddr*)&si6;
+	si_len = sizeof(si6);
+	sin_port = &si6.sin6_port;
+	memset(&si6, 0, sizeof(si6));
+    }
 #endif
 
     si.sin_family = AF_INET;
@@ -512,12 +553,14 @@ static int init_rtp(void) {
 #endif
     si.sin_addr.s_addr = htonl(INADDR_ANY);
 #ifdef AF_INET6
-    si6.sin6_family = AF_INET6;
-    #ifdef SIN6_LEN
-        si6.sin6_len = sizeof(si);
-    #endif
-    si6.sin6_addr = in6addr_any;
-    si6.sin6_flowinfo = 0;
+    if (!ipv4_only) {
+	si6.sin6_family = AF_INET6;
+	#ifdef SIN6_LEN
+	    si6.sin6_len = sizeof(si);
+	#endif
+	si6.sin6_addr = in6addr_any;
+	si6.sin6_flowinfo = 0;
+    }
 #endif
 
     int sock = -1, csock = -1;    // data and control (we treat the streams the same here)

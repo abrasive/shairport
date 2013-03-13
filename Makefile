@@ -1,5 +1,16 @@
-CFLAGS:=-O2 -Wall $(shell pkg-config --cflags openssl ao)
-LDFLAGS:=-lm -lpthread $(shell pkg-config --libs openssl ao)
+
+MY_CFLAGS= $(shell pkg-config --cflags ao)
+MY_LDFLAGS= $(shell pkg-config --libs ao)
+ifeq ($(shell uname),FreeBSD)
+MY_LDFLAGS+= -lssl
+else
+MY_CFLAGS+= $(shell pkg-config --cflags openssl)
+MY_LDFLAGS+= $(shell pkg-config --libs openssl)
+endif
+
+CFLAGS:=-O2 -Wall $(MY_CFLAGS)
+LDFLAGS:=-lm -lpthread $(MY_LDFLAGS)
+
 OBJS=socketlib.o shairport.o alac.o hairtunes.o
 all: hairtunes shairport
 
