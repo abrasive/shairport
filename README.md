@@ -1,7 +1,6 @@
-ShairPort v0.05
-==============
-James Laird <jhl@mafipulation.org>
-April 13, 2011
+ShairPort
+=========
+By [James Laird](mailto:jhl@mafipulation.org) ([announcement](http://mafipulation.org/blagoblig/2011/04/08#shairport))
 
 What it is
 ----------
@@ -26,8 +25,9 @@ Thanks to wtbw.
 
 Contributors
 ------------
-* [David Hammerton](http://craz.net/)
-* [Albert Zeyer](http://www.az2000.de)
+* [James Laird](mailto:jhl@mafipulation.org), founder and initial code
+* [David Hammerton](http://craz.net/), ALAC decoder
+* [Albert Zeyer](http://www.az2000.de), maintainer
 * [Preston Marshall](mailto:preston@synergyeoc.com)
 * [Mads Mætzke Tandrup](mailto:mads@tandrup.org)
 * [Martin Spasov](mailto:mspasov@gmail.com)
@@ -41,16 +41,14 @@ Contributors
 
 Known Ports and Tools
 ---------------------
-Java:
-    [JAirPort](https://github.com/froks/JAirPort)
-    [RPlay](https://github.com/bencall/RPlay).
-
-Windows:
-    [shairport4w](http://sf.net/projects/shairport4w)
-
-OS X:
-    [ShairportMenu](https://github.com/rcarlsen/ShairPortMenu), a GUI wrapper as a menu widget
-    [MacShairport](https://github.com/joshaber/MacShairport)
+* Java:
+    * [JAirPort](https://github.com/froks/JAirPort)
+    * [RPlay](https://github.com/bencall/RPlay)
+* Windows:
+    * [shairport4w](http://sf.net/projects/shairport4w)
+* OS X:
+    * [ShairportMenu](https://github.com/rcarlsen/ShairPortMenu), a GUI wrapper as a menu widget
+    * [MacShairport](https://github.com/joshaber/MacShairport)
 
 Changelog
 ---------
