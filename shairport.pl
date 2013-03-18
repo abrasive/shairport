@@ -70,6 +70,7 @@ my $squeeze;
 my $cliport;
 # SB target
 my $mac;
+my $display_type;
 # SB volume
 my $volume;
 # custom play and stop program
@@ -152,6 +153,7 @@ $volume = ( (defined( $volume ) && $volume && $volume =~ m/^[0-9]+/ && $volume >
 if (defined($squeeze) && $squeeze) {
     my $players;
     my @details;
+    my %display_types;
 
     my $response;
     my $socket = IO::Socket::INET -> new (
@@ -179,12 +181,25 @@ if (defined($squeeze) && $squeeze) {
             @details = split( /playerindex%3A/ , $response );
             close( $socket );
             shift( @details );
+            
             for( my $n = 0; $n <= scalar( @details ); $n++ ) {
                 if( defined( $details[ $n ] ) ) {
-                    my $address = $details[ $n ];
+                    my $detail_line = $details[ $n ];
+                    my $address;
+                    my $display;
+
+                    if ($detail_line =~ /^.*playerid%3A([[:xdigit:]%]+)\s/) {
+                        $address = $1;
+                        $address =~ s/%3A/:/g;
+                        chomp $address;
+                    }
+
+                    if ($detail_line =~ /\sdisplaytype%3A([^\s]+)/) {
+                        $display = $1;
+                        $display_types{ $address } = $display;
+                    }
+
                     $address =~ s/^.*playerid%3A([[:xdigit:]%]+)\s.*$/$1/;
-                    $address =~ s/%3A/:/g;
-                    chomp $address;
                     $details[ $n ] = $address;
                 }
             }
@@ -216,6 +231,8 @@ if (defined($squeeze) && $squeeze) {
                     exit(1);
                 }
             }
+
+            $display_type = $display_types{ $mac } if (defined( $mac )); 
             $mac = uri_escape( $mac ) if( defined( $mac ) && $mac );
         }
     }
@@ -474,10 +491,13 @@ sub performSqueezeboxSetup {
                 print "$response\n" if $verbose;
             }
 
-            print "Showing message... " if $verbose;
-            print $socket "$mac show line2%3AStarting%20AirPlay duration%3A5 brightness%3ApowerOn font%3Ahuge\n";
-            $response = <$socket>;
-            print "$response\n" if $verbose;
+            # The show command hangs on squeezebox receivers 
+            if (defined( $display_type ) && $display_type ne "none") { 
+                print "Showing message... " if $verbose;
+                print $socket "$mac show line2%3AStarting%20AirPlay duration%3A5 brightness%3ApowerOn font%3Ahuge\n";
+                $response = <$socket>;
+                print "$response\n" if $verbose;
+            }
 
             if( defined( $index ) ) {
                 print "Playing favourite... " if $verbose;
