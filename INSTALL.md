@@ -22,6 +22,10 @@ Perl modules (install from CPAN if needed e.g. `perl -MCPAN -e 'install X'`):
     make
     perl shairport.pl
 
+    Note: to compile shairport binary so it can be run directly with avahi linked in, 
+    uncomment the line setting LINK_AVAHI line in the Makefile, make, and then run ./shairport.
+    You will need the "libavahi-cilent-dev" package installed to build
+
 ## Redhat/Fedora:
 
     yum install openssl-devel libao libao-devel perl-Crypt-OpenSSL-RSA perl-IO-Socket-INET6 perl-libwww-perl avahi-tools

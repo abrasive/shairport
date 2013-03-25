@@ -1,3 +1,10 @@
+# Uncomment this if you have the avahi client libraries installed and you want to
+# link avahi directly to shairport rather than calling avahi-publish-service as
+# a subprocess. The advantage of linking it directly is it's a cleaner approach
+# than execp, and the avahi service will reliably unpublish when shairport dies.
+#
+# LINKAVAHI := 1
+
 
 MY_CFLAGS= $(shell pkg-config --cflags ao)
 MY_LDFLAGS= $(shell pkg-config --libs ao)
@@ -10,6 +17,11 @@ endif
 
 CFLAGS:=-O2 -Wall $(MY_CFLAGS)
 LDFLAGS:=-lm -lpthread $(MY_LDFLAGS)
+ifdef LINKAVAHI
+    CFLAGS := $(CFLAGS) $(shell pkg-config --cflags avahi-client) -DLINKAVAHI
+    LDFLAGS := $(LDFLAGS) $(shell pkg-config --libs avahi-client)
+endif
+
 
 OBJS=socketlib.o shairport.o alac.o hairtunes.o
 all: hairtunes shairport
