@@ -29,6 +29,16 @@
 #include "socketlib.h"
 #include "shairport.h"
 #include "hairtunes.h"
+#ifdef LINKAVAHI
+#include <avahi-client/client.h>
+#include <avahi-client/publish.h>
+
+#include <avahi-common/alternative.h>
+#include <avahi-common/simple-watch.h>
+#include <avahi-common/malloc.h>
+#include <avahi-common/error.h>
+#include <avahi-common/timeval.h>
+#endif
 
 #ifndef TRUE
 #define TRUE (-1)
@@ -63,6 +73,7 @@ static void cleanupBuffers(struct connection *pConnection);
 static void cleanup(struct connection *pConnection);
 
 static int startAvahi(const char *pHwAddr, const char *pServerName, int pPort);
+static void stopAvahi();
 
 static int getAvailChars(struct shairbuffer *pBuf);
 static void addToShairBuffer(struct shairbuffer *pBuf, char *pNewBuf);
@@ -81,23 +92,49 @@ static void initBuffer(struct shairbuffer *pBuf, int pNumChars);
 static void setKeys(struct keyring *pKeys, char *pIV, char* pAESKey, char *pFmtp);
 static RSA *loadKey(void);
 
+#ifdef LINKAVAHI
+AvahiClient *avahiclient;
+AvahiEntryGroup *avahigroup = NULL;
+AvahiSimplePoll *avahipoll = NULL;
+int avahiport;
+char avahiname[100 + HWID_SIZE + 3];
+static void avahiCreateService(AvahiClient *c);
+#endif
 
-static void handle_sigchld(int signo) {
+static void shutdownShairport() {
+    stopAvahi();
+    exit(1);    // should really break out of while loop with condition...
+}
+
+
+static void signalHandler(int signo) {
     int status;
-    waitpid(-1, &status, WNOHANG);
+    switch(signo) {
+      case SIGCHLD:
+        waitpid(-1, &status, WNOHANG);
+        break;
+      case SIGTERM:
+      case SIGHUP:
+      case SIGINT:
+        shutdownShairport();
+        break;
+    }
 }
 
 int main(int argc, char **argv)
 {
   // unfortunately we can't just IGN on non-SysV systems
   struct sigaction sa;
-  sa.sa_handler = handle_sigchld;
+  sa.sa_handler = signalHandler;
   sa.sa_flags = 0;
   sigemptyset(&sa.sa_mask);
   if (sigaction(SIGCHLD, &sa, NULL) < 0) {
       perror("sigaction");
       return 1;
   }
+  sigaction(SIGINT, &sa, NULL);
+  sigaction(SIGTERM, &sa, NULL);
+  sigaction(SIGHUP, &sa, NULL);
 
   char tHWID[HWID_SIZE] = {0,51,52,53,54,55};
   char tHWID_Hex[HWID_SIZE * 2 + 1];
@@ -220,6 +257,7 @@ int main(int argc, char **argv)
       dup(tIdx);
     }
   }
+
   srandom ( time(NULL) );
   // Copy over empty 00's
   //tPrintHWID[tIdx] = tAddr[0];
@@ -947,6 +985,112 @@ static void cleanup(struct connection *pConn)
   }
 }
 
+#ifdef LINKAVAHI
+
+static void avahiGroupCallback(AvahiEntryGroup *g, AvahiEntryGroupState state, AVAHI_GCC_UNUSED void *userdata) {
+    assert(g == avahigroup || avahigroup == NULL);
+    avahigroup = g;
+    switch (state) {
+        case AVAHI_ENTRY_GROUP_UNCOMMITED :
+        case AVAHI_ENTRY_GROUP_REGISTERING :
+        case AVAHI_ENTRY_GROUP_ESTABLISHED :
+            break;
+        case AVAHI_ENTRY_GROUP_COLLISION :
+        case AVAHI_ENTRY_GROUP_FAILURE :
+            slog(LOG_INFO, "Avahi group failure: %s\n", avahi_strerror(avahi_client_errno(avahi_entry_group_get_client(g))));
+            avahi_simple_poll_quit(avahipoll);
+            break;
+    }
+}
+
+static void avahiCreateService(AvahiClient *c) {
+    assert(c);
+    int ret;
+
+    if (!avahigroup) {
+        if (!(avahigroup = avahi_entry_group_new(c, avahiGroupCallback, NULL))) {
+            slog(LOG_INFO, "Avahi avahi_entry_group_new() failed: %s\n", avahi_strerror(avahi_client_errno(c)));
+            avahi_simple_poll_quit(avahipoll);
+            return;
+        }
+    }
+
+    if (avahi_entry_group_is_empty(avahigroup)) {
+        slog(LOG_INFO, "Avahi adding service: %s\n", avahiname);
+        if ((ret = avahi_entry_group_add_service(avahigroup, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC, 0, avahiname, "_raop._tcp", NULL, NULL, avahiport, "tp=UDP", "sm=false", "sv=false", "ek=1", "et=0,1", "cn=0,1", "ch=2", "ss=16", "sr=44100", "pw=false", "vn=3", "txtvers=1", NULL)) < 0) {
+            slog(LOG_INFO, "Avahi failed to add _raop._tcp: %s\n", avahi_strerror(ret));
+            avahi_simple_poll_quit(avahipoll);
+            return;
+        }
+    }
+
+    if ((ret = avahi_entry_group_commit(avahigroup)) < 0) {
+        slog(LOG_INFO, "Avahi failed commit entry group: %s\n", avahi_strerror(ret));
+        avahi_simple_poll_quit(avahipoll);
+        return;
+    }
+
+}
+
+static void avahiClientCallback(AvahiClient *c, AvahiClientState state, AVAHI_GCC_UNUSED void * userdata) {
+    switch(state) {
+        case AVAHI_CLIENT_S_RUNNING:
+            avahiCreateService(c);
+            break;
+        case AVAHI_CLIENT_FAILURE:
+            slog(LOG_INFO, "Avahi client failure: %s\n", avahi_strerror(avahi_client_errno(c)));
+            avahi_simple_poll_quit(avahipoll);
+            break;
+        case AVAHI_CLIENT_S_COLLISION:
+        case AVAHI_CLIENT_S_REGISTERING:
+            if (avahigroup) {
+                avahi_entry_group_reset(avahigroup);
+            }
+            break;
+        case AVAHI_CLIENT_CONNECTING:
+            ;
+    }
+}
+
+static int startAvahi(const char *pHWStr, const char *pServerName, int pPort) {
+    int tMaxServerName = 25; // Something reasonable?  iPad showed 21, iphone 25
+    if(strlen(pServerName) > tMaxServerName) {
+      slog(LOG_INFO,"Hey dog, we see you like long server names, "
+              "so we put a strncat in our command so we don't buffer overflow, while you listen to your flow.\n"
+              "We just used the first %d characters.  Pick something shorter if you want\n", tMaxServerName);
+    }
+    avahiname[0] = '\0';
+    char tPort[SERVLEN];
+    sprintf(tPort, "%d", pPort);
+    strcat(avahiname, pHWStr);
+    strcat(avahiname, "@");
+    strncat(avahiname, pServerName, tMaxServerName);
+    slog(AVAHI_LOG_LEVEL, "Avahi/DNS-SD Name: %s\n", avahiname);
+
+    avahiport = pPort;
+    int error;
+    if (!(avahipoll = avahi_simple_poll_new())) {
+        slog(LOG_INFO, "Avahi couldn't create avahi poll");
+        exit(1);
+    }
+    avahiclient = avahi_client_new(avahi_simple_poll_get(avahipoll), 0, avahiClientCallback, NULL, &error);
+    if (!avahiclient) {
+        slog(LOG_INFO, "Avahi Failed to create client: %s", avahi_strerror(error));
+        exit(1);
+    }
+    return 0;
+}
+
+static void stopAvahi() {
+  if (avahiclient) {
+    avahi_client_free(avahiclient);
+  }
+  if (avahipoll) {
+    avahi_simple_poll_free(avahipoll);
+  }
+}
+
+#else
 static int startAvahi(const char *pHWStr, const char *pServerName, int pPort)
 {
   int tMaxServerName = 25; // Something reasonable?  iPad showed 21, iphone 25
@@ -991,6 +1135,10 @@ static int startAvahi(const char *pHWStr, const char *pServerName, int pPort)
   }
   return tPid;
 }
+
+static void stopAvahi() {
+}
+#endif
 
 static int getAvailChars(struct shairbuffer *pBuf)
 {

@@ -39,6 +39,20 @@
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
 
+#ifdef LINKAVAHI
+#include <avahi-client/client.h>
+#include <avahi-client/publish.h>
+
+#include <avahi-common/alternative.h>
+#include <avahi-common/simple-watch.h>
+#include <avahi-common/malloc.h>
+#include <avahi-common/error.h>
+#include <avahi-common/timeval.h>
+extern AvahiSimplePoll *avahipoll;
+#endif
+
+
+
 int common_setup(struct addrinfo **ppAddrInfo, int pPort)
 {
   int tSock;
@@ -164,6 +178,22 @@ int setup_server(struct addrinfo *server_addr, int pPort)
 
 int acceptClient(int pSock, struct addrinfo *server_addr)
 {
+#ifdef LINKAVAHI
+  struct timeval timeout, origtimeout;
+  origtimeout.tv_sec = 1;
+  memcpy(&timeout, &origtimeout, sizeof(timeout));
+  fd_set fdset;
+  FD_ZERO(&fdset);
+  FD_SET(pSock, &fdset);
+  // Seems to work without this, but told to iterate so we iterate
+  while (select(pSock+1, &fdset, &fdset, NULL, &timeout) == 0) {
+      if (avahi_simple_poll_iterate(avahipoll, 1)) {
+          return ERROR;
+      }
+      FD_SET(pSock, &fdset);
+      memcpy(&timeout, &origtimeout, sizeof(timeout));
+  }
+#endif
   int tAccept = accept(pSock, server_addr->ai_addr, &server_addr->ai_addrlen);
   // close the listen socket.  Not expecting any more clients.
   if (tAccept < 0)
