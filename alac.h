@@ -1,14 +1,16 @@
 #ifndef __ALAC__DECOMP_H
 #define __ALAC__DECOMP_H
 
+#include <stdint.h>
+
 typedef struct alac_file alac_file;
 
-alac_file *create_alac(int samplesize, int numchannels);
-void decode_frame(alac_file *alac,
-                  unsigned char *inbuffer,
-                  void *outbuffer, int *outputsize);
+alac_file *alac_create(int samplesize, int numchannels);
+void alac_decode_frame(alac_file *alac,
+                       unsigned char *inbuffer,
+                       void *outbuffer, int *outputsize);
 void alac_set_info(alac_file *alac, char *inputbuffer);
-void allocate_buffers(alac_file *alac);
+void alac_allocate_buffers(alac_file *alac);
 
 struct alac_file
 {
