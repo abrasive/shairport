@@ -59,7 +59,7 @@ void usage(char *progname) {
            "    -s fill     set how full the buffer must be before audio output starts\n"
            "                    This value is in frames; default %d\n"
            "Run %s -o <output> -h to find the available options for a specific output\n"
-           "\n", progname, config.buffer_start_fill);
+           "\n", config.buffer_start_fill, progname);
 
     if (config.output_name)
         config.output = audio_get_output(config.output_name);
