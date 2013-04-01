@@ -1,3 +1,4 @@
-hairtunes
 shairport
 *.o
+config.mk
+config.h

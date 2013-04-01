@@ -1,6 +1,20 @@
-SRCS := shairport.c rtsp.c mdns.c audio.c common.c rtp.c player.c alac.c $(wildcard audio_*.c)
+ifeq ($(wildcard config.mk),)
+$(warning config.mk does not exist, configuring.)
+config.mk:
+	sh ./configure
+	$(MAKE) shairport
+endif
 
-LIBS := -lcrypto -lm -lao -lpthread
+-include config.mk
+
+SRCS := shairport.c rtsp.c mdns.c common.c rtp.c player.c alac.c audio.c audio_dummy.c
+
+ifdef CONFIG_AO
+SRCS += audio_ao.c
+endif
 
 shairport: $(SRCS)
-	gcc -ggdb -Wall -Wno-unused-value $(SRCS) $(LIBS) -o shairport
+	$(CC) $(CFLAGS) $(SRCS) $(LDFLAGS) -o shairport
+
+clean:
+	rm shairport
