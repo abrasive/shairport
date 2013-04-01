@@ -95,6 +95,8 @@ static int init(int argc, char **argv) {
 static void deinit(void) {
     if (dev)
         ao_close(dev);
+    dev = NULL;
+    ao_shutdown();
 }
 
 static void start(int sample_rate) {
