@@ -6,21 +6,21 @@
 int Fs;
 long long starttime, samples_played;
 
-static int dummy_init(int argc, char **argv) {
+static int init(int argc, char **argv) {
     return 0;
 }
 
-static void dummy_deinit(void) {
+static void deinit(void) {
 }
 
-static void dummy_start(int sample_rate) {
+static void start(int sample_rate) {
     Fs = sample_rate;
     starttime = 0;
     samples_played = 0;
     printf("dummy audio output started at Fs=%d Hz\n", sample_rate);
 }
 
-static void dummy_play(short buf[], int samples) {
+static void play(short buf[], int samples) {
     struct timeval tv;
 
     // this is all a bit expensive but it's long-term stable.
@@ -38,15 +38,21 @@ static void dummy_play(short buf[], int samples) {
     usleep(finishtime - nowtime);
 }
 
-static void dummy_stop(void) {
+static void stop(void) {
     printf("dummy audio stopped\n");
 }
 
-audio_ops audio_dummy = {
-    .init = &dummy_init,
-    .deinit = &dummy_deinit,
-    .start = &dummy_start,
-    .stop = &dummy_stop,
-    .play = &dummy_play,
+static void help(void) {
+    printf("There are no options for dummy audio.\n");
+}
+
+audio_output audio_dummy = {
+    .name = "dummy",
+    .help = &help,
+    .init = &init,
+    .deinit = &deinit,
+    .start = &start,
+    .stop = &stop,
+    .play = &play,
     .volume = NULL
 };

@@ -10,7 +10,8 @@ typedef struct {
     char *apname;
     char hw_addr[6];
     int port;
-    audio_ops *output;
+    char *output_name;
+    audio_output *output;
     int buffer_start_fill;
 } shairport_cfg;
 

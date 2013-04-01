@@ -7,6 +7,14 @@
 
 ao_device *dev = NULL;
 
+static void help(void) {
+    printf("    -d driver      set the output driver\n"
+           "    -o name=value  set an arbitrary ao option\n"
+           "    -i id          shorthand for -o id=<id>\n"
+           "    -n name        shorthand for -o dev=<name> -o dsp=<name>\n"
+          );
+}
+
 static int init(int argc, char **argv) {
     printf("ao: init\n");
     ao_initialize();
@@ -43,7 +51,9 @@ static void play(short buf[], int samples) {
 static void stop(void) {
 }
 
-audio_ops audio_ao = {
+audio_output audio_ao = {
+    .name = "ao",
+    .help = &help,
     .init = &init,
     .deinit = &deinit,
     .start = &start,

@@ -31,8 +31,11 @@ int main(int argc, char **argv) {
     config.port = 9000;
     config.apname = "hellothere";
 
-    config.output = &audio_dummy;
-    //config.output = &audio_ao;
+    config.output = audio_get_output(config.output_name);
+    if (!config.output) {
+        audio_ls_outputs();
+        die("Invalid audio output specified!\n");
+    }
 
     // mask off all signals before creating threads.
     // this way we control which thread gets which signals.

@@ -2,6 +2,9 @@
 #define _AUDIO_H
 
 typedef struct {
+    void (*help)(void);
+    char *name;
+
     // start of program
     int (*init)(int argc, char **argv);
     // at end of program
@@ -14,9 +17,9 @@ typedef struct {
 
     // may be NULL, in which case soft volume is applied
     void (*volume)(double vol);
-} audio_ops;
+} audio_output;
 
-extern audio_ops audio_dummy;
-extern audio_ops audio_ao;
+audio_output *audio_get_output(char *name);
+void audio_ls_outputs(void);
 
 #endif //_AUDIO_H
