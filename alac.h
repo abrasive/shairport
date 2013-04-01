@@ -11,6 +11,7 @@ void alac_decode_frame(alac_file *alac,
                        void *outbuffer, int *outputsize);
 void alac_set_info(alac_file *alac, char *inputbuffer);
 void alac_allocate_buffers(alac_file *alac);
+void alac_free(alac_file *alac);
 
 struct alac_file
 {

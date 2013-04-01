@@ -153,15 +153,23 @@ static int init_decoder(int32_t fmtp[12]) {
     return 0;
 }
 
+static void free_decoder(void) {
+    alac_free(decoder_info);
+}
+
 #ifdef FANCY_RESAMPLING
 static int init_src(void) {
     int err;
     if (fancy_resampling)
         src = src_new(SRC_SINC_MEDIUM_QUALITY, 2, &err);
     else
-        src = 0;
+        src = NULL;
 
     return err;
+}
+static void free_src(void) {
+    src_delete(src);
+    src = NULL;
 }
 #endif
 
@@ -170,6 +178,12 @@ static void init_buffer(void) {
     for (i=0; i<BUFFER_FRAMES; i++)
         audio_buffer[i].data = malloc(OUTFRAME_BYTES);
     ab_resync();
+}
+
+static void free_buffer(void) {
+    int i;
+    for (i=0; i<BUFFER_FRAMES; i++)
+        free(audio_buffer[i].data);
 }
 
 void player_put_packet(seq_t seqno, uint8_t *data, int len) {
@@ -485,9 +499,8 @@ int player_play(stream_cfg *stream) {
 
     AES_set_decrypt_key(stream->aeskey, 128, &aes);
     aesiv = stream->aesiv;
-    // XXX these leak memory
-    init_decoder(stream->fmtp);
     init_buffer();
+    init_decoder(stream->fmtp);
 #ifdef FANCY_RESAMPLING
     init_src();
 #endif
@@ -503,4 +516,9 @@ void player_stop(void) {
     please_stop = 1;
     pthread_join(player_thread, NULL);
     config.output->stop();
+    free_buffer();
+    free_decoder();
+#ifdef FANCY_RESAMPLING
+    free_src();
+#endif
 }
