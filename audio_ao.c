@@ -87,7 +87,7 @@ static int init(int argc, char **argv) {
     fmt.channels = 2;
     fmt.byte_format = AO_FMT_NATIVE;
 
-    dev = ao_open_live(driver, &fmt, NULL);
+    dev = ao_open_live(driver, &fmt, ao_opts);
 
     return dev ? 0 : 1;
 }
