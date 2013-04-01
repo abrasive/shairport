@@ -36,7 +36,7 @@ static inline int rtsp_playing(void) {
 
 static void rtsp_take_player(void) {
     if (pthread_mutex_trylock(&playing_mutex)) {
-        debug("another thread is playing, shutting it down\n");
+        debug("shutting down playing thread\n");
         // XXX minor race condition between please_shutdown and signal delivery
         please_shutdown = 1;
         pthread_kill(playing_thread, SIGUSR1);

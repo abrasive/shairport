@@ -4,8 +4,11 @@
 #include "rtsp.h"
 #include "mdns.h"
 
-
+static int shutting_down = 0;
 static void shutdown(void) {
+    if (shutting_down)
+        return;
+    shutting_down = 1;
     printf("Shutting down...\n");
     mdns_unregister();
     rtsp_shutdown_stream();
