@@ -15,6 +15,7 @@ typedef struct {
     int buffer_start_fill;
 } shairport_cfg;
 
+extern int debuglev;
 void die(char *format, ...);
 void warn(char *format, ...);
 void debug(char *format, ...);

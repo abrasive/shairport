@@ -51,7 +51,6 @@ static pthread_mutex_t vol_mutex = PTHREAD_MUTEX_INITIALIZER;
 // default buffer size
 // needs to be a power of 2 because of the way BUFIDX(seqno) works
 #define BUFFER_FRAMES  512
-#define START_FILL     250
 #define MAX_PACKET      2048
 
 typedef struct audio_buffer_entry {   // decoded audio packets
@@ -321,10 +320,10 @@ static short *buffer_get_frame(void) {
     buf_fill = ab_write - ab_read;
     bf_est_update(buf_fill);
 
-    // check if t+16, t+32, t+64, t+128, ... (START_FILL / 2)
+    // check if t+16, t+32, t+64, t+128, ... (buffer_start_fill / 2)
     // packets have arrived... last-chance resend
     if (!ab_buffering) {
-        for (i = 16; i < (START_FILL / 2); i = (i * 2)) {
+        for (i = 16; i < (config.buffer_start_fill / 2); i = (i * 2)) {
             next = ab_read + i;
             abuf = audio_buffer + BUFIDX(next);
             if (!abuf->ready) {
@@ -456,8 +455,13 @@ void player_flush(void) {
 }
 
 int player_play(stream_cfg *stream) {
+    if (config.buffer_start_fill > BUFFER_FRAMES)
+        die("specified buffer starting fill %d > buffer size %d\n",
+            config.buffer_start_fill, BUFFER_FRAMES);
+
     AES_set_decrypt_key(stream->aeskey, 128, &aes);
     aesiv = stream->aesiv;
+    // XXX these leak memory
     init_decoder(stream->fmtp);
     init_buffer();
 #ifdef FANCY_RESAMPLING

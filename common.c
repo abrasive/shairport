@@ -11,7 +11,7 @@
 
 shairport_cfg config;
 
-int debuglev = 1;
+int debuglev = 0;
 
 void die(char *format, ...) {
     fprintf(stderr, "FATAL: ");
@@ -42,7 +42,6 @@ void debug(char *format, ...) {
 
 
 char *base64_enc(uint8_t *input, int length) {
-    int ret;
     BIO *bmem, *b64;
     BUF_MEM *bptr;
     b64 = BIO_new(BIO_f_base64());
@@ -50,7 +49,7 @@ char *base64_enc(uint8_t *input, int length) {
     b64 = BIO_push(b64, bmem);
     BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
     BIO_write(b64, input, length);
-    ret = BIO_flush(b64);
+    BIO_flush(b64);
     BIO_get_mem_ptr(b64, &bptr);
 
     char *buf = (char *)malloc(bptr->length);
@@ -65,7 +64,6 @@ char *base64_enc(uint8_t *input, int length) {
 }
 
 uint8_t *base64_dec(char *input, int *outlen) {
-    int ret;
     BIO *bmem, *b64;
     int inlen = strlen(input);
 
@@ -78,7 +76,7 @@ uint8_t *base64_dec(char *input, int *outlen) {
     BIO_write(bmem, input, inlen);
     while (inlen++ & 3)
         BIO_write(bmem, "=", 1);
-    ret = BIO_flush(bmem);
+    BIO_flush(bmem);
     
     int bufsize = strlen(input)*3/4 + 1;
     uint8_t *buf = malloc(bufsize);
