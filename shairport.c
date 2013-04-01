@@ -2,10 +2,12 @@
 #include <memory.h>
 #include "common.h"
 #include "rtsp.h"
+#include "mdns.h"
 
 
 static void shutdown(void) {
     printf("Shutting down...\n");
+    mdns_unregister();
     rtsp_shutdown_stream();
     config.output->deinit();
     exit(0);
@@ -23,17 +25,21 @@ int main(int argc, char **argv) {
 //    config.password = "hello";
     memcpy(config.hw_addr, "\0\x11\x22\x33\x44\x55", 6);
     config.buffer_start_fill = 220;
+    config.port = 9000;
+    config.apname = "hellothere";
 
     config.output = &audio_dummy;
     //config.output = &audio_ao;
 
     // mask off all signals before creating threads.
     // this way we control which thread gets which signals.
+    // for now, we don't care which thread gets the following.
     sigset_t set;
     sigfillset(&set);
     sigdelset(&set, SIGINT);
     sigdelset(&set, SIGTERM);
     sigdelset(&set, SIGSTOP);
+    sigdelset(&set, SIGCHLD);
     pthread_sigmask(SIG_BLOCK, &set, NULL);
 
     // setting this to SIG_IGN would prevent signalling any threads.
@@ -46,6 +52,7 @@ int main(int argc, char **argv) {
     sa.sa_sigaction = &sig_shutdown;
     sigaction(SIGINT, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
+    sigaction(SIGCHLD, &sa, NULL);
 
     config.output->init(0, 0);
 

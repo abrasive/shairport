@@ -7,6 +7,7 @@
 
 typedef struct {
     char *password;
+    char *apname;
     char hw_addr[6];
     int port;
     audio_ops *output;

@@ -17,6 +17,7 @@
 #include "common.h"
 #include "player.h"
 #include "rtp.h"
+#include "mdns.h"
 
 // only one thread is allowed to use the player at once.
 // it monitors the request variable (at least when interrupted)
@@ -698,6 +699,8 @@ void rtsp_listen_loop(void) {
     FD_SET(sockfd[0], &fds);
     if (sockfd[1])
         FD_SET(sockfd[1], &fds);
+
+    mdns_register();
 
     printf("Listening for connections.\n");
 
