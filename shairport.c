@@ -55,9 +55,9 @@ void usage(char *progname) {
     printf("Available options:\n"
            "    -h          show this help\n"
            "    -p port     set RTSP listening port\n"
-           "    -n name     set advertised name\n"
+           "    -a name     set advertised name\n"
            "    -o output   set audio output\n"
-           "    -s fill     set how full the buffer must be before audio output starts\n"
+           "    -b fill     set how full the buffer must be before audio output starts\n"
            "                    This value is in frames; default %d\n"
            "Run %s -o <output> -h to find the available options for a specific output\n"
            "\n", config.buffer_start_fill, progname);
@@ -74,7 +74,7 @@ void usage(char *progname) {
 
 int parse_options(int argc, char **argv) {
     char opt;
-    while ((opt = getopt(argc, argv, "+hp:n:o:s:")) > 0) {
+    while ((opt = getopt(argc, argv, "+hp:a:o:b:")) > 0) {
         switch (opt) {
             default:
                 printf("Unknown argument -%c\n", optopt);
@@ -87,13 +87,13 @@ int parse_options(int argc, char **argv) {
             case 'p':
                 config.port = atoi(optarg);
                 break;
-            case 'n':
+            case 'a':
                 config.apname = optarg;
                 break;
             case 'o':
                 config.output_name = optarg;
                 break;
-            case 's':
+            case 'v':
                 config.buffer_start_fill = atoi(optarg);
                 break;
         }
