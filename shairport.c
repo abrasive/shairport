@@ -101,8 +101,33 @@ int parse_options(int argc, char **argv) {
     return optind;
 }
 
+void signal_setup(void) {
+    // mask off all signals before creating threads.
+    // this way we control which thread gets which signals.
+    // for now, we don't care which thread gets the following.
+    sigset_t set;
+    sigfillset(&set);
+    sigdelset(&set, SIGINT);
+    sigdelset(&set, SIGTERM);
+    sigdelset(&set, SIGSTOP);
+    sigdelset(&set, SIGCHLD);
+    pthread_sigmask(SIG_BLOCK, &set, NULL);
+
+    // setting this to SIG_IGN would prevent signalling any threads.
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_flags = SA_SIGINFO;
+    sa.sa_sigaction = &sig_ignore;
+    sigaction(SIGUSR1, &sa, NULL);
+    
+    sa.sa_sigaction = &sig_shutdown;
+    sigaction(SIGINT, &sa, NULL);
+    sigaction(SIGTERM, &sa, NULL);
+    sigaction(SIGCHLD, &sa, NULL);
+}
 
 int main(int argc, char **argv) {
+    signal_setup();
     memset(&config, 0, sizeof(config));
 
     // set defaults
@@ -129,29 +154,6 @@ int main(int argc, char **argv) {
     MD5_Final(ap_md5, &ctx);
     memcpy(config.hw_addr, ap_md5, sizeof(config.hw_addr));
 
-
-    // mask off all signals before creating threads.
-    // this way we control which thread gets which signals.
-    // for now, we don't care which thread gets the following.
-    sigset_t set;
-    sigfillset(&set);
-    sigdelset(&set, SIGINT);
-    sigdelset(&set, SIGTERM);
-    sigdelset(&set, SIGSTOP);
-    sigdelset(&set, SIGCHLD);
-    pthread_sigmask(SIG_BLOCK, &set, NULL);
-
-    // setting this to SIG_IGN would prevent signalling any threads.
-    struct sigaction sa;
-    memset(&sa, 0, sizeof(sa));
-    sa.sa_flags = SA_SIGINFO;
-    sa.sa_sigaction = &sig_ignore;
-    sigaction(SIGUSR1, &sa, NULL);
-    
-    sa.sa_sigaction = &sig_shutdown;
-    sigaction(SIGINT, &sa, NULL);
-    sigaction(SIGTERM, &sa, NULL);
-    sigaction(SIGCHLD, &sa, NULL);
 
     rtsp_listen_loop();
 
