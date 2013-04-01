@@ -66,7 +66,7 @@ void mdns_register(void) {
                 config.password ? "pw=true" : "pw=false"
 
     char *argv[] = {
-        NULL, mdns_apname, "_raop._tcp", mdns_port, RECORD
+        NULL, mdns_apname, "_raop._tcp", mdns_port, RECORD, NULL
     };
 
     argv[0] = "avahi-publish-service";
@@ -76,7 +76,7 @@ void mdns_register(void) {
     execvp(argv[0], argv);
 
     char *mac_argv[] = {"dns-sd", "-R", mdns_apname, "_raop._tcp", ".",
-                        mdns_port, RECORD};
+                        mdns_port, RECORD, NULL};
     execvp(mac_argv[0], mac_argv);
 
     die("Could not establish mDNS advertisement!\n");
