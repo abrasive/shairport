@@ -27,6 +27,7 @@
 #include <signal.h>
 #include <unistd.h>
 #include <memory.h>
+#include <openssl/md5.h>
 #include "common.h"
 #include "rtsp.h"
 #include "mdns.h"
@@ -120,6 +121,14 @@ int main(int argc, char **argv) {
         die("Invalid audio output specified!\n");
     }
     config.output->init(argc-audio_arg, argv+audio_arg);
+
+    uint8_t ap_md5[16];
+    MD5_CTX ctx;
+    MD5_Init(&ctx);
+    MD5_Update(&ctx, config.apname, strlen(config.apname));
+    MD5_Final(ap_md5, &ctx);
+    memcpy(config.hw_addr, ap_md5, sizeof(config.hw_addr));
+
 
     // mask off all signals before creating threads.
     // this way we control which thread gets which signals.
