@@ -67,6 +67,7 @@ static void rtsp_take_player(void) {
         pthread_kill(playing_thread, SIGUSR1);
         pthread_mutex_lock(&playing_mutex);
     }
+    playing_thread = pthread_self();
 }
 
 void rtsp_shutdown_stream(void) {
@@ -330,8 +331,6 @@ static void handle_flush(rtsp_conn_info *conn,
 
 static void handle_setup(rtsp_conn_info *conn,
                          rtsp_message *req, rtsp_message *resp) {
-    playing_thread = pthread_self();
-
     int cport, tport;
     char *hdr = msg_get_header(req, "Transport");
     if (!hdr)
