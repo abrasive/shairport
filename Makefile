@@ -13,8 +13,11 @@ ifdef CONFIG_AO
 SRCS += audio_ao.c
 endif
 
+# default target
+all: shairport
+
 shairport: $(SRCS)
 	$(CC) $(CFLAGS) $(SRCS) $(LDFLAGS) -o shairport
 
 clean:
-	rm shairport
+	rm -f shairport
