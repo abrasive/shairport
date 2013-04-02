@@ -93,7 +93,7 @@ int parse_options(int argc, char **argv) {
             case 'o':
                 config.output_name = optarg;
                 break;
-            case 'v':
+            case 'b':
                 config.buffer_start_fill = atoi(optarg);
                 break;
         }
