@@ -37,7 +37,7 @@
 static int running = 0;
 static int please_shutdown;
 
-static struct sockaddr rtp_client;
+static SOCKADDR rtp_client;
 static int sock;
 static pthread_t rtp_thread;
 
@@ -86,11 +86,11 @@ static void *rtp_receiver(void *arg) {
     return NULL;
 }
 
-static int bind_port(struct sockaddr *remote) {
+static int bind_port(SOCKADDR *remote) {
     struct addrinfo hints, *info;
 
     memset(&hints, 0, sizeof(hints));
-    hints.ai_family = remote->sa_family;
+    hints.ai_family = remote->SAFAMILY;
     hints.ai_socktype = SOCK_DGRAM;
     hints.ai_flags = AI_PASSIVE;
 
@@ -99,18 +99,18 @@ static int bind_port(struct sockaddr *remote) {
     if (ret < 0)
         die("failed to get usable addrinfo?! %s", gai_strerror(ret));
 
-    sock = socket(remote->sa_family, SOCK_DGRAM, IPPROTO_UDP);
+    sock = socket(remote->SAFAMILY, SOCK_DGRAM, IPPROTO_UDP);
     ret = bind(sock, info->ai_addr, info->ai_addrlen);
 
     if (ret < 0)
         die("could not bind a UDP port!");
 
     int sport;
-    struct sockaddr local;
+    SOCKADDR local;
     socklen_t local_len = sizeof(local);
-    getsockname(sock, &local, &local_len);
+    getsockname(sock, (struct sockaddr*)&local, &local_len);
 #ifdef AF_INET6
-    if (local.sa_family == AF_INET6) {
+    if (local.SAFAMILY == AF_INET6) {
         struct sockaddr_in6 *sa6 = (struct sockaddr_in6*)&local;
         sport = htons(sa6->sin6_port);
     } else
@@ -124,7 +124,7 @@ static int bind_port(struct sockaddr *remote) {
 }
 
 
-int rtp_setup(struct sockaddr *remote, int cport, int tport) {
+int rtp_setup(SOCKADDR *remote, int cport, int tport) {
     if (running)
         die("rtp_setup called with active stream!\n");
 
@@ -135,7 +135,7 @@ int rtp_setup(struct sockaddr *remote, int cport, int tport) {
     
     memcpy(&rtp_client, remote, sizeof(rtp_client));
 #ifdef AF_INET6
-    if (rtp_client.sa_family == AF_INET6) {
+    if (rtp_client.SAFAMILY == AF_INET6) {
         struct sockaddr_in6 *sa6 = (struct sockaddr_in6*)&rtp_client;
         sa6->sin6_port = htons(cport);
     } else
@@ -179,5 +179,5 @@ void rtp_request_resend(seq_t first, seq_t last) {
     *(unsigned short *)(req+4) = htons(first);  // missed seqnum
     *(unsigned short *)(req+6) = htons(last-first+1);  // count
 
-    sendto(sock, req, sizeof(req), 0, &rtp_client, sizeof(rtp_client));
+    sendto(sock, req, sizeof(req), 0, (struct sockaddr*)&rtp_client, sizeof(rtp_client));
 }

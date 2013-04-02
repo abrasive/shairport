@@ -52,7 +52,7 @@ static pthread_t playing_thread = 0;
 
 typedef struct {
     stream_cfg stream;
-    struct sockaddr remote;
+    SOCKADDR remote;
 } rtsp_conn_info;
 
 static inline int rtsp_playing(void) {
@@ -450,9 +450,9 @@ static void apple_challenge(int fd, rtsp_message *req, rtsp_message *resp) {
     if (!hdr)
         return;
 
-    struct sockaddr fdsa;
+    SOCKADDR fdsa;
     socklen_t sa_len = sizeof(fdsa);
-    getsockname(fd, &fdsa, &sa_len);
+    getsockname(fd, (struct sockaddr*)&fdsa, &sa_len);
 
     int chall_len;
     uint8_t *chall = base64_dec(hdr, &chall_len);
@@ -470,7 +470,7 @@ static void apple_challenge(int fd, rtsp_message *req, rtsp_message *resp) {
     bp += chall_len;
     
 #ifdef AF_INET6
-    if (fdsa.sa_family == AF_INET6) {
+    if (fdsa.SAFAMILY == AF_INET6) {
         struct sockaddr_in6 *sa6 = (struct sockaddr_in6*)(&fdsa);
         memcpy(bp, sa6->sin6_addr.s6_addr, 16);
         bp += 16;
