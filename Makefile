@@ -20,4 +20,4 @@ shairport: $(SRCS)
 	$(CC) $(CFLAGS) $(SRCS) $(LDFLAGS) -o shairport
 
 clean:
-	rm shairport
+	rm -f shairport
