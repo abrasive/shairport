@@ -52,9 +52,9 @@ static unsigned char *aesiv;
 static AES_KEY aes;
 static int sampling_rate, frame_size;
 
-#define FRAME_BYTES (4*frame_size)
+#define FRAME_BYTES(frame_size) (4*frame_size)
 // maximal resampling shift - conservative
-#define OUTFRAME_BYTES (4*(frame_size+3))
+#define OUTFRAME_BYTES(frame_size) (4*(frame_size+3))
 
 static pthread_t player_thread;
 static int please_stop;
@@ -119,7 +119,7 @@ static void alac_decode(short *dest, uint8_t *buf, int len) {
 
     alac_decode_frame(decoder_info, packet, dest, &outsize);
 
-    assert(outsize == FRAME_BYTES);
+    assert(outsize == FRAME_BYTES(frame_size));
 }
 
 
@@ -176,7 +176,7 @@ static void free_src(void) {
 static void init_buffer(void) {
     int i;
     for (i=0; i<BUFFER_FRAMES; i++)
-        audio_buffer[i].data = malloc(OUTFRAME_BYTES);
+        audio_buffer[i].data = malloc(OUTFRAME_BYTES(frame_size));
     ab_resync();
 }
 
@@ -373,7 +373,7 @@ static short *buffer_get_frame(void) {
     abuf_t *curframe = audio_buffer + BUFIDX(read);
     if (!curframe->ready) {
         warn("missing frame.\n");
-        memset(curframe->data, 0, FRAME_BYTES);
+        memset(curframe->data, 0, FRAME_BYTES(frame_size));
     }
     curframe->ready = 0;
     pthread_mutex_unlock(&ab_mutex);
@@ -424,9 +424,9 @@ static void *player_thread_func(void *arg) {
     int play_samples;
 
     signed short *inbuf, *outbuf, *silence;
-    outbuf = malloc(OUTFRAME_BYTES);
-    silence = malloc(OUTFRAME_BYTES);
-    memset(silence, 0, OUTFRAME_BYTES);
+    outbuf = malloc(OUTFRAME_BYTES(frame_size));
+    silence = malloc(OUTFRAME_BYTES(frame_size));
+    memset(silence, 0, OUTFRAME_BYTES(frame_size));
 
 #ifdef FANCY_RESAMPLING
     float *frame, *outframe;
@@ -437,8 +437,8 @@ static void *player_thread_func(void *arg) {
 
         srcdat.data_in = frame;
         srcdat.data_out = outframe;
-        srcdat.input_frames = FRAME_BYTES;
-        srcdat.output_frames = 2*FRAME_BYTES;
+        srcdat.input_frames = FRAME_BYTES(frame_size);
+        srcdat.output_frames = 2*FRAME_BYTES(frame_size);
         srcdat.src_ratio = 1.0;
         srcdat.end_of_input = 0;
     }
@@ -453,15 +453,15 @@ static void *player_thread_func(void *arg) {
         if (fancy_resampling) {
             int i;
             pthread_mutex_lock(&vol_mutex);
-            for (i=0; i<2*FRAME_BYTES; i++) {
+            for (i=0; i<2*FRAME_BYTES(frame_size); i++) {
                 frame[i] = (float)inbuf[i] / 32768.0;
                 frame[i] *= volume;
             }
             pthread_mutex_unlock(&vol_mutex);
             srcdat.src_ratio = bf_playback_rate;
             src_process(src, &srcdat);
-            assert(srcdat.input_frames_used == FRAME_BYTES);
-            src_float_to_short_array(outframe, outbuf, FRAME_BYTES*2);
+            assert(srcdat.input_frames_used == FRAME_BYTES(frame_size));
+            src_float_to_short_array(outframe, outbuf, FRAME_BYTES(frame_size)*2);
             play_samples = srcdat.output_frames_gen;
         } else
 #endif
@@ -499,8 +499,9 @@ int player_play(stream_cfg *stream) {
 
     AES_set_decrypt_key(stream->aeskey, 128, &aes);
     aesiv = stream->aesiv;
-    init_buffer();
     init_decoder(stream->fmtp);
+    // must be after decoder init
+    init_buffer();
 #ifdef FANCY_RESAMPLING
     init_src();
 #endif
