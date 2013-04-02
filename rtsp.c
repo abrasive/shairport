@@ -615,7 +615,7 @@ static void *rtsp_conversation_thread_func(void *vfd) {
     int fd = *(int*)vfd;
     socklen_t slen = sizeof(conn.remote);
     
-    fd = accept(fd, &conn.remote, &slen);
+    fd = accept(fd, (struct sockaddr *)&conn.remote, &slen);
     if (fd < 0) {
         perror("failed to accept connection");
         goto shutdown;
