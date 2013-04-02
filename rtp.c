@@ -28,7 +28,9 @@
 #include <signal.h>
 #include <unistd.h>
 #include <memory.h>
+#include <sys/types.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
 #include <netdb.h>
 #include "common.h"
 #include "player.h"
