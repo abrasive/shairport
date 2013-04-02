@@ -33,7 +33,7 @@
 #include "mdns.h"
 
 static int shutting_down = 0;
-static void shutdown(void) {
+void shairport_shutdown(void) {
     if (shutting_down)
         return;
     shutting_down = 1;
@@ -47,7 +47,7 @@ static void shutdown(void) {
 static void sig_ignore(int foo, siginfo_t *bar, void *baz) {
 }
 static void sig_shutdown(int foo, siginfo_t *bar, void *baz) {
-    shutdown();
+    shairport_shutdown();
 }
 
 void usage(char *progname) {
@@ -158,6 +158,6 @@ int main(int argc, char **argv) {
     rtsp_listen_loop();
 
     // should not.
-    shutdown();
+    shairport_shutdown();
     return 1;
 }
