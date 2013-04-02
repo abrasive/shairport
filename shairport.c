@@ -74,7 +74,7 @@ void usage(char *progname) {
 
 int parse_options(int argc, char **argv) {
     char opt;
-    while ((opt = getopt(argc, argv, "+hp:a:o:b:")) > 0) {
+    while ((opt = getopt(argc, argv, "+hvp:a:o:b:")) > 0) {
         switch (opt) {
             default:
                 printf("Unknown argument -%c\n", optopt);
