@@ -73,7 +73,7 @@ void usage(char *progname) {
 }
 
 int parse_options(int argc, char **argv) {
-    char opt;
+    int opt;
     while ((opt = getopt(argc, argv, "+hvp:a:o:b:")) > 0) {
         switch (opt) {
             default:
