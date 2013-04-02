@@ -45,6 +45,12 @@
 #include "rtp.h"
 #include "mdns.h"
 
+// some BSDs (OpenBSD, NetBSD) do not support AI_ADDRCONFIG
+// it's not critical anyway, define it to 0 (a no-op)
+#ifndef AI_ADDRCONFIG
+#define AI_ADDRCONFIG 0
+#endif
+
 // only one thread is allowed to use the player at once.
 // it monitors the request variable (at least when interrupted)
 static pthread_mutex_t playing_mutex = PTHREAD_MUTEX_INITIALIZER;
