@@ -4,19 +4,19 @@ echo Configuring Shairport
 
 rm -f config.mk config.h
 
-LDFLAGS+=" -lm -lpthread"
+LDFLAGS="${LDFLAGS} -lm -lpthread"
 
 if pkg-config openssl 2>/dev/null; then
-    CFLAGS+=" `pkg-config --cflags openssl`"
-    LDFLAGS+=" `pkg-config --libs openssl`"
+    CFLAGS="${CFLAGS} `pkg-config --cflags openssl`"
+    LDFLAGS="${LDFLAGS} `pkg-config --libs openssl`"
 else
     echo Guessing OpenSSL linker flags
-    LDFLAGS+=" -lssl -lcrypto"
+    LDFLAGS="${LDFLAGS} -lssl -lcrypto"
 fi
 
 if pkg-config ao 2>/dev/null; then
-    CFLAGS+=" `pkg-config --cflags ao`"
-    LDFLAGS+=" `pkg-config --libs ao`"
+    CFLAGS="${CFLAGS} `pkg-config --cflags ao`"
+    LDFLAGS="${LDFLAGS} `pkg-config --libs ao`"
     echo "#define CONFIG_AO" >> config.h
     echo "CONFIG_AO=yes" >> config.mk
     echo libao found
