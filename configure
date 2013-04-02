@@ -4,6 +4,8 @@ echo Configuring Shairport
 
 rm -f config.mk config.h
 
+echo "// automatically generated file" > config.h
+
 LDFLAGS="${LDFLAGS} -lm -lpthread"
 
 if pkg-config openssl 2>/dev/null; then
