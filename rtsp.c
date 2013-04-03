@@ -406,7 +406,7 @@ static void handle_announce(rtsp_conn_info *conn,
     char *cp = req->content;
     int cp_left = req->contentlength;
     char *next;
-    while (cp) {
+    while (cp_left && cp) {
         next = nextline(cp, cp_left);
         cp_left -= next-cp;
 
