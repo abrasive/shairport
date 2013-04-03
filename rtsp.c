@@ -361,6 +361,8 @@ static void handle_setup(rtsp_conn_info *conn,
     sprintf(resphdr + strlen(resphdr), ";server_port=%d", sport);
     msg_add_header(resp, "Transport", resphdr);
 
+    msg_add_header(resp, "Session", "1");
+
     resp->respcode = 200;
 }
 
