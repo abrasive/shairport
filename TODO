@@ -1,4 +1,8 @@
-- makefile
 - documentation
 - PKGBUILD, initscript, systemd, launchd plist
-- tidy debug printing
+- alsa
+- pipe
+- avahi
+- volume
+- supervisor?
+- pico mdns?

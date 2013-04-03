@@ -218,7 +218,7 @@ void player_put_packet(seq_t seqno, uint8_t *data, int len) {
 
     pthread_mutex_lock(&ab_mutex);
     if (ab_buffering && buf_fill >= config.buffer_start_fill) {
-        debug("buffering over. starting play\n");
+        debug(1, "buffering over. starting play\n");
         ab_buffering = 0;
         pthread_cond_signal(&ab_buffer_ready);
     }
@@ -302,10 +302,20 @@ static void bf_est_reset(short fill) {
 }
 
 static void bf_est_update(short fill) {
+    // the rate-matching system needs to decide how full to keep the buffer.
+    // the initial fill is present when the system starts to output samples,
+    // but most output chains will instantly gobble their own buffer's worth of
+    // data. we average for a while to decide where to draw the line.
     if (fill_count < 1000) {
         desired_fill += (double)fill/1000.0;
         fill_count++;
         return;
+    } else if (fill_count == 1000) {
+        // this information could be used to help estimate our effective latency?
+        debug(1, "established desired fill of %f frames, "
+              "so output chain buffered about %f frames\n", desired_fill,
+              config.buffer_start_fill - desired_fill);
+        fill_count++;
     }
 
 #define CONTROL_A   (1e-4)
@@ -318,7 +328,7 @@ static void bf_est_update(short fill) {
 
     bf_est_drift = biquad_filt(&bf_drift_lpf, CONTROL_B*(adj_error + err_deriv) + bf_est_drift);
 
-    debug("bf %d err %f drift %f desiring %f ed %f estd %f\n",
+    debug(3, "bf %d err %f drift %f desiring %f ed %f estd %f\n",
           fill, bf_est_err, bf_est_drift, desired_fill, err_deriv, err_deriv + adj_error);
     bf_playback_rate = 1.0 + adj_error + bf_est_drift;
 
@@ -401,12 +411,12 @@ static int stuff_buffer(double playback_rate, short *inptr, short *outptr) {
     };
     if (stuff) {
         if (stuff==1) {
-            debug("+++++++++\n");
+            debug(2, "+++++++++\n");
             // interpolate one sample
             *outptr++ = dithered_vol(((long)inptr[-2] + (long)inptr[0]) >> 1);
             *outptr++ = dithered_vol(((long)inptr[-1] + (long)inptr[1]) >> 1);
         } else if (stuff==-1) {
-            debug("---------\n");
+            debug(2, "---------\n");
             inptr++;
             inptr++;
         }

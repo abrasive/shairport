@@ -49,7 +49,8 @@ static int init(int argc, char **argv) {
 
     optind = 0;
     // some platforms apparently require optreset = 1; - which?
-    char opt, *mid;
+    int opt;
+    char *mid;
     while ((opt = getopt(argc, argv, "d:i:n:o:")) > 0) {
         switch (opt) {
             case 'd':

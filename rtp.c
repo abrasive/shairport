@@ -74,15 +74,15 @@ static void *rtp_receiver(void *arg) {
                 continue;
             }
             if (type == 0x56 && seqno == 0) {
-                debug("Suspected resync request packet received.\n");
-                player_flush();
+                debug(2, "resend-related request packet received, ignoring.\n");
                 continue;
             }
+            debug(1, "Unknown RTP packet of type 0x%02X length %d seqno %d\n", type, nread, seqno);
         }
         warn("Unknown RTP packet of type 0x%02X length %d\n", type, nread);
     }
 
-    debug("RTP thread interrupted. terminating.\n");
+    debug(1, "RTP thread interrupted. terminating.\n");
     close(sock);
 
     return NULL;
@@ -130,7 +130,7 @@ int rtp_setup(SOCKADDR *remote, int cport, int tport) {
     if (running)
         die("rtp_setup called with active stream!\n");
 
-    debug("rtp_setup: cport=%d tport=%d\n", cport, tport);
+    debug(1, "rtp_setup: cport=%d tport=%d\n", cport, tport);
 
     // we do our own timing and ignore the timing port.
     // an audio perfectionist may wish to learn the protocol.
@@ -149,7 +149,7 @@ int rtp_setup(SOCKADDR *remote, int cport, int tport) {
 
     int sport = bind_port(remote);
 
-    debug("rtp listening on port %d\n", sport);
+    debug(1, "rtp listening on port %d\n", sport);
 
     please_shutdown = 0;
     pthread_create(&rtp_thread, NULL, &rtp_receiver, NULL);
