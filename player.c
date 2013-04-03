@@ -302,10 +302,20 @@ static void bf_est_reset(short fill) {
 }
 
 static void bf_est_update(short fill) {
+    // the rate-matching system needs to decide how full to keep the buffer.
+    // the initial fill is present when the system starts to output samples,
+    // but most output chains will instantly gobble their own buffer's worth of
+    // data. we average for a while to decide where to draw the line.
     if (fill_count < 1000) {
         desired_fill += (double)fill/1000.0;
         fill_count++;
         return;
+    } else if (fill_count == 1000) {
+        // this information could be used to help estimate our effective latency?
+        debug(1, "established desired fill of %f frames, "
+              "so output chain buffered about %f frames\n", desired_fill,
+              config.buffer_start_fill - desired_fill);
+        fill_count++;
     }
 
 #define CONTROL_A   (1e-4)
