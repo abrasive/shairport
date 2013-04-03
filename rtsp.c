@@ -474,7 +474,7 @@ static struct method_handler {
     {"TEARDOWN",        handle_teardown},
     {"SETUP",           handle_setup},
     {"GET_PARAMETER",   handle_ignore},
-    {"SET_PARAMETER",   handle_set_parameter}, // XXX
+    {"SET_PARAMETER",   handle_set_parameter},
     {"RECORD",          handle_ignore},
     {NULL,              NULL}
 };
