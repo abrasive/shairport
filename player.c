@@ -517,8 +517,10 @@ int player_play(stream_cfg *stream) {
 #endif
 
     please_stop = 0;
+    if(config.play_prog) system(config.play_prog);
     config.output->start(sampling_rate);
     pthread_create(&player_thread, NULL, player_thread_func, NULL);
+
 
     return 0;
 }
@@ -527,6 +529,7 @@ void player_stop(void) {
     please_stop = 1;
     pthread_join(player_thread, NULL);
     config.output->stop();
+    if(config.stop_prog) system(config.stop_prog);
     free_buffer();
     free_decoder();
 #ifdef FANCY_RESAMPLING

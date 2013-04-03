@@ -56,6 +56,8 @@ void usage(char *progname) {
            "    -h          show this help\n"
            "    -p port     set RTSP listening port\n"
            "    -a name     set advertised name\n"
+           "    -P command  program to launch when playback begins\n"
+           "    -S command  program to launch when playback ends\n"
            "    -o output   set audio output\n"
            "    -b fill     set how full the buffer must be before audio output starts\n"
            "                    This value is in frames; default %d\n"
@@ -74,7 +76,7 @@ void usage(char *progname) {
 
 int parse_options(int argc, char **argv) {
     int opt;
-    while ((opt = getopt(argc, argv, "+hvp:a:o:b:")) > 0) {
+    while ((opt = getopt(argc, argv, "+hvp:a:o:b:P:S:")) > 0) {
         switch (opt) {
             default:
                 printf("Unknown argument -%c\n", optopt);
@@ -89,6 +91,12 @@ int parse_options(int argc, char **argv) {
                 break;
             case 'a':
                 config.apname = optarg;
+                break;
+            case 'P':
+                config.play_prog = optarg;
+                break;
+            case 'S':
+                config.stop_prog = optarg;
                 break;
             case 'o':
                 config.output_name = optarg;
