@@ -72,10 +72,10 @@ static void *rtp_receiver(void *arg) {
                 continue;
             }
             if (type == 0x56 && seqno == 0) {
-                debug("Suspected resync request packet received.\n");
-                player_flush();
+                debug("resend-related request packet received, ignoring.\n");
                 continue;
             }
+            debug("Unknown RTP packet of type 0x%02X length %d seqno %d\n", type, nread, seqno);
         }
         warn("Unknown RTP packet of type 0x%02X length %d\n", type, nread);
     }
