@@ -477,11 +477,8 @@ static void apple_challenge(int fd, rtsp_message *req, rtsp_message *resp) {
 #endif
     {
         struct sockaddr_in *sa = (struct sockaddr_in*)(&fdsa);
-        unsigned int ip = sa->sin_addr.s_addr;
-        for (i=0; i<4; i++) {
-            *bp++ = ip & 0xff;
-            ip >>= 8;
-        }
+        memcpy(bp, &sa->sin_addr, 4);
+		bp += 4;
     }
 
     for (i=0; i<6; i++)
