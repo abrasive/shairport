@@ -371,6 +371,32 @@ static void handle_ignore(rtsp_conn_info *conn,
     resp->respcode = 200;
 }
 
+static void handle_set_parameter(rtsp_conn_info *conn,
+                                 rtsp_message *req, rtsp_message *resp) {
+    if (!req->contentlength)
+        return;
+
+    char *cp = req->content;
+    int cp_left = req->contentlength;
+    char *next;
+    while (cp_left && cp) {
+        next = nextline(cp, cp_left);
+        cp_left -= next-cp;
+
+        if (!strncmp(cp, "volume: ", 8)) {
+            float volume = atof(cp + 8);
+            debug(1, "volume: %f\n", volume);
+            player_volume(volume);
+        } else {
+            debug(1, "unrecognised parameter: >>%s<< (%d)\n", cp, strlen(cp));
+        }
+        cp = next;
+    }
+
+
+    resp->respcode = 200;
+}
+
 static void handle_announce(rtsp_conn_info *conn,
                             rtsp_message *req, rtsp_message *resp) {
 
@@ -441,7 +467,7 @@ static struct method_handler {
     {"TEARDOWN",        handle_teardown},
     {"SETUP",           handle_setup},
     {"GET_PARAMETER",   handle_ignore},
-    {"SET_PARAMETER",   handle_ignore}, // XXX
+    {"SET_PARAMETER",   handle_set_parameter}, // XXX
     {"RECORD",          handle_ignore},
     {NULL,              NULL}
 };
