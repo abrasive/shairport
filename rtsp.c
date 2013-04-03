@@ -356,9 +356,9 @@ static void handle_setup(rtsp_conn_info *conn,
 
     player_play(&conn->stream);
 
-    char *resphdr = malloc(strlen(hdr) + 20);
+    char *resphdr = malloc(strlen(hdr) + 35);
     strcpy(resphdr, hdr);
-    sprintf(resphdr + strlen(resphdr), ";server_port=%d", sport);
+    sprintf(resphdr + strlen(resphdr), ";server_port=%d\r\nSession: 1\r\n", sport);
     msg_add_header(resp, "Transport", resphdr);
 
     resp->respcode = 200;
