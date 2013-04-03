@@ -29,7 +29,7 @@ typedef struct {
 extern int debuglev;
 void die(char *format, ...);
 void warn(char *format, ...);
-void debug(char *format, ...);
+void debug(int level, char *format, ...);
 
 uint8_t *base64_dec(char *input, int *outlen);
 char *base64_enc(uint8_t *input, int length);
