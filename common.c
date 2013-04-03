@@ -56,10 +56,9 @@ void warn(char *format, ...) {
     va_end(args);
 }
 
-void debug(char *format, ...) {
-    if (!debuglev)
+void debug(int level, char *format, ...) {
+    if (level > debuglev)
         return;
-    fprintf(stderr, "DEBUG: ");
     va_list args;
     va_start(args, format);
     vfprintf(stderr, format, args);

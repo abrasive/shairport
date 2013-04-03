@@ -61,7 +61,7 @@ static inline int rtsp_playing(void) {
 
 static void rtsp_take_player(void) {
     if (pthread_mutex_trylock(&playing_mutex)) {
-        debug("shutting down playing thread\n");
+        debug(1, "shutting down playing thread\n");
         // XXX minor race condition between please_shutdown and signal delivery
         please_shutdown = 1;
         pthread_kill(playing_thread, SIGUSR1);
@@ -161,7 +161,7 @@ static int msg_handle_line(rtsp_message **pmsg, char *line) {
         *pmsg = msg;
         char *sp, *p;
 
-        debug("received request: %s\n", line);
+        debug(1, "received request: %s\n", line);
 
         p = strtok_r(line, " ", &sp);
         if (!p)
@@ -191,7 +191,7 @@ static int msg_handle_line(rtsp_message **pmsg, char *line) {
         *p = 0;
         p += 2;
         msg_add_header(msg, line, p);
-        debug("    %s: %s\n", line, p);
+        debug(2, "    %s: %s\n", line, p);
         return -1;
     } else {
         char *cl = msg_get_header(msg, "Content-Length");
@@ -219,12 +219,12 @@ static rtsp_message * rtsp_read_request(int fd) {
 
     while (msg_size < 0) {
         if (please_shutdown) {
-            debug("RTSP shutdown requested\n");
+            debug(1, "RTSP shutdown requested\n");
             goto shutdown;
         }
         nread = read(fd, buf+inbuf, buflen - inbuf);
         if (!nread) {
-            debug("RTSP connection closed\n");
+            debug(1, "RTSP connection closed\n");
             goto shutdown;
         }
         if (nread < 0) {
@@ -291,10 +291,10 @@ static void msg_write_response(int fd, rtsp_message *resp) {
                      "RTSP/1.0 %d %s\r\n", resp->respcode,
                      resp->respcode==200 ? "OK" : "Error");
     write(fd, rbuf, nrbuf);
-    debug("sending response: %s", rbuf);
+    debug(1, "sending response: %s", rbuf);
     int i;
     for (i=0; i<resp->nheaders; i++) {
-        debug("    %s: %s\n", resp->name[i], resp->value[i]);
+        debug(2, "    %s: %s\n", resp->name[i], resp->value[i]);
         write(fd, resp->name[i], strlen(resp->name[i]));
         write(fd, ": ", 2);
         write(fd, resp->value[i], strlen(resp->value[i]));
