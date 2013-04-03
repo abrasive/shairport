@@ -28,7 +28,9 @@
 #include <signal.h>
 #include <unistd.h>
 #include <memory.h>
+#include <sys/types.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
 #include <netdb.h>
 #include "common.h"
 #include "player.h"
@@ -101,6 +103,8 @@ static int bind_port(SOCKADDR *remote) {
 
     sock = socket(remote->SAFAMILY, SOCK_DGRAM, IPPROTO_UDP);
     ret = bind(sock, info->ai_addr, info->ai_addrlen);
+
+    freeaddrinfo(info);
 
     if (ret < 0)
         die("could not bind a UDP port!");
