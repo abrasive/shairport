@@ -17,26 +17,31 @@
 . /lib/lsb/init-functions
 
 NAME=ShairPort
-DAEMON="/usr/local/bin/shairport.pl"
+DAEMON="/usr/local/bin/shairport/shairport.pl"
 PIDFILE=/var/run/$NAME.pid
-DAEMON_ARGS="-w $PIDFILE -a $NAME"
-
-[ -x $binary ] || exit 0
-
-RETVAL=0
 
 start() {
-    echo -n "Starting shairport: "
-    start-stop-daemon --start --quiet --pidfile "$PIDFILE" \
-                      --exec "$DAEMON" -b --oknodo -- $DAEMON_ARGS
-    log_end_msg $?
+    log_daemon_msg "Starting shairport"
+
+    if start-stop-daemon --start --quiet --pidfile "$PIDFILE" --exec "$DAEMON" -b --oknodo -- $DAEMON_ARGS; then
+        log_end_msg 0
+    else
+        log_end_msg 1
+    fi
 }
 
 stop() {
-    echo -n "Shutting down shairport: "
-    start-stop-daemon --stop --quiet --pidfile "$PIDFILE" \
-                --retry 1 --oknodo
-    log_end_msg $?
+    log_daemon_msg "Shutting down shairport"
+
+    if start-stop-daemon --stop --quiet --pidfile "$PIDFILE" --retry 1 --oknodo; then
+        log_end_msg 0
+    else
+        log_end_msg 1
+    fi
+}
+
+status() {
+    status_of_proc -p $PIDFILE $DAEMON $NAME && exit 0 || exit $?
 }
 
 restart() {
@@ -53,15 +58,14 @@ case "$1" in
         stop
     ;;
     status)
-        status shairport
+        status
     ;;
     restart)
         restart
     ;;
     *)
-        echo "Usage: $0 {start|stop|status|restart}"
+        log_action_msg "Usage: $0 {start|stop|status|restart}"
     ;;
 esac
 
 exit 0
-
