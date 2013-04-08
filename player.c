@@ -188,7 +188,7 @@ static void free_buffer(void) {
 
 void player_put_packet(seq_t seqno, uint8_t *data, int len) {
     abuf_t *abuf = 0;
-    short buf_fill;
+    int16_t buf_fill;
 
     pthread_mutex_lock(&ab_mutex);
     if (!ab_synced) {
@@ -209,7 +209,7 @@ void player_put_packet(seq_t seqno, uint8_t *data, int len) {
     } else {    // too late.
         warn("late packet %04X (%04X:%04X)\n", seqno, ab_read, ab_write);
     }
-    buf_fill = ab_write - ab_read;
+    buf_fill = seq_diff(ab_read, ab_write);
     pthread_mutex_unlock(&ab_mutex);
 
     if (abuf) {
@@ -338,15 +338,14 @@ static void bf_est_update(short fill) {
 
 // get the next frame, when available. return 0 if underrun/stream reset.
 static short *buffer_get_frame(void) {
-    short buf_fill;
-    seq_t read;
+    int16_t buf_fill;
+    seq_t read, next;
     abuf_t *abuf = 0;
-    unsigned short next;
     int i;
 
     pthread_mutex_lock(&ab_mutex);
 
-    buf_fill = ab_write - ab_read;
+    buf_fill = seq_diff(ab_read, ab_write);
     if (buf_fill < 1 || !ab_synced || ab_buffering) {    // init or underrun. stop and wait
         if (ab_synced)
             warn("underrun.\n");
@@ -354,7 +353,7 @@ static short *buffer_get_frame(void) {
         ab_buffering = 1;
         pthread_cond_wait(&ab_buffer_ready, &ab_mutex);
         ab_read++;
-        buf_fill = ab_write - ab_read;
+        buf_fill = seq_diff(ab_read, ab_write);
         bf_est_reset(buf_fill);
         pthread_mutex_unlock(&ab_mutex);
 
@@ -366,7 +365,7 @@ static short *buffer_get_frame(void) {
     }
     read = ab_read;
     ab_read++;
-    buf_fill = ab_write - ab_read;
+    buf_fill = seq_diff(ab_read, ab_write);
     bf_est_update(buf_fill);
 
     // check if t+16, t+32, t+64, t+128, ... (buffer_start_fill / 2)
@@ -383,7 +382,7 @@ static short *buffer_get_frame(void) {
 
     abuf_t *curframe = audio_buffer + BUFIDX(read);
     if (!curframe->ready) {
-        warn("missing frame.\n");
+        warn("missing frame %04X.\n", read);
         memset(curframe->data, 0, FRAME_BYTES(frame_size));
     }
     curframe->ready = 0;

@@ -8,7 +8,13 @@ typedef struct {
     int32_t fmtp[12];
 } stream_cfg;
 
-typedef unsigned short seq_t;
+typedef uint16_t seq_t;
+
+// wrapped number between two seq_t.
+static inline uint16_t seq_diff(seq_t a, seq_t b) {
+    int16_t diff = b - a;
+    return diff;
+}
 
 int player_play(stream_cfg *cfg);
 void player_stop(void);

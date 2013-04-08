@@ -175,7 +175,7 @@ void rtp_request_resend(seq_t first, seq_t last) {
     if (!running)
         die("rtp_request_resend called without active stream!\n");
 
-    warn("requesting resend on %d packets\n", last-first+1);
+    warn("requesting resend on %d packets\n", seq_diff(first,last) + 1);
     char req[8];    // *not* a standard RTCP NACK
     req[0] = 0x80;
     req[1] = 0x55|0x80;  // Apple 'resend'
