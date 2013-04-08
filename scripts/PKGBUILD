@@ -1,0 +1,22 @@
+# for Arch Linux
+pkgname=shairport-git
+pkgver=1.0
+pkgrel=1
+pkgdesc="An AirPlay-compatible audio receiver"
+url='http://github.com/abrasive/shairport'
+arch=('i686' 'x86_64' 'armhf')
+license=('public-domain')
+groups=('daemons')
+depends=('glibc' 'pkgconfig' 'libao' 'openssl')
+source=(git://github.com/abrasive/shairport.git#branch=1.0-dev)
+md5sums=('SKIP')
+
+build() {
+    cd "$srcdir"/shairport
+    make
+}
+
+package() {
+    cd "$srcdir"/shairport
+    make PREFIX="$pkgdir/usr" install
+}
