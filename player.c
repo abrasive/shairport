@@ -198,7 +198,7 @@ void player_put_packet(seq_t seqno, uint8_t *data, int len) {
         ab_read = seqno;
         ab_synced = 1;
     }
-    if (seqno == ab_write+1) {                  // expected packet
+    if (seq_diff(ab_write, seqno) == 1) {                  // expected packet
         abuf = audio_buffer + BUFIDX(seqno);
         ab_write = seqno;
     } else if (seq_order(ab_write, seqno)) {    // newer than expected
