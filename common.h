@@ -22,6 +22,8 @@ typedef struct {
     uint8_t hw_addr[6];
     int port;
     char *output_name;
+    char *play_prog;
+    char *stop_prog;
     audio_output *output;
     int buffer_start_fill;
 } shairport_cfg;
