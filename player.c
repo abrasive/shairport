@@ -88,7 +88,8 @@ static abuf_t audio_buffer[BUFFER_FRAMES];
 static seq_t ab_read, ab_write;
 static int ab_buffering = 1, ab_synced = 0;
 static pthread_mutex_t ab_mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t ab_buffer_ready = PTHREAD_COND_INITIALIZER;
+
+static void bf_est_reset(short fill);
 
 static void ab_resync(void) {
     int i;
@@ -221,7 +222,7 @@ void player_put_packet(seq_t seqno, uint8_t *data, int len) {
     if (ab_buffering && buf_fill >= config.buffer_start_fill) {
         debug(1, "buffering over. starting play\n");
         ab_buffering = 0;
-        pthread_cond_signal(&ab_buffer_ready);
+        bf_est_reset(buf_fill);
     }
     pthread_mutex_unlock(&ab_mutex);
 }
@@ -343,20 +344,17 @@ static short *buffer_get_frame(void) {
     abuf_t *abuf = 0;
     int i;
 
+    if (ab_buffering)
+        return 0;
+
     pthread_mutex_lock(&ab_mutex);
 
     buf_fill = seq_diff(ab_read, ab_write);
-    if (buf_fill < 1 || !ab_synced || ab_buffering) {    // init or underrun. stop and wait
-        if (ab_synced)
+    if (buf_fill < 1 || !ab_synced) {
+        if (buf_fill < 1)
             warn("underrun.\n");
-
         ab_buffering = 1;
-        pthread_cond_wait(&ab_buffer_ready, &ab_mutex);
-        ab_read++;
-        buf_fill = seq_diff(ab_read, ab_write);
-        bf_est_reset(buf_fill);
         pthread_mutex_unlock(&ab_mutex);
-
         return 0;
     }
     if (buf_fill >= BUFFER_FRAMES) {   // overrunning! uh-oh. restart at a sane distance
@@ -455,9 +453,9 @@ static void *player_thread_func(void *arg) {
 #endif
 
     while (!please_stop) {
-        do {
-            inbuf = ab_buffering ? silence : buffer_get_frame();
-        } while (!inbuf);
+        inbuf = buffer_get_frame();
+        if (!inbuf)
+            inbuf = silence;
 
 #ifdef FANCY_RESAMPLING
         if (fancy_resampling) {
