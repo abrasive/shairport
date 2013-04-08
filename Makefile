@@ -19,6 +19,7 @@ endif
 all: shairport
 
 install: shairport
+	install -m 755 -d $(PREFIX)/bin
 	install -m 755 shairport $(PREFIX)/bin/shairport
 
 shairport: $(SRCS)
