@@ -192,8 +192,9 @@ void player_put_packet(seq_t seqno, uint8_t *data, int len) {
 
     pthread_mutex_lock(&ab_mutex);
     if (!ab_synced) {
-        ab_write = seqno;
-        ab_read = seqno-1;
+        debug(2, "syncing to first seqno %04X\n", seqno);
+        ab_write = seqno-1;
+        ab_read = seqno;
         ab_synced = 1;
     }
     if (seqno == ab_write+1) {                  // expected packet
