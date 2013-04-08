@@ -743,7 +743,7 @@ void rtsp_listen_loop(void) {
     freeaddrinfo(info);
 
     if (!nsock)
-        die("could not bind any listen sockets!");
+        die("could not bind any listen sockets!\n");
 
 
     int maxfd = sockfd[0];
