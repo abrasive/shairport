@@ -33,6 +33,9 @@
 #include "mdns.h"
 
 static int shutting_down = 0;
+
+static int  tDaemonize = 0;
+
 void shairport_shutdown(void) {
     if (shutting_down)
         return;
@@ -59,6 +62,7 @@ void usage(char *progname) {
            "    -o output   set audio output\n"
            "    -b fill     set how full the buffer must be before audio output starts\n"
            "                    This value is in frames; default %d\n"
+    	   "    -d          Daemon mode\n"
            "Run %s -o <output> -h to find the available options for a specific output\n"
            "\n", config.buffer_start_fill, progname);
 
@@ -74,7 +78,7 @@ void usage(char *progname) {
 
 int parse_options(int argc, char **argv) {
     int opt;
-    while ((opt = getopt(argc, argv, "+hvp:a:o:b:")) > 0) {
+    while ((opt = getopt(argc, argv, "+hvdp:a:o:b:")) > 0) {
         switch (opt) {
             default:
                 printf("Unknown argument -%c\n", optopt);
@@ -96,6 +100,9 @@ int parse_options(int argc, char **argv) {
             case 'b':
                 config.buffer_start_fill = atoi(optarg);
                 break;
+			case 'd':
+				tDaemonize = 1;
+				break;
         }
     }
     return optind;
@@ -154,7 +161,19 @@ int main(int argc, char **argv) {
     MD5_Final(ap_md5, &ctx);
     memcpy(config.hw_addr, ap_md5, sizeof(config.hw_addr));
 
-
+    if(tDaemonize)
+    {
+    int tPid = fork();
+		if(tPid < 0)
+		{
+		exit(1); // Error on fork
+		}
+		else if(tPid > 0)
+		{
+		exit(0);
+		}
+	}
+				
     rtsp_listen_loop();
 
     // should not.
