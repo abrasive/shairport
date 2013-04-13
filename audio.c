@@ -27,7 +27,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "audio.h"
-#include "config.h"
+//#include "config.h"
 
 #ifdef CONFIG_AO
 extern audio_output audio_ao;
