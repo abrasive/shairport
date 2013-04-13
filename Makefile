@@ -1,19 +1,12 @@
-ifeq ($(wildcard config.mk),)
-$(warning config.mk does not exist, configuring.)
-config.mk:
-	sh ./configure
-	$(MAKE) shairport
-endif
+CFLAGS+=-Wall $(shell pkg-config --cflags openssl) -DDISABLESTUFF
 
--include config.mk
+LDFLAGS+=-lm -lpthread $(shell pkg-config --libs openssl)
+
 
 PREFIX ?= /usr/local
 
-SRCS := shairport.c rtsp.c mdns.c common.c rtp.c player.c alac.c audio.c audio_dummy.c
+SRCS := shairport.c rtsp.c mdns.c common.c rtp.c player.c alac.c audio.c audio_ao.c 
 
-ifdef CONFIG_AO
-SRCS += audio_ao.c
-endif
 
 # default target
 all: shairport
