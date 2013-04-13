@@ -1,11 +1,11 @@
-CFLAGS+=-Wall $(shell pkg-config --cflags openssl) -DDISABLESTUFF
+CFLAGS+=-Wall $(shell pkg-config --cflags openssl) -DCONFIG_AO
 
-LDFLAGS+=-lm -lpthread $(shell pkg-config --libs openssl)
+LDFLAGS+=-lm -lpthread $(shell pkg-config --libs openssl) $(shell pkg-config --libs ao)
 
 
 PREFIX ?= /usr/local
 
-SRCS := shairport.c rtsp.c mdns.c common.c rtp.c player.c alac.c audio.c audio_ao.c 
+SRCS := shairport.c rtsp.c mdns.c common.c rtp.c player.c alac.c audio.c audio_dummy.c audio_ao.c 
 
 
 # default target
