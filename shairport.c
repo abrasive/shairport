@@ -59,6 +59,8 @@ void usage(char *progname) {
            "    -o output   set audio output\n"
            "    -b fill     set how full the buffer must be before audio output starts\n"
            "                    This value is in frames; default %d\n"
+           "    -d          fork (daemonise)\n"
+           "                    The PID of the child process is written to stdout\n"
            "Run %s -o <output> -h to find the available options for a specific output\n"
            "\n", config.buffer_start_fill, progname);
 
@@ -74,13 +76,16 @@ void usage(char *progname) {
 
 int parse_options(int argc, char **argv) {
     int opt;
-    while ((opt = getopt(argc, argv, "+hvp:a:o:b:")) > 0) {
+    while ((opt = getopt(argc, argv, "+hdvp:a:o:b:")) > 0) {
         switch (opt) {
             default:
                 printf("Unknown argument -%c\n", optopt);
             case 'h':
                 usage(argv[0]);
                 exit(1);
+            case 'd':
+                config.daemonise = 1;
+                break;
             case 'v':
                 debuglev++;
                 break;

@@ -758,6 +758,14 @@ void rtsp_listen_loop(void) {
 
     mdns_register();
 
+    if (config.daemonise) {
+        pid_t pid = fork();
+        if (pid) {
+            printf("%d\n", pid);
+            exit(0);
+        }
+    }
+
     printf("Listening for connections.\n");
 
     int acceptfd;

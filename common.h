@@ -24,6 +24,7 @@ typedef struct {
     char *output_name;
     audio_output *output;
     int buffer_start_fill;
+    int daemonise;
 } shairport_cfg;
 
 extern int debuglev;
