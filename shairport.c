@@ -124,7 +124,7 @@ void signal_setup(void) {
     sa.sa_flags = SA_SIGINFO;
     sa.sa_sigaction = &sig_ignore;
     sigaction(SIGUSR1, &sa, NULL);
-    
+
     sa.sa_sigaction = &sig_shutdown;
     sigaction(SIGINT, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
@@ -144,7 +144,7 @@ int main(int argc, char **argv) {
     snprintf(config.apname, 20 + 100, "Shairport on %s", hostname);
 
     int audio_arg = parse_options(argc, argv);
-    
+
     config.output = audio_get_output(config.output_name);
     if (!config.output) {
         audio_ls_outputs();

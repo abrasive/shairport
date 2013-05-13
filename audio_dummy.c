@@ -52,11 +52,11 @@ static void play(short buf[], int samples) {
     // this is all a bit expensive but it's long-term stable.
     gettimeofday(&tv, NULL);
 
-    long long nowtime = tv.tv_usec + 1e6*tv.tv_sec; 
+    long long nowtime = tv.tv_usec + 1e6*tv.tv_sec;
 
     if (!starttime)
         starttime = nowtime;
-    
+
     samples_played += samples;
 
     long long finishtime = starttime + samples_played * 1e6 / Fs;

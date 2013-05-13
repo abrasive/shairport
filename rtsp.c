@@ -124,7 +124,7 @@ typedef struct {
 
 static rtsp_message * msg_init(void) {
     rtsp_message *msg = malloc(sizeof(rtsp_message));
-    memset(msg, 0, sizeof(rtsp_message)); 
+    memset(msg, 0, sizeof(rtsp_message));
     return msg;
 }
 
@@ -179,7 +179,7 @@ static int msg_handle_line(rtsp_message **pmsg, char *line) {
         p = strtok_r(NULL, " ", &sp);
         if (!p)
             goto fail;
-        
+
         p = strtok_r(NULL, " ", &sp);
         if (!p)
             goto fail;
@@ -221,7 +221,7 @@ static rtsp_message * rtsp_read_request(int fd) {
 
     rtsp_message *msg = NULL;
 
-    ssize_t nread; 
+    ssize_t nread;
     ssize_t inbuf = 0;
     int msg_size = -1;
 
@@ -426,7 +426,7 @@ static void handle_announce(rtsp_conn_info *conn,
 
         if (!strncmp(cp, "a=rsaaeskey:", 12))
             prsaaeskey = cp+12;
-        
+
         cp = next;
     }
 
@@ -455,7 +455,7 @@ static void handle_announce(rtsp_conn_info *conn,
     }
     memcpy(conn->stream.aeskey, aeskey, 16);
     free(aeskey);
-    
+
     int i;
     for (i=0; i<sizeof(conn->stream.fmtp)/sizeof(conn->stream.fmtp[0]); i++)
         conn->stream.fmtp[i] = atoi(strsep(&pfmtp, " \t"));
@@ -503,7 +503,7 @@ static void apple_challenge(int fd, rtsp_message *req, rtsp_message *resp) {
     memcpy(bp, chall, chall_len);
     free(chall);
     bp += chall_len;
-    
+
 #ifdef AF_INET6
     if (fdsa.SAFAMILY == AF_INET6) {
         struct sockaddr_in6 *sa6 = (struct sockaddr_in6*)(&fdsa);
@@ -560,7 +560,7 @@ static int rtsp_auth(char **nonce, rtsp_message *req, rtsp_message *resp) {
     char *hdr = msg_get_header(req, "Authorization");
     if (!hdr || strncmp(hdr, "Digest ", 7))
         goto authenticate;
-    
+
     char *realm = strstr(hdr, "realm=\"");
     char *username = strstr(hdr, "username=\"");
     char *response = strstr(hdr, "response=\"");
@@ -646,7 +646,7 @@ static void *rtsp_conversation_thread_func(void *vfd) {
 
     int fd = *(int*)vfd;
     socklen_t slen = sizeof(conn.remote);
-    
+
     fd = accept(fd, (struct sockaddr *)&conn.remote, &slen);
     if (fd < 0) {
         perror("failed to accept connection");
@@ -667,7 +667,7 @@ static void *rtsp_conversation_thread_func(void *vfd) {
 
         if (rtsp_auth(&auth_nonce, req, resp))
             goto respond;
-        
+
         struct method_handler *mh;
         for (mh=method_handlers; mh->method; mh++) {
             if (!strcmp(mh->method, req->method)) {
@@ -680,7 +680,7 @@ respond:
         msg_write_response(fd, resp);
         msg_free(req);
         msg_free(resp);
-    } 
+    }
 
 shutdown:
     if (fd > 0)
@@ -731,7 +731,7 @@ void rtsp_listen_loop(void) {
     if (ret) {
         die("getaddrinfo failed: %s\n", gai_strerror(ret));
     }
-    
+
     for (p=info; p; p=p->ai_next) {
         int fd = socket(p->ai_family, p->ai_socktype, IPPROTO_TCP);
         int yes = 1;

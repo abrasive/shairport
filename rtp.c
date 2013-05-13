@@ -136,7 +136,7 @@ int rtp_setup(SOCKADDR *remote, int cport, int tport) {
 
     // we do our own timing and ignore the timing port.
     // an audio perfectionist may wish to learn the protocol.
-    
+
     memcpy(&rtp_client, remote, sizeof(rtp_client));
 #ifdef AF_INET6
     if (rtp_client.SAFAMILY == AF_INET6) {

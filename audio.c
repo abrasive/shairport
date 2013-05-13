@@ -41,11 +41,11 @@ static audio_output *outputs[] = {
     &audio_dummy,
     NULL
 };
-    
+
 
 audio_output *audio_get_output(char *name) {
     audio_output **out;
-    
+
     // default to the first
     if (!name)
         return outputs[0];

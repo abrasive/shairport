@@ -47,7 +47,7 @@ void mdns_register(void) {
 
     if ((mdns_pid = fork()))
         return;
-    
+
     char *mdns_apname = malloc(strlen(config.apname) + 14);
     char *p = mdns_apname;
     int i;

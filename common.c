@@ -102,7 +102,7 @@ uint8_t *base64_dec(char *input, int *outlen) {
     while (inlen++ & 3)
         BIO_write(bmem, "=", 1);
     BIO_flush(bmem);
-    
+
     int bufsize = strlen(input)*3/4 + 1;
     uint8_t *buf = malloc(bufsize);
     int nread;
@@ -115,7 +115,7 @@ uint8_t *base64_dec(char *input, int *outlen) {
     return buf;
 }
 
-static char super_secret_key[] = 
+static char super_secret_key[] =
 "-----BEGIN RSA PRIVATE KEY-----\n"
 "MIIEpQIBAAKCAQEA59dE8qLieItsH1WgjrcFRKj6eUWqi+bGLOX1HL3U3GhC/j0Qg90u3sG/1CUt\n"
 "wC5vOYvfDmFI6oSFXi5ELabWJmT2dKHzBJKa3k9ok+8t9ucRqMd6DZHJ2YCCLlDRKSKv6kDqnw4U\n"
