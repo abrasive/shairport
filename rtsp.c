@@ -28,9 +28,10 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
 #include <sys/select.h>
 #include <signal.h>
-#include <netdb.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -45,10 +46,10 @@
 #include "rtp.h"
 #include "mdns.h"
 
-// some BSDs (OpenBSD, NetBSD) do not support AI_ADDRCONFIG
-// it's not critical anyway, define it to 0 (a no-op)
-#ifndef AI_ADDRCONFIG
-#define AI_ADDRCONFIG 0
+#ifdef AF_INET6
+#define INETx_ADDRSTRLEN INET6_ADDRSTRLEN
+#else
+#define INETx_ADDRSTRLEN INET_ADDRSTRLEN
 #endif
 
 // only one thread is allowed to use the player at once.
@@ -695,18 +696,34 @@ shutdown:
     return NULL;
 }
 
+// this function is not thread safe.
+static const char* format_address(struct sockaddr *fsa) {
+    static char string[INETx_ADDRSTRLEN];
+    void *addr;
+#ifdef AF_INET6
+    if (fsa->sa_family == AF_INET6) {
+        struct sockaddr_in6 *sa6 = (struct sockaddr_in6*)(fsa);
+        addr = &(sa6->sin6_addr);
+    } else
+#endif
+    {
+        struct sockaddr_in *sa = (struct sockaddr_in*)(fsa);
+        addr = &(sa->sin_addr);
+    }
+    return inet_ntop(fsa->sa_family, addr, string, sizeof(string));
+}
+
 void rtsp_listen_loop(void) {
     struct addrinfo hints, *info, *p;
     char portstr[6];
-    int sockfd[2];
+    int *sockfd = NULL;
     int nsock = 0;
-    int ret;
-    memset(sockfd, 0, sizeof(sockfd));
+    int i, ret;
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_PASSIVE | AI_ADDRCONFIG;
+    hints.ai_flags = AI_PASSIVE;
 
     snprintf(portstr, 6, "%d", config.port);
 
@@ -714,16 +731,17 @@ void rtsp_listen_loop(void) {
     if (ret) {
         die("getaddrinfo failed: %s\n", gai_strerror(ret));
     }
-
+    
     for (p=info; p; p=p->ai_next) {
         int fd = socket(p->ai_family, p->ai_socktype, IPPROTO_TCP);
         int yes = 1;
 
         ret = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
 
-#ifdef AF_INET6
+#ifdef IPV6_V6ONLY
         // some systems don't support v4 access on v6 sockets, but some do.
-        // since we need to account for two sockets we might as well always.
+        // since we need to account for two sockets we might as well
+        // always.
         if (p->ai_family == AF_INET6)
             ret |= setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &yes, sizeof(yes));
 #endif
@@ -731,13 +749,18 @@ void rtsp_listen_loop(void) {
         if (!ret)
             ret = bind(fd, p->ai_addr, p->ai_addrlen);
 
+        // one of the address families will fail on some systems that
+        // report its availability. do not complain.
         if (ret) {
-            perror("could not bind a listen socket");
+            debug(1, "Failed to bind to address %s\n", format_address(p->ai_addr));
             continue;
         }
+        debug(1, "Bound to address %s\n", format_address(p->ai_addr));
 
         listen(fd, 5);
-        sockfd[nsock++] = fd;
+        nsock++;
+        sockfd = realloc(sockfd, nsock*sizeof(int));
+        sockfd[nsock-1] = fd;
     }
 
     freeaddrinfo(info);
@@ -746,15 +769,14 @@ void rtsp_listen_loop(void) {
         die("could not bind any listen sockets!\n");
 
 
-    int maxfd = sockfd[0];
-    if (sockfd[1]>maxfd)
-        maxfd = sockfd[1];
-
+    int maxfd = -1;
     fd_set fds;
     FD_ZERO(&fds);
-    FD_SET(sockfd[0], &fds);
-    if (sockfd[1])
-        FD_SET(sockfd[1], &fds);
+    for (i=0; i<nsock; i++) {
+        FD_SET(sockfd[i], &fds);
+        if (sockfd[i] > maxfd)
+            maxfd = sockfd[i];
+    }
 
     mdns_register();
 
@@ -770,10 +792,12 @@ void rtsp_listen_loop(void) {
 
     int acceptfd;
     while (select(maxfd+1, &fds, 0, 0, 0) >= 0) {
-        if (FD_ISSET(sockfd[0], &fds))
-            acceptfd = sockfd[0];
-        if (FD_ISSET(sockfd[1], &fds) && sockfd[1])
-            acceptfd = sockfd[1];
+        for (i=0; i<nsock; i++) {
+            if (FD_ISSET(sockfd[i], &fds)) {
+                acceptfd = sockfd[i];
+                break;
+            }
+        }
 
         // for now, we do not track these and let them die of natural causes.
         // XXX: this leaks threads; they need to be culled with pthread_tryjoin_np.
@@ -781,9 +805,8 @@ void rtsp_listen_loop(void) {
         pthread_t rtsp_conversation_thread;
         pthread_create(&rtsp_conversation_thread, NULL, rtsp_conversation_thread_func, &acceptfd);
 
-        FD_SET(sockfd[0], &fds);
-        if (sockfd[1])
-            FD_SET(sockfd[1], &fds);
+        for (i=0; i<nsock; i++)
+            FD_SET(sockfd[i], &fds);
     }
     perror("select");
     die("fell out of the RTSP select loop\n");
