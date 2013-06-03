@@ -170,7 +170,7 @@ int main(int argc, char **argv) {
     config.output = audio_get_output(config.output_name);
     if (!config.output) {
         audio_ls_outputs();
-        die("Invalid audio output specified!\n");
+        die("Invalid audio output specified!");
     }
     config.output->init(argc-audio_arg, argv+audio_arg);
 

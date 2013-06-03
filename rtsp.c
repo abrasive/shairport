@@ -130,7 +130,7 @@ static rtsp_message * msg_init(void) {
 
 static int msg_add_header(rtsp_message *msg, char *name, char *value) {
     if (msg->nheaders >= sizeof(msg->name)/sizeof(char*)) {
-        warn("too many headers?!\n");
+        warn("too many headers?!");
         return 1;
     }
 
@@ -193,7 +193,7 @@ static int msg_handle_line(rtsp_message **pmsg, char *line) {
         char *p;
         p = strstr(line, ": ");
         if (!p) {
-            warn("bad header: >>%s<<\n", line);
+            warn("bad header: >>%s<<", line);
             goto fail;
         }
         *p = 0;
@@ -248,7 +248,7 @@ static rtsp_message * rtsp_read_request(int fd) {
             msg_size = msg_handle_line(&msg, buf);
 
             if (!msg) {
-                warn("no RTSP header received\n");
+                warn("no RTSP header received");
                 goto shutdown;
             }
 
@@ -431,14 +431,14 @@ static void handle_announce(rtsp_conn_info *conn,
     }
 
     if (!paesiv || !prsaaeskey || !pfmtp) {
-        warn("required params missing from announce\n");
+        warn("required params missing from announce");
         return;
     }
 
     int len, keylen;
     uint8_t *aesiv = base64_dec(paesiv, &len);
     if (len != 16) {
-        warn("client announced aeskey of %d bytes, wanted 16\n", len);
+        warn("client announced aeskey of %d bytes, wanted 16", len);
         free(aesiv);
         return;
     }
@@ -449,7 +449,7 @@ static void handle_announce(rtsp_conn_info *conn,
     uint8_t *aeskey = rsa_apply(rsaaeskey, len, &keylen, RSA_MODE_KEY);
     free(rsaaeskey);
     if (keylen != 16) {
-        warn("client announced rsaaeskey of %d bytes, wanted 16\n", keylen);
+        warn("client announced rsaaeskey of %d bytes, wanted 16", keylen);
         free(aeskey);
         return;
     }
@@ -496,7 +496,7 @@ static void apple_challenge(int fd, rtsp_message *req, rtsp_message *resp) {
     memset(buf, 0, sizeof(buf));
 
     if (chall_len > 16) {
-        warn("oversized Apple-Challenge!\n");
+        warn("oversized Apple-Challenge!");
         free(chall);
         return;
     }
@@ -622,7 +622,7 @@ static int rtsp_auth(char **nonce, rtsp_message *req, rtsp_message *resp) {
 
     if (!strcmp(response, buf))
         return 0;
-    warn("auth failed\n");
+    warn("auth failed");
 
 authenticate:
     resp->respcode = 401;
@@ -729,7 +729,7 @@ void rtsp_listen_loop(void) {
 
     ret = getaddrinfo(NULL, portstr, &hints, &info);
     if (ret) {
-        die("getaddrinfo failed: %s\n", gai_strerror(ret));
+        die("getaddrinfo failed: %s", gai_strerror(ret));
     }
 
     for (p=info; p; p=p->ai_next) {
@@ -766,7 +766,7 @@ void rtsp_listen_loop(void) {
     freeaddrinfo(info);
 
     if (!nsock)
-        die("could not bind any listen sockets!\n");
+        die("could not bind any listen sockets!");
 
 
     int maxfd = -1;
@@ -816,5 +816,5 @@ void rtsp_listen_loop(void) {
             FD_SET(sockfd[i], &fds);
     }
     perror("select");
-    die("fell out of the RTSP select loop\n");
+    die("fell out of the RTSP select loop");
 }

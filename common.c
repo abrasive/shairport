@@ -45,6 +45,7 @@ void die(char *format, ...) {
     va_start(args, format);
     vfprintf(stderr, format, args);
     va_end(args);
+    fprintf(stderr, "\n");
     shairport_shutdown();
 }
 
@@ -54,6 +55,7 @@ void warn(char *format, ...) {
     va_start(args, format);
     vfprintf(stderr, format, args);
     va_end(args);
+    fprintf(stderr, "\n");
 }
 
 void debug(int level, char *format, ...) {

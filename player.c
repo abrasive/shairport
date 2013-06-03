@@ -209,7 +209,7 @@ void player_put_packet(seq_t seqno, uint8_t *data, int len) {
     } else if (seq_order(ab_read, seqno)) {     // late but not yet played
         abuf = audio_buffer + BUFIDX(seqno);
     } else {    // too late.
-        warn("late packet %04X (%04X:%04X)\n", seqno, ab_read, ab_write);
+        warn("late packet %04X (%04X:%04X)", seqno, ab_read, ab_write);
     }
     buf_fill = seq_diff(ab_read, ab_write);
     pthread_mutex_unlock(&ab_mutex);
@@ -353,13 +353,13 @@ static short *buffer_get_frame(void) {
     buf_fill = seq_diff(ab_read, ab_write);
     if (buf_fill < 1 || !ab_synced) {
         if (buf_fill < 1)
-            warn("underrun.\n");
+            warn("underrun.");
         ab_buffering = 1;
         pthread_mutex_unlock(&ab_mutex);
         return 0;
     }
     if (buf_fill >= BUFFER_FRAMES) {   // overrunning! uh-oh. restart at a sane distance
-        warn("overrun.\n");
+        warn("overrun.");
         ab_read = ab_write - config.buffer_start_fill;
     }
     read = ab_read;
@@ -381,7 +381,7 @@ static short *buffer_get_frame(void) {
 
     abuf_t *curframe = audio_buffer + BUFIDX(read);
     if (!curframe->ready) {
-        warn("missing frame %04X.\n", read);
+        warn("missing frame %04X.", read);
         memset(curframe->data, 0, FRAME_BYTES(frame_size));
     }
     curframe->ready = 0;
@@ -503,7 +503,7 @@ void player_flush(void) {
 
 int player_play(stream_cfg *stream) {
     if (config.buffer_start_fill > BUFFER_FRAMES)
-        die("specified buffer starting fill %d > buffer size %d\n",
+        die("specified buffer starting fill %d > buffer size %d",
             config.buffer_start_fill, BUFFER_FRAMES);
 
     AES_set_decrypt_key(stream->aeskey, 128, &aes);
@@ -518,7 +518,7 @@ int player_play(stream_cfg *stream) {
     please_stop = 0;
     if (config.cmd_start && !fork()) {
         if (system(config.cmd_start))
-            warn("exec of external start command failed\n");
+            warn("exec of external start command failed");
         exit(0);
     }
     config.output->start(sampling_rate);
@@ -533,7 +533,7 @@ void player_stop(void) {
     config.output->stop();
     if (config.cmd_stop && !fork()) {
         if (system(config.cmd_stop))
-            warn("exec of external stop command failed\n");
+            warn("exec of external stop command failed");
         exit(0);
     }
     free_buffer();

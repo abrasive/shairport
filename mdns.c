@@ -79,5 +79,5 @@ void mdns_register(void) {
                         mdns_port, RECORD, NULL};
     execvp(mac_argv[0], mac_argv);
 
-    die("Could not establish mDNS advertisement!\n");
+    die("Could not establish mDNS advertisement!");
 }

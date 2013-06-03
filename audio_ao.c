@@ -56,7 +56,7 @@ static int init(int argc, char **argv) {
             case 'd':
                 driver = ao_driver_id(optarg);
                 if (!driver)
-                    die("could not find ao driver %s\n", optarg);
+                    die("could not find ao driver %s", optarg);
                 break;
             case 'i':
                 ao_append_option(&ao_opts, "id", optarg);
@@ -70,13 +70,13 @@ static int init(int argc, char **argv) {
             case 'o':
                 mid = strchr(optarg, '=');
                 if (!mid)
-                    die("Expected an = in audio option %s\n", optarg);
+                    die("Expected an = in audio option %s", optarg);
                 *mid = 0;
                 ao_append_option(&ao_opts, optarg, mid+1);
                 break;
             default:
                 help();
-                die("Invalid audio option -%c specified\n", opt);
+                die("Invalid audio option -%c specified", opt);
         }
     }
 
@@ -102,7 +102,7 @@ static void deinit(void) {
 
 static void start(int sample_rate) {
     if (sample_rate != 44100)
-        die("unexpected sample rate!\n");
+        die("unexpected sample rate!");
 }
 
 static void play(short buf[], int samples) {

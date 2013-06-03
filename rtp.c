@@ -79,7 +79,7 @@ static void *rtp_receiver(void *arg) {
             }
             debug(1, "Unknown RTP packet of type 0x%02X length %d seqno %d\n", type, nread, seqno);
         }
-        warn("Unknown RTP packet of type 0x%02X length %d\n", type, nread);
+        warn("Unknown RTP packet of type 0x%02X length %d", type, nread);
     }
 
     debug(1, "RTP thread interrupted. terminating.\n");
@@ -130,7 +130,7 @@ static int bind_port(SOCKADDR *remote) {
 
 int rtp_setup(SOCKADDR *remote, int cport, int tport) {
     if (running)
-        die("rtp_setup called with active stream!\n");
+        die("rtp_setup called with active stream!");
 
     debug(1, "rtp_setup: cport=%d tport=%d\n", cport, tport);
 
@@ -162,7 +162,7 @@ int rtp_setup(SOCKADDR *remote, int cport, int tport) {
 
 void rtp_shutdown(void) {
     if (!running)
-        die("rtp_shutdown called without active stream!\n");
+        die("rtp_shutdown called without active stream!");
 
     please_shutdown = 1;
     pthread_kill(rtp_thread, SIGUSR1);
@@ -173,9 +173,9 @@ void rtp_shutdown(void) {
 
 void rtp_request_resend(seq_t first, seq_t last) {
     if (!running)
-        die("rtp_request_resend called without active stream!\n");
+        die("rtp_request_resend called without active stream!");
 
-    warn("requesting resend on %d packets (%04X:%04X)\n",
+    warn("requesting resend on %d packets (%04X:%04X)",
          seq_diff(first,last) + 1, first, last);
 
     char req[8];    // *not* a standard RTCP NACK
