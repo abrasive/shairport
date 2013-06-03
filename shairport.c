@@ -71,6 +71,9 @@ void usage(char *progname) {
            "                    This value is in frames; default %d\n"
            "    -d          fork (daemonise)\n"
            "                    The PID of the child process is written to stdout\n"
+           "    -B command  run a shell command when playback begins\n"
+           "    -E command  run a shell command when playback ends\n"
+           "\n"
            "Run %s -o <output> -h to find the available options for a specific output\n"
            "\n", config.buffer_start_fill, progname);
 
@@ -86,7 +89,7 @@ void usage(char *progname) {
 
 int parse_options(int argc, char **argv) {
     int opt;
-    while ((opt = getopt(argc, argv, "+hdvp:a:o:b:")) > 0) {
+    while ((opt = getopt(argc, argv, "+hdvp:a:o:b:B:E:")) > 0) {
         switch (opt) {
             default:
                 printf("Unknown argument -%c\n", optopt);
@@ -110,6 +113,12 @@ int parse_options(int argc, char **argv) {
                 break;
             case 'b':
                 config.buffer_start_fill = atoi(optarg);
+                break;
+            case 'B':
+                config.cmd_start = optarg;
+                break;
+            case 'E':
+                config.cmd_stop = optarg;
                 break;
         }
     }

@@ -26,6 +26,7 @@ typedef struct {
     int buffer_start_fill;
     int daemonise;
     int mdns_internal;
+    char *cmd_start, *cmd_stop;
 } shairport_cfg;
 
 extern int debuglev;

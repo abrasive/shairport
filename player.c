@@ -36,6 +36,7 @@
 #include <sys/signal.h>
 #include <assert.h>
 #include <fcntl.h>
+#include <stdlib.h>
 
 #include "common.h"
 #include "player.h"
@@ -515,6 +516,11 @@ int player_play(stream_cfg *stream) {
 #endif
 
     please_stop = 0;
+    if (config.cmd_start && !fork()) {
+        if (system(config.cmd_start))
+            warn("exec of external start command failed\n");
+        exit(0);
+    }
     config.output->start(sampling_rate);
     pthread_create(&player_thread, NULL, player_thread_func, NULL);
 
@@ -525,6 +531,11 @@ void player_stop(void) {
     please_stop = 1;
     pthread_join(player_thread, NULL);
     config.output->stop();
+    if (config.cmd_stop && !fork()) {
+        if (system(config.cmd_stop))
+            warn("exec of external stop command failed\n");
+        exit(0);
+    }
     free_buffer();
     free_decoder();
 #ifdef FANCY_RESAMPLING
