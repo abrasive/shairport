@@ -1,5 +1,5 @@
 /*
- * Audio driver handler. This file is part of Shairport.
+ * pipe output driver. This file is part of Shairport.
  * Copyright (c) James Laird 2013
  * All rights reserved.
  *
@@ -25,43 +25,63 @@
  */
 
 #include <stdio.h>
-#include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <memory.h>
+#include "common.h"
 #include "audio.h"
-#include "config.h"
 
-#ifdef CONFIG_AO
-extern audio_output audio_ao;
-#endif
-extern audio_output audio_dummy, audio_pipe;
+int fd = -1;
 
-static audio_output *outputs[] = {
-#ifdef CONFIG_AO
-    &audio_ao,
-#endif
-    &audio_dummy,
-    &audio_pipe,
-    NULL
+char *pipename = NULL;
+
+static void start(int sample_rate) {
+    fd = open(pipename, O_WRONLY);
+    if (fd < 0) {
+        perror("open");
+        die("could not open specified pipe for writing");
+    }
+}
+
+static void play(short buf[], int samples) {
+    write(fd, buf, samples*4);
+}
+
+static void stop(void) {
+    close(fd);
+}
+
+static int init(int argc, char **argv) {
+    if (argc != 1)
+        die("bad argument(s) to pipe");
+
+    pipename = strdup(argv[0]);
+
+    // test open pipe so we error on startup if it's going to fail
+    start(44100);
+    stop();
+
+    return 0;
+}
+
+static void deinit(void) {
+    if (fd > 0)
+        close(fd);
+    if (pipename)
+        free(pipename);
+}
+
+static void help(void) {
+    printf("pipe takes 1 argument: the name of the FIFO to write to.\n");
+}
+
+audio_output audio_pipe = {
+    .name = "pipe",
+    .help = &help,
+    .init = &init,
+    .deinit = &deinit,
+    .start = &start,
+    .stop = &stop,
+    .play = &play,
+    .volume = NULL
 };
-
-
-audio_output *audio_get_output(char *name) {
-    audio_output **out;
-
-    // default to the first
-    if (!name)
-        return outputs[0];
-
-    for (out=outputs; *out; out++)
-        if (!strcasecmp(name, (*out)->name))
-            return *out;
-
-    return NULL;
-}
-
-void audio_ls_outputs(void) {
-    audio_output **out;
-
-    printf("Available audio outputs:\n");
-    for (out=outputs; *out; out++)
-        printf("    %s%s\n", (*out)->name, out==outputs ? " (default)" : "");
-}
