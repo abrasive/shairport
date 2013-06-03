@@ -791,7 +791,14 @@ void rtsp_listen_loop(void) {
     printf("Listening for connections.\n");
 
     int acceptfd;
-    while (select(maxfd+1, &fds, 0, 0, 0) >= 0) {
+    while (1) {
+        ret = select(maxfd+1, &fds, 0, 0, 0);
+        if (ret<0) {
+            if (errno==EINTR)
+                continue;
+            break;
+        }
+
         for (i=0; i<nsock; i++) {
             if (FD_ISSET(sockfd[i], &fds)) {
                 acceptfd = sockfd[i];

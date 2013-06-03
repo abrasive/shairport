@@ -28,6 +28,7 @@
 #include <unistd.h>
 #include <memory.h>
 #include <openssl/md5.h>
+#include <sys/wait.h>
 #include "common.h"
 #include "rtsp.h"
 #include "mdns.h"
@@ -48,6 +49,15 @@ static void sig_ignore(int foo, siginfo_t *bar, void *baz) {
 }
 static void sig_shutdown(int foo, siginfo_t *bar, void *baz) {
     shairport_shutdown();
+}
+
+static void sig_child(int foo, siginfo_t *bar, void *baz) {
+    pid_t pid;
+    while ((pid = waitpid((pid_t)-1, 0, WNOHANG)) > 0) {
+        if (pid == mdns_pid && !shutting_down) {
+            die("MDNS child process died unexpectedly!");
+        }
+    }
 }
 
 void usage(char *progname) {
@@ -128,6 +138,9 @@ void signal_setup(void) {
     sa.sa_sigaction = &sig_shutdown;
     sigaction(SIGINT, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
+
+    sa.sa_flags = SA_SIGINFO;
+    sa.sa_sigaction = &sig_child;
     sigaction(SIGCHLD, &sa, NULL);
 }
 

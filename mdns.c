@@ -31,7 +31,7 @@
 #include <unistd.h>
 #include "common.h"
 
-static int mdns_pid = 0;
+int mdns_pid = 0;
 
 void mdns_unregister(void) {
     if (mdns_pid)
