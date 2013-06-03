@@ -29,25 +29,26 @@
 #include <memory.h>
 #include <string.h>
 #include <unistd.h>
+#include "config.h"
 #include "common.h"
+#include "mdns.h"
+#ifdef CONFIG_AVAHI
+#include "avahi.h"
+#endif
 
 int mdns_pid = 0;
 
 void mdns_unregister(void) {
+#ifdef CONFIG_AVAHI
+    avahi_unregister();
+#endif
+
     if (mdns_pid)
         kill(mdns_pid, SIGTERM);
     mdns_pid = 0;
 }
 
 void mdns_register(void) {
-    if (mdns_pid)
-        die("attempted to register with mDNS twice");
-
-    // XXX todo: native avahi support, if available at compile time
-
-    if ((mdns_pid = fork()))
-        return;
-
     char *mdns_apname = malloc(strlen(config.apname) + 14);
     char *p = mdns_apname;
     int i;
@@ -58,15 +59,20 @@ void mdns_register(void) {
     *p++ = '@';
     strcpy(p, config.apname);
 
+#ifdef CONFIG_AVAHI
+    if (avahi_register(mdns_apname))
+        return;
+    warn("avahi_register failed, falling back to external programs");
+#endif
+
+    if ((mdns_pid = fork()))
+        return;
+
     char mdns_port[6];
     sprintf(mdns_port, "%d", config.port);
 
-#define RECORD  "tp=UDP", "sm=false", "ek=1", "et=0,1", "cn=0,1", "ch=2", \
-                "ss=16", "sr=44100", "vn=3", "txtvers=1", \
-                config.password ? "pw=true" : "pw=false"
-
     char *argv[] = {
-        NULL, mdns_apname, "_raop._tcp", mdns_port, RECORD, NULL
+        NULL, mdns_apname, "_raop._tcp", mdns_port, MDNS_RECORD, NULL
     };
 
     argv[0] = "avahi-publish-service";
@@ -76,7 +82,7 @@ void mdns_register(void) {
     execvp(argv[0], argv);
 
     char *mac_argv[] = {"dns-sd", "-R", mdns_apname, "_raop._tcp", ".",
-                        mdns_port, RECORD, NULL};
+                        mdns_port, MDNS_RECORD, NULL};
     execvp(mac_argv[0], mac_argv);
 
     die("Could not establish mDNS advertisement!");

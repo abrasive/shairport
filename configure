@@ -26,6 +26,16 @@ else
     echo libao not found
 fi
 
+if pkg-config avahi-client 2>/dev/null; then
+    CFLAGS="${CFLAGS} `pkg-config --cflags avahi-client`"
+    LDFLAGS="${LDFLAGS} `pkg-config --libs avahi-client`"
+    echo "#define CONFIG_AVAHI" >> config.h
+    echo "CONFIG_AVAHI=yes" >> config.mk
+    echo avahi-client found
+else
+    echo avahi-client not found
+fi
+
 echo "CFLAGS+=${CFLAGS}" >> config.mk
 echo "LDFLAGS+=${LDFLAGS}" >> config.mk
 
