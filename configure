@@ -12,8 +12,7 @@ if pkg-config openssl 2>/dev/null; then
     CFLAGS="${CFLAGS} `pkg-config --cflags openssl`"
     LDFLAGS="${LDFLAGS} `pkg-config --libs openssl`"
 else
-    echo Guessing OpenSSL linker flags
-    LDFLAGS="${LDFLAGS} -lssl -lcrypto"
+    echo OpenSSL or its dev package not found
 fi
 
 if pkg-config ao 2>/dev/null; then
@@ -23,7 +22,7 @@ if pkg-config ao 2>/dev/null; then
     echo "CONFIG_AO=yes" >> config.mk
     echo libao found
 else
-    echo libao not found
+    echo libao or its dev package not found
 fi
 
 if pkg-config avahi-client 2>/dev/null; then
@@ -33,7 +32,7 @@ if pkg-config avahi-client 2>/dev/null; then
     echo "CONFIG_AVAHI=yes" >> config.mk
     echo avahi-client found
 else
-    echo avahi-client not found
+    echo avahi-client or its dev package not found
 fi
 
 echo "CFLAGS+=${CFLAGS}" >> config.mk
