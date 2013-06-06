@@ -164,6 +164,7 @@ void rtp_shutdown(void) {
     if (!running)
         die("rtp_shutdown called without active stream!");
 
+    debug(2, "shutting down RTP thread\n");
     please_shutdown = 1;
     pthread_kill(rtp_thread, SIGUSR1);
     void *retval;

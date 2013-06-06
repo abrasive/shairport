@@ -647,6 +647,7 @@ static void *rtsp_conversation_thread_func(void *vfd) {
     int fd = *(int*)vfd;
     socklen_t slen = sizeof(conn.remote);
 
+    debug(1, "new RTSP connection\n");
     fd = accept(fd, (struct sockaddr *)&conn.remote, &slen);
     if (fd < 0) {
         perror("failed to accept connection");
@@ -683,6 +684,7 @@ respond:
     }
 
 shutdown:
+    debug(1, "closing RTSP connection\n");
     if (fd > 0)
         close(fd);
     if (rtsp_playing()) {
@@ -693,6 +695,7 @@ shutdown:
     }
     if (auth_nonce)
         free(auth_nonce);
+    debug(2, "terminating RTSP thread\n");
     return NULL;
 }
 
@@ -798,6 +801,8 @@ void rtsp_listen_loop(void) {
                 continue;
             break;
         }
+
+        debug(2, "new connection coming.\n");
 
         for (i=0; i<nsock; i++) {
             if (FD_ISSET(sockfd[i], &fds)) {
