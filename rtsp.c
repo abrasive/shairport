@@ -62,6 +62,8 @@ typedef struct {
     int fd;
     stream_cfg stream;
     SOCKADDR remote;
+    int running;
+    pthread_t thread;
 } rtsp_conn_info;
 
 static inline int rtsp_playing(void) {
@@ -84,6 +86,32 @@ void rtsp_shutdown_stream(void) {
     pthread_mutex_unlock(&playing_mutex);
 }
 
+// keep track of the threads we have spawned so we can join() them
+static rtsp_conn_info **conns = NULL;
+static int nconns = 0;
+static void track_thread(rtsp_conn_info *conn) {
+    conns = realloc(conns, sizeof(rtsp_conn_info*) * (nconns + 1));
+    conns[nconns] = conn;
+    nconns++;
+}
+
+static void cleanup_threads(void) {
+    void *retval;
+    int i;
+    debug(2, "culling threads.\n");
+    for (i=0; i<nconns; ) {
+        if (conns[i]->running == 0) {
+            pthread_join(conns[i]->thread, &retval);
+            free(conns[i]);
+            debug(2, "one joined\n");
+            nconns--;
+            if (nconns)
+                conns[i] = conns[nconns];
+        } else {
+            i++;
+        }
+    }
+}
 
 // park a null at the line ending, and return the next line pointer
 // accept \r, \n, or \r\n
@@ -684,7 +712,7 @@ respond:
     }
     if (auth_nonce)
         free(auth_nonce);
-    free(conn);
+    conn->running = 0;
     debug(2, "terminating RTSP thread\n");
     return NULL;
 }
@@ -766,7 +794,6 @@ void rtsp_listen_loop(void) {
     fd_set fds;
     FD_ZERO(&fds);
     for (i=0; i<nsock; i++) {
-        FD_SET(sockfd[i], &fds);
         if (sockfd[i] > maxfd)
             maxfd = sockfd[i];
     }
@@ -784,20 +811,32 @@ void rtsp_listen_loop(void) {
     printf("Listening for connections.\n");
 
     int acceptfd;
+    struct timeval tv;
     while (1) {
-        ret = select(maxfd+1, &fds, 0, 0, 0);
+        tv.tv_sec = 300;
+        tv.tv_usec = 0;
+
+        for (i=0; i<nsock; i++)
+            FD_SET(sockfd[i], &fds);
+
+        ret = select(maxfd+1, &fds, 0, 0, &tv);
         if (ret<0) {
             if (errno==EINTR)
                 continue;
             break;
         }
 
+        cleanup_threads();
+
+        acceptfd = -1;
         for (i=0; i<nsock; i++) {
             if (FD_ISSET(sockfd[i], &fds)) {
                 acceptfd = sockfd[i];
                 break;
             }
         }
+        if (acceptfd < 0) // timeout
+            continue;
 
         rtsp_conn_info *conn = malloc(sizeof(rtsp_conn_info));
         memset(conn, 0, sizeof(rtsp_conn_info));
@@ -807,15 +846,17 @@ void rtsp_listen_loop(void) {
         conn->fd = accept(acceptfd, (struct sockaddr *)&conn->remote, &slen);
         if (conn->fd < 0) {
             perror("failed to accept connection");
+            free(conn);
         } else {
-            // for now, we do not track these and let them die of natural causes.
-            // XXX: this leaks threads; they need to be culled with pthread_tryjoin_np.
             pthread_t rtsp_conversation_thread;
-            pthread_create(&rtsp_conversation_thread, NULL, rtsp_conversation_thread_func, conn);
-        }
+            ret = pthread_create(&rtsp_conversation_thread, NULL, rtsp_conversation_thread_func, conn);
+            if (ret)
+                die("Failed to create RTSP receiver thread!");
 
-        for (i=0; i<nsock; i++)
-            FD_SET(sockfd[i], &fds);
+            conn->thread = rtsp_conversation_thread;
+            conn->running = 1;
+            track_thread(conn);
+        }
     }
     perror("select");
     die("fell out of the RTSP select loop");
