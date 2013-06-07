@@ -59,6 +59,7 @@ static int please_shutdown = 0;
 static pthread_t playing_thread = 0;
 
 typedef struct {
+    int fd;
     stream_cfg stream;
     SOCKADDR remote;
 } rtsp_conn_info;
@@ -634,33 +635,22 @@ authenticate:
     return 1;
 }
 
-static void *rtsp_conversation_thread_func(void *vfd) {
+static void *rtsp_conversation_thread_func(void *pconn) {
     // SIGUSR1 is used to interrupt this thread if blocked for read
     sigset_t set;
     sigemptyset(&set);
     sigaddset(&set, SIGUSR1);
     pthread_sigmask(SIG_UNBLOCK, &set, NULL);
 
-    rtsp_conn_info conn;
-    memset(&conn, 0, sizeof(conn));
-
-    int fd = *(int*)vfd;
-    socklen_t slen = sizeof(conn.remote);
-
-    debug(1, "new RTSP connection\n");
-    fd = accept(fd, (struct sockaddr *)&conn.remote, &slen);
-    if (fd < 0) {
-        perror("failed to accept connection");
-        goto shutdown;
-    }
+    rtsp_conn_info *conn = pconn;
 
     rtsp_message *req, *resp;
     char *hdr, *auth_nonce = NULL;
-    while ((req = rtsp_read_request(fd))) {
+    while ((req = rtsp_read_request(conn->fd))) {
         resp = msg_init();
         resp->respcode = 400;
 
-        apple_challenge(fd, req, resp);
+        apple_challenge(conn->fd, req, resp);
         hdr = msg_get_header(req, "CSeq");
         if (hdr)
             msg_add_header(resp, "CSeq", hdr);
@@ -672,21 +662,20 @@ static void *rtsp_conversation_thread_func(void *vfd) {
         struct method_handler *mh;
         for (mh=method_handlers; mh->method; mh++) {
             if (!strcmp(mh->method, req->method)) {
-                mh->handler(&conn, req, resp);
+                mh->handler(conn, req, resp);
                 break;
             }
         }
 
 respond:
-        msg_write_response(fd, resp);
+        msg_write_response(conn->fd, resp);
         msg_free(req);
         msg_free(resp);
     }
 
-shutdown:
     debug(1, "closing RTSP connection\n");
-    if (fd > 0)
-        close(fd);
+    if (conn->fd > 0)
+        close(conn->fd);
     if (rtsp_playing()) {
         rtp_shutdown();
         player_stop();
@@ -695,6 +684,7 @@ shutdown:
     }
     if (auth_nonce)
         free(auth_nonce);
+    free(conn);
     debug(2, "terminating RTSP thread\n");
     return NULL;
 }
@@ -802,8 +792,6 @@ void rtsp_listen_loop(void) {
             break;
         }
 
-        debug(2, "new connection coming.\n");
-
         for (i=0; i<nsock; i++) {
             if (FD_ISSET(sockfd[i], &fds)) {
                 acceptfd = sockfd[i];
@@ -811,11 +799,20 @@ void rtsp_listen_loop(void) {
             }
         }
 
-        // for now, we do not track these and let them die of natural causes.
-        // XXX: this leaks threads; they need to be culled with pthread_tryjoin_np.
-        // XXX: acceptfd could change before the thread is up. which should never happen, but still.
-        pthread_t rtsp_conversation_thread;
-        pthread_create(&rtsp_conversation_thread, NULL, rtsp_conversation_thread_func, &acceptfd);
+        rtsp_conn_info *conn = malloc(sizeof(rtsp_conn_info));
+        memset(conn, 0, sizeof(rtsp_conn_info));
+        socklen_t slen = sizeof(conn->remote);
+
+        debug(1, "new RTSP connection\n");
+        conn->fd = accept(acceptfd, (struct sockaddr *)&conn->remote, &slen);
+        if (conn->fd < 0) {
+            perror("failed to accept connection");
+        } else {
+            // for now, we do not track these and let them die of natural causes.
+            // XXX: this leaks threads; they need to be culled with pthread_tryjoin_np.
+            pthread_t rtsp_conversation_thread;
+            pthread_create(&rtsp_conversation_thread, NULL, rtsp_conversation_thread_func, conn);
+        }
 
         for (i=0; i<nsock; i++)
             FD_SET(sockfd[i], &fds);
