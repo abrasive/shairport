@@ -25,6 +25,16 @@ else
     echo libao or its dev package not found
 fi
 
+if pkg-config libpulse-simple 2>/dev/null; then
+    CFLAGS="${CFLAGS} `pkg-config --cflags libpulse-simple`"
+    LDFLAGS="${LDFLAGS} `pkg-config --libs libpulse-simple`"
+    echo "#define CONFIG_PULSE" >> config.h
+    echo "CONFIG_PULSE=yes" >> config.mk
+    echo libpulse found
+else
+    echo libpulse or its dev package not found
+fi
+
 if pkg-config avahi-client 2>/dev/null; then
     CFLAGS="${CFLAGS} `pkg-config --cflags avahi-client`"
     LDFLAGS="${LDFLAGS} `pkg-config --libs avahi-client`"
