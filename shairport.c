@@ -26,6 +26,7 @@
 
 #include <signal.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <memory.h>
 #include <openssl/md5.h>
 #include <sys/wait.h>
@@ -77,6 +78,8 @@ void usage(char *progname) {
     printf("                        starts. This value is in frames; default %d\n", config.buffer_start_fill);
     printf("    -d, --daemon        fork (daemonise). The PID of the child process is\n");
     printf("                        written to stdout\n");
+    printf("    -P, --pidfile=FILE  write daemon's pid to FILE on startup.\n");
+    printf("                        Has no effect if -d is not specified\n");
     printf("    -B, --on-start=COMMAND  run a shell command when playback begins\n");
     printf("    -E, --on-stop=COMMAND   run a shell command when playback ends\n");
 
@@ -93,6 +96,7 @@ int parse_options(int argc, char **argv) {
     static struct option long_options[] = {
         {"help",    no_argument,        NULL, 'h'},
         {"daemon",  no_argument,        NULL, 'd'},
+        {"pidfile", required_argument,  NULL, 'P'},
         {"port",    required_argument,  NULL, 'p'},
         {"name",    required_argument,  NULL, 'a'},
         {"output",  required_argument,  NULL, 'o'},
@@ -103,7 +107,7 @@ int parse_options(int argc, char **argv) {
 
     int opt;
     while ((opt = getopt_long(argc, argv,
-                              "+hdvp:a:o:b:B:E:",
+                              "+hdvP:p:a:o:b:B:E:",
                               long_options, NULL)) > 0) {
         switch (opt) {
             default:
@@ -133,6 +137,9 @@ int parse_options(int argc, char **argv) {
                 break;
             case 'E':
                 config.cmd_stop = optarg;
+                break;
+            case 'f':
+                config.pidfile = optarg;
                 break;
         }
     }
@@ -213,6 +220,28 @@ int main(int argc, char **argv) {
             printf("%d\n", pid);
             exit(0);
         }
+        else {
+            int lock_fd = -1;
+            if (config.pidfile)
+            {
+                struct flock lock;
+                lock.l_type = F_WRLCK;
+                lock.l_whence = SEEK_SET;
+                lock.l_start = 0;
+                lock.l_len = 0;
+
+                lock_fd = open(config.pidfile, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+                if (lock_fd < 0)
+                {
+                    die("Could not open pidfile");
+                }
+                if (lockf(lock_fd,F_TLOCK,0) < 0)
+                {
+                    die("Could not lock pidfile. Is an other instance running ?");
+                }
+                dprintf(lock_fd, "%d\n", getpid());
+            }
+        }            
     }
 
     config.output = audio_get_output(config.output_name);
