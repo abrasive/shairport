@@ -77,3 +77,12 @@ void daemon_ready() {
     close(daemon_pipe[1]);
 }    
 
+void daemon_exit() {
+    if (lock_fd) {
+        lockf(lock_fd, F_ULOCK, 0);
+        close(lock_fd);
+        unlink(config.pidfile);
+        lock_fd = -1;
+    }
+}
+
