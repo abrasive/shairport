@@ -216,8 +216,13 @@ void log_setup() {
             die("Could not open logfile");
 
         dup2(log_fd, STDOUT_FILENO);
+        setvbuf (stdout, NULL, _IOLBF, BUFSIZ);
+
         if (!config.errfile)
+        {
             dup2(log_fd, STDERR_FILENO);
+            setvbuf (stderr, NULL, _IOLBF, BUFSIZ);
+        }
     }
 
     if (config.errfile) {
@@ -228,6 +233,7 @@ void log_setup() {
             die("Could not open logfile");
 
         dup2(err_fd, STDERR_FILENO);
+        setvbuf (stderr, NULL, _IOLBF, BUFSIZ);
     }
 }
 
