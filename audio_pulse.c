@@ -33,8 +33,10 @@
 #include "common.h"
 #include "audio.h"
 
-pa_simple *pa_dev = NULL;
-int pa_error;
+static pa_simple *pa_dev = NULL;
+static int pa_error;
+static const char *pa_server = NULL;
+static const char *pa_sink = NULL;
 
 static void help(void) {
     printf("    -a server set the server name\n"
@@ -43,8 +45,6 @@ static void help(void) {
 }
 
 static int init(int argc, char **argv) {
-    const char *server = NULL;
-    const char *sink = NULL;
 
     optind = 0;
     // some platforms apparently require optreset = 1; - which?
@@ -53,10 +53,10 @@ static int init(int argc, char **argv) {
     while ((opt = getopt(argc, argv, "a:s:")) > 0) {
         switch (opt) {
             case 'a':
-                server = optarg;
+                pa_server = optarg;
                 break;
             case 's':
-                sink = optarg;
+                pa_sink = optarg;
                 break;
             default:
                 help();
@@ -64,37 +64,36 @@ static int init(int argc, char **argv) {
         }
     }
 
-    static const pa_sample_spec ss = {
-            .format = PA_SAMPLE_S16LE,
-            .rate = 44100,
-            .channels = 2
-    };
-
-
-    pa_dev = pa_simple_new(server, "shairport", PA_STREAM_PLAYBACK, sink, "shairport", &ss, NULL, NULL, &pa_error);
-
-    return pa_dev ? 0 : 1;
+    return 0;
 }
 
 static void deinit(void) {
-    if (pa_dev)
-        pa_simple_free(pa_dev);
-    pa_dev = NULL;
 }
 
 static void start(int sample_rate) {
-    if (sample_rate != 44100)
-        die("unexpected sample rate!");
+    const pa_sample_spec ss = {
+            .format = PA_SAMPLE_S16LE,
+            .rate = sample_rate,
+            .channels = 2
+    };
+
+    pa_dev = pa_simple_new(pa_server, "shairport", PA_STREAM_PLAYBACK, pa_sink, "shairport", &ss, NULL, NULL, &pa_error);
+    if (!pa_dev)
+        die("Could not connect to pulseaudio server: %s", pa_strerror(pa_error));
 }
 
 static void play(short buf[], int samples) {
     if( pa_simple_write(pa_dev, (char *)buf, (size_t)samples * 4, &pa_error) < 0 )
-        fprintf(stderr, __FILE__": pa_simple_write() failed: %s\n", pa_strerror(pa_error));
+        warn("pa_simple_write() failed: %s\n", pa_strerror(pa_error));
 }
 
 static void stop(void) {
     if (pa_simple_drain(pa_dev, &pa_error) < 0)
-        fprintf(stderr, __FILE__": pa_simple_drain() failed: %s\n", pa_strerror(pa_error));
+        warn("pa_simple_drain() failed: %s\n", pa_strerror(pa_error));
+
+    if (pa_dev)
+        pa_simple_free(pa_dev);
+    pa_dev = NULL;
 }
 
 audio_output audio_pulse = {
