@@ -25,6 +25,16 @@ else
     echo libao or its dev package not found
 fi
 
+if pkg-config alsa 2>/dev/null; then
+    CFLAGS="${CFLAGS} `pkg-config --cflags alsa`"
+    LDFLAGS="${LDFLAGS} `pkg-config --libs alsa`"
+    echo "#define CONFIG_ALSA" >> config.h
+    echo "CONFIG_ALSA=yes" >> config.mk
+    echo libalsa found
+else
+    echo libalsa or its dev package not found
+fi
+
 if pkg-config avahi-client 2>/dev/null; then
     CFLAGS="${CFLAGS} `pkg-config --cflags avahi-client`"
     LDFLAGS="${LDFLAGS} `pkg-config --libs avahi-client`"
