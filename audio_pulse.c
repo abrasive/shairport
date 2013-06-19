@@ -46,7 +46,10 @@ static void help(void) {
 
 static int init(int argc, char **argv) {
 
-    optind = 0;
+    optind = 1; // optind=0 is equivalent to optind=1 plus special behaviour
+    argv--;     // so we shift the arguments to satisfy getopt()
+    argc++;
+
     // some platforms apparently require optreset = 1; - which?
     int opt;
     char *mid;
@@ -64,6 +67,9 @@ static int init(int argc, char **argv) {
         }
     }
 
+    if (optind < argc)
+        die("Invalid audio argument: %s", argv[optind]); 
+
     return 0;
 }
 
@@ -77,7 +83,14 @@ static void start(int sample_rate) {
             .channels = 2
     };
 
-    pa_dev = pa_simple_new(pa_server, "shairport", PA_STREAM_PLAYBACK, pa_sink, "shairport", &ss, NULL, NULL, &pa_error);
+    pa_dev = pa_simple_new(pa_server,
+            "shairport",
+            PA_STREAM_PLAYBACK,
+            pa_sink,
+            "shairport",
+            &ss, NULL, NULL,
+            &pa_error);
+
     if (!pa_dev)
         die("Could not connect to pulseaudio server: %s", pa_strerror(pa_error));
 }
