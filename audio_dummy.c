@@ -69,7 +69,7 @@ static void stop(void) {
 }
 
 static void help(void) {
-    printf("There are no options for dummy audio.\n");
+    printf("    There are no options for dummy audio.\n");
 }
 
 audio_output audio_dummy = {

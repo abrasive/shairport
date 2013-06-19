@@ -72,7 +72,7 @@ static void deinit(void) {
 }
 
 static void help(void) {
-    printf("pipe takes 1 argument: the name of the FIFO to write to.\n");
+    printf("    pipe takes 1 argument: the name of the FIFO to write to.\n");
 }
 
 audio_output audio_pipe = {
