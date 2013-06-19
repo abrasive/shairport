@@ -47,7 +47,9 @@ static int init(int argc, char **argv) {
     int driver = ao_default_driver_id();
     ao_option *ao_opts = NULL;
 
-    optind = 0;
+    optind = 1; // optind=0 is equivalent to optind=1 plus special behaviour
+    argv--;     // so we shift the arguments to satisfy getopt()
+    argc++;
     // some platforms apparently require optreset = 1; - which?
     int opt;
     char *mid;
@@ -79,6 +81,9 @@ static int init(int argc, char **argv) {
                 die("Invalid audio option -%c specified", opt);
         }
     }
+
+    if (optind < argc)
+        die("Invalid audio argument: %s", argv[optind]);
 
     ao_sample_format fmt;
     memset(&fmt, 0, sizeof(fmt));

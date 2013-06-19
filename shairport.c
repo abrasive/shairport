@@ -88,6 +88,9 @@ void usage(char *progname) {
 }
 
 int parse_options(int argc, char **argv) {
+    // prevent unrecognised arguments from being shunted to the audio driver
+    setenv("POSIXLY_CORRECT", "", 1);
+
     int opt;
     while ((opt = getopt(argc, argv, "+hdvp:a:o:b:B:E:")) > 0) {
         switch (opt) {
