@@ -37,14 +37,18 @@ static pa_simple *pa_dev = NULL;
 static int pa_error;
 static const char *pa_server = NULL;
 static const char *pa_sink = NULL;
+static const char *pa_appname = NULL;
 
 static void help(void) {
     printf("    -a server set the server name\n"
            "    -s sink   set the output sink\n"
+           "    -n name   set the application name, as seen by PulseAudio\n"
+           "                  defaults to the access point name\n"
           );
 }
 
 static int init(int argc, char **argv) {
+    pa_appname = config.apname;
 
     optind = 1; // optind=0 is equivalent to optind=1 plus special behaviour
     argv--;     // so we shift the arguments to satisfy getopt()
@@ -53,13 +57,16 @@ static int init(int argc, char **argv) {
     // some platforms apparently require optreset = 1; - which?
     int opt;
     char *mid;
-    while ((opt = getopt(argc, argv, "a:s:")) > 0) {
+    while ((opt = getopt(argc, argv, "a:s:n:")) > 0) {
         switch (opt) {
             case 'a':
                 pa_server = optarg;
                 break;
             case 's':
                 pa_sink = optarg;
+                break;
+            case 'n':
+                pa_appname = optarg;
                 break;
             default:
                 help();
@@ -84,10 +91,10 @@ static void start(int sample_rate) {
     };
 
     pa_dev = pa_simple_new(pa_server,
-            "shairport",
+            pa_appname,
             PA_STREAM_PLAYBACK,
             pa_sink,
-            "shairport",
+            "Shairport Stream",
             &ss, NULL, NULL,
             &pa_error);
 
