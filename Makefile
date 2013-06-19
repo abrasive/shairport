@@ -9,7 +9,7 @@ endif
 
 PREFIX ?= /usr/local
 
-SRCS := shairport.c rtsp.c mdns.c common.c rtp.c player.c alac.c audio.c audio_dummy.c audio_pipe.c
+SRCS := shairport.c daemon.c rtsp.c mdns.c common.c rtp.c player.c alac.c audio.c audio_dummy.c audio_pipe.c
 
 ifdef CONFIG_AO
 SRCS += audio_ao.c

@@ -26,13 +26,18 @@
 
 #include <signal.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <memory.h>
 #include <openssl/md5.h>
 #include <sys/wait.h>
+#include <getopt.h>
 #include "common.h"
+#include "daemon.h"
 #include "rtsp.h"
 #include "mdns.h"
 #include "getopt_long.h"
+
+static void log_setup();
 
 static int shutting_down = 0;
 void shairport_shutdown(void) {
@@ -43,6 +48,8 @@ void shairport_shutdown(void) {
     mdns_unregister();
     rtsp_shutdown_stream();
     config.output->deinit();
+    daemon_exit(); // This does nothing if not in daemon mode
+
     exit(0);
 }
 
@@ -61,6 +68,10 @@ static void sig_child(int foo, siginfo_t *bar, void *baz) {
     }
 }
 
+static void sig_logrotate(int foo, siginfo_t *bar, void *baz) {
+    log_setup();
+}
+
 void usage(char *progname) {
     printf("Usage: %s [options...]\n", progname);
     printf("  or:  %s [options...] -- [audio output-specific options]\n", progname);
@@ -77,6 +88,11 @@ void usage(char *progname) {
     printf("                        starts. This value is in frames; default %d\n", config.buffer_start_fill);
     printf("    -d, --daemon        fork (daemonise). The PID of the child process is\n");
     printf("                        written to stdout\n");
+    printf("    -P, --pidfile=FILE  write daemon's pid to FILE on startup.\n");
+    printf("                        Has no effect if -d is not specified\n");
+    printf("    -l, --log FILE      redirect shairport's standard output to FILE\n");
+    printf("                        If --errror is not specified, it also redirects error output to FILE\n");
+    printf("    -e, --error FILE    redirect shairport's standard error output to FILE\n");
     printf("    -B, --on-start=COMMAND  run a shell command when playback begins\n");
     printf("    -E, --on-stop=COMMAND   run a shell command when playback ends\n");
 
@@ -93,6 +109,9 @@ int parse_options(int argc, char **argv) {
     static struct option long_options[] = {
         {"help",    no_argument,        NULL, 'h'},
         {"daemon",  no_argument,        NULL, 'd'},
+        {"pidfile", required_argument,  NULL, 'P'},
+        {"log",     required_argument,  NULL, 'l'},
+        {"error",   required_argument,  NULL, 'e'},
         {"port",    required_argument,  NULL, 'p'},
         {"name",    required_argument,  NULL, 'a'},
         {"output",  required_argument,  NULL, 'o'},
@@ -103,7 +122,7 @@ int parse_options(int argc, char **argv) {
 
     int opt;
     while ((opt = getopt_long(argc, argv,
-                              "+hdvp:a:o:b:B:E:",
+                              "+hdvP:l:e:p:a:o:b:B:E:",
                               long_options, NULL)) > 0) {
         switch (opt) {
             default:
@@ -134,6 +153,15 @@ int parse_options(int argc, char **argv) {
             case 'E':
                 config.cmd_stop = optarg;
                 break;
+            case 'P':
+                config.pidfile = optarg;
+                break;
+            case 'l':
+                config.logfile = optarg;
+                break;
+            case 'e':
+                config.errfile = optarg;
+                break;
         }
     }
     return optind;
@@ -147,6 +175,7 @@ void signal_setup(void) {
     sigfillset(&set);
     sigdelset(&set, SIGINT);
     sigdelset(&set, SIGTERM);
+    sigdelset(&set, SIGHUP);
     sigdelset(&set, SIGSTOP);
     sigdelset(&set, SIGCHLD);
     pthread_sigmask(SIG_BLOCK, &set, NULL);
@@ -162,18 +191,49 @@ void signal_setup(void) {
     sigaction(SIGINT, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
 
+    sa.sa_sigaction = &sig_logrotate;
+    sigaction(SIGHUP, &sa, NULL);
+
     sa.sa_flags = SA_SIGINFO;
     sa.sa_sigaction = &sig_child;
     sigaction(SIGCHLD, &sa, NULL);
 }
 
-static int daemon_pipe[2] = {-1, -1};
 // forked daemon lets the spawner know it's up and running OK
 // should be called only once!
 void shairport_startup_complete(void) {
     if (config.daemonise) {
-        write(daemon_pipe[1], "ok", 2);
-        close(daemon_pipe[1]);
+        daemon_ready();
+    }
+}
+
+void log_setup() {
+    if (config.logfile) {
+        int log_fd = open(config.logfile,
+                O_WRONLY | O_CREAT | O_APPEND,
+                S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+        if (log_fd < 0)
+            die("Could not open logfile");
+
+        dup2(log_fd, STDOUT_FILENO);
+        setvbuf (stdout, NULL, _IOLBF, BUFSIZ);
+
+        if (!config.errfile)
+        {
+            dup2(log_fd, STDERR_FILENO);
+            setvbuf (stderr, NULL, _IOLBF, BUFSIZ);
+        }
+    }
+
+    if (config.errfile) {
+        int err_fd = open(config.errfile,
+                O_WRONLY | O_CREAT | O_APPEND,
+                S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+        if (err_fd < 0)
+            die("Could not open logfile");
+
+        dup2(err_fd, STDERR_FILENO);
+        setvbuf (stderr, NULL, _IOLBF, BUFSIZ);
     }
 }
 
@@ -192,34 +252,18 @@ int main(int argc, char **argv) {
     // parse arguments into config
     int audio_arg = parse_options(argc, argv);
 
-    int ret;
     if (config.daemonise) {
-        ret = pipe(daemon_pipe);
-        if (ret < 0)
-            die("couldn't create a pipe?!");
-
-        pid_t pid = fork();
-        if (pid < 0)
-            die("failed to fork!");
-
-        if (pid) {
-            char buf[8];
-            ret = read(daemon_pipe[0], buf, sizeof(buf));
-            if (ret < 0) {
-                printf("Spawning the daemon failed.\n");
-                exit(1);
-            }
-
-            printf("%d\n", pid);
-            exit(0);
-        }
+        daemon_init();
     }
+
+    log_setup();
 
     config.output = audio_get_output(config.output_name);
     if (!config.output) {
         audio_ls_outputs();
         die("Invalid audio output specified!");
     }
+
     config.output->init(argc-audio_arg, argv+audio_arg);
 
     uint8_t ap_md5[16];

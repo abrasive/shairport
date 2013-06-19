@@ -27,6 +27,9 @@ typedef struct {
     int daemonise;
     int mdns_internal;
     char *cmd_start, *cmd_stop;
+    char *pidfile;
+    char *logfile;
+    char *errfile;
 } shairport_cfg;
 
 extern int debuglev;
