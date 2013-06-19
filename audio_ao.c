@@ -55,7 +55,7 @@ static int init(int argc, char **argv) {
         switch (opt) {
             case 'd':
                 driver = ao_driver_id(optarg);
-                if (!driver)
+                if (driver < 0)
                     die("could not find ao driver %s", optarg);
                 break;
             case 'i':
