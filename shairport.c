@@ -32,6 +32,7 @@
 #include "common.h"
 #include "rtsp.h"
 #include "mdns.h"
+#include "getopt_long.h"
 
 static int shutting_down = 0;
 void shairport_shutdown(void) {
@@ -61,41 +62,51 @@ static void sig_child(int foo, siginfo_t *bar, void *baz) {
 }
 
 void usage(char *progname) {
-    printf("Usage: %s [options...] [-- [output options...]]\n\n", progname);
-    printf("Available options:\n"
-           "    -h          show this help\n"
-           "    -p port     set RTSP listening port\n"
-           "    -a name     set advertised name\n"
-           "    -o output   set audio output\n"
-           "    -b fill     set how full the buffer must be before audio output starts\n"
-           "                    This value is in frames; default %d\n"
-           "    -d          fork (daemonise)\n"
-           "                    The PID of the child process is written to stdout\n"
-           "    -B command  run a shell command when playback begins\n"
-           "    -E command  run a shell command when playback ends\n"
-           "\n"
-           "Run %s -o <output> -h to find the available options for a specific output\n"
-           "\n", config.buffer_start_fill, progname);
+    printf("Usage: %s [options...]\n", progname);
+    printf("  or:  %s [options...] -- [audio output-specific options]\n", progname);
 
-    if (config.output_name)
-        config.output = audio_get_output(config.output_name);
-    if (config.output) {
-        printf("Options for output %s:\n", config.output_name);
-        config.output->help();
-    } else {
-        audio_ls_outputs();
-    }
+    printf("\n");
+    printf("Mandatory arguments to long options are mandatory for short options too.\n");
+
+    printf("\n");
+    printf("Options:\n");
+    printf("    -h, --help          show this help\n");
+    printf("    -p, --port=PORT     set RTSP listening port\n");
+    printf("    -a, --name=NAME     set advertised name\n");
+    printf("    -b FILL             set how full the buffer must be before audio output\n");
+    printf("                        starts. This value is in frames; default %d\n", config.buffer_start_fill);
+    printf("    -d, --daemon        fork (daemonise). The PID of the child process is\n");
+    printf("                        written to stdout\n");
+    printf("    -B, --on-start=COMMAND  run a shell command when playback begins\n");
+    printf("    -E, --on-stop=COMMAND   run a shell command when playback ends\n");
+
+    printf("    -o, --output=BACKEND    select audio output method\n");
+
+    printf("\n");
+    audio_ls_outputs();
 }
 
 int parse_options(int argc, char **argv) {
     // prevent unrecognised arguments from being shunted to the audio driver
     setenv("POSIXLY_CORRECT", "", 1);
 
+    static struct option long_options[] = {
+        {"help",    no_argument,        NULL, 'h'},
+        {"daemon",  no_argument,        NULL, 'd'},
+        {"port",    required_argument,  NULL, 'p'},
+        {"name",    required_argument,  NULL, 'a'},
+        {"output",  required_argument,  NULL, 'o'},
+        {"on-start",required_argument,  NULL, 'B'},
+        {"on-stop", required_argument,  NULL, 'E'},
+        {NULL, 0, NULL, 0}
+    };
+
     int opt;
-    while ((opt = getopt(argc, argv, "+hdvp:a:o:b:B:E:")) > 0) {
+    while ((opt = getopt_long(argc, argv,
+                              "+hdvp:a:o:b:B:E:",
+                              long_options, NULL)) > 0) {
         switch (opt) {
             default:
-                printf("Unknown argument -%c\n", optopt);
             case 'h':
                 usage(argv[0]);
                 exit(1);
