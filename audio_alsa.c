@@ -1,6 +1,6 @@
 /*
  * libalsa output driver. This file is part of Shairport.
- * Copyright (c) Muffinman, Skaman 2013
+ * Copyright (c) James Laird 2013
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -55,10 +55,10 @@ audio_output audio_alsa = {
 static snd_pcm_t *alsa_handle = NULL;
 static snd_pcm_hw_params_t *alsa_params = NULL;
 
-static snd_mixer_t *alsa_mix_handle = NULL;
-static snd_mixer_elem_t *alsa_mix_elem = NULL;
-static snd_mixer_selem_id_t *alsa_mix_sid = NULL;
-static long alsa_mix_minv, alsa_mix_range;
+snd_mixer_t *alsa_mix_handle = NULL;
+snd_mixer_elem_t *alsa_mix_elem = NULL;
+snd_mixer_selem_id_t *alsa_mix_sid = NULL;
+long alsa_mix_minv, alsa_mix_maxv;
 
 static char *alsa_out_dev = "default";
 static char *alsa_mix_dev = NULL;
@@ -78,9 +78,7 @@ static void help(void) {
 static int init(int argc, char **argv) {
     int hardware_mixer = 0;
     
-    optind = 1; // optind=0 is equivalent to optind=1 plus special behaviour
-    argv--; // so we shift the arguments to satisfy getopt()
-    argc++;
+    optind = 0;
     // some platforms apparently require optreset = 1; - which?
     int opt;
     while ((opt = getopt(argc, argv, "d:t:m:c:i:")) > 0) {
@@ -106,10 +104,6 @@ static int init(int argc, char **argv) {
                 die("Invalid audio option -%c specified", opt);
         }
     }
-    
-    if (optind < argc)
-        die("Invalid audio argument: %s", argv[optind]);
-        
     if (!hardware_mixer)
         return 0;
         
@@ -118,7 +112,6 @@ static int init(int argc, char **argv) {
     audio_alsa.volume = &volume;
     
     int ret = 0;
-    long alsa_mix_maxv;
     
     snd_mixer_selem_id_alloca(&alsa_mix_sid);
     snd_mixer_selem_id_set_index(alsa_mix_sid, alsa_mix_index);
@@ -133,12 +126,11 @@ static int init(int argc, char **argv) {
 
     ret = snd_mixer_load(alsa_mix_handle);
     if (ret < 0)
-        die ("Failed to load mixer element");
+        die ("Failed to register mixer element");
     alsa_mix_elem = snd_mixer_find_selem(alsa_mix_handle, alsa_mix_sid);
     if (!alsa_mix_elem)
         die ("Failed to find mixer element");
     snd_mixer_selem_get_playback_volume_range (alsa_mix_elem, &alsa_mix_minv, &alsa_mix_maxv);
-    alsa_mix_range = alsa_mix_maxv - alsa_mix_minv;
     
     return 0;
 }
@@ -189,7 +181,7 @@ static void stop(void) {
 }
 
 static void volume(double vol) {
-    long alsa_volume = (vol*alsa_mix_range)+alsa_mix_minv;
+    long alsa_volume = (vol*(alsa_mix_maxv - alsa_mix_minv))+alsa_mix_minv;
     if(snd_mixer_selem_set_playback_volume_all(alsa_mix_elem, alsa_volume) != 0)
         die ("Failed to set playback volume");
 }
