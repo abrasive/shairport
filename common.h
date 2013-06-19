@@ -44,5 +44,6 @@ uint8_t *rsa_apply(uint8_t *input, int inlen, int *outlen, int mode);
 extern shairport_cfg config;
 
 void shairport_shutdown(void);
+void shairport_startup_complete(void);
 
 #endif // _COMMON_H

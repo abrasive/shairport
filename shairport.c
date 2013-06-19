@@ -167,6 +167,16 @@ void signal_setup(void) {
     sigaction(SIGCHLD, &sa, NULL);
 }
 
+static int daemon_pipe[2] = {-1, -1};
+// forked daemon lets the spawner know it's up and running OK
+// should be called only once!
+void shairport_startup_complete(void) {
+    if (config.daemonise) {
+        write(daemon_pipe[1], "ok", 2);
+        close(daemon_pipe[1]);
+    }
+}
+
 int main(int argc, char **argv) {
     signal_setup();
     memset(&config, 0, sizeof(config));
@@ -179,7 +189,31 @@ int main(int argc, char **argv) {
     config.apname = malloc(20 + 100);
     snprintf(config.apname, 20 + 100, "Shairport on %s", hostname);
 
+    // parse arguments into config
     int audio_arg = parse_options(argc, argv);
+
+    int ret;
+    if (config.daemonise) {
+        ret = pipe(daemon_pipe);
+        if (ret < 0)
+            die("couldn't create a pipe?!");
+
+        pid_t pid = fork();
+        if (pid < 0)
+            die("failed to fork!");
+
+        if (pid) {
+            char buf[8];
+            ret = read(daemon_pipe[0], buf, sizeof(buf));
+            if (ret < 0) {
+                printf("Spawning the daemon failed.\n");
+                exit(1);
+            }
+
+            printf("%d\n", pid);
+            exit(0);
+        }
+    }
 
     config.output = audio_get_output(config.output_name);
     if (!config.output) {
