@@ -19,6 +19,10 @@ ifdef CONFIG_AVAHI
 SRCS += avahi.c
 endif
 
+ifndef CONFIG_HAVE_GETOPT_H
+SRCS += getopt_long.c
+endif
+
 # default target
 all: shairport
 
