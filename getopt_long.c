@@ -148,8 +148,7 @@ getopt_long(int argc, char *const argv[],
             }
 
             if (opterr && optstring[0] != ':')
-                warn(
-                        "%s: illegal option -- %s\n", argv[0], place);
+                warn("illegal option -- %s\n", place);
             place = EMSG;
             optind++;
             return BADCH;
@@ -165,8 +164,7 @@ getopt_long(int argc, char *const argv[],
         if (!*place)
             ++optind;
         if (opterr && *optstring != ':')
-            warn(
-                    "%s: illegal option -- %c\n", argv[0], optopt);
+            warn("illegal option -- %c\n", optopt);
         return BADCH;
     }
 
@@ -186,9 +184,7 @@ getopt_long(int argc, char *const argv[],
             if (*optstring == ':')
                 return BADARG;
             if (opterr)
-                warn(
-                        "%s: option requires an argument -- %c\n",
-                        argv[0], optopt);
+                warn("option requires an argument -- %c\n", optopt);
             return BADCH;
         }
         else
