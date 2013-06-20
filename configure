@@ -9,11 +9,11 @@ echo "// automatically generated file" > config.h
 LDFLAGS="${LDFLAGS} -lm -lpthread"
 
 if make -f Makefile.tests test_getopt > /dev/null;  then
-    echo "getopt.h found (or compiler broken)"
+    echo "getopt.h found"
     echo "#define CONFIG_HAVE_GETOPT_H" >> config.h
     echo "CONFIG_HAVE_GETOPT_H=yes" >> config.mk
 else
-    echo "getopt.h not found, using our own getopt_long."
+    echo "getopt.h not found (or compiler broken), using our own getopt_long."
 fi
 
 if pkg-config openssl 2>/dev/null; then
