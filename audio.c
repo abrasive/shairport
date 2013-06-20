@@ -35,9 +35,15 @@ extern audio_output audio_ao;
 #ifdef CONFIG_PULSE
 extern audio_output audio_pulse;
 #endif
+#ifdef CONFIG_ALSA
+extern audio_output audio_alsa;
+#endif
 extern audio_output audio_dummy, audio_pipe;
 
 static audio_output *outputs[] = {
+#ifdef CONFIG_ALSA
+    &audio_alsa,
+#endif
 #ifdef CONFIG_PULSE
     &audio_pulse,
 #endif

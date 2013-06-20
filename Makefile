@@ -16,7 +16,11 @@ SRCS += audio_ao.c
 endif
 
 ifdef CONFIG_PULSE
-    SRCS += audio_pulse.c
+SRCS += audio_pulse.c
+endif
+
+ifdef CONFIG_ALSA
+SRCS += audio_alsa.c
 endif
 
 ifdef CONFIG_AVAHI
