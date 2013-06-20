@@ -54,8 +54,7 @@ void daemon_init() {
 
         printf("%d\n", pid);
         exit(0);
-    }
-    else {
+    } else {
         if (config.pidfile) {
             lock_fd = open(config.pidfile, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
             if (lock_fd < 0) {

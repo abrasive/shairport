@@ -91,7 +91,8 @@ void usage(char *progname) {
     printf("    -P, --pidfile=FILE  write daemon's pid to FILE on startup.\n");
     printf("                        Has no effect if -d is not specified\n");
     printf("    -l, --log FILE      redirect shairport's standard output to FILE\n");
-    printf("                        If --errror is not specified, it also redirects error output to FILE\n");
+    printf("                        If --errror is not specified, it also redirects\n");
+    printf("                        error output to FILE\n");
     printf("    -e, --error FILE    redirect shairport's standard error output to FILE\n");
     printf("    -B, --on-start=COMMAND  run a shell command when playback begins\n");
     printf("    -E, --on-stop=COMMAND   run a shell command when playback ends\n");
@@ -218,8 +219,7 @@ void log_setup() {
         dup2(log_fd, STDOUT_FILENO);
         setvbuf (stdout, NULL, _IOLBF, BUFSIZ);
 
-        if (!config.errfile)
-        {
+        if (!config.errfile) {
             dup2(log_fd, STDERR_FILENO);
             setvbuf (stderr, NULL, _IOLBF, BUFSIZ);
         }
@@ -263,7 +263,6 @@ int main(int argc, char **argv) {
         audio_ls_outputs();
         die("Invalid audio output specified!");
     }
-
     config.output->init(argc-audio_arg, argv+audio_arg);
 
     uint8_t ap_md5[16];
