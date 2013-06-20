@@ -88,7 +88,7 @@ void usage(char *progname) {
     printf("    -b FILL             set how full the buffer must be before audio output\n");
     printf("                        starts. This value is in frames; default %d\n", config.buffer_start_fill);
     printf("    -d, --daemon        fork (daemonise). The PID of the child process is\n");
-    printf("                        written to stdout\n");
+    printf("                        written to stdout, unless a pidfile is used.\n");
     printf("    -P, --pidfile=FILE  write daemon's pid to FILE on startup.\n");
     printf("                        Has no effect if -d is not specified\n");
     printf("    -l, --log FILE      redirect shairport's standard output to FILE\n");

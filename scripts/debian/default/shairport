@@ -1,0 +1,36 @@
+# Shairport Daemon options
+# Uncomment and modify lines to change defaults
+#
+
+# User and group under whihc shairport should be run
+# user should have permission to output sound
+# Check the audio output documentation for details.
+#USER=shairport
+#GROUP=nobody
+
+# Process' nice on start
+#NICE=0
+
+#LOGFILE=/var/log/shairport.log
+
+# If empty, errors are redirected to LOGFILE
+#ERRFILE=/var/log/shairport.err
+
+#PIDFILE=/var/run/shairport.pid
+
+# Set the AirPlay advertised name.
+# Defaults to computer's hostname
+#AP_NAME=
+
+# Set output driver and options
+# Defaults to the first available, depends on the build options
+# Check 'shairport -h' for details
+#OUTPUT=ao
+#OUTPUT_OPTS=
+
+# Change how many frames re required to start playing
+#BUFFER_FILL=220
+
+#RUN_ONSTART=
+#RUN_ONSTOP=
+
