@@ -47,7 +47,8 @@ void shairport_shutdown(void) {
     printf("Shutting down...\n");
     mdns_unregister();
     rtsp_shutdown_stream();
-    config.output->deinit();
+    if (config.output)
+        config.output->deinit();
     daemon_exit(); // This does nothing if not in daemon mode
 
     exit(0);
