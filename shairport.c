@@ -253,6 +253,10 @@ int main(int argc, char **argv) {
     // parse arguments into config
     int audio_arg = parse_options(argc, argv);
 
+    // mDNS supports maximum of 63-character names (we append 13).
+    if (strlen(config.apname) > 50)
+        die("Supplied name too long (max 50 characters)");
+
     if (config.daemonise) {
         daemon_init();
     }
