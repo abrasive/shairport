@@ -1,9 +1,5 @@
 - documentation
+  - Ubuntu/Debian packages needed for compile
+  - usage
+  - different audio backend detailed docs?
 - initscript, launchd plist
-- avahi integration
-- logging? or otherwise good behaviour when daemonised
-- supervisor? kill mdns registrar if main proc dies with KILL or SEGV
-
-Before release:
-- stop leaking threads on every connection
-- alsa
