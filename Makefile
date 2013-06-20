@@ -38,7 +38,7 @@ install: shairport
 	install -m 755 -d $(PREFIX)/bin
 	install -m 755 shairport $(PREFIX)/bin/shairport
 
-shairport: $(SRCS)
+shairport: $(SRCS) config.h config.mk
 	$(CC) $(CFLAGS) $(SRCS) $(LDFLAGS) -o shairport
 
 clean:
