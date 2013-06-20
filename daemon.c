@@ -52,7 +52,9 @@ void daemon_init() {
             exit(1);
         }
 
-        printf("%d\n", pid);
+        if(!config.pidfile)
+            printf("%d\n", pid);
+
         exit(0);
     } else {
         if (config.pidfile) {
