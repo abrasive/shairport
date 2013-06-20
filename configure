@@ -16,52 +16,33 @@ else
     echo "getopt.h not found (or compiler broken), using our own getopt_long."
 fi
 
-if pkg-config openssl 2>/dev/null; then
-    CFLAGS="${CFLAGS} `pkg-config --cflags openssl`"
-    LDFLAGS="${LDFLAGS} `pkg-config --libs openssl`"
-else
-    echo OpenSSL or its dev package not found
-fi
+# check for and use pkg-config package $2 with CONFIG_ var $3
+do_pkg_config()
+{
+    if pkg-config $2 2>/dev/null; then
+        CFLAGS="${CFLAGS} `pkg-config --cflags $2`"
+        LDFLAGS="${LDFLAGS} `pkg-config --libs $2`"
+        if [ "$3" ]; then
+            echo "#define $3" >> config.h
+            echo "$3=yes" >> config.mk
+        fi
+        echo "$1 found"
+    else
+        echo "$1 or its dev package not found"
+        if [ ! "$3" ]; then
+            echo "Required package not found, cannot continue"
+            rm -f config.mk config.h
+            exit 1
+        fi
+    fi
+}
 
-if pkg-config ao 2>/dev/null; then
-    CFLAGS="${CFLAGS} `pkg-config --cflags ao`"
-    LDFLAGS="${LDFLAGS} `pkg-config --libs ao`"
-    echo "#define CONFIG_AO" >> config.h
-    echo "CONFIG_AO=yes" >> config.mk
-    echo libao found
-else
-    echo libao or its dev package not found
-fi
+do_pkg_config OpenSSL       openssl
+do_pkg_config libao         ao              CONFIG_AO
+do_pkg_config PulseAudio    libpulse-simple CONFIG_PULSE
+do_pkg_config ALSA          alsa            CONFIG_ALSA
+do_pkg_config Avahi\ client avahi-client    CONFIG_AVAHI
 
-if pkg-config libpulse-simple 2>/dev/null; then
-    CFLAGS="${CFLAGS} `pkg-config --cflags libpulse-simple`"
-    LDFLAGS="${LDFLAGS} `pkg-config --libs libpulse-simple`"
-    echo "#define CONFIG_PULSE" >> config.h
-    echo "CONFIG_PULSE=yes" >> config.mk
-    echo libpulse found
-else
-    echo libpulse or its dev package not found
-fi
-
-if pkg-config alsa 2>/dev/null; then
-    CFLAGS="${CFLAGS} `pkg-config --cflags alsa`"
-    LDFLAGS="${LDFLAGS} `pkg-config --libs alsa`"
-    echo "#define CONFIG_ALSA" >> config.h
-    echo "CONFIG_ALSA=yes" >> config.mk
-    echo libalsa found
-else
-    echo libalsa or its dev package not found
-fi
-
-if pkg-config avahi-client 2>/dev/null; then
-    CFLAGS="${CFLAGS} `pkg-config --cflags avahi-client`"
-    LDFLAGS="${LDFLAGS} `pkg-config --libs avahi-client`"
-    echo "#define CONFIG_AVAHI" >> config.h
-    echo "CONFIG_AVAHI=yes" >> config.mk
-    echo avahi-client found
-else
-    echo avahi-client or its dev package not found
-fi
 
 echo "CFLAGS+=${CFLAGS}" >> config.mk
 echo "LDFLAGS+=${LDFLAGS}" >> config.mk
@@ -69,4 +50,4 @@ echo "LDFLAGS+=${LDFLAGS}" >> config.mk
 echo CFLAGS: ${CFLAGS}
 echo LDFLAGS: ${LDFLAGS}
 
-echo Configure done
+echo "Configure successful. You may now build with 'make'"
