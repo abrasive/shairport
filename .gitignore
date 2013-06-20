@@ -1,4 +1,4 @@
-shairport
-*.o
-config.mk
-config.h
+/shairport
+/*.o
+/config.mk
+/config.h
