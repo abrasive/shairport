@@ -7,15 +7,38 @@ What it is
 This program emulates an AirPort Express for the purpose of streaming music from iTunes and compatible iPods and iPhones. It implements a server for the Apple RAOP protocol.
 ShairPort does not support AirPlay v2 (video and photo streaming).
 
-How to use it
+Build Requirements
+------------------
+Required:
+* OpenSSL
+
+Optionally:
+* libao
+* PulseAudio
+* avahi
+
+Runtime Requirements
+--------------------
+You must be running an mDNS (Bonjour) daemon. On a Mac, this will be running already. Otherwise, you must be running avahi-daemon or Howl.
+
+How to get started
 -------------
 ```
 ./configure
-make clean all
-./shairport -a 'AP Name'
+make
+./shairport -a 'My Shairport Name'
 ```
 
 The triangle-in-rectangle AirTunes (now AirPlay) logo will appear in the iTunes status bar of any machine on the network, or on iPod/iPhone play controls screen. Choose your access point name to start streaming to the ShairPort instance.
+
+Audio Outputs
+-------------
+Shairport supports different audio backends.
+For a list of available backends and their options, run `shairport -h`.
+Note that options are supplied to backends at the end of the commandline, separated by --, for example:
+```
+shairport -o ao -- -d mydriver -o setting=thing
+```
 
 Thanks
 ------
@@ -25,9 +48,19 @@ Thanks also to Apple for obfuscating the private key in the ROM image, using a s
 Thanks to Ten Thousand Free Men and their Families for having a computer and stuff.
 Thanks to wtbw.
 
-Contributors
-------------
-* [James Laird](mailto:jhl@mafipulation.org), founder and initial code
+Contributors to version 1.x
+---------------------------
+* [James Laird](http://mafipulation.org)
+* [Paul Lietar](http://www.lietar.net/~paul)
+* [Quentin Smart](http://github.com/sm3rt)
+* [Brendan Shanks](http://github.com/mrpippy)
+* [Peter Körner](http://mazdermind.de)
+* [Muffinman](http://github.com/therealmuffin)
+* [Skaman](http://github.com/skaman)
+
+Contributors to version 0.x
+---------------------------
+* [James Laird](mailto:jhl@mafipulation.org), author
 * [David Hammerton](http://craz.net/), ALAC decoder
 * [Albert Zeyer](http://www.az2000.de), maintainer
 * [Preston Marshall](mailto:preston@synergyeoc.com)
@@ -51,17 +84,3 @@ Known Ports and Tools
 * OS X:
     * [ShairportMenu](https://github.com/rcarlsen/ShairPortMenu), a GUI wrapper as a menu widget
     * [MacShairport](https://github.com/joshaber/MacShairport)
-
-Changelog
----------
-* 0.01  April 5, 2011
-    * initial release
-* 0.02  April 11, 2011
-    * bugfix: libao compatibility
-* 0.03  April 11, 2011
-    * bugfix: ipv6 didn't work - IO::Socket::INET6 is required too
-* 0.04  April 12, 2011
-    * cross-platform count_leading_zeros under GCC - will now compile cleanly on ARM and other platforms
-* 0.05  April 13, 2011
-    * error-handling cleanup in the Perl script including more meaningful error messages, based on common problems seen
-
