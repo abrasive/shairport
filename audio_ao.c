@@ -35,10 +35,10 @@
 ao_device *dev = NULL;
 
 static void help(void) {
-    printf("    -d driver      set the output driver\n"
-           "    -o name=value  set an arbitrary ao option\n"
-           "    -i id          shorthand for -o id=<id>\n"
-           "    -n name        shorthand for -o dev=<name> -o dsp=<name>\n"
+    printf("    -d driver           set the output driver\n"
+           "    -o name=value       set an arbitrary ao option\n"
+           "    -i id               shorthand for -o id=<id>\n"
+           "    -n name             shorthand for -o dev=<name> -o dsp=<name>\n"
           );
 }
 

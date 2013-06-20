@@ -37,10 +37,10 @@ static pa_simple *pa_dev = NULL;
 static int pa_error;
 
 static void help(void) {
-    printf("    -a server set the server name\n"
-           "    -s sink   set the output sink\n"
-           "    -n name   set the application name, as seen by PulseAudio\n"
-           "                  defaults to the access point name\n"
+    printf("    -a server           set the server name\n"
+           "    -s sink             set the output sink\n"
+           "    -n name             set the application name, as seen by PulseAudio\n"
+           "                            defaults to the access point name\n"
           );
 }
 
