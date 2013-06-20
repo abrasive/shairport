@@ -45,16 +45,27 @@ void daemon_init() {
         die("failed to fork!");
 
     if (pid) {
-        char buf[8];
+        close(daemon_pipe[1]);
+
+        char buf[64];
         ret = read(daemon_pipe[0], buf, sizeof(buf));
         if (ret < 0) {
-            printf("Spawning the daemon failed.\n");
+            // No response from child, something failed
+            fprintf(stderr, "Spawning the daemon failed.\n");
             exit(1);
+        } else if (buf[0] != 0) {
+            // First byte is non zero, child sent error message
+            write(STDERR_FILENO, buf, ret);
+            fprintf(stderr, "\n");
+            exit(1);
+        } else {
+            // Success !
+            printf("%d\n", pid);
+            exit(0);
         }
-
-        printf("%d\n", pid);
-        exit(0);
     } else {
+        close(daemon_pipe[0]);
+
         if (config.pidfile) {
             lock_fd = open(config.pidfile, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
             if (lock_fd < 0) {
@@ -72,12 +83,21 @@ void daemon_init() {
 }
 
 void daemon_ready() {
-    write(daemon_pipe[1], "ok", 2);
+    char ok = 0;
+    write(daemon_pipe[1], &ok, 1);
     close(daemon_pipe[1]);
+    daemon_pipe[1] = -1;
 }    
 
+void daemon_fail(const char *format, va_list arg) {
+    // Are we still initializing ?
+    if (daemon_pipe[1] > 0) {
+        vdprintf(daemon_pipe[1], format, arg);
+    }
+}
+
 void daemon_exit() {
-    if (lock_fd) {
+    if (lock_fd > 0) {
         lockf(lock_fd, F_ULOCK, 0);
         close(lock_fd);
         unlink(config.pidfile);
