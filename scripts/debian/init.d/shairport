@@ -72,6 +72,11 @@ do_stop()
         --retry=TERM/10/KILL/5
 }
 
+do_reload()
+{
+    [ -f $PIDFILE ] && kill -HUP $(cat $PIDFILE) || return 1
+}
+
 case "$1" in
   start)
 	log_daemon_msg "Starting $DESC" "$NAME"
@@ -83,6 +88,11 @@ case "$1" in
 	do_stop
         log_end_msg $?
 	;;
+  reload)
+        log_daemon_msg "Reloading $DESC" "$NAME"
+        do_reload
+        log_end_msg $?
+        ;;
   status)
 	status_of_proc "$DAEMON" "$NAME" && exit 0 || exit $?
 	;;
