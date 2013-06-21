@@ -26,6 +26,7 @@
 
 #include <signal.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 #include <memory.h>
 #include <openssl/md5.h>
