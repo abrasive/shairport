@@ -26,35 +26,104 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <stdlib.h>
+#include <limits.h>
+#include <dlfcn.h>
 #include "audio.h"
 #include "config.h"
+#include "common.h"
 
-#ifdef CONFIG_AO
-extern audio_output audio_ao;
-#endif
-#ifdef CONFIG_PULSE
-extern audio_output audio_pulse;
-#endif
-#ifdef CONFIG_ALSA
-extern audio_output audio_alsa;
-#endif
+#define MAX_AUDIO_OUTPUTS 8
+
 extern audio_output audio_dummy, audio_pipe;
 
+#ifdef CONFIG_DYNAMIC_PLUGINS
+static audio_output *outputs[MAX_AUDIO_OUTPUTS+1] = {
+#else
 static audio_output *outputs[] = {
-#ifdef CONFIG_ALSA
-    &audio_alsa,
-#endif
-#ifdef CONFIG_PULSE
-    &audio_pulse,
-#endif
-#ifdef CONFIG_AO
-    &audio_ao,
 #endif
     &audio_dummy,
     &audio_pipe,
     NULL
 };
 
+static audio_output **next_output = outputs;
+
+void audio_load_plugins(const char *path) {
+    size_t dir_length;
+    char *filename;
+    DIR *d;
+    struct dirent *dir;
+    struct stat st;
+    int ret;
+    void *dl_handle;
+    audio_output* (*dl_get_audio)(void);
+    audio_output* output;
+
+    while (*next_output != NULL)
+        next_output ++;
+
+
+    dir_length = strlen(path);
+    filename = malloc(dir_length + NAME_MAX + 2);
+    strcpy(filename, path);
+    filename[dir_length] = '/';
+    filename[dir_length+1] = 0;
+
+    d = opendir(path);
+    if(d == NULL) {
+        warn("Could not open plugins directory : %s", path);
+        free(filename);
+        return;
+    }
+
+    while ((dir = readdir(d)) != NULL) {
+      if (next_output == outputs + MAX_AUDIO_OUTPUTS) {
+          warn("Maximum number of output drivers reached");
+          break;
+      }
+
+      strcpy(filename + dir_length + 1, dir->d_name);
+      ret = stat(filename, &st);
+
+      if (ret < 0) {
+          warn("Could not stat file : %s", filename);
+          continue;
+      }
+      
+      // Skip directories.
+      if(S_ISDIR(st.st_mode))
+          continue;
+
+      dl_handle = dlopen(filename, RTLD_NOW | RTLD_LOCAL);
+      if (dl_handle == NULL) {
+          warn("Could not dlopen plugin %s : %s", filename, dlerror());
+          continue;
+      }
+
+      dl_get_audio = dlsym(dl_handle, "plugin_get_audio"); 
+      if (dl_get_audio == NULL) {
+          warn("Plugin %s entry not found : %s", filename, dlerror());
+          continue;
+      }
+
+      output = dl_get_audio();
+      if (output == NULL) {
+          warn("Loading plugin %s failed", filename);
+      }
+
+      printf("%s output driver loaded\n", output->name);
+      
+      *next_output = output;
+      next_output ++;
+      *next_output = NULL;
+    }
+
+    free(filename);
+    closedir(d);
+}
 
 audio_output *audio_get_output(char *name) {
     audio_output **out;

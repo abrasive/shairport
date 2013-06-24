@@ -19,6 +19,7 @@ typedef struct {
     void (*volume)(double vol);
 } audio_output;
 
+void audio_load_plugins(const char *path);
 audio_output *audio_get_output(char *name);
 void audio_ls_outputs(void);
 

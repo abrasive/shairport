@@ -46,6 +46,9 @@ do_pkg_config Avahi\ client avahi-client    CONFIG_AVAHI
 
 echo "CFLAGS+=${CFLAGS}" >> config.mk
 echo "LDFLAGS+=${LDFLAGS}" >> config.mk
+echo "CONFIG_DYNAMIC_PLUGINS=yes" >> config.mk
+echo "#define CONFIG_DYNAMIC_PLUGINS" >> config.h
+echo "PLUGIN_EXT=so" >> config.mk
 
 echo CFLAGS: ${CFLAGS}
 echo LDFLAGS: ${LDFLAGS}

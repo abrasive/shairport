@@ -32,6 +32,7 @@
 #include <pulse/error.h>
 #include "common.h"
 #include "audio.h"
+#include "config.h"
 
 static pa_simple *pa_dev = NULL;
 static int pa_error;
@@ -127,3 +128,10 @@ audio_output audio_pulse = {
     .play = &play,
     .volume = NULL
 };
+
+#ifdef CONFIG_DYNAMIC_PLUGINS
+audio_output *plugin_get_audio(void) {
+    return &audio_pulse;
+};
+#endif
+

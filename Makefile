@@ -7,20 +7,32 @@ endif
 
 -include config.mk
 
+# default target
+all: shairport
+
+PLUGIN_DIR = plugins
+
 PREFIX ?= /usr/local
 
 SRCS := shairport.c daemon.c rtsp.c mdns.c common.c rtp.c player.c alac.c audio.c audio_dummy.c audio_pipe.c
+CLEAN := 
 
 ifdef CONFIG_AO
-SRCS += audio_ao.c
+PLUGIN_SRCS := audio_ao.c
+PLUGIN_NAME := audio_ao
+-include plugin.mk
 endif
 
 ifdef CONFIG_PULSE
-SRCS += audio_pulse.c
+PLUGIN_SRCS := audio_pulse.c
+PLUGIN_NAME := audio_pulse
+-include plugin.mk
 endif
 
 ifdef CONFIG_ALSA
-SRCS += audio_alsa.c
+PLUGIN_SRCS := audio_alsa.c
+PLUGIN_NAME := audio_alsa
+-include plugin.mk
 endif
 
 ifdef CONFIG_AVAHI
@@ -31,9 +43,6 @@ ifndef CONFIG_HAVE_GETOPT_H
 SRCS += getopt_long.c
 endif
 
-# default target
-all: shairport
-
 install: shairport
 	install -m 755 -d $(PREFIX)/bin
 	install -m 755 shairport $(PREFIX)/bin/shairport
@@ -43,3 +52,4 @@ shairport: $(SRCS) config.h config.mk
 
 clean:
 	rm -f shairport
+	rm -f $(CLEAN)
