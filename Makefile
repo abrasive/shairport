@@ -12,10 +12,7 @@ all: shairport
 
 PLUGIN_DIR = plugins
 
-PREFIX ?= /usr/local
-
 SRCS := shairport.c daemon.c rtsp.c mdns.c common.c rtp.c player.c alac.c audio.c audio_dummy.c audio_pipe.c
-CLEAN := 
 
 ifdef CONFIG_AO
 PLUGIN_SRCS := audio_ao.c
@@ -52,4 +49,6 @@ shairport: $(SRCS) config.h config.mk
 
 clean:
 	rm -f shairport
-	rm -f $(CLEAN)
+
+$(PLUGINS_PATH):
+	mkdir -p $@

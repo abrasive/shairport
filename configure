@@ -37,20 +37,33 @@ do_pkg_config()
     fi
 }
 
+do_export_variable()
+{
+    echo "$1=$(eval echo \$$1)" >> config.mk
+    echo "#define $1 \"$(eval echo \$$1)\"" >> config.h
+}
+
+[ "${PREFIX}" ] || PREFIX=/usr/local
+PLUGINS_PATH=${PREFIX}/lib/shairport/plugins
+PLUGIN_EXT=.so
+
 do_pkg_config OpenSSL       openssl
 do_pkg_config libao         ao              CONFIG_AO
 do_pkg_config PulseAudio    libpulse-simple CONFIG_PULSE
 do_pkg_config ALSA          alsa            CONFIG_ALSA
 do_pkg_config Avahi\ client avahi-client    CONFIG_AVAHI
 
+do_export_variable PREFIX
+do_export_variable PLUGINS_PATH
+do_export_variable PLUGIN_EXT
 
 echo "CFLAGS+=${CFLAGS}" >> config.mk
 echo "LDFLAGS+=${LDFLAGS}" >> config.mk
 echo "CONFIG_DYNAMIC_PLUGINS=yes" >> config.mk
 echo "#define CONFIG_DYNAMIC_PLUGINS" >> config.h
-echo "PLUGIN_EXT=so" >> config.mk
 
 echo CFLAGS: ${CFLAGS}
 echo LDFLAGS: ${LDFLAGS}
+echo PREFIX: ${PREFIX}
 
 echo "Configure successful. You may now build with 'make'"

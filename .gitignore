@@ -1,5 +1,7 @@
 /shairport
-/*.o
+*.o
+*.so
 /config.mk
 /config.h
 /plugins/*
+

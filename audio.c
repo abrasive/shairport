@@ -58,6 +58,7 @@ void audio_load_plugins(const char *path) {
     struct dirent *dir;
     struct stat st;
     int ret;
+    char *ext;
     void *dl_handle;
     audio_output* (*dl_get_audio)(void);
     audio_output* output;
@@ -93,8 +94,13 @@ void audio_load_plugins(const char *path) {
           continue;
       }
       
-      // Skip directories.
-      if(S_ISDIR(st.st_mode))
+      // Skip non regular.
+      if(!S_ISREG(st.st_mode))
+          continue;
+
+      // Skip non .so file
+      ext = strrchr(dir->d_name, '.');
+      if (ext == NULL || strcmp(ext, PLUGIN_EXT) != 0)
           continue;
 
       dl_handle = dlopen(filename, RTLD_NOW | RTLD_LOCAL);
