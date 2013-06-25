@@ -9,6 +9,8 @@ $(PLUGIN_OBJS): %.o: %.c
 $(PLUGIN_TARGET): $(PLUGIN_OBJS)
 	$(CC) $(LDFLAGS) -shared -o $@ $^
 
+.PHONY: clean_$(PLUGIN_NAME) install_$(PLUGIN_NAME)
+
 clean_$(PLUGIN_NAME):
 	rm -f $(PLUGIN_OBJS) $(PLUGIN_TARGET)
 

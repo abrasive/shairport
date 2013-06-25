@@ -7,6 +7,8 @@ endif
 
 -include config.mk
 
+.PHONY: all install clean mrproper
+
 # default target
 all: shairport
 
@@ -44,11 +46,15 @@ install: shairport
 	install -m 755 -d $(PREFIX)/bin
 	install -m 755 shairport $(PREFIX)/bin/shairport
 
-shairport: $(SRCS) config.h config.mk
-	$(CC) $(CFLAGS) $(SRCS) $(LDFLAGS) -o shairport
-
 clean:
 	rm -f shairport
 
+mrproper: clean
+	rm -f config.mk config.h
+
 $(PLUGINS_PATH):
 	mkdir -p $@
+
+shairport: $(SRCS) config.h config.mk
+	$(CC) $(CFLAGS) $(SRCS) $(LDFLAGS) -o shairport
+
