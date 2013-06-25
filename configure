@@ -1,21 +1,5 @@
 #!/bin/sh
 
-echo Configuring Shairport
-
-rm -f config.mk config.h
-
-echo "// automatically generated file" > config.h
-
-LDFLAGS="${LDFLAGS} -lm -lpthread"
-
-if make -f Makefile.tests test_getopt > /dev/null;  then
-    echo "getopt.h found"
-    echo "#define CONFIG_HAVE_GETOPT_H" >> config.h
-    echo "CONFIG_HAVE_GETOPT_H=yes" >> config.mk
-else
-    echo "getopt.h not found (or compiler broken), using our own getopt_long."
-fi
-
 # check for and use pkg-config package $2 with CONFIG_ var $3
 do_pkg_config()
 {
@@ -43,15 +27,43 @@ do_export_variable()
     echo "#define $1 \"$(eval echo \$$1)\"" >> config.h
 }
 
+do_test()
+{
+    if make -f Makefile.tests $1 1> /dev/null 2> /dev/null;  then
+        echo $2
+        if [ "$4" ]; then
+            echo "#define $4" >> config.h
+            echo "$4=yes" >> config.mk
+        fi
+    else
+        echo $3
+        if [ ! "$4" ]; then
+            echo "Cannot continue"
+            rm -f config.mk config.h
+            exit 1
+        fi
+    fi
+}
+
 [ "${PREFIX}" ] || PREFIX=/usr/local
 PLUGINS_PATH=${PREFIX}/lib/shairport/plugins
 PLUGIN_EXT=.so
+
+LDFLAGS="${LDFLAGS} -lm -lpthread"
+
+echo Configuring Shairport
+
+rm -f config.mk config.h
+
+echo "// automatically generated file" > config.h
 
 do_pkg_config OpenSSL       openssl
 do_pkg_config libao         ao              CONFIG_AO
 do_pkg_config PulseAudio    libpulse-simple CONFIG_PULSE
 do_pkg_config ALSA          alsa            CONFIG_ALSA
 do_pkg_config Avahi\ client avahi-client    CONFIG_AVAHI
+
+do_test test_getopt  "getopt.h found" "getopt.h not found (or compiler broken), using our own getopt_long." CONFIG_HAVE_GETOPT_H
 
 do_export_variable PREFIX
 do_export_variable PLUGINS_PATH
