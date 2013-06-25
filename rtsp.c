@@ -708,6 +708,7 @@ respond:
         rtp_shutdown();
         player_stop();
         please_shutdown = 0;
+        playing_thread = 0;
         pthread_mutex_unlock(&playing_mutex);
     }
     if (auth_nonce)
