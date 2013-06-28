@@ -1,18 +1,14 @@
 ifeq ($(wildcard config.mk),)
-$(warning config.mk does not exist, configuring.)
-config.mk:
-	sh ./configure
-	$(MAKE) shairport
+$(error config.mk does not exist, please run './configure')
 endif
 
 -include config.mk
+-include platform-$(PLATFORM).mk
 
 .PHONY: all install clean mrproper
 
 # default target
 all: shairport
-
-PLUGIN_DIR = plugins
 
 SRCS := shairport.c daemon.c rtsp.c mdns.c common.c rtp.c player.c alac.c audio.c audio_dummy.c audio_pipe.c
 
@@ -52,9 +48,9 @@ clean:
 mrproper: clean
 	rm -f config.mk config.h
 
-$(PLUGINS_PATH):
-	mkdir -p $@
+$(PREFIX_PLUGINS):
+	install -m 755 -d $@
 
 shairport: $(SRCS) config.h config.mk
-	$(CC) $(CFLAGS) $(SRCS) $(LDFLAGS) -o shairport
+	$(CC) $(CFLAGS) $(APP_CFLAGS) $(SRCS) $(LDFLAGS) $(APP_LDFLAGS) -o shairport
 

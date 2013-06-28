@@ -23,8 +23,17 @@ do_pkg_config()
 
 do_export_variable()
 {
-    echo "$1=$(eval echo \$$1)" >> config.mk
-    echo "#define $1 \"$(eval echo \$$1)\"" >> config.h
+    if [ "$2" ]; then
+        echo "$1=$(eval echo $2)" >> config.mk
+    else
+        echo "$1=$(eval echo \$$1)" >> config.mk
+    fi
+
+    if [ "$3" ]; then
+        echo "#define $1 \"$(eval echo $3)\"" >> config.h
+    else
+        echo "#define $1 \"$(eval echo \$$1)\"" >> config.h
+    fi
 }
 
 do_test()
@@ -57,6 +66,15 @@ rm -f config.mk config.h
 
 echo "// automatically generated file" > config.h
 
+
+
+PLATFORM=$(uname -s | tr '[:upper:]' '[:lower:]')
+[ "${PREFIX}" ] || PREFIX=/usr/local
+PREFIX_PLUGINS=${PREFIX}/lib/shairport/plugins
+PLUGIN_EXT=.so
+
+LDFLAGS="${LDFLAGS} -lm -lpthread"
+
 do_pkg_config OpenSSL       openssl
 do_pkg_config libao         ao              CONFIG_AO
 do_pkg_config PulseAudio    libpulse-simple CONFIG_PULSE
@@ -65,14 +83,14 @@ do_pkg_config Avahi\ client avahi-client    CONFIG_AVAHI
 
 do_test test_getopt  "getopt.h found" "getopt.h not found (or compiler broken), using our own getopt_long." CONFIG_HAVE_GETOPT_H
 
+do_export_variable CONFIG_DYNAMIC_PLUGINS yes ""
+do_export_variable PLATFORM
 do_export_variable PREFIX
-do_export_variable PLUGINS_PATH
+do_export_variable PREFIX_PLUGINS
 do_export_variable PLUGIN_EXT
 
 echo "CFLAGS+=${CFLAGS}" >> config.mk
 echo "LDFLAGS+=${LDFLAGS}" >> config.mk
-echo "CONFIG_DYNAMIC_PLUGINS=yes" >> config.mk
-echo "#define CONFIG_DYNAMIC_PLUGINS" >> config.h
 
 echo CFLAGS: ${CFLAGS}
 echo LDFLAGS: ${LDFLAGS}

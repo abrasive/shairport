@@ -3,5 +3,4 @@
 *.so
 /config.mk
 /config.h
-/plugins/*
 

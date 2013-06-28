@@ -1,21 +1,23 @@
 ifdef CONFIG_DYNAMIC_PLUGINS
 
-PLUGIN_OBJS = $(subst .c,.o,$(PLUGIN_SRCS))
-PLUGIN_TARGET = $(PLUGIN_DIR)/$(PLUGIN_NAME).so
+PLUGIN_OBJS := $(subst .c,.o,$(PLUGIN_SRCS))
+PLUGIN_FILE := $(PLUGIN_NAME)$(PLUGIN_EXT)
+PLUGIN_TARGET := $(PLUGIN_FILE)
 
 $(PLUGIN_OBJS): %.o: %.c
-	$(CC) $(CFLAGS) -fPIC -c -o $@ $<
+	$(CC) $(CFLAGS) $(MODULE_CFLAGS) -c -o $@ $<
 
 $(PLUGIN_TARGET): $(PLUGIN_OBJS)
-	$(CC) $(LDFLAGS) -shared -o $@ $^
+	    $(CC) $(LDFLAGS) $(MODULE_LDFLAGS) -o $@ $^
 
 .PHONY: clean_$(PLUGIN_NAME) install_$(PLUGIN_NAME)
 
 clean_$(PLUGIN_NAME):
-	rm -f $(PLUGIN_OBJS) $(PLUGIN_TARGET)
+	rm -f $(PLUGIN_OBJS)
+	rm -f $(PLUGIN_TARGET)
 
-install_$(PLUGIN_NAME): $(PLUGINS_PATH) $(PLUGIN_TARGET)
-	install -c $(PLUGIN_TARGET) $(PLUGINS_PATH)/$(notdir $(PLUGIN_TARGET))
+install_$(PLUGIN_NAME): $(PREFIX_PLUGINS) $(PLUGIN_TARGET)
+	install -m 755 $(PLUGIN_TARGET) $(PREFIX_PLUGINS)/$(PLUGIN_FILE)
 
 all: $(PLUGIN_TARGET)
 clean: clean_$(PLUGIN_NAME)

@@ -1,0 +1,5 @@
+MODULE_CFLAGS=-fPIC
+MODULE_LDFLAGS=-shared
+APP_CFLAGS=-export-dynamic
+MODULE_CFLAGS=
+

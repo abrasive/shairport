@@ -242,7 +242,7 @@ void log_setup() {
 int main(int argc, char **argv) {
     signal_setup();
     memset(&config, 0, sizeof(config));
-    audio_load_plugins(PLUGINS_PATH);
+    audio_load_plugins(PREFIX_PLUGINS);
 
     // set defaults
     config.buffer_start_fill = 220;
