@@ -39,6 +39,14 @@
 
 extern audio_output audio_dummy, audio_pipe;
 
+#ifndef CONFIG_DYNAMIC_PLUGINS
+
+#define EXPORT_AUDIO_PLUGIN(name) extern audio_output name;
+#include "plugin.export.h"
+#undef  EXPORT_AUDIO_PLUGIN
+
+#endif
+
 #ifdef CONFIG_DYNAMIC_PLUGINS
 static audio_output *outputs[MAX_AUDIO_OUTPUTS+1] = {
 #else
@@ -46,12 +54,22 @@ static audio_output *outputs[] = {
 #endif
     &audio_dummy,
     &audio_pipe,
+
+#ifndef CONFIG_DYNAMIC_PLUGINS
+
+#define EXPORT_AUDIO_PLUGIN(name) &name,
+#include "plugin.export.h"
+#undef  EXPORT_AUDIO_PLUGIN
+
+#endif
+
     NULL
 };
 
 static audio_output **next_output = outputs;
 
 void audio_load_plugins(const char *path) {
+#ifdef CONFIG_DYNAMIC_PLUGINS
     size_t dir_length;
     char *filename;
     DIR *d;
@@ -100,7 +118,7 @@ void audio_load_plugins(const char *path) {
 
       // Skip non .so file
       ext = strrchr(dir->d_name, '.');
-      if (ext == NULL || strcmp(ext, PLUGIN_EXT) != 0)
+      if (ext == NULL || strcmp(ext, DYNAMIC_PLUGIN_EXT) != 0)
           continue;
 
       dl_handle = dlopen(filename, RTLD_NOW | RTLD_LOCAL);
@@ -129,6 +147,7 @@ void audio_load_plugins(const char *path) {
 
     free(filename);
     closedir(d);
+#endif
 }
 
 audio_output *audio_get_output(char *name) {

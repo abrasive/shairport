@@ -1,5 +1,3 @@
-ifdef CONFIG_DYNAMIC_PLUGINS
-
 PLUGIN_OBJS := $(subst .c,.o,$(PLUGIN_SRCS))
 PLUGIN_FILE := $(PLUGIN_NAME)$(PLUGIN_EXT)
 PLUGIN_TARGET := $(PLUGIN_FILE)
@@ -7,15 +5,21 @@ PLUGIN_TARGET := $(PLUGIN_FILE)
 $(PLUGIN_OBJS): %.o: %.c
 	$(CC) $(CFLAGS) $(MODULE_CFLAGS) -c -o $@ $<
 
-$(PLUGIN_TARGET): $(PLUGIN_OBJS)
-	    $(CC) $(LDFLAGS) $(MODULE_LDFLAGS) -o $@ $^
-
-.PHONY: clean_$(PLUGIN_NAME) install_$(PLUGIN_NAME)
-
 clean_$(PLUGIN_NAME): PLUGIN_OBJS := $(PLUGIN_OBJS)
 clean_$(PLUGIN_NAME): PLUGIN_TARGET := $(PLUGIN_TARGET)
 clean_$(PLUGIN_NAME):
 	rm -f $(PLUGIN_OBJS) $(PLUGIN_TARGET)
+
+.PHONY: clean_$(PLUGIN_NAME)
+
+clean: clean_$(PLUGIN_NAME)
+
+ifdef CONFIG_DYNAMIC_PLUGINS
+
+$(PLUGIN_TARGET): $(PLUGIN_OBJS)
+	$(CC) $(LDFLAGS) $(MODULE_LDFLAGS) -o $@ $^
+
+.PHONY: install_$(PLUGIN_NAME)
 
 install_$(PLUGIN_NAME): PLUGIN_TARGET := $(PLUGIN_TARGET)
 install_$(PLUGIN_NAME): PLUGIN_FILE := $(PLUGIN_FILE)
@@ -23,9 +27,20 @@ install_$(PLUGIN_NAME): $(PREFIX_PLUGINS) $(PLUGIN_TARGET)
 	install -m 755 $(PLUGIN_TARGET) $(PREFIX_PLUGINS)/$(PLUGIN_FILE)
 
 all: $(PLUGIN_TARGET)
-clean: clean_$(PLUGIN_NAME)
 install: install_$(PLUGIN_NAME)
 
 else
-    SRCS += $(PLUGIN_SRCS)
+
+$(PLUGIN_TARGET): $(PLUGIN_OBJS)
+	$(AR) rvs $@ $^
+
+PLUGIN_STATIC += $(PLUGIN_TARGET)
+
+.PHONY: export_plugin_$(PLUGIN_NAME)
+export_plugin_$(PLUGIN_NAME): PLUGIN_NAME := $(PLUGIN_NAME)
+export_plugin_$(PLUGIN_NAME): truncate_$(PLUGIN_EXPORT_H)
+	echo "EXPORT_AUDIO_PLUGIN($(PLUGIN_NAME))" >> $(PLUGIN_EXPORT_H)
+
+$(PLUGIN_EXPORT_H): export_plugin_$(PLUGIN_NAME)
+
 endif

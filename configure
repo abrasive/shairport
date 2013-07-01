@@ -66,12 +66,11 @@ rm -f config.mk config.h
 
 echo "// automatically generated file" > config.h
 
-
-
 PLATFORM=$(uname -s | tr '[:upper:]' '[:lower:]')
 [ "${PREFIX}" ] || PREFIX=/usr/local
 PREFIX_PLUGINS=${PREFIX}/lib/shairport/plugins
-PLUGIN_EXT=.so
+DYNAMIC_PLUGIN_EXT=.so
+STATIC_PLUGIN_EXT=.a
 
 LDFLAGS="${LDFLAGS} -lm -lpthread"
 
@@ -87,7 +86,8 @@ do_export_variable CONFIG_DYNAMIC_PLUGINS yes ""
 do_export_variable PLATFORM
 do_export_variable PREFIX
 do_export_variable PREFIX_PLUGINS
-do_export_variable PLUGIN_EXT
+do_export_variable DYNAMIC_PLUGIN_EXT
+do_export_variable STATIC_PLUGIN_EXT
 
 echo "CFLAGS+=${CFLAGS}" >> config.mk
 echo "LDFLAGS+=${LDFLAGS}" >> config.mk

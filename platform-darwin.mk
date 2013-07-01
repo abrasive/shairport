@@ -1,5 +1,11 @@
+ifdef CONFIG_DYNAMIC_PLUGINS
 MODULE_CFLAGS=-fno-common
 MODULE_LDFLAGS=-bundle -Wl,-undefined -Wl,dynamic_lookup
 APP_CFLAGS=
 MODULE_CFLAGS=
-
+else
+MODULE_CFLAGS=
+MODULE_LDFLAGS=
+APP_CFLAGS=
+MODULE_CFLAGS=
+endif

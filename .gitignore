@@ -1,6 +1,8 @@
 /shairport
 *.o
 *.so
+*.a
 /config.mk
 /config.h
+/plugin.export.h
 
