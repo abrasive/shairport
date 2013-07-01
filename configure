@@ -54,9 +54,48 @@ do_test()
     fi
 }
 
+usage()
+{
+    cat >&2 <<EOF
+Usage : ./configure [-p prefix] [-s]
+Options:
+    -p prefix   set the prefix where shairport should be installed
+    -s          disable dynamic plugins
+EOF
+
+}
+
+
+while getopts ":p:sh" opt; do
+    case $opt in
+        p)
+            PREFIX=$OPTARG
+            ;;
+        s)
+            CONFIG_DYNAMIC_PLUGIN=no
+            ;;
+        h)
+            usage
+            exit 0
+            ;;
+
+        \?)
+            echo "Invalid option: -$OPTARG" >&2
+            usage
+            exit 1
+            ;;
+        :)
+            echo "Option -$OPTARG requires an argument." >&2
+            usage
+            exit 1
+            ;;
+    esac
+done
+
 [ "${PREFIX}" ] || PREFIX=/usr/local
+[ "${CONFIG_DYNAMIC_PLUGIN}" == "no" ] || CONFIG_DYNAMIC_PLUGIN=yes
+
 PLUGINS_PATH=${PREFIX}/lib/shairport/plugins
-PLUGIN_EXT=.so
 
 LDFLAGS="${LDFLAGS} -lm -lpthread"
 
@@ -82,7 +121,9 @@ do_pkg_config Avahi\ client avahi-client    CONFIG_AVAHI
 
 do_test test_getopt  "getopt.h found" "getopt.h not found (or compiler broken), using our own getopt_long." CONFIG_HAVE_GETOPT_H
 
-do_export_variable CONFIG_DYNAMIC_PLUGINS yes ""
+[ "${CONFIG_DYNAMIC_PLUGIN}" == "no" ] || \
+    do_export_variable CONFIG_DYNAMIC_PLUGINS yes ""
+
 do_export_variable PLATFORM
 do_export_variable PREFIX
 do_export_variable PREFIX_PLUGINS
@@ -95,5 +136,6 @@ echo "LDFLAGS+=${LDFLAGS}" >> config.mk
 echo CFLAGS: ${CFLAGS}
 echo LDFLAGS: ${LDFLAGS}
 echo PREFIX: ${PREFIX}
+echo Dynamic Plugins: ${CONFIG_DYNAMIC_PLUGIN}
 
 echo "Configure successful. You may now build with 'make'"
