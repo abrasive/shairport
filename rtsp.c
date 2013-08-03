@@ -411,7 +411,7 @@ static void handle_ignore(rtsp_conn_info *conn,
 static void handle_set_parameter(rtsp_conn_info *conn,
                                  rtsp_message *req, rtsp_message *resp) {
     if (!req->contentlength)
-        return;
+        debug(1, "received empty SET_PARAMETER request\n");
 
     char *cp = req->content;
     int cp_left = req->contentlength;
