@@ -65,6 +65,8 @@ void mdns_register(void) {
     warn("avahi_register failed, falling back to external programs");
 #endif
 
+    free(mdns_apname);
+
     if ((mdns_pid = fork()))
         return;
 
