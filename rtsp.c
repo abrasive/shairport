@@ -331,22 +331,32 @@ shutdown:
 }
 
 static void msg_write_response(int fd, rtsp_message *resp) {
-    char rbuf[30];
-    int nrbuf;
-    nrbuf = snprintf(rbuf, sizeof(rbuf),
-                     "RTSP/1.0 %d %s\r\n", resp->respcode,
-                     resp->respcode==200 ? "OK" : "Error");
-    write(fd, rbuf, nrbuf);
-    debug(1, "sending response: %s", rbuf);
-    int i;
+    char pkt[1024];
+    int pktfree = sizeof(pkt);
+    char *p = pkt;
+    int i, n;
+
+    n = snprintf(p, pktfree,
+                 "RTSP/1.0 %d %s\r\n", resp->respcode,
+                 resp->respcode==200 ? "OK" : "Error");
+    debug(1, "sending response: %s", pkt);
+    pktfree -= n;
+    p += n;
+
     for (i=0; i<resp->nheaders; i++) {
         debug(2, "    %s: %s\n", resp->name[i], resp->value[i]);
-        write(fd, resp->name[i], strlen(resp->name[i]));
-        write(fd, ": ", 2);
-        write(fd, resp->value[i], strlen(resp->value[i]));
-        write(fd, "\r\n", 2);
+        n = snprintf(p, pktfree, "%s: %s\r\n", resp->name[i], resp->value[i]);
+        pktfree -= n;
+        p += n;
+        if (pktfree <= 0)
+            die("Attempted to write overlong RTSP packet");
     }
-    write(fd, "\r\n", 2);
+
+    if (pktfree < 3)
+        die("Attempted to write overlong RTSP packet");
+
+    strcpy(p, "\r\n");
+    write(fd, pkt, p-pkt+2);
 }
 
 static void handle_options(rtsp_conn_info *conn,
