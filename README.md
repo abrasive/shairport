@@ -17,6 +17,10 @@ Optionally:
 * PulseAudio
 * avahi
 
+Debian/Raspbian users can get the basics with
+`apt-get install libssl-dev libavahi-client-dev libasound2-dev`
+
+
 Runtime Requirements
 --------------------
 You must be running an mDNS (Bonjour) daemon. On a Mac, this will be running already. Otherwise, you must be running avahi-daemon or Howl.
