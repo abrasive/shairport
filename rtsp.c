@@ -56,7 +56,7 @@
 // it monitors the request variable (at least when interrupted)
 static pthread_mutex_t playing_mutex = PTHREAD_MUTEX_INITIALIZER;
 static int please_shutdown = 0;
-static pthread_t playing_thread = 0;
+static pthread_t playing_thread;
 
 typedef struct {
     int fd;
@@ -66,8 +66,14 @@ typedef struct {
     pthread_t thread;
 } rtsp_conn_info;
 
+// determine if we are the currently playing thread
 static inline int rtsp_playing(void) {
-    return playing_thread == pthread_self();
+    if (pthread_mutex_trylock(&playing_mutex)) {
+        return pthread_equal(playing_thread, pthread_self());
+    } else {
+        pthread_mutex_unlock(&playing_mutex);
+        return 0;
+    }
 }
 
 static void rtsp_take_player(void) {
@@ -711,7 +717,6 @@ respond:
         rtp_shutdown();
         player_stop();
         please_shutdown = 0;
-        playing_thread = 0;
         pthread_mutex_unlock(&playing_mutex);
     }
     if (auth_nonce)
