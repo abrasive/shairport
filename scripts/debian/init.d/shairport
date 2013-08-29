@@ -1,15 +1,15 @@
 #! /bin/sh
 ### BEGIN INIT INFO
-# Provides:          skeleton
+# Provides:          shairport
 # Required-Start:    $remote_fs $networking
 # Required-Stop:     $remote_fs $networking
-# Should-Start:      pulseaudio alsa-utils hostname
-# Should-Stop:       pulseaudio alsa-utils hostname
+# Should-Start:      pulseaudio alsa-utils hostname avahi
+# Should-Stop:       pulseaudio alsa-utils hostname avahi
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
 ### END INIT INFO
 
-# Do not configure this file. Edit /etc/default/shairport instead!
+# Do not modify this file. Edit /etc/default/shairport instead !
 
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DESC="Shairport Airtunes emulator"
