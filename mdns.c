@@ -25,28 +25,29 @@
  */
 
 
-#include <signal.h>
 #include <memory.h>
 #include <string.h>
-#include <unistd.h>
 #include "config.h"
 #include "common.h"
 #include "mdns.h"
+
 #ifdef CONFIG_AVAHI
-#include "avahi.h"
+extern mdns_backend mdns_avahi;
 #endif
 
-int mdns_pid = 0;
+extern mdns_backend mdns_external_avahi;
+extern mdns_backend mdns_external_dns_sd;
 
-void mdns_unregister(void) {
+static mdns_backend *mdns_backends[] = {
 #ifdef CONFIG_AVAHI
-    avahi_unregister();
+    &mdns_avahi,
 #endif
+    &mdns_external_avahi,
+    &mdns_external_dns_sd,
+    NULL
+};
 
-    if (mdns_pid)
-        kill(mdns_pid, SIGTERM);
-    mdns_pid = 0;
-}
+static mdns_backend *backend = NULL;
 
 void mdns_register(void) {
     char *mdns_apname = malloc(strlen(config.apname) + 14);
@@ -59,31 +60,26 @@ void mdns_register(void) {
     *p++ = '@';
     strcpy(p, config.apname);
 
-#ifdef CONFIG_AVAHI
-    if (avahi_register(mdns_apname))
-        return;
-    warn("avahi_register failed, falling back to external programs");
-#endif
+    backend = NULL;
+    mdns_backend **s = NULL;
+    for (s = mdns_backends; *s; s++)
+    {
+        int error = (*s)->mdns_register(mdns_apname, config.port);
+        if (error == 0)
+        {
+            backend = *s;
+            break;
+        }
+    }
 
-    if ((mdns_pid = fork()))
-        return;
-
-    char mdns_port[6];
-    sprintf(mdns_port, "%d", config.port);
-
-    char *argv[] = {
-        NULL, mdns_apname, "_raop._tcp", mdns_port, MDNS_RECORD, NULL
-    };
-
-    argv[0] = "avahi-publish-service";
-    execvp(argv[0], argv);
-
-    argv[0] = "mDNSPublish";
-    execvp(argv[0], argv);
-
-    char *mac_argv[] = {"dns-sd", "-R", mdns_apname, "_raop._tcp", ".",
-                        mdns_port, MDNS_RECORD, NULL};
-    execvp(mac_argv[0], mac_argv);
-
-    die("Could not establish mDNS advertisement!");
+    if (backend == NULL)
+        die("Could not establish mDNS advertisement!");
 }
+
+void mdns_unregister(void) {
+    if (backend) {
+        backend->mdns_unregister();
+    }
+}
+
+

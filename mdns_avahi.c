@@ -38,6 +38,7 @@ static AvahiEntryGroup *group = NULL;
 static AvahiThreadedPoll *tpoll = NULL;
 
 static char *name = NULL;
+static int port = 0;
 
 static void egroup_callback(AvahiEntryGroup *g,
                             AvahiEntryGroupState state,
@@ -67,7 +68,7 @@ static void register_service(AvahiClient *c) {
                                         "_raop._tcp",
                                         NULL,
                                         NULL,
-                                        config.port,
+                                        port,
                                         MDNS_RECORD,
                                         NULL);
     if (ret < 0)
@@ -100,14 +101,15 @@ static void client_callback(AvahiClient *c,
     }
 }
 
-int avahi_register(char *srvname) {
+static int avahi_register(char *srvname, int srvport) {
     debug(1, "avahi: avahi_register\n");
     name = strdup(srvname);
+    port = srvport;
 
     int err;
     if (!(tpoll = avahi_threaded_poll_new())) {
         warn("couldn't create avahi threaded tpoll!");
-        return 0;
+        return -1;
     }
     if (!(client = avahi_client_new(avahi_threaded_poll_get(tpoll), 
                                     0,
@@ -115,18 +117,18 @@ int avahi_register(char *srvname) {
                                     NULL,
                                     &err))) {
         warn("couldn't create avahi client: %s!", avahi_strerror(err));
-        return 0;
+        return -1;
     }
 
     if (avahi_threaded_poll_start(tpoll) < 0) {
         warn("couldn't start avahi tpoll thread");
-        return 0;
+        return -1;
     }
 
-    return 1;
+    return 0;
 }
 
-void avahi_unregister(void) {
+static void avahi_unregister(void) {
     debug(1, "avahi: avahi_unregister\n");
     if (tpoll)
         avahi_threaded_poll_stop(tpoll);
@@ -137,4 +139,9 @@ void avahi_unregister(void) {
     name = NULL;
 }
 
+mdns_backend mdns_avahi = 
+{
+    .mdns_register = avahi_register,
+    .mdns_unregister = avahi_unregister
+};
 
