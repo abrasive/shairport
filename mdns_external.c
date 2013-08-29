@@ -93,16 +93,22 @@ static int mdns_external_avahi_register(char *apname, int port) {
     };
 
     argv[0] = "avahi-publish-service";
-    mdns_pid = fork_execvp(argv[0], argv);
-    if (mdns_pid > 0)
+    int pid = fork_execvp(argv[0], argv);
+    if (pid >= 0)
+    {
+        mdns_pid = pid;
         return 0;
+    }
     else
         warn("Calling %s failed !", argv[0]);
 
     argv[0] = "mDNSPublish";
-    mdns_pid = fork_execvp(argv[0], argv);
-    if (mdns_pid > 0)
+    pid = fork_execvp(argv[0], argv);
+    if (pid >= 0)
+    {
+        mdns_pid = pid;
         return 0;
+    }
     else
         warn("Calling %s failed !", argv[0]);
     
@@ -117,9 +123,12 @@ static int mdns_external_dns_sd_register(char *apname, int port) {
     char *argv[] = {"dns-sd", "-R", apname, "_raop._tcp", ".",
                         mdns_port, MDNS_RECORD, NULL};
 
-    mdns_pid = fork_execvp(argv[0], argv);
-    if (mdns_pid > 0)
+    int pid = fork_execvp(argv[0], argv);
+    if (pid >= 0)
+    {
+        mdns_pid = pid;
         return 0;
+    }
     else
         warn("Calling %s failed !", argv[0]);
 
@@ -133,11 +142,13 @@ static void kill_mdns_child(void) {
 }
 
 mdns_backend mdns_external_avahi = {
+    .name = "external-avahi",
     .mdns_register = mdns_external_avahi_register,
     .mdns_unregister = kill_mdns_child
 };
 
 mdns_backend mdns_external_dns_sd = {
+    .name = "external-dns-sd",
     .mdns_register = mdns_external_dns_sd_register,
     .mdns_unregister = kill_mdns_child
 };
