@@ -10,6 +10,12 @@ getopt_long.c, getopt_long.h:
     PostgreSQL Global Development Group
     see getopt_long.[ch] for full license text
 
+tinysvcmdns.c, tinysvcmdns.h:
+    Copyright (C) 2011 Darell Tan
+    All rights reserved.
+    see tinysvcmdns.[ch] for full license text
+
+
 Shairport:
     Copyright (c) 2011-2013 James Laird <jhl@mafipulation.org>
 
