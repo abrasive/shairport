@@ -35,6 +35,7 @@ DAEMON_ARGS="--daemon --pidfile $PIDFILE --log $LOGFILE"
 [ -z "$ON_START" ]    || DAEMON_ARGS="$DAEMON_ARGS --on-start \"$ON_START\""
 [ -z "$ON_STOP" ]     || DAEMON_ARGS="$DAEMON_ARGS --on-stop \"$ON_STOP\""
 [ -z "$OUTPUT" ]      || DAEMON_ARGS="$DAEMON_ARGS --output $OUTPUT"
+[ -z "$MDNS" ]        || DAEMON_ARGS="$DAEMON_ARGS --mdns $MDNS"
 [ -z "$OUTPUT_OPTS" ] || DAEMON_ARGS="$DAEMON_ARGS -- $OUTPUT_OPTS"
 
 # Exit if the package is not installed

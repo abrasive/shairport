@@ -93,15 +93,20 @@ void usage(char *progname) {
     printf("                        written to stdout, unless a pidfile is used.\n");
     printf("    -P, --pidfile=FILE  write daemon's pid to FILE on startup.\n");
     printf("                        Has no effect if -d is not specified\n");
-    printf("    -l, --log FILE      redirect shairport's standard output to FILE\n");
-    printf("                        If --errror is not specified, it also redirects\n");
+    printf("    -l, --log=FILE      redirect shairport's standard output to FILE\n");
+    printf("                        If --error is not specified, it also redirects\n");
     printf("                        error output to FILE\n");
-    printf("    -e, --error FILE    redirect shairport's standard error output to FILE\n");
+    printf("    -e, --error=FILE    redirect shairport's standard error output to FILE\n");
     printf("    -B, --on-start=COMMAND  run a shell command when playback begins\n");
     printf("    -E, --on-stop=COMMAND   run a shell command when playback ends\n");
 
     printf("    -o, --output=BACKEND    select audio output method\n");
+    printf("    -m, --mdns=BACKEND      force the use of BACKEND to advertize the service\n");
+    printf("                            if no mdns provider is specified,\n");
+    printf("                            shairport tries them all until one works.\n");
 
+    printf("\n");
+    mdns_ls_backends();
     printf("\n");
     audio_ls_outputs();
 }
@@ -111,7 +116,7 @@ int parse_options(int argc, char **argv) {
     setenv("POSIXLY_CORRECT", "", 1);
 
     static struct option long_options[] = {
-        {"help",    no_argument,        NULL, 'h'},
+        {"help",    no_argument,        NULL, 'h'}, 
         {"daemon",  no_argument,        NULL, 'd'},
         {"pidfile", required_argument,  NULL, 'P'},
         {"log",     required_argument,  NULL, 'l'},
@@ -121,12 +126,13 @@ int parse_options(int argc, char **argv) {
         {"output",  required_argument,  NULL, 'o'},
         {"on-start",required_argument,  NULL, 'B'},
         {"on-stop", required_argument,  NULL, 'E'},
+        {"mdns",    required_argument,  NULL, 'm'},
         {NULL, 0, NULL, 0}
     };
 
     int opt;
     while ((opt = getopt_long(argc, argv,
-                              "+hdvP:l:e:p:a:o:b:B:E:",
+                              "+hdvP:l:e:p:a:o:b:B:E:m:",
                               long_options, NULL)) > 0) {
         switch (opt) {
             default:
@@ -165,6 +171,9 @@ int parse_options(int argc, char **argv) {
                 break;
             case 'e':
                 config.errfile = optarg;
+                break;
+            case 'm':
+                config.mdns_name = optarg;
                 break;
         }
     }

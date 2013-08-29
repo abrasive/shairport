@@ -47,8 +47,6 @@ static mdns_backend *mdns_backends[] = {
     NULL
 };
 
-static mdns_backend *backend = NULL;
-
 void mdns_register(void) {
     char *mdns_apname = malloc(strlen(config.apname) + 14);
     char *p = mdns_apname;
@@ -60,26 +58,54 @@ void mdns_register(void) {
     *p++ = '@';
     strcpy(p, config.apname);
 
-    backend = NULL;
-    mdns_backend **s = NULL;
-    for (s = mdns_backends; *s; s++)
+    mdns_backend **b = NULL;
+    
+    if (config.mdns_name != NULL)
     {
-        int error = (*s)->mdns_register(mdns_apname, config.port);
-        if (error == 0)
+        for (b = mdns_backends; *b; b++)
         {
-            backend = *s;
+            if (strcmp((*b)->name, config.mdns_name) != 0) // Not the one we are looking for
+                continue;
+            int error = (*b)->mdns_register(mdns_apname, config.port);
+            if (error >= 0)
+            {
+                config.mdns = *b;
+            }
             break;
+        }
+
+        if (*b == NULL)
+            warn("%s mDNS backend not found");
+    }
+    else
+    {
+        for (b = mdns_backends; *b; b++)
+        {
+            int error = (*b)->mdns_register(mdns_apname, config.port);
+            if (error >= 0)
+            {
+                config.mdns = *b;
+                break;
+            }
         }
     }
 
-    if (backend == NULL)
+    if (config.mdns == NULL)
         die("Could not establish mDNS advertisement!");
 }
 
 void mdns_unregister(void) {
-    if (backend) {
-        backend->mdns_unregister();
+    if (config.mdns) {
+        config.mdns->mdns_unregister();
     }
 }
 
+void mdns_ls_backends(void) {
+    mdns_backend **b = NULL;
+    printf("Available mDNS backends: \n");
+    for (b = mdns_backends; *b; b++)
+    {
+        printf("    %s\n", (*b)->name);
+    }
+}
 
