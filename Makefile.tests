@@ -2,3 +2,9 @@ test_getopt:
 	echo '#include <getopt.h>' > .test_getopt.c
 	$(CC) $(CFLAGS) -c .test_getopt.c
 	rm .test_getopt.c .test_getopt.o
+
+test_dns_sd:
+	echo '#include <dns_sd.h>' > .test_dns_sd.c
+	$(CC) $(CFLAGS) -c .test_dns_sd.c
+	rm .test_dns_sd.c .test_dns_sd.o
+

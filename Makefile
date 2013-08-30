@@ -31,6 +31,10 @@ ifdef CONFIG_AVAHI
 SRCS += mdns_avahi.c
 endif
 
+ifdef CONFIG_HAVE_DNS_SD_H
+SRCS += mdns_dns_sd.c
+endif
+
 ifndef CONFIG_HAVE_GETOPT_H
 SRCS += getopt_long.c
 endif

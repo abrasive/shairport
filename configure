@@ -8,12 +8,20 @@ echo "// automatically generated file" > config.h
 
 LDFLAGS="${LDFLAGS} -lm -lpthread"
 
-if make -f Makefile.tests test_getopt > /dev/null;  then
+if make -f Makefile.tests test_getopt > /dev/null 2>&1;  then
     echo "getopt.h found"
     echo "#define CONFIG_HAVE_GETOPT_H" >> config.h
     echo "CONFIG_HAVE_GETOPT_H=yes" >> config.mk
 else
     echo "getopt.h not found (or compiler broken), using our own getopt_long."
+fi
+
+if make -f Makefile.tests test_dns_sd > /dev/null 2>&1;  then
+    echo "dns_sd.h found"
+    echo "#define CONFIG_HAVE_DNS_SD_H" >> config.h
+    echo "CONFIG_HAVE_DNS_SD_H=yes" >> config.mk
+else
+    echo "dns_sd.h not found"
 fi
 
 # check for and use pkg-config package $2 with CONFIG_ var $3
