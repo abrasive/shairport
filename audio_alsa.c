@@ -32,6 +32,7 @@
 #include <alsa/asoundlib.h>
 #include "common.h"
 #include "audio.h"
+#include "config.h"
 
 static void help(void);
 static int init(int argc, char **argv);
@@ -193,3 +194,10 @@ static void volume(double vol) {
     if(snd_mixer_selem_set_playback_volume_all(alsa_mix_elem, alsa_volume) != 0)
         die ("Failed to set playback volume");
 }
+
+#ifdef CONFIG_DYNAMIC_PLUGINS
+audio_output *plugin_get_audio(void) {
+    return &audio_alsa;
+};
+#endif
+

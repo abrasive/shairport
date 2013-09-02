@@ -1,21 +1,5 @@
 #!/bin/sh
 
-echo Configuring Shairport
-
-rm -f config.mk config.h
-
-echo "// automatically generated file" > config.h
-
-LDFLAGS="${LDFLAGS} -lm -lpthread"
-
-if make -f Makefile.tests test_getopt > /dev/null;  then
-    echo "getopt.h found"
-    echo "#define CONFIG_HAVE_GETOPT_H" >> config.h
-    echo "CONFIG_HAVE_GETOPT_H=yes" >> config.mk
-else
-    echo "getopt.h not found (or compiler broken), using our own getopt_long."
-fi
-
 # check for and use pkg-config package $2 with CONFIG_ var $3
 do_pkg_config()
 {
@@ -37,17 +21,121 @@ do_pkg_config()
     fi
 }
 
+do_export_variable()
+{
+    if [ "$2" ]; then
+        echo "$1=$(eval echo $2)" >> config.mk
+    else
+        echo "$1=$(eval echo \$$1)" >> config.mk
+    fi
+
+    if [ "$3" ]; then
+        echo "#define $1 \"$(eval echo $3)\"" >> config.h
+    else
+        echo "#define $1 \"$(eval echo \$$1)\"" >> config.h
+    fi
+}
+
+do_test()
+{
+    if make -f Makefile.tests $1 1> /dev/null 2> /dev/null;  then
+        echo $2
+        if [ "$4" ]; then
+            echo "#define $4" >> config.h
+            echo "$4=yes" >> config.mk
+        fi
+    else
+        echo $3
+        if [ ! "$4" ]; then
+            echo "Cannot continue"
+            rm -f config.mk config.h
+            exit 1
+        fi
+    fi
+}
+
+usage()
+{
+    cat >&2 <<EOF
+Usage : ./configure [-p prefix] [-s]
+Options:
+    -p prefix   set the prefix where shairport should be installed
+    -s          disable dynamic plugins
+EOF
+
+}
+
+
+while getopts ":p:sh" opt; do
+    case $opt in
+        p)
+            PREFIX=$OPTARG
+            ;;
+        s)
+            CONFIG_DYNAMIC_PLUGIN=no
+            ;;
+        h)
+            usage
+            exit 0
+            ;;
+
+        \?)
+            echo "Invalid option: -$OPTARG" >&2
+            usage
+            exit 1
+            ;;
+        :)
+            echo "Option -$OPTARG requires an argument." >&2
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+[ "${PREFIX}" ] || PREFIX=/usr/local
+[ "${CONFIG_DYNAMIC_PLUGIN}" == "no" ] || CONFIG_DYNAMIC_PLUGIN=yes
+
+PLUGINS_PATH=${PREFIX}/lib/shairport/plugins
+
+LDFLAGS="${LDFLAGS} -lm -lpthread"
+
+echo Configuring Shairport
+
+rm -f config.mk config.h
+
+echo "// automatically generated file" > config.h
+
+PLATFORM=$(uname -s | tr '[:upper:]' '[:lower:]')
+[ "${PREFIX}" ] || PREFIX=/usr/local
+PREFIX_PLUGINS=${PREFIX}/lib/shairport/plugins
+DYNAMIC_PLUGIN_EXT=.so
+STATIC_PLUGIN_EXT=.a
+
+LDFLAGS="${LDFLAGS} -lm -lpthread"
+
 do_pkg_config OpenSSL       openssl
 do_pkg_config libao         ao              CONFIG_AO
 do_pkg_config PulseAudio    libpulse-simple CONFIG_PULSE
 do_pkg_config ALSA          alsa            CONFIG_ALSA
 do_pkg_config Avahi\ client avahi-client    CONFIG_AVAHI
 
+do_test test_getopt  "getopt.h found" "getopt.h not found (or compiler broken), using our own getopt_long." CONFIG_HAVE_GETOPT_H
+
+[ "${CONFIG_DYNAMIC_PLUGIN}" == "no" ] || \
+    do_export_variable CONFIG_DYNAMIC_PLUGINS yes ""
+
+do_export_variable PLATFORM
+do_export_variable PREFIX
+do_export_variable PREFIX_PLUGINS
+do_export_variable DYNAMIC_PLUGIN_EXT
+do_export_variable STATIC_PLUGIN_EXT
 
 echo "CFLAGS+=${CFLAGS}" >> config.mk
 echo "LDFLAGS+=${LDFLAGS}" >> config.mk
 
 echo CFLAGS: ${CFLAGS}
 echo LDFLAGS: ${LDFLAGS}
+echo PREFIX: ${PREFIX}
+echo Dynamic Plugins: ${CONFIG_DYNAMIC_PLUGIN}
 
 echo "Configure successful. You may now build with 'make'"

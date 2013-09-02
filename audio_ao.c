@@ -31,6 +31,7 @@
 #include <ao/ao.h>
 #include "common.h"
 #include "audio.h"
+#include "config.h"
 
 ao_device *dev = NULL;
 
@@ -127,3 +128,10 @@ audio_output audio_ao = {
     .play = &play,
     .volume = NULL
 };
+
+#ifdef CONFIG_DYNAMIC_PLUGINS
+audio_output *plugin_get_audio(void) {
+    return &audio_ao;
+};
+#endif
+
