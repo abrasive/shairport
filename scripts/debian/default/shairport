@@ -28,6 +28,11 @@
 #OUTPUT=ao
 #OUTPUT_OPTS=
 
+# Force the mDNS backend
+# By default, shairport will try all backends until one works.
+# Check 'shairport -h' for details
+# MDNS=avahi
+
 # Change how many frames re required to start playing
 #BUFFER_FILL=220
 

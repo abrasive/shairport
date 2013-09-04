@@ -25,28 +25,36 @@
  */
 
 
-#include <signal.h>
 #include <memory.h>
 #include <string.h>
-#include <unistd.h>
 #include "config.h"
 #include "common.h"
 #include "mdns.h"
+
 #ifdef CONFIG_AVAHI
-#include "avahi.h"
+extern mdns_backend mdns_avahi;
 #endif
 
-int mdns_pid = 0;
+extern mdns_backend mdns_external_avahi;
+extern mdns_backend mdns_external_dns_sd;
+extern mdns_backend mdns_tinysvcmdns;
 
-void mdns_unregister(void) {
-#ifdef CONFIG_AVAHI
-    avahi_unregister();
+#ifdef CONFIG_HAVE_DNS_SD_H
+extern mdns_backend mdns_dns_sd;
 #endif
 
-    if (mdns_pid)
-        kill(mdns_pid, SIGTERM);
-    mdns_pid = 0;
-}
+static mdns_backend *mdns_backends[] = {
+#ifdef CONFIG_AVAHI
+    &mdns_avahi,
+#endif
+#ifdef CONFIG_HAVE_DNS_SD_H
+    &mdns_dns_sd,
+#endif
+    &mdns_external_avahi,
+    &mdns_external_dns_sd,
+    &mdns_tinysvcmdns,
+    NULL
+};
 
 void mdns_register(void) {
     char *mdns_apname = malloc(strlen(config.apname) + 14);
@@ -59,31 +67,54 @@ void mdns_register(void) {
     *p++ = '@';
     strcpy(p, config.apname);
 
-#ifdef CONFIG_AVAHI
-    if (avahi_register(mdns_apname))
-        return;
-    warn("avahi_register failed, falling back to external programs");
-#endif
+    mdns_backend **b = NULL;
+    
+    if (config.mdns_name != NULL)
+    {
+        for (b = mdns_backends; *b; b++)
+        {
+            if (strcmp((*b)->name, config.mdns_name) != 0) // Not the one we are looking for
+                continue;
+            int error = (*b)->mdns_register(mdns_apname, config.port);
+            if (error >= 0)
+            {
+                config.mdns = *b;
+            }
+            break;
+        }
 
-    if ((mdns_pid = fork()))
-        return;
+        if (*b == NULL)
+            warn("%s mDNS backend not found");
+    }
+    else
+    {
+        for (b = mdns_backends; *b; b++)
+        {
+            int error = (*b)->mdns_register(mdns_apname, config.port);
+            if (error >= 0)
+            {
+                config.mdns = *b;
+                break;
+            }
+        }
+    }
 
-    char mdns_port[6];
-    sprintf(mdns_port, "%d", config.port);
-
-    char *argv[] = {
-        NULL, mdns_apname, "_raop._tcp", mdns_port, MDNS_RECORD, NULL
-    };
-
-    argv[0] = "avahi-publish-service";
-    execvp(argv[0], argv);
-
-    argv[0] = "mDNSPublish";
-    execvp(argv[0], argv);
-
-    char *mac_argv[] = {"dns-sd", "-R", mdns_apname, "_raop._tcp", ".",
-                        mdns_port, MDNS_RECORD, NULL};
-    execvp(mac_argv[0], mac_argv);
-
-    die("Could not establish mDNS advertisement!");
+    if (config.mdns == NULL)
+        die("Could not establish mDNS advertisement!");
 }
+
+void mdns_unregister(void) {
+    if (config.mdns) {
+        config.mdns->mdns_unregister();
+    }
+}
+
+void mdns_ls_backends(void) {
+    mdns_backend **b = NULL;
+    printf("Available mDNS backends: \n");
+    for (b = mdns_backends; *b; b++)
+    {
+        printf("    %s\n", (*b)->name);
+    }
+}
+
