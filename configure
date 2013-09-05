@@ -43,6 +43,12 @@ do_pkg_config PulseAudio    libpulse-simple CONFIG_PULSE
 do_pkg_config ALSA          alsa            CONFIG_ALSA
 do_pkg_config Avahi\ client avahi-client    CONFIG_AVAHI
 
+if [ `uname` == 'OpenBSD' ]; then
+	echo "OpenBSD machine, use sndio"
+	echo "#define CONFIG_SNDIO" >> config.h
+	echo "CONFIG_SNDIO=yes" >> config.mk
+	LDFLAGS="${LDFLAGS} -lsndio"
+fi
 
 echo "CFLAGS+=${CFLAGS}" >> config.mk
 echo "LDFLAGS+=${LDFLAGS}" >> config.mk
