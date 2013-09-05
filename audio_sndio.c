@@ -26,7 +26,7 @@ static struct sio_par par;
 static int init(int argc, char **argv) {
 	sio = sio_open(SIO_DEVANY, SIO_PLAY, 0);
 	if (!sio)
-		die("sndio: cannoct connect to sound server");
+		die("sndio: cannot connect to sound server");
 
 	sio_initpar(&par);
 
