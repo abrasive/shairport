@@ -25,9 +25,9 @@ Thanks to wtbw.
 
 Contributors
 ------------
-* [James Laird](mailto:jhl@mafipulation.org), founder and initial code
+* [James Laird](mailto:jhl@mafipulation.org), maintainer, founder and initial code
 * [David Hammerton](http://craz.net/), ALAC decoder
-* [Albert Zeyer](http://www.az2000.de), maintainer
+* [Albert Zeyer](http://www.az2000.de), old maintainer
 * [Preston Marshall](mailto:preston@synergyeoc.com)
 * [Mads Mætzke Tandrup](mailto:mads@tandrup.org)
 * [Martin Spasov](mailto:mspasov@gmail.com)
