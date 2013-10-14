@@ -38,9 +38,17 @@ endif
 # default target
 all: shairport
 
-install: shairport
+install: install-exe install-init
+install-exe: shairport
 	install -m 755 -d $(PREFIX)/bin
 	install -m 755 shairport $(PREFIX)/bin/shairport
+install-init: install-exe
+	if [[ "$(uname)" = "Linux" ]]; then\
+		if [[ "$(shell cat /proc/version)" = *Gentoo* ]]; then\
+			cp scripts/gentoo/openrc/init.d.sh /etc/init.d/shairport\
+			cp scripts/gentoo/openrc/conf.d.cfg /etc/conf.d/shairport\
+		fi;\
+	fi
 
 shairport: $(SRCS) config.h config.mk
 	$(CC) $(CFLAGS) $(SRCS) $(LDFLAGS) -o shairport
