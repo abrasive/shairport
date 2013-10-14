@@ -53,7 +53,7 @@ void die(char *format, ...) {
     va_end(args);
     
     fprintf(stderr, "\n");
-    shairport_shutdown();
+    shairport_shutdown(1);
 }
 
 void warn(char *format, ...) {

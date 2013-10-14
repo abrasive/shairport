@@ -41,7 +41,8 @@
 static void log_setup();
 
 static int shutting_down = 0;
-void shairport_shutdown(void) {
+
+void shairport_shutdown(int retval) {
     if (shutting_down)
         return;
     shutting_down = 1;
@@ -52,13 +53,13 @@ void shairport_shutdown(void) {
         config.output->deinit();
     daemon_exit(); // This does nothing if not in daemon mode
 
-    exit(0);
+    exit(retval);
 }
 
 static void sig_ignore(int foo, siginfo_t *bar, void *baz) {
 }
 static void sig_shutdown(int foo, siginfo_t *bar, void *baz) {
-    shairport_shutdown();
+    shairport_shutdown(0);
 }
 
 static void sig_child(int foo, siginfo_t *bar, void *baz) {
@@ -282,6 +283,6 @@ int main(int argc, char **argv) {
     rtsp_listen_loop();
 
     // should not.
-    shairport_shutdown();
+    shairport_shutdown(1);
     return 1;
 }
