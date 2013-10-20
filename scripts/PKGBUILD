@@ -8,6 +8,8 @@ arch=('i686' 'x86_64' 'armv6h')
 license=('public-domain')
 groups=('daemons')
 depends=('glibc' 'pkgconfig' 'libao' 'openssl')
+provides=('shairport')
+conflicts=('shairport')
 source=(git://github.com/abrasive/shairport.git#branch=1.0-dev)
 md5sums=('SKIP')
 
