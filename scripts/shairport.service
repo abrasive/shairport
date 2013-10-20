@@ -5,7 +5,8 @@ Requires=avahi-daemon.service
 After=avahi-daemon.service
 
 [Service]
-ExecStart=/usr/bin/shairport
+EnvironmentFile=/etc/conf.d/shairport
+ExecStart=/usr/bin/shairport $SHAIRPORT_ARGS
 Restart=always
 
 [Install]
