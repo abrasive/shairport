@@ -64,9 +64,9 @@ do_pkg_config ALSA          alsa            CONFIG_ALSA
 do_pkg_config Avahi\ client avahi-client    CONFIG_AVAHI
 
 if [ `uname` = 'OpenBSD' ]; then
-	echo "OpenBSD machine, use sndio"
+    echo "OpenBSD machine, use sndio"
     export_config CONFIG_SNDIO
-	LDFLAGS="${LDFLAGS} -lsndio"
+    LDFLAGS="${LDFLAGS} -lsndio"
 fi
 
 check_header  getopt.h      CONFIG_HAVE_GETOPT_H

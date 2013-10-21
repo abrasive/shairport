@@ -6,7 +6,7 @@
  * tinysvcmdns - a tiny MDNS implementation for publishing services
  * Copyright (C) 2011 Darell Tan
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -215,7 +215,7 @@ static uint8_t *copy_label(uint8_t *pkt_buf, size_t pkt_len, size_t off) {
 
         if (off > pkt_len)
                 return NULL;
-        
+
         len = pkt_buf[off] + 1;
         if (off + len > pkt_len) {
                 DEBUG_PRINTF("label length exceeds packet buffer\n");
@@ -295,7 +295,7 @@ void rr_entry_destroy(struct rr_entry *rr) {
         // check rr_type and free data elements
         switch (rr->type) {
                 case RR_PTR:
-                        if (rr->data.PTR.name) 
+                        if (rr->data.PTR.name)
                                 free(rr->data.PTR.name);
                         // don't free entry
                         break;
@@ -304,7 +304,7 @@ void rr_entry_destroy(struct rr_entry *rr) {
                         txt_rec = &rr->data.TXT;
                         while (txt_rec) {
                                 struct rr_data_txt *next = txt_rec->next;
-                                if (txt_rec->txt) 
+                                if (txt_rec->txt)
                                         free(txt_rec->txt);
 
                                 // only free() if it wasn't part of the struct
@@ -501,7 +501,7 @@ struct rr_group *rr_group_find(struct rr_group* g, uint8_t *name) {
 struct rr_entry *rr_entry_find(struct rr_list *rr_list, uint8_t *name, uint16_t type) {
         struct rr_list *rr = rr_list;
         for (; rr; rr = rr->next) {
-                if (rr->e->type == type && cmp_nlabel(rr->e->name, name) == 0) 
+                if (rr->e->type == type && cmp_nlabel(rr->e->name, name) == 0)
                         return rr->e;
         }
         return NULL;
@@ -551,14 +551,14 @@ uint8_t *mdns_write_u32(uint8_t *ptr, const uint32_t v) {
 }
 
 uint16_t mdns_read_u16(const uint8_t *ptr) {
-        return  ((ptr[0] & 0xFF) << 8) | 
+        return  ((ptr[0] & 0xFF) << 8) |
                         ((ptr[1] & 0xFF) << 0);
 }
 
 uint32_t mdns_read_u32(const uint8_t *ptr) {
-        return  ((ptr[0] & 0xFF) << 24) | 
-                        ((ptr[1] & 0xFF) << 16) | 
-                        ((ptr[2] & 0xFF) <<  8) | 
+        return  ((ptr[0] & 0xFF) << 24) |
+                        ((ptr[1] & 0xFF) << 16) |
+                        ((ptr[2] & 0xFF) <<  8) |
                         ((ptr[3] & 0xFF) <<  0);
 }
 
@@ -600,15 +600,15 @@ void mdns_pkt_destroy(struct mdns_pkt *p) {
 
 // parse the MDNS questions section
 // stores the parsed data in the given mdns_pkt struct
-static size_t mdns_parse_qn(uint8_t *pkt_buf, size_t pkt_len, size_t off, 
+static size_t mdns_parse_qn(uint8_t *pkt_buf, size_t pkt_len, size_t off,
                 struct mdns_pkt *pkt) {
         const uint8_t *p = pkt_buf + off;
         struct rr_entry *rr;
         uint8_t *name;
-   
+
         assert(pkt != NULL);
 
-        rr = malloc(sizeof(struct rr_entry)); 
+        rr = malloc(sizeof(struct rr_entry));
         memset(rr, 0, sizeof(struct rr_entry));
 
         name = uncompress_nlabel(pkt_buf, pkt_len, off);
@@ -623,13 +623,13 @@ static size_t mdns_parse_qn(uint8_t *pkt_buf, size_t pkt_len, size_t off,
         p += sizeof(uint16_t);
 
         rr_list_append(&pkt->rr_qn, rr);
-        
+
         return p - (pkt_buf + off);
 }
 
 // parse the MDNS RR section
 // stores the parsed data in the given mdns_pkt struct
-static size_t mdns_parse_rr(uint8_t *pkt_buf, size_t pkt_len, size_t off, 
+static size_t mdns_parse_rr(uint8_t *pkt_buf, size_t pkt_len, size_t off,
                 struct mdns_pkt *pkt) {
         const uint8_t *p = pkt_buf + off;
         const uint8_t *e = pkt_buf + pkt_len;
@@ -644,7 +644,7 @@ static size_t mdns_parse_rr(uint8_t *pkt_buf, size_t pkt_len, size_t off,
         if (off > pkt_len)
                 return 0;
 
-        rr = malloc(sizeof(struct rr_entry)); 
+        rr = malloc(sizeof(struct rr_entry));
         memset(rr, 0, sizeof(struct rr_entry));
 
         name = uncompress_nlabel(pkt_buf, pkt_len, off);
@@ -693,7 +693,7 @@ static size_t mdns_parse_rr(uint8_t *pkt_buf, size_t pkt_len, size_t off,
                         }
                         rr->data.AAAA.addr = malloc(sizeof(struct in6_addr));
                         int i;
-                        for (i = 0; i < sizeof(struct in6_addr); i++) 
+                        for (i = 0; i < sizeof(struct in6_addr); i++)
                                 rr->data.AAAA.addr->s6_addr[i] = p[i];
                         p += sizeof(struct in6_addr);
                         break;
@@ -727,7 +727,7 @@ static size_t mdns_parse_rr(uint8_t *pkt_buf, size_t pkt_len, size_t off,
                                 }
                                 p += txt_rec->txt[0] + 1;
 
-                                if (p >= e) 
+                                if (p >= e)
                                         break;
 
                                 // allocate another record
@@ -749,7 +749,7 @@ static size_t mdns_parse_rr(uint8_t *pkt_buf, size_t pkt_len, size_t off,
         }
 
         rr_list_append(&pkt->rr_ans, rr);
-        
+
         return p - (pkt_buf + off);
 }
 
@@ -760,7 +760,7 @@ struct mdns_pkt *mdns_parse_pkt(uint8_t *pkt_buf, size_t pkt_len) {
         struct mdns_pkt *pkt;
         int i;
 
-        if (pkt_len < 12) 
+        if (pkt_len < 12)
                 return NULL;
 
         MALLOC_ZERO_STRUCT(pkt, mdns_pkt);
@@ -806,7 +806,7 @@ struct mdns_pkt *mdns_parse_pkt(uint8_t *pkt_buf, size_t pkt_len) {
 
 // encodes a name (label) into a packet using the name compression scheme
 // encoded names will be added to the compression list for subsequent use
-static size_t mdns_encode_name(uint8_t *pkt_buf, size_t pkt_len, size_t off, 
+static size_t mdns_encode_name(uint8_t *pkt_buf, size_t pkt_len, size_t off,
                 const uint8_t *name, struct name_comp *comp) {
         struct name_comp *c, *c_tail = NULL;
         uint8_t *p = pkt_buf + off;
@@ -851,7 +851,7 @@ static size_t mdns_encode_name(uint8_t *pkt_buf, size_t pkt_len, size_t off,
 
 // encodes an RR entry at the given offset
 // returns the size of the entire RR entry
-static size_t mdns_encode_rr(uint8_t *pkt_buf, size_t pkt_len, size_t off, 
+static size_t mdns_encode_rr(uint8_t *pkt_buf, size_t pkt_len, size_t off,
                 struct rr_entry *rr, struct name_comp *comp) {
         uint8_t *p = pkt_buf + off, *p_data;
         size_t l;
@@ -874,7 +874,7 @@ static size_t mdns_encode_rr(uint8_t *pkt_buf, size_t pkt_len, size_t off,
 
         // TTL
         p = mdns_write_u32(p, rr->ttl);
-        
+
         // data length (filled in later)
         p += sizeof(uint16_t);
 
@@ -893,8 +893,8 @@ static size_t mdns_encode_rr(uint8_t *pkt_buf, size_t pkt_len, size_t off,
                         break;
 
                 case RR_PTR:
-                        label = rr->data.PTR.name ? 
-                                        rr->data.PTR.name : 
+                        label = rr->data.PTR.name ?
+                                        rr->data.PTR.name :
                                         rr->data.PTR.entry->name;
                         p += mdns_encode_name(pkt_buf, pkt_len, p - pkt_buf, label, comp);
                         break;
@@ -910,24 +910,24 @@ static size_t mdns_encode_rr(uint8_t *pkt_buf, size_t pkt_len, size_t off,
 
                 case RR_SRV:
                         p = mdns_write_u16(p, rr->data.SRV.priority);
-                        
+
                         p = mdns_write_u16(p, rr->data.SRV.weight);
 
                         p = mdns_write_u16(p, rr->data.SRV.port);
 
-                        p += mdns_encode_name(pkt_buf, pkt_len, p - pkt_buf, 
+                        p += mdns_encode_name(pkt_buf, pkt_len, p - pkt_buf,
                                         rr->data.SRV.target, comp);
                         break;
 
                 case RR_NSEC:
-                        p += mdns_encode_name(pkt_buf, pkt_len, p - pkt_buf, 
+                        p += mdns_encode_name(pkt_buf, pkt_len, p - pkt_buf,
                                         rr->name, comp);
 
                         *p++ = 0;       // bitmap window/block number
 
                         *p++ = sizeof(rr->data.NSEC.bitmap);    // bitmap length
 
-                        for (i = 0; i < sizeof(rr->data.NSEC.bitmap); i++) 
+                        for (i = 0; i < sizeof(rr->data.NSEC.bitmap); i++)
                                 *p++ = rr->data.NSEC.bitmap[i];
 
                         break;
@@ -974,7 +974,7 @@ size_t mdns_encode_pkt(struct mdns_pkt *answer, uint8_t *pkt_buf, size_t pkt_len
 
         // allocate list for name compression
         comp = malloc(sizeof(struct name_comp));
-        if (comp == NULL) 
+        if (comp == NULL)
                 return -1;
         memset(comp, 0, sizeof(struct name_comp));
 
@@ -983,7 +983,7 @@ size_t mdns_encode_pkt(struct mdns_pkt *answer, uint8_t *pkt_buf, size_t pkt_len
         comp->pos = 0;
 
         // skip encoding of qn
-        
+
         struct rr_list *rr_set[] = {
                 answer->rr_ans,
                 answer->rr_auth,
@@ -1184,24 +1184,24 @@ static void add_related_rr(struct mdnsd *svr, struct rr_list *list, struct mdns_
                 switch (ans->type) {
                         case RR_PTR:
                                 // target host A, AAAA records
-                                reply->num_add_rr += populate_answers(svr, &reply->rr_add, 
+                                reply->num_add_rr += populate_answers(svr, &reply->rr_add,
                                                                                 MDNS_RR_GET_PTR_NAME(ans), RR_ANY);
                                 break;
 
                         case RR_SRV:
                                 // target host A, AAAA records
-                                reply->num_add_rr += populate_answers(svr, &reply->rr_add, 
+                                reply->num_add_rr += populate_answers(svr, &reply->rr_add,
                                                                                 ans->data.SRV.target, RR_ANY);
 
                                 // perhaps TXT records of the same name?
                                 // if we use RR_ANY, we risk pulling in the same RR_SRV
-                                reply->num_add_rr += populate_answers(svr, &reply->rr_add, 
+                                reply->num_add_rr += populate_answers(svr, &reply->rr_add,
                                                                                 ans->name, RR_TXT);
                                 break;
 
                         case RR_A:
                         case RR_AAAA:
-                                reply->num_add_rr += populate_answers(svr, &reply->rr_add, 
+                                reply->num_add_rr += populate_answers(svr, &reply->rr_add,
                                                                                 ans->name, RR_NSEC);
                                 break;
 
@@ -1212,14 +1212,14 @@ static void add_related_rr(struct mdnsd *svr, struct rr_list *list, struct mdns_
         }
 }
 
-// creates an announce packet given the type name PTR 
+// creates an announce packet given the type name PTR
 static void announce_srv(struct mdnsd *svr, struct mdns_pkt *reply, uint8_t *name) {
         mdns_init_reply(reply, 0);
 
         reply->num_ans_rr += populate_answers(svr, &reply->rr_ans, name, RR_PTR);
-        
+
         // remember to add the services dns-sd PTR too
-        reply->num_ans_rr += populate_answers(svr, &reply->rr_ans, 
+        reply->num_ans_rr += populate_answers(svr, &reply->rr_ans,
                                                                 SERVICES_DNS_SD_NLABEL, RR_PTR);
 
         // see if we can match additional records for answers
@@ -1237,11 +1237,11 @@ static int process_mdns_pkt(struct mdnsd *svr, struct mdns_pkt *pkt, struct mdns
         assert(pkt != NULL);
 
         // is it standard query?
-        if ((pkt->flags & MDNS_FLAG_RESP) == 0 && 
+        if ((pkt->flags & MDNS_FLAG_RESP) == 0 &&
                         MDNS_FLAG_GET_OPCODE(pkt->flags) == 0) {
                 mdns_init_reply(reply, pkt->id);
 
-                DEBUG_PRINTF("flags = %04x, qn = %d, ans = %d, add = %d\n", 
+                DEBUG_PRINTF("flags = %04x, qn = %d, ans = %d, add = %d\n",
                                                 pkt->flags,
                                                 pkt->num_qn,
                                                 pkt->num_ans_rr,
@@ -1414,7 +1414,7 @@ static void main_loop(struct mdnsd *svr) {
                         struct sockaddr_in fromaddr;
                         socklen_t sockaddr_size = sizeof(struct sockaddr_in);
 
-                        ssize_t recvsize = recvfrom(svr->sockfd, pkt_buffer, PACKET_SIZE, 0, 
+                        ssize_t recvsize = recvfrom(svr->sockfd, pkt_buffer, PACKET_SIZE, 0,
                                 (struct sockaddr *) &fromaddr, &sockaddr_size);
                         if (recvsize < 0) {
                                 log_message(LOG_ERR, "recv(): %m");
@@ -1440,7 +1440,7 @@ static void main_loop(struct mdnsd *svr) {
 
                         // extract from head of list
                         pthread_mutex_lock(&svr->data_lock);
-                        if (svr->announce) 
+                        if (svr->announce)
                                 ann_e = rr_list_remove(&svr->announce, svr->announce->e);
                         pthread_mutex_unlock(&svr->data_lock);
 
@@ -1539,10 +1539,10 @@ void mdnsd_add_rr(struct mdnsd *svr, struct rr_entry *rr) {
         pthread_mutex_unlock(&svr->data_lock);
 }
 
-struct mdns_service *mdnsd_register_svc(struct mdnsd *svr, const char *instance_name, 
+struct mdns_service *mdnsd_register_svc(struct mdnsd *svr, const char *instance_name,
                 const char *type, uint16_t port, const char *hostname, const char *txt[]) {
-        struct rr_entry *txt_e = NULL, 
-                                        *srv_e = NULL, 
+        struct rr_entry *txt_e = NULL,
+                                        *srv_e = NULL,
                                         *ptr_e = NULL,
                                         *bptr_e = NULL;
         uint8_t *target;
@@ -1561,14 +1561,14 @@ struct mdns_service *mdnsd_register_svc(struct mdnsd *svr, const char *instance_
                 rr_list_append(&service->entries, txt_e);
 
                 // add TXTs
-                for (; *txt; txt++) 
+                for (; *txt; txt++)
                         rr_add_txt(txt_e, *txt);
         }
 
         // create SRV record
         assert(hostname || svr->hostname);      // either one as target
-        target = hostname ? 
-                                create_nlabel(hostname) : 
+        target = hostname ?
+                                create_nlabel(hostname) :
                                 dup_nlabel(svr->hostname);
 
         srv_e = rr_create_srv(dup_nlabel(nlabel), port, target);

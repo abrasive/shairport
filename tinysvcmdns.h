@@ -6,7 +6,7 @@
  * tinysvcmdns - a tiny MDNS implementation for publishing services
  * Copyright (C) 2011 Darell Tan
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -224,7 +224,7 @@ void mdnsd_set_hostname_v6(struct mdnsd *svr, const char *hostname, struct in6_a
 void mdnsd_add_rr(struct mdnsd *svr, struct rr_entry *rr);
 
 // registers a service with the MDNS responder instance
-struct mdns_service *mdnsd_register_svc(struct mdnsd *svr, const char *instance_name, 
+struct mdns_service *mdnsd_register_svc(struct mdnsd *svr, const char *instance_name,
                 const char *type, uint16_t port, const char *hostname, const char *txt[]);
 
 // destroys the mdns_service struct returned by mdnsd_register_svc()

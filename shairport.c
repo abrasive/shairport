@@ -116,7 +116,7 @@ int parse_options(int argc, char **argv) {
     setenv("POSIXLY_CORRECT", "", 1);
 
     static struct option long_options[] = {
-        {"help",    no_argument,        NULL, 'h'}, 
+        {"help",    no_argument,        NULL, 'h'},
         {"daemon",  no_argument,        NULL, 'd'},
         {"pidfile", required_argument,  NULL, 'P'},
         {"log",     required_argument,  NULL, 'l'},
