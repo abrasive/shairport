@@ -34,10 +34,11 @@ static DNSServiceRef service;
 static int mdns_dns_sd_register(char *apname, int port) {
     const char *record[] = { MDNS_RECORD, NULL };
     uint16_t length = 0;
+    const char **field;
 
     // Concatenate string contained i record into buf.
 
-    for (const char **field = record; *field; field ++)
+    for (field = record; *field; field ++)
     {
         length += strlen(*field) + 1; // One byte for length each time
     } 
@@ -51,7 +52,7 @@ static int mdns_dns_sd_register(char *apname, int port) {
 
     char *p = buf;
 
-    for (const char **field = record; *field; field ++)
+    for (field = record; *field; field ++)
     {
         char * newp = stpcpy(p + 1, *field);
         *p = newp - p - 1;
