@@ -8,21 +8,34 @@ echo "// automatically generated file" > config.h
 
 LDFLAGS="${LDFLAGS} -lm -lpthread"
 
-if make -f Makefile.tests test_getopt > /dev/null 2>&1;  then
-    echo "getopt.h found"
-    echo "#define CONFIG_HAVE_GETOPT_H" >> config.h
-    echo "CONFIG_HAVE_GETOPT_H=yes" >> config.mk
-else
-    echo "getopt.h not found (or compiler broken), using our own getopt_long."
-fi
+export_config()
+{
+    echo "#define $1" >> config.h
+    echo "$1=yes" >> config.mk
+    let $1=yes
+}
 
-if make -f Makefile.tests test_dns_sd > /dev/null 2>&1;  then
-    echo "dns_sd.h found"
-    echo "#define CONFIG_HAVE_DNS_SD_H" >> config.h
-    echo "CONFIG_HAVE_DNS_SD_H=yes" >> config.mk
-else
-    echo "dns_sd.h not found"
-fi
+# check for header $1 with CONFIG_ var $2
+check_header()
+{
+    echo "#include<$1>" > .header_test.c
+    if gcc -c .header_test.c > /dev/null 2>&1 /dev/null;  then
+        echo "$1 found"
+        if [ "$2" ]; then
+            export_config $2
+        fi
+    else
+        echo "$1 not found"
+        if [ ! "$2" ]; then
+            echo "Required header not found, cannot continue"
+            rm .header_test.c
+            rm -f config.mk config.h
+            exit 1
+        fi
+    fi
+
+    rm -f .header_test.c .header_test.o
+}
 
 # check for and use pkg-config package $2 with CONFIG_ var $3
 do_pkg_config()
@@ -31,8 +44,7 @@ do_pkg_config()
         CFLAGS="${CFLAGS} `pkg-config --cflags $2`"
         LDFLAGS="${LDFLAGS} `pkg-config --libs $2`"
         if [ "$3" ]; then
-            echo "#define $3" >> config.h
-            echo "$3=yes" >> config.mk
+            export_config $3
         fi
         echo "$1 found"
     else
@@ -53,10 +65,17 @@ do_pkg_config Avahi\ client avahi-client    CONFIG_AVAHI
 
 if [ `uname` = 'OpenBSD' ]; then
 	echo "OpenBSD machine, use sndio"
-	echo "#define CONFIG_SNDIO" >> config.h
-	echo "CONFIG_SNDIO=yes" >> config.mk
+    export_config CONFIG_SNDIO
 	LDFLAGS="${LDFLAGS} -lsndio"
 fi
+
+check_header  getopt.h      CONFIG_HAVE_GETOPT_H
+
+# Don't build dns_sd backend if we have avahi
+if [ -z "$CONFIG_AVAHI" ]; then
+    check_header  dns_sd.h      CONFIG_HAVE_DNS_SD_H
+fi
+
 
 echo "CFLAGS+=${CFLAGS}" >> config.mk
 echo "LDFLAGS+=${LDFLAGS}" >> config.mk
