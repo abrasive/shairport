@@ -30,6 +30,7 @@
 #include <net/if.h> 
 #include <ifaddrs.h>
 #include <unistd.h>
+#include <netinet/in.h>
 #include "common.h"
 #include "mdns.h"
 
