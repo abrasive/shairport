@@ -39,13 +39,13 @@ The triangle-in-rectangle AirTunes (now AirPlay) logo will appear in the iTunes 
 
 
 How to install (the debian way)
---------------
-To install the generated binary to /usr/local/bin simply run
+------------------------------
+To install the generated binary to `/usr/local/bin` simply run
 ```
 sudo make install
 ```
 
-If you want to install it to a specific directory you have to define the PREFIX variable on your own:
+If you want to install it to a specific directory you have to define the `PREFIX` variable on your own:
 ```
 make install PREFIX=/path/to/installation/directory
 ```
