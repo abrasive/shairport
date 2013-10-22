@@ -55,7 +55,6 @@ static int init(int argc, char **argv) {
 
     // some platforms apparently require optreset = 1; - which?
     int opt;
-    char *mid;
     while ((opt = getopt(argc, argv, "a:s:n:")) > 0) {
         switch (opt) {
             case 'a':
