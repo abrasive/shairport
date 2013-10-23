@@ -1,4 +1,0 @@
-test_getopt:
-	echo '#include <getopt.h>' > .test_getopt.c
-	$(CC) $(CFLAGS) -c .test_getopt.c
-	rm .test_getopt.c .test_getopt.o

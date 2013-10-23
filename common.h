@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <sys/socket.h>
 #include "audio.h"
+#include "mdns.h"
 
 // struct sockaddr_in6 is bigger than struct sockaddr. derp
 #ifdef AF_INET6
@@ -23,9 +24,10 @@ typedef struct {
     int port;
     char *output_name;
     audio_output *output;
+    char *mdns_name;
+    mdns_backend *mdns;
     int buffer_start_fill;
     int daemonise;
-    int mdns_internal;
     char *cmd_start, *cmd_stop;
     char *pidfile;
     char *logfile;

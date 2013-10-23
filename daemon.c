@@ -89,7 +89,7 @@ void daemon_ready() {
     write(daemon_pipe[1], &ok, 1);
     close(daemon_pipe[1]);
     daemon_pipe[1] = -1;
-}    
+}
 
 void daemon_fail(const char *format, va_list arg) {
     // Are we still initializing ?

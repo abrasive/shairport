@@ -82,7 +82,7 @@ void audio_ls_outputs(void) {
     printf("Available audio outputs:\n");
     for (out=outputs; *out; out++)
         printf("    %s%s\n", (*out)->name, out==outputs ? " (default)" : "");
-    
+
     for (out=outputs; *out; out++) {
         printf("\n");
         printf("Options for output %s:\n", (*out)->name);
