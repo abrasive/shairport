@@ -12,7 +12,7 @@ export_config()
 {
     echo "#define $1" >> config.h
     echo "$1=yes" >> config.mk
-    let $1=yes
+    eval "$1=yes"
 }
 
 # check for header $1 with CONFIG_ var $2
