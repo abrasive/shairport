@@ -1,7 +1,4 @@
 #!/sbin/runscript
-# Copyright 1999-2013 Gentoo Foundation
-# Distributed under the terms of the GNU General Public License v2
-# $Header: $
 
 EXEC=/usr/local/bin/shairport
 
@@ -29,13 +26,13 @@ start() {
 		ebegin "Starting shairport as $NAME"
 	fi
 
-	if [[ -z "$LOGFILE" ]]; then LOGFILE=/var/log/shairport.log; fi
-	OPTIONS="$OPTIONS --log $LOGFILE"
+	if [[ ! -z "$LOGFILE" ]]; then OPTIONS="$OPTIONS --log $LOGFILE"; fi
 
-	if [[ ! -z "$ERRFILE" ]]; then OPTIONS="$OPTIONS -error $ERRFILE"; fi
+	if [[ ! -z "$ERRFILE" ]]; then OPTIONS="$OPTIONS --error $ERRFILE"; fi
 
-	if [[ ! -z "$BACKEND" ]]; then OPTIONS="$OPTIONS -output=$BACKEND $BACKEND_OPTS"; fi
-	
+	if [[ ! -z "$BACKEND" ]]; then OPTIONS="$OPTIONS --output=$BACKEND $BACKEND_OPTS"; fi
+	if [[ ! -z "$BACKEND_OPTS" ]]; then OPTIONS="$OPTIONS -- $BACKEND_OPTS"; fi
+
 	start-stop-daemon --start --exec $EXEC -- $OPTIONS
 	eend $?
 }
