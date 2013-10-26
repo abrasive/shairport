@@ -196,10 +196,11 @@ void signal_setup(void) {
     // setting this to SIG_IGN would prevent signalling any threads.
     struct sigaction sa;
     memset(&sa, 0, sizeof(sa));
-    sa.sa_flags = SA_SIGINFO | SA_RESTART;
+    sa.sa_flags = SA_SIGINFO;
     sa.sa_sigaction = &sig_ignore;
     sigaction(SIGUSR1, &sa, NULL);
 
+    sa.sa_flags = SA_SIGINFO | SA_RESTART;
     sa.sa_sigaction = &sig_shutdown;
     sigaction(SIGINT, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
