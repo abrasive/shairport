@@ -41,7 +41,7 @@ extern audio_output audio_pulse;
 #ifdef CONFIG_ALSA
 extern audio_output audio_alsa;
 #endif
-extern audio_output audio_dummy, audio_pipe;
+extern audio_output audio_dummy, audio_pipe, audio_oss;
 
 static audio_output *outputs[] = {
 #ifdef CONFIG_SNDIO
@@ -58,6 +58,7 @@ static audio_output *outputs[] = {
 #endif
     &audio_dummy,
     &audio_pipe,
+    &audio_oss,
     NULL
 };
 

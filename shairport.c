@@ -87,6 +87,7 @@ void usage(char *progname) {
     printf("    -h, --help          show this help\n");
     printf("    -p, --port=PORT     set RTSP listening port\n");
     printf("    -a, --name=NAME     set advertised name\n");
+    printf("    -i, --interface=IP 	set interface ip of mdns bind to. only available when use tinysvcmdns\n");
     printf("    -b FILL             set how full the buffer must be before audio output\n");
     printf("                        starts. This value is in frames; default %d\n", config.buffer_start_fill);
     printf("    -d, --daemon        fork (daemonise). The PID of the child process is\n");
@@ -127,12 +128,13 @@ int parse_options(int argc, char **argv) {
         {"on-start",required_argument,  NULL, 'B'},
         {"on-stop", required_argument,  NULL, 'E'},
         {"mdns",    required_argument,  NULL, 'm'},
+        {"interface",required_argument,  NULL, 'i'},
         {NULL, 0, NULL, 0}
     };
 
     int opt;
     while ((opt = getopt_long(argc, argv,
-                              "+hdvP:l:e:p:a:o:b:B:E:m:",
+                              "+hdvP:l:e:p:a:o:b:B:E:m:i:",
                               long_options, NULL)) > 0) {
         switch (opt) {
             default:
@@ -174,6 +176,9 @@ int parse_options(int argc, char **argv) {
                 break;
             case 'm':
                 config.mdns_name = optarg;
+                break;
+            case 'i':
+                config.interfaceip = optarg;
                 break;
         }
     }

@@ -529,7 +529,7 @@ int player_play(stream_cfg *stream) {
 
 void player_stop(void) {
     please_stop = 1;
-    pthread_join(player_thread, NULL);
+    pthread_kill(player_thread, SIGUSR1);
     config.output->stop();
     if (config.cmd_stop && !fork()) {
         if (system(config.cmd_stop))

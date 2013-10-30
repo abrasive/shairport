@@ -28,15 +28,46 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <memory.h>
+#include <sys/soundcard.h>
+#include <sys/ioctl.h>
 #include "common.h"
 #include "audio.h"
 
 static int fd = -1;
 
-char *pipename = NULL;
+char *devname = NULL;
 
 static void start(int sample_rate) {
-    fd = open(pipename, O_WRONLY);
+    fd = open(devname, O_WRONLY);
+    int size = 16;
+    int rate = sample_rate;
+    int channel = 2;
+    int status;
+    int DMA = 0x0A0B;
+    int format = AFMT_S16_LE;
+    status = ioctl(fd, SNDCTL_DSP_SETFRAGMENT, &DMA);
+    if (status == -1)
+    {
+        perror("ioctl buffer size\n");
+        return;
+    }
+    status = ioctl(fd, SOUND_PCM_WRITE_BITS, &size);
+    if (status == -1)
+        perror("SOUND_PCM_WRITE_BITS ioctl failed");
+    if (size != 16)
+        perror("unable to set sample size");
+    status = ioctl(fd, SOUND_PCM_WRITE_CHANNELS, &channel);
+    if (status == -1)
+        perror("SOUND_PCM_WRITE_CHANNELS ioctl failed");
+
+    status = ioctl(fd, SNDCTL_DSP_SETFMT, &format);
+    if (status == -1)
+        perror("SNDCTL_DSP_SETFMT ioctl failed");
+
+    status = ioctl(fd, SOUND_PCM_WRITE_RATE, &rate);
+    if (status == -1)
+        perror("SOUND_PCM_WRITE_WRITE ioctl failed");
+
     if (fd < 0) {
         perror("open");
         die("could not open specified pipe for writing");
@@ -55,7 +86,7 @@ static int init(int argc, char **argv) {
     if (argc != 1)
         die("bad argument(s) to pipe");
 
-    pipename = strdup(argv[0]);
+    devname = strdup(argv[0]);
 
     // test open pipe so we error on startup if it's going to fail
     start(44100);
@@ -67,16 +98,16 @@ static int init(int argc, char **argv) {
 static void deinit(void) {
     if (fd > 0)
         close(fd);
-    if (pipename)
-        free(pipename);
+    if (devname)
+        free(devname);
 }
 
 static void help(void) {
-    printf("    pipe takes 1 argument: the name of the FIFO to write to.\n");
+    printf("    oss takes 1 argument: the name of oss dev.\n");
 }
 
-audio_output audio_pipe = {
-    .name = "pipe",
+audio_output audio_oss = {
+    .name = "oss",
     .help = &help,
     .init = &init,
     .deinit = &deinit,
