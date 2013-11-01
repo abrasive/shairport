@@ -449,6 +449,16 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn,
     resp->respcode = 200;
 }
 
+
+static void handle_set_parameter_coverart(rtsp_conn_info *conn,
+                                          rtsp_message *req, rtsp_message *resp) {
+    
+    resp->respcode = 200;
+}
+
+static void handle_set_parameter_coverart_empty(rtsp_conn_info *conn,
+                                                rtsp_message *req, rtsp_message *resp) {
+    
     resp->respcode = 200;
 }
 
