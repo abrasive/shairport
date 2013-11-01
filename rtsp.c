@@ -427,11 +427,8 @@ static void handle_ignore(rtsp_conn_info *conn,
     resp->respcode = 200;
 }
 
-static void handle_set_parameter(rtsp_conn_info *conn,
-                                 rtsp_message *req, rtsp_message *resp) {
-    if (!req->contentlength)
-        debug(1, "received empty SET_PARAMETER request\n");
-
+static void handle_set_parameter_parameter(rtsp_conn_info *conn,
+                                           rtsp_message *req, rtsp_message *resp) {
     char *cp = req->content;
     int cp_left = req->contentlength;
     char *next;
@@ -449,6 +446,8 @@ static void handle_set_parameter(rtsp_conn_info *conn,
         cp = next;
     }
 
+    resp->respcode = 200;
+}
 
     resp->respcode = 200;
 }
