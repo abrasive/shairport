@@ -530,29 +530,29 @@ static void handle_set_parameter(rtsp_conn_info *conn,
     char *ct = msg_get_header(req, "Content-Type");
 
     if (ct) {
-        debug(1, "CT %s\n", ct);
+        debug(2, "SET_PARAMETER Content-Type: %s\n", ct);
 
         if (!strncmp(ct, "application/x-dmap-tagged", 25)) {
-            debug(1, "I have tagged stuff!\n");
+            debug(1, "received metadata tags in SET_PARAMETER request\n");
 
             handle_set_parameter_metadata(conn, req, resp);
         } else if (!strncmp(ct, "image/jpeg", 10)) {
-            debug(1, "I have an image!\n");
+            debug(1, "received image in SET_PARAMETER request\n");
 
             handle_set_parameter_coverart(conn, req, resp);
          } else if (!strncmp(ct, "image/none", 10)) {
-            debug(1, "I have an empty image!\n");
+            debug(1, "received empty image in SET_PARAMETER request\n");
 
             handle_set_parameter_coverart_empty(conn, req, resp);
          } else if (!strncmp(ct, "text/parameters", 15)) {
-            debug(1, "I have parameters!\n");
+            debug(1, "received parameters in SET_PARAMETER request\n");
 
             handle_set_parameter_parameter(conn, req, resp);
         } else {
-            debug(1, "I have got something else: %s\n", ct);
+            debug(1, "received unknown Content-Type %s in SET_PARAMETER request\n", ct);
         }
     } else {
-        debug(1, "missing Content-Type header\n");
+        debug(1, "missing Content-Type header in SET_PARAMETER request\n");
     }
 
     resp->respcode = 200;
