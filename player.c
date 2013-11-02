@@ -515,7 +515,8 @@ void player_cover_image(char *buf, int len, char *ext) {
         MD5_Final(img_md5, &ctx);
 
         char img_md5_str[33];
-        for (int i = 0; i < 16; i++)
+        int i;
+        for (i = 0; i < 16; i++)
             sprintf(&img_md5_str[i*2], "%02x", (uint8_t)img_md5[i]);
 
         char *dir = config.cover_dir;
@@ -550,9 +551,9 @@ void player_cover_image(char *buf, int len, char *ext) {
         if (success) {
             printf("Cover Art file is %s\n", path);
         }
-       
+
         free(path);
-    }   
+    }
 }
 
 void player_cover_clear() {
