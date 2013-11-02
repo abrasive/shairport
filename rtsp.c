@@ -45,6 +45,7 @@
 #include "player.h"
 #include "rtp.h"
 #include "mdns.h"
+#include "metadata.h"
 
 #ifdef AF_INET6
 #define INETx_ADDRSTRLEN INET6_ADDRSTRLEN
@@ -456,6 +457,7 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn,
     char *cp = req->content;
     int cl = req->contentlength;
 
+    metadata *meta = metadata_init();
 
     unsigned int off = 8;
 
@@ -473,9 +475,30 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn,
         val[vl] = '\0';
         off += vl;
 
+        debug(2, "Tag: %s   Content: %s\n", tag, val);
+
+        if (!strncmp(tag, "asal ", 4) && meta->album == NULL) {
+            debug(1, "META Album: %s\n", val);
+            meta->album = strdup(val);
+        } else if (!strncmp(tag, "asar ", 4) && meta->artist == NULL) {
+            debug(1, "META Artist: %s\n", val);
+            meta->artist = strdup(val);
+        } else if (!strncmp(tag, "ascm ", 4) && meta->comment == NULL) {
+            debug(1, "META Comment: %s\n", val);
+            meta->comment = strdup(val);
+        } else if (!strncmp(tag, "asgn ", 4) && meta->genre == NULL) {
+            debug(1, "META Genre: %s\n", val);
+            meta->genre = strdup(val);
+        } else if (!strncmp(tag, "minm ", 4) && meta->title == NULL) {
+            debug(1, "META Title: %s\n", val);
+            meta->title = strdup(val);
+        }
+
         free(val);    
     }
 
+    player_metadata(meta);
+    metadata_free(meta);
 }
 
 static void handle_set_parameter_coverart(rtsp_conn_info *conn,
