@@ -29,6 +29,8 @@
 #include <unistd.h>
 #include <string.h>
 #include <sys/types.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <pthread.h>
 #include <openssl/aes.h>
 #include <math.h>
@@ -37,6 +39,7 @@
 #include <assert.h>
 #include <fcntl.h>
 #include <stdlib.h>
+#include <openssl/md5.h>
 
 #include "common.h"
 #include "player.h"
@@ -503,6 +506,53 @@ void player_metadata(metadata *meta) {
 
 void player_cover_image(char *buf, int len, char *ext) {
     printf("Cover Art set\n");
+
+    if (config.cover_dir) {
+        uint8_t img_md5[16];
+        MD5_CTX ctx;
+        MD5_Init(&ctx);
+        MD5_Update(&ctx, buf, len);
+        MD5_Final(img_md5, &ctx);
+
+        char img_md5_str[33];
+        for (int i = 0; i < 16; i++)
+            sprintf(&img_md5_str[i*2], "%02x", (uint8_t)img_md5[i]);
+
+        char *dir = config.cover_dir;
+        char *prefix = "cover-";
+
+        int pl = strlen(dir) + 1 + strlen(prefix) + strlen(img_md5_str) + 1 + strlen(ext);
+
+        char *path = malloc(pl+1);
+        snprintf(path, pl+1, "%s/%s%s.%s", dir, prefix, img_md5_str, ext);
+
+        int cover_fd = open(path, O_WRONLY | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
+
+        int success = 0;
+
+        if (cover_fd > -1) {
+            if (write(cover_fd, buf, len) < len) {
+                warn("writing failed\n");
+            } else {
+                success = 1;
+            }
+
+            close(cover_fd);
+        } else {
+            if (errno == EEXIST) {
+                debug(1, "file already exists. skipping.\n");
+                success = 1;
+            } else {
+                warn("could not open file %s for writing cover art.\n", path);
+            }
+        }
+
+        if (success) {
+            printf("Cover Art file is %s\n", path);
+        }
+       
+        free(path);
+    }   
 }
 
 void player_cover_clear() {
