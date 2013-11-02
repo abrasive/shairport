@@ -536,7 +536,7 @@ static void handle_set_parameter(rtsp_conn_info *conn,
             debug(1, "received metadata tags in SET_PARAMETER request\n");
 
             handle_set_parameter_metadata(conn, req, resp);
-        } else if (!strncmp(ct, "image/jpeg", 10)) {
+        } else if (!strncmp(ct, "image/jpeg", 10) || !strncmp(ct, "image/png", 9)) {
             debug(1, "received image in SET_PARAMETER request\n");
 
             handle_set_parameter_coverart(conn, req, resp);
