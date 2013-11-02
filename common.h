@@ -29,6 +29,7 @@ typedef struct {
     int buffer_start_fill;
     int daemonise;
     char *cmd_start, *cmd_stop;
+    char *cover_dir;
     char *pidfile;
     char *logfile;
     char *errfile;

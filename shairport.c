@@ -99,6 +99,7 @@ void usage(char *progname) {
     printf("    -e, --error=FILE    redirect shairport's standard error output to FILE\n");
     printf("    -B, --on-start=COMMAND  run a shell command when playback begins\n");
     printf("    -E, --on-stop=COMMAND   run a shell command when playback ends\n");
+    printf("    -C, --cover-dir=DIR     set a directory to write the album cover art to\n");
 
     printf("    -o, --output=BACKEND    select audio output method\n");
     printf("    -m, --mdns=BACKEND      force the use of BACKEND to advertize the service\n");
@@ -116,23 +117,24 @@ int parse_options(int argc, char **argv) {
     setenv("POSIXLY_CORRECT", "", 1);
 
     static struct option long_options[] = {
-        {"help",    no_argument,        NULL, 'h'},
-        {"daemon",  no_argument,        NULL, 'd'},
-        {"pidfile", required_argument,  NULL, 'P'},
-        {"log",     required_argument,  NULL, 'l'},
-        {"error",   required_argument,  NULL, 'e'},
-        {"port",    required_argument,  NULL, 'p'},
-        {"name",    required_argument,  NULL, 'a'},
-        {"output",  required_argument,  NULL, 'o'},
-        {"on-start",required_argument,  NULL, 'B'},
-        {"on-stop", required_argument,  NULL, 'E'},
-        {"mdns",    required_argument,  NULL, 'm'},
-        {NULL, 0, NULL, 0}
+        {"help",      no_argument,        NULL, 'h'},
+        {"daemon",    no_argument,        NULL, 'd'},
+        {"pidfile",   required_argument,  NULL, 'P'},
+        {"log",       required_argument,  NULL, 'l'},
+        {"error",     required_argument,  NULL, 'e'},
+        {"port",      required_argument,  NULL, 'p'},
+        {"name",      required_argument,  NULL, 'a'},
+        {"output",    required_argument,  NULL, 'o'},
+        {"on-start",  required_argument,  NULL, 'B'},
+        {"on-stop",   required_argument,  NULL, 'E'},
+        {"cover-dir", required_argument,  NULL, 'C'},
+        {"mdns",      required_argument,  NULL, 'm'},
+        {NULL,        0,                  NULL,   0} 
     };
 
     int opt;
     while ((opt = getopt_long(argc, argv,
-                              "+hdvP:l:e:p:a:o:b:B:E:m:",
+                              "+hdvP:l:e:p:a:o:b:B:E:C:m:",
                               long_options, NULL)) > 0) {
         switch (opt) {
             default:
@@ -162,6 +164,9 @@ int parse_options(int argc, char **argv) {
                 break;
             case 'E':
                 config.cmd_stop = optarg;
+                break;
+            case 'C':
+                config.cover_dir = optarg;
                 break;
             case 'P':
                 config.pidfile = optarg;
