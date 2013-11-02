@@ -441,6 +441,9 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn,
             float volume = atof(cp + 8);
             debug(1, "volume: %f\n", volume);
             player_volume(volume);
+        } else if(!strncmp(cp, "progress: ", 10)) {
+            char *progress = cp + 10;
+            debug(1, "progress: %s\n", progress);
         } else {
             debug(1, "unrecognised parameter: >>%s<< (%d)\n", cp, strlen(cp));
         }
