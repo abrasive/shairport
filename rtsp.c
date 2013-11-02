@@ -488,10 +488,23 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn,
 
 static void handle_set_parameter_coverart(rtsp_conn_info *conn,
                                           rtsp_message *req, rtsp_message *resp) {
+    char *cp = req->content;
+    int cl = req->contentlength;
+
+    char *ct = msg_get_header(req, "Content-Type");
+
+    if (!strncmp(ct, "image/jpeg", 10)) {
+        player_cover_image(cp, cl, "jpg");
+    } 
+
+    if (!strncmp(ct, "image/png", 9)) {
+        player_cover_image(cp, cl, "png");
+    }    
 }
 
 static void handle_set_parameter_coverart_empty(rtsp_conn_info *conn,
                                                 rtsp_message *req, rtsp_message *resp) {
+    player_cover_clear();
 }
 
 static void handle_set_parameter(rtsp_conn_info *conn,
