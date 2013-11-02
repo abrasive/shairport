@@ -484,19 +484,14 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn,
         free(content);
     }
 
-    resp->respcode = 200;
 }
 
 static void handle_set_parameter_coverart(rtsp_conn_info *conn,
                                           rtsp_message *req, rtsp_message *resp) {
-    
-    resp->respcode = 200;
 }
 
 static void handle_set_parameter_coverart_empty(rtsp_conn_info *conn,
                                                 rtsp_message *req, rtsp_message *resp) {
-    
-    resp->respcode = 200;
 }
 
 static void handle_set_parameter(rtsp_conn_info *conn,
@@ -531,6 +526,8 @@ static void handle_set_parameter(rtsp_conn_info *conn,
     } else {
         debug(1, "missing Content-Type header\n");
     }
+
+    resp->respcode = 200;
 }
 
 static void handle_announce(rtsp_conn_info *conn,
