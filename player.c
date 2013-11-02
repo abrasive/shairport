@@ -495,6 +495,20 @@ void player_volume(double f) {
         pthread_mutex_unlock(&vol_mutex);
     }
 }
+
+void player_metadata(metadata *meta) {
+    printf("Metadata Artist: %s  Title: %s  Album: %s  Genre: %s  Comment: %s\n",
+           meta->artist, meta->title, meta->album, meta->genre, meta->comment);
+}
+
+void player_cover_image(char *buf, int len, char *ext) {
+    printf("Cover Art set\n");
+}
+
+void player_cover_clear() {
+    printf("Cover Art cleared\n");
+}
+
 void player_flush(void) {
     pthread_mutex_lock(&ab_mutex);
     ab_resync();
