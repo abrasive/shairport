@@ -449,40 +449,31 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn,
         }
         cp = next;
     }
-
-    resp->respcode = 200;
 }
 
 static void handle_set_parameter_metadata(rtsp_conn_info *conn,
                                           rtsp_message *req, rtsp_message *resp) {
-
     char *cp = req->content;
     int cl = req->contentlength;
 
-    // asal - album
-    // minm - title
-    // asar - track
-    // asgn - genre
-    // ascm - comment
 
     unsigned int off = 8;
 
     while (off < cl) {
         char tag[5];
         strncpy(tag, cp+off, 4);
-        tag[4] = 0;
+        tag[4] = '\0';
         off += 4;
 
-        uint32_t flength = ntohl(*(uint32_t *)(cp+off));
+        uint32_t vl = ntohl(*(uint32_t *)(cp+off));
         off += sizeof(uint32_t);
 
-        char *content = malloc(flength+1);
-        strncpy(content, cp+off, flength);
-        *(content+flength) = 0;
-        off += flength;
+        char *val = malloc(vl+1);
+        strncpy(val, cp+off, vl);
+        val[vl] = '\0';
+        off += vl;
 
-        debug(2, "Tag: %s   Content: %s\n", tag, content);
-        free(content);
+        free(val);    
     }
 
 }
