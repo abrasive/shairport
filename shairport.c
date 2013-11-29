@@ -132,7 +132,7 @@ int parse_options(int argc, char **argv) {
 
     int opt;
     while ((opt = getopt_long(argc, argv,
-                              "+hdvP:l:e:p:a:o:b:B:E:m:",
+                              "+hdvP:l:e:p:a:o:b:B:E:m:q:",
                               long_options, NULL)) > 0) {
         switch (opt) {
             default:
@@ -174,6 +174,9 @@ int parse_options(int argc, char **argv) {
                 break;
             case 'm':
                 config.mdns_name = optarg;
+                break;
+            case 'q':
+                config.quiet = optarg;
                 break;
         }
     }

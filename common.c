@@ -57,6 +57,8 @@ void die(char *format, ...) {
 }
 
 void warn(char *format, ...) {
+    if (shairport_cfg.quiet)
+        return;
     fprintf(stderr, "WARNING: ");
     va_list args;
     va_start(args, format);
