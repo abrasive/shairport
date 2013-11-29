@@ -176,7 +176,7 @@ int parse_options(int argc, char **argv) {
                 config.mdns_name = optarg;
                 break;
             case 'q':
-                config.quiet = optarg;
+                config.quiet = 1;
                 break;
         }
     }
