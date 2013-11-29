@@ -144,6 +144,9 @@ int parse_options(int argc, char **argv) {
             case 'd':
                 config.daemonise = 1;
                 break;
+            case 'q':
+                config.quiet = 1;
+                break;
             case 'v':
                 debuglev++;
                 break;
@@ -176,9 +179,6 @@ int parse_options(int argc, char **argv) {
                 break;
             case 'm':
                 config.mdns_name = optarg;
-                break;
-            case 'q':
-                config.quiet = 1;
                 break;
         }
     }
