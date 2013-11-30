@@ -176,7 +176,7 @@ void rtp_request_resend(seq_t first, seq_t last) {
     if (!running)
         die("rtp_request_resend called without active stream!");
 
-    warn("requesting resend on %d packets (%04X:%04X)",
+    debug(1, "requesting resend on %d packets (%04X:%04X)",
          seq_diff(first,last) + 1, first, last);
 
     char req[8];    // *not* a standard RTCP NACK
