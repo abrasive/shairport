@@ -66,6 +66,7 @@
 
 #define DEFAULT_TTL             120
 
+#include "common.h"
 
 struct name_comp {
         uint8_t *label; // label
@@ -1106,6 +1107,16 @@ static int create_recv_sock() {
                 log_message(LOG_ERR, "recv bind(): %m");
         }
 
+        if(config.interfaceip && *(config.interfaceip)) {
+            struct in_addr interface_addr;
+            memset(&interface_addr, 0, sizeof(interface_addr));
+            interface_addr.s_addr = inet_addr(config.interfaceip);
+            if ((r = setsockopt (sd, IPPROTO_IP, IP_MULTICAST_IF, (char *)&interface_addr, sizeof(interface_addr))) < 0) {
+                log_message(LOG_ERR, "recv setsockopt(IP_MULTICAST_IF): %m");
+                return r;
+            }
+        }
+    
         // add membership to receiving socket
         struct ip_mreq mreq;
         memset(&mreq, 0, sizeof(struct ip_mreq));

@@ -274,9 +274,11 @@ static rtsp_message * rtsp_read_request(int fd) {
             goto shutdown;
         }
         if (nread < 0) {
-            if (errno==EINTR)
-                continue;
-            perror("read failure");
+            if (errno==EINTR) {
+                debug(1, "RTSP connection closed by EINTR\n");
+            }
+            else
+                perror("read failure");
             goto shutdown;
         }
         inbuf += nread;
@@ -309,10 +311,13 @@ static rtsp_message * rtsp_read_request(int fd) {
         nread = read(fd, buf+inbuf, msg_size-inbuf);
         if (!nread)
             goto shutdown;
-        if (nread==EINTR)
-            continue;
+        
         if (nread < 0) {
-            perror("read failure");
+            if (errno==EINTR) {
+                debug(1, "RTSP connection closed by EINTR\n");
+            }
+            else
+                perror("read failure");
             goto shutdown;
         }
         inbuf += nread;
@@ -725,7 +730,9 @@ respond:
         close(conn->fd);
     if (rtsp_playing()) {
         rtp_shutdown();
+        debug(1, "stop player\n");
         player_stop();
+        debug(1, "player stoped\n");
         please_shutdown = 0;
         pthread_mutex_unlock(&playing_mutex);
     }
