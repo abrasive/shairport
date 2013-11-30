@@ -85,6 +85,7 @@ void usage(char *progname) {
     printf("\n");
     printf("Options:\n");
     printf("    -h, --help          show this help\n");
+    printf("    -q, --quiet         do not print any messages (useful for Raspberry Pi)\n");
     printf("    -p, --port=PORT     set RTSP listening port\n");
     printf("    -a, --name=NAME     set advertised name\n");
     printf("    -b FILL             set how full the buffer must be before audio output\n");
@@ -118,6 +119,7 @@ int parse_options(int argc, char **argv) {
     static struct option long_options[] = {
         {"help",    no_argument,        NULL, 'h'},
         {"daemon",  no_argument,        NULL, 'd'},
+        {"quiet",  no_argument,        NULL, 'q'},
         {"pidfile", required_argument,  NULL, 'P'},
         {"log",     required_argument,  NULL, 'l'},
         {"error",   required_argument,  NULL, 'e'},
@@ -132,7 +134,7 @@ int parse_options(int argc, char **argv) {
 
     int opt;
     while ((opt = getopt_long(argc, argv,
-                              "+hdvP:l:e:p:a:o:b:B:E:m:",
+                              "+hdvP:l:e:p:a:o:b:B:E:m:q:",
                               long_options, NULL)) > 0) {
         switch (opt) {
             default:
@@ -141,6 +143,9 @@ int parse_options(int argc, char **argv) {
                 exit(1);
             case 'd':
                 config.daemonise = 1;
+                break;
+            case 'q':
+                config.quiet = 1;
                 break;
             case 'v':
                 debuglev++;
