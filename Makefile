@@ -5,11 +5,14 @@ config.mk:
 	$(MAKE) shairport
 endif
 
+CFLAGS ?= -O2
 -include config.mk
 
 PREFIX ?= /usr/local
 
+
 SRCS := shairport.c daemon.c rtsp.c mdns.c mdns_external.c mdns_tinysvcmdns.c common.c rtp.c player.c alac.c audio.c audio_dummy.c audio_pipe.c tinysvcmdns.c
+DEPS := config.mk alac.h audio.h common.h daemon.h getopt_long.h mdns.h player.h rtp.h rtsp.h tinysvcmdns.h
 
 ifdef CONFIG_SNDIO
 SRCS += audio_sndio.c
@@ -46,8 +49,13 @@ install: shairport
 	install -m 755 -d $(PREFIX)/bin
 	install -m 755 shairport $(PREFIX)/bin/shairport
 
-shairport: $(SRCS) config.h config.mk
-	$(CC) $(CFLAGS) $(SRCS) $(LDFLAGS) -o shairport
+%.o: %.c $(DEPS)
+	$(CC) -c $(CFLAGS) $<
+
+OBJS := $(SRCS:.c=.o)
+shairport: $(OBJS)
+	$(CC) $(OBJS) $(LDFLAGS) -o shairport
 
 clean:
 	rm -f shairport
+	rm -f $(OBJS)
