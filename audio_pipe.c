@@ -31,7 +31,7 @@
 #include "common.h"
 #include "audio.h"
 
-int fd = -1;
+static int fd = -1;
 
 char *pipename = NULL;
 
