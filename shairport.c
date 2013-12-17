@@ -136,9 +136,11 @@ int parse_options(int argc, char **argv) {
                               long_options, NULL)) > 0) {
         switch (opt) {
             default:
-            case 'h':
                 usage(argv[0]);
                 exit(1);
+            case 'h':
+                usage(argv[0]);
+                exit(0);
             case 'd':
                 config.daemonise = 1;
                 break;
