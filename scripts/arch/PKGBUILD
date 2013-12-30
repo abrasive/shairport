@@ -7,7 +7,6 @@ url='http://github.com/abrasive/shairport'
 arch=('i686' 'x86_64' 'armv6h')
 license=('public-domain')
 groups=('daemons')
-install=('shairport.install')
 depends=('openssl')
 optdepends=(
 	'libao: sound support'
@@ -17,6 +16,7 @@ optdepends=(
 )
 provides=('shairport')
 conflicts=('shairport')
+install=('shairport.install')
 source=(git://github.com/abrasive/shairport.git)
 md5sums=('SKIP')
 
