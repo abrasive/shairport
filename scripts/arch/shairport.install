@@ -1,0 +1,19 @@
+post_install() {
+  echo "**********************************************************************"
+  echo "To modify settings, create a .conf file overriding the default
+  echo "ExecStart in the following location:
+  echo "/etc/systemd/system/shairport.service.d/"
+  echo "**********************************************************************"
+}
+
+post_upgrade() {
+  post_install()
+}
+
+post_remove() {
+  echo "**********************************************************************"
+  echo "If you have created an options file in the following directory,"
+  echo "please remember to delete it:"
+  echo "/etc/systemd/system/shairport.service.d/"
+  echo "**********************************************************************"
+}
