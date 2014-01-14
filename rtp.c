@@ -57,8 +57,10 @@ static void *rtp_receiver(void *arg) {
 
         ssize_t plen = nread;
         uint8_t type = packet[1] & ~0x80;
-        if (type == 0x60 || type == 0x56) {   // audio data / resend
+        if (type == 0x60 || type == 0x56 || type == 0x54) {   // audio data / resend /sync
             pktp = packet;
+            if (type == 0x54)
+                continue;
             if (type==0x56) {
                 pktp += 4;
                 plen -= 4;
@@ -176,7 +178,7 @@ void rtp_request_resend(seq_t first, seq_t last) {
     if (!running)
         die("rtp_request_resend called without active stream!");
 
-    debug(1, "requesting resend on %d packets (%04X:%04X)",
+    debug(1, "requesting resend on %d packets (%04X:%04X)\n",
          seq_diff(first,last) + 1, first, last);
 
     char req[8];    // *not* a standard RTCP NACK
