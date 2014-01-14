@@ -407,7 +407,7 @@ static void handle_setup(rtsp_conn_info *conn,
     tport = atoi(p);
 
     rtsp_take_player();
-    int sport = rtp_setup(&conn->remote, cport, tport);
+    int sport = rtp_setup(&conn->remote, &cport, &tport);
     if (!sport)
         return;
 
@@ -416,7 +416,7 @@ static void handle_setup(rtsp_conn_info *conn,
     char resphdr[100];
     snprintf(resphdr, sizeof(resphdr),
              "RTP/AVP/UDP;unicast;mode=record;server_port=%d;control_port=%d;timing_port=%d",
-             sport, sport, sport);
+             sport, cport, tport);
     msg_add_header(resp, "Transport", resphdr);
 
     msg_add_header(resp, "Session", "1");
