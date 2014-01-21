@@ -29,6 +29,7 @@ typedef struct {
     int buffer_start_fill;
     int daemonise;
     char *cmd_start, *cmd_stop;
+    int cmd_blocking;
     char *pidfile;
     char *logfile;
     char *errfile;
@@ -45,6 +46,9 @@ char *base64_enc(uint8_t *input, int length);
 #define RSA_MODE_AUTH (0)
 #define RSA_MODE_KEY  (1)
 uint8_t *rsa_apply(uint8_t *input, int inlen, int *outlen, int mode);
+
+void command_start(void);
+void command_stop(void);
 
 extern shairport_cfg config;
 
