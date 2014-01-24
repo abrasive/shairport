@@ -414,7 +414,7 @@ static void handle_setup(rtsp_conn_info *conn,
 
     char *resphdr = malloc(strlen(hdr) + 20);
     strcpy(resphdr, hdr);
-    sprintf(resphdr + strlen(resphdr), ";server_port=%d", sport);
+    sprintf(resphdr + strlen(resphdr), ";server_port=%d;control_port=%d;timing_port=%d", sport, sport, sport);
     msg_add_header(resp, "Transport", resphdr);
 
     msg_add_header(resp, "Session", "1");
