@@ -1,7 +1,7 @@
 # for Arch Linux
 pkgname=shairport-git
 pkgver=1.0
-pkgrel=3
+pkgrel=4
 pkgdesc="An AirPlay-compatible audio receiver"
 url='http://github.com/abrasive/shairport'
 arch=('i686' 'x86_64' 'armv6h')
