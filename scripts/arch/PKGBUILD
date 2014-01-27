@@ -16,7 +16,7 @@ optdepends=(
 )
 provides=('shairport')
 conflicts=('shairport')
-install=('shairport.install')
+install='shairport.install'
 source=(git://github.com/abrasive/shairport.git)
 md5sums=('SKIP')
 
