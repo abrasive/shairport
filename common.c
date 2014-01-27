@@ -173,3 +173,31 @@ uint8_t *rsa_apply(uint8_t *input, int inlen, int *outlen, int mode) {
     }
     return out;
 }
+
+void command_start(void) {
+    if (!config.cmd_start)
+        return;
+    if (!config.cmd_blocking && fork())
+        return;
+
+    debug(1, "running start command: %s", config.cmd_start);
+    if (system(config.cmd_start))
+        warn("exec of external start command failed");
+
+    if (!config.cmd_blocking)
+        exit(0);
+}
+
+void command_stop(void) {
+    if (!config.cmd_stop)
+        return;
+    if (!config.cmd_blocking && fork())
+        return;
+
+    debug(1, "running stop command: %s", config.cmd_stop);
+    if (system(config.cmd_stop))
+        warn("exec of external stop command failed");
+
+    if (!config.cmd_blocking)
+        exit(0);
+}

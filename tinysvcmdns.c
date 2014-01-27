@@ -1650,16 +1650,16 @@ struct mdnsd *mdnsd_start() {
 void mdnsd_stop(struct mdnsd *s) {
         assert(s != NULL);
 
-        struct timeval tv = {
+        struct timespec ts = {
                 .tv_sec = 0,
-                .tv_usec = 500 * 1000,
+                .tv_nsec = 500 * 1000000,
         };
 
         s->stop_flag = 1;
         write_pipe(s->notify_pipe[1], ".", 1);
 
         while (s->stop_flag != 2)
-                select(0, NULL, NULL, NULL, &tv);
+                nanosleep(&ts, NULL);
 
         close_pipe(s->notify_pipe[0]);
         close_pipe(s->notify_pipe[1]);
