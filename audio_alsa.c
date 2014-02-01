@@ -40,6 +40,7 @@ static void start(int sample_rate);
 static void play(short buf[], int samples);
 static void stop(void);
 static void volume(double vol);
+static long long get_delay(void);
 
 audio_output audio_alsa = {
     .name = "alsa",
@@ -49,7 +50,8 @@ audio_output audio_alsa = {
     .start = &start,
     .stop = &stop,
     .play = &play,
-    .volume = NULL
+    .volume = NULL,
+    .get_delay = &get_delay
 };
 
 static snd_pcm_t *alsa_handle = NULL;
@@ -64,6 +66,8 @@ static char *alsa_out_dev = "default";
 static char *alsa_mix_dev = NULL;
 static char *alsa_mix_ctrl = "Master";
 static int alsa_mix_index = 0;
+
+static int device_sample_rate;
 
 static void help(void) {
     printf("    -d output-device    set the output device [default*|...]\n"
@@ -153,6 +157,7 @@ static void deinit(void) {
 static void start(int sample_rate) {
     if (sample_rate != 44100)
         die("Unexpected sample rate!");
+    device_sample_rate = sample_rate;
 
     int ret, dir = 0;
     snd_pcm_uframes_t frames = 64;
@@ -193,3 +198,19 @@ static void volume(double vol) {
     if(snd_mixer_selem_set_playback_volume_all(alsa_mix_elem, alsa_volume) != 0)
         die ("Failed to set playback volume");
 }
+
+static long long get_delay(void) {
+  snd_pcm_sframes_t frames = 0;
+  snd_pcm_delay(alsa_handle, &frames);
+
+  if (frames < 0)
+  {
+#if SND_LIB_VERSION >= 0x000901 /* snd_pcm_forward() exists since 0.9.0rc8 */
+    snd_pcm_forward(alsa_handle, -frames);
+#endif
+    frames = 0;
+  }
+
+  return (long long)frames * 1000000LL / (long long)device_sample_rate;
+}
+

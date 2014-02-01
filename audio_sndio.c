@@ -23,6 +23,14 @@
 static struct sio_hdl *sio;
 static struct sio_par par;
 
+long long writepos; /* frames written */
+
+
+static void position_changed(void *addr, int delta)
+{
+	writepos -= delta;
+}
+
 static int init(int argc, char **argv) {
 	sio = sio_open(SIO_DEVANY, SIO_PLAY, 0);
 	if (!sio)
@@ -41,6 +49,8 @@ static int init(int argc, char **argv) {
 	if (!sio_getpar(sio, &par))
 		die("sndio: failed to get audio parameters");
 
+	sio_onmove(sio, position_changed, NULL);
+
 	return 0;
 }
 
@@ -51,11 +61,14 @@ static void deinit(void) {
 static void start(int sample_rate) {
 	if (sample_rate != par.rate)
 		die("unexpected sample rate!");
+	writepos = 0;
 	sio_start(sio);
 }
 
 static void play(short buf[], int samples) {
-	sio_write(sio, (char *)buf, samples * par.bps * par.pchan);
+	int bytes_per_frame = par.bps * par.pchan;
+	sio_write(sio, (char *)buf, samples * bytes_per_frame);
+	writepos += samples;
 }
 
 static void stop(void) {
@@ -72,6 +85,12 @@ static void volume(double vol) {
 	sio_setvol(sio, v);
 }
 
+static long long get_delay(void) {
+	long long delay = writepos  * 1000000LL / (long long)par.rate;
+
+	return delay;
+}
+
 audio_output audio_sndio = {
 	.name = "sndio",
 	.help = &help,
@@ -80,5 +99,6 @@ audio_output audio_sndio = {
 	.start = &start,
 	.stop = &stop,
 	.play = &play,
-	.volume = &volume
+	.volume = &volume,
+	.get_delay = get_delay
 };
