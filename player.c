@@ -502,6 +502,10 @@ void player_flush(void) {
 }
 
 int player_play(stream_cfg *stream) {
+  
+    config.output->init(newArgc, newArgv);
+    printf("Audio initialized....\n");
+  
     if (config.buffer_start_fill > BUFFER_FRAMES)
         die("specified buffer starting fill %d > buffer size %d",
             config.buffer_start_fill, BUFFER_FRAMES);
@@ -530,7 +534,11 @@ void player_stop(void) {
     command_stop();
     free_buffer();
     free_decoder();
-#ifdef FANCY_RESAMPLING
+    
+    config.output->deinit();
+    printf("Audio deinitialized\n");
+    
+    #ifdef FANCY_RESAMPLING
     free_src();
 #endif
 }
