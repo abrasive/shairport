@@ -284,7 +284,7 @@ int main(int argc, char **argv) {
         audio_ls_outputs();
         die("Invalid audio output specified!");
     }
-    config.output->init(argc-audio_arg, argv+audio_arg);
+    
 
     uint8_t ap_md5[16];
     MD5_CTX ctx;
