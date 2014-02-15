@@ -30,6 +30,8 @@ start() {
 
 	if [[ ! -z "$ERRFILE" ]]; then OPTIONS="$OPTIONS --error $ERRFILE"; fi
 
+	if [[ ! -z "$MDNS" ]]; then OPTIONS="$OPTIONS --mdns $MDNS"; fi		
+
 	if [[ ! -z "$BACKEND" ]]; then OPTIONS="$OPTIONS --output=$BACKEND $BACKEND_OPTS"; fi
 	if [[ ! -z "$BACKEND_OPTS" ]]; then OPTIONS="$OPTIONS -- $BACKEND_OPTS"; fi
 
