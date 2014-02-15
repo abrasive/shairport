@@ -670,6 +670,12 @@ int player_play(stream_cfg *stream) {
     please_stop = 0;
     command_start();
     config.output->start(sampling_rate);
+    // generic outputs cannot report the delay, so we estimate the buffer depth
+    // at startup and hope for the best
+    if (!config.output->get_delay) {
+        config.output->get_delay = audio_get_delay;
+        audio_estimate_delay(config.output);
+    }
     pthread_create(&player_thread, NULL, player_thread_func, NULL);
 
     return 0;

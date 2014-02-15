@@ -24,5 +24,7 @@ typedef struct {
 
 audio_output *audio_get_output(char *name);
 void audio_ls_outputs(void);
+long long audio_get_delay(void);
+void audio_estimate_delay(audio_output *output);
 
 #endif //_AUDIO_H
