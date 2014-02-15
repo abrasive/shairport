@@ -2,7 +2,7 @@
 
 EAPI="5"
 
-inherit flag-o-matic eutils git-2
+inherit git-2
 
 DESCRIPTION="This program emulates an AirPort Express for the purpose of \
 			streaming music from iTunes and compatible iPods and iPhones. \
@@ -24,9 +24,6 @@ RDEPEND="${DEPEND}"
 src_install() {
 	emake PREFIX="${D}" install
 
-	insinto /etc/conf.d/
-	newins scripts/gentoo/openrc/conf.d.cfg shairport
-
-	insinto /etc/init.d/
-	newins scripts/gentoo/openrc/init.d.sh shairport
+	doinitd scripts/gentoo/openrc/init.d/shairport
+	doconfd scripts/gentoo/openrc/conf.d/shairport
 }
