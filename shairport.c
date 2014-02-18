@@ -283,8 +283,15 @@ int main(int argc, char **argv) {
     if (!config.output) {
         audio_ls_outputs();
         die("Invalid audio output specified!");
-    }
+    }   
     
+    //temporary initialization to check the settings..
+    newArgc=argc-audio_arg;
+    newArgv=argv+audio_arg;
+    config.output->init(newArgc, newArgv);
+    printf("Checking audio output...\n");
+    config.output->deinit();
+    printf("Audio output checked succesfully\n");
 
     uint8_t ap_md5[16];
     MD5_CTX ctx;
