@@ -455,11 +455,9 @@ static void *player_thread_func(void *arg) {
 
     while (!please_stop) {
         inbuf = buffer_get_frame();
-        if (!inbuf) {
-            // We sleep if we buffer was underrun. Better than pushing silence!
-            usleep(1000);
-            continue;
-        }
+        if (!inbuf)
+            inbuf = silence;
+
 #ifdef FANCY_RESAMPLING
         if (fancy_resampling) {
             int i;
