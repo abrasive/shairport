@@ -7,6 +7,7 @@ After=avahi-daemon.service
 [Service]
 User=shairport
 Group=shairport
+SupplementaryGroups=audio
 ExecStart=/usr/bin/shairport
 Restart=always
 
