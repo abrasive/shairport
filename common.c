@@ -35,6 +35,7 @@
 #include <openssl/buffer.h>
 #include "common.h"
 #include "daemon.h"
+#include <time.h>
 
 shairport_cfg config;
 
@@ -57,7 +58,10 @@ void die(char *format, ...) {
 }
 
 void warn(char *format, ...) {
-    fprintf(stderr, "WARNING: ");
+    time_t rawtime;
+
+    time( &rawtime);
+    fprintf(stderr,  "%s WARNING: ", strtok(ctime(&rawtime),"\n"));
     va_list args;
     va_start(args, format);
     vfprintf(stderr, format, args);
@@ -66,8 +70,12 @@ void warn(char *format, ...) {
 }
 
 void debug(int level, char *format, ...) {
+    time_t rawtime;
     if (level > debuglev)
         return;
+
+    time( &rawtime);
+    fprintf(stderr,  "%s DEBUG: ", strtok(ctime(&rawtime),"\n"));
     va_list args;
     va_start(args, format);
     vfprintf(stderr, format, args);
