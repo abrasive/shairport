@@ -199,13 +199,28 @@ static void free_buffer(void) {
         free(audio_buffer[i].data);
 }
 
+    //  Calculate the boundary threshold for resends dependant on buffer size
+    //  FOCUS_BOUNDARY is the preferred threshold if this can be accomodated
+    //  Above the boundary resends are handled as a result of advance packets
+    //  Below the boundary resends are handled in Last-Chance algorithm
+#define FOCUS_BOUNDARY  128
+
+static int resend_focus(int fill){
+    if ((fill > FOCUS_BOUNDARY) &&
+        ((fill/2) < FOCUS_BOUNDARY)) {
+	return FOCUS_BOUNDARY;
+    } else {
+	return (fill/2);
+    }
+}
+
 void player_put_packet(seq_t seqno, uint8_t *data, int len) {
     abuf_t *abuf = 0;
     int16_t buf_fill;
 
     pthread_mutex_lock(&ab_mutex);
     if (!ab_synced) {
-        debug(2, "syncing to first seqno %04X\n", seqno);
+        debug(1, "syncing to first seqno %04X\n", seqno);
         ab_write = seqno-1;
         ab_read = seqno;
         ab_synced = 1;
@@ -218,16 +233,21 @@ void player_put_packet(seq_t seqno, uint8_t *data, int len) {
 	// Those more than a buffer size in advance should cause a resync
 	// When buffering the valid threshold should be the buffer fill target itself
 	if (seq_diff(ab_read, seqno) > (ab_buffering ? config.buffer_start_fill : BUFFER_FRAMES)) {
-	   warn("out of range re-sync %04X (%04X:%04%)", seqno, ab_read, ab_write);
+	   warn("out of range re-sync %04X (%04X:%04X)", seqno, ab_read, ab_write);
 	   ab_resync();
 	   ab_synced = 1;
 	   ab_read = seqno;
 	   ab_write = seqno;
            abuf = audio_buffer + BUFIDX(seqno);
 	} else {
-           debug(1, "advance packet %04X (%04X:%04X)\n", seqno, ab_read, ab_write);
-
-           rtp_request_resend(ab_write+1, seqno-1);
+	   // Accept advance packet, but only request resends
+	   //  if in upper portion of the frame buffer
+	   if(seq_diff(ab_read, seqno) >= resend_focus(config.buffer_start_fill)) {
+             debug(1, "advance packet - request resend, %04X (%04X:%04X)\n", seqno, ab_read, ab_write);
+             rtp_request_resend(ab_write+1, seqno-1);
+	   } else {
+             debug(1, "advance packet - no resend %04X (%04X:%04X)\n", seqno, ab_read, ab_write);
+	   }
            abuf = audio_buffer + BUFIDX(seqno);
            ab_write = seqno;
 	}
@@ -398,14 +418,15 @@ static short *buffer_get_frame(void) {
     buf_fill = seq_diff(ab_read, ab_write);
     bf_est_update(buf_fill);
 
-    // check if t+16, t+32, t+64, t+128, ... (buffer_start_fill / 2)
+    // check if t+16, t+32, t+64, t+128, ... resend focus boundary
     // packets have arrived... last-chance resend
     if (!ab_buffering) {
-        for (i = 16; i < (config.buffer_start_fill / 2); i = (i * 2)) {
+        for (i = 16; i <= resend_focus(config.buffer_start_fill); i = (i * 2)) {
             next = ab_read + i;
             abuf = audio_buffer + BUFIDX(next);
-            if (!abuf->ready) {
+            if ((!abuf->ready) && (next <= (ab_write+1))){
                 rtp_request_resend(next, next);
+                debug(1, "last chance resend T+%i, %04X (%04X:%04X)\n", i, next, ab_read, ab_write);
             }
         }
     }
