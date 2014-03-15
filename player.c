@@ -315,9 +315,10 @@ static void bf_est_update(short fill) {
         return;
     } else if (fill_count == 1000) {
         // this information could be used to help estimate our effective latency?
+	desired_fill = (2*config.buffer_start_fill) - desired_fill;
         debug(1, "established desired fill of %f frames, "
               "so output chain buffered about %f frames\n", desired_fill,
-              config.buffer_start_fill - desired_fill);
+              desired_fill - config.buffer_start_fill);
         fill_count++;
     }
 
