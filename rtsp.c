@@ -45,6 +45,7 @@
 #include "player.h"
 #include "rtp.h"
 #include "mdns.h"
+#include "wiringPi.h"
 
 #ifdef AF_INET6
 #define INETx_ADDRSTRLEN INET6_ADDRSTRLEN
@@ -372,6 +373,7 @@ static void handle_teardown(rtsp_conn_info *conn,
                             rtsp_message *req, rtsp_message *resp) {
     if (!rtsp_playing())
         return;
+    digitalWrite(11, 1);	/* On TearDown:	Turn Ampliefier OFF - enable sleep */
     resp->respcode = 200;
     msg_add_header(resp, "Connection", "close");
     please_shutdown = 1;
@@ -409,6 +411,7 @@ static void handle_setup(rtsp_conn_info *conn,
     int sport = rtp_setup(&conn->remote, cport, tport);
     if (!sport)
         return;
+    digitalWrite(11, 0);	/* On Set-up:	Turn Amplifier ON - disable sleep */
 
     player_play(&conn->stream);
 
@@ -815,6 +818,10 @@ void rtsp_listen_loop(void) {
         if (sockfd[i] > maxfd)
             maxfd = sockfd[i];
     }
+
+    wiringPiSetupPhys();	/* Listen Loop: Initilise the GPIO access - use physical pin numbers */
+    pinMode(11, OUTPUT);	/* let's use Pin 11 */
+    digitalWrite(11, 1);	/* turn Amplifier Sleep mode ON */
 
     mdns_register();
 

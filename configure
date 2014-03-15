@@ -6,7 +6,7 @@ rm -f config.mk config.h
 
 echo "// automatically generated file" > config.h
 
-LDFLAGS="${LDFLAGS} -lm -lpthread"
+LDFLAGS="${LDFLAGS} -lm -lpthread -lwiringPi"
 
 export_config()
 {
