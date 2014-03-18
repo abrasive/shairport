@@ -424,7 +424,7 @@ static short *buffer_get_frame(void) {
         for (i = 16; i <= resend_focus(config.buffer_start_fill); i = (i * 2)) {
             next = ab_read + i;
             abuf = audio_buffer + BUFIDX(next);
-            if ((!abuf->ready) && (next <= (ab_write+1))){
+            if ((!abuf->ready) && (next <= ab_write)){
                 rtp_request_resend(next, next);
                 debug(1, "last chance resend T+%i, %04X (%04X:%04X)\n", i, next, ab_read, ab_write);
             }
