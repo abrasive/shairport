@@ -201,8 +201,8 @@ static void free_buffer(void) {
 
     //  Calculate the boundary threshold for resends dependant on buffer size
     //  FOCUS_BOUNDARY is the preferred threshold if this can be accomodated
-    //  Above the boundary resends are handled as a result of advance packets
-    //  Below the boundary resends are handled in Last-Chance algorithm
+    //  Resends are typically handled as a result of advance packets
+    //  However below the boundary resends are also handled in Last-Chance algorithm
 #define FOCUS_BOUNDARY  128
 
 static int resend_focus(int fill){
@@ -240,14 +240,10 @@ void player_put_packet(seq_t seqno, uint8_t *data, int len) {
 	   ab_write = seqno;
            abuf = audio_buffer + BUFIDX(seqno);
 	} else {
-	   // Accept advance packet, but only request resends
-	   //  if in upper portion of the frame buffer
-	   if(seq_diff(ab_read, seqno) >= resend_focus(config.buffer_start_fill)) {
-             debug(1, "advance packet - request resend, %04X (%04X:%04X)\n", seqno, ab_read, ab_write);
-             rtp_request_resend(ab_write+1, seqno-1);
-	   } else {
-             debug(1, "advance packet - no resend %04X (%04X:%04X)\n", seqno, ab_read, ab_write);
-	   }
+           debug(1, "advance packet %04X (%04X:%04X)\n", seqno, ab_read, ab_write);
+
+           rtp_request_resend(ab_write+1, seqno-1);
+
            abuf = audio_buffer + BUFIDX(seqno);
            ab_write = seqno;
 	}
@@ -411,7 +407,7 @@ static short *buffer_get_frame(void) {
         warn("overrun %i (%04X:%04X)", buf_fill, ab_read, ab_write);
 	read = ab_read;
         ab_read = ab_write - config.buffer_start_fill;
-	ab_reset(read, ab_read);	// reset any ready frames in those we've skipped
+	ab_reset((ab_write + 1 - BUFFER_FRAMES), ab_read);	// reset any ready frames in those we've skipped (avoiding wrap around)
     }
     read = ab_read;
     ab_read++;
@@ -424,7 +420,7 @@ static short *buffer_get_frame(void) {
         for (i = 16; i <= resend_focus(config.buffer_start_fill); i = (i * 2)) {
             next = ab_read + i;
             abuf = audio_buffer + BUFIDX(next);
-            if ((!abuf->ready) && (next <= ab_write)){
+            if ((!abuf->ready) && (next < ab_write)){
                 rtp_request_resend(next, next);
                 debug(1, "last chance resend T+%i, %04X (%04X:%04X)\n", i, next, ab_read, ab_write);
             }
