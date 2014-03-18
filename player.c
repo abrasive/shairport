@@ -230,9 +230,9 @@ void player_put_packet(seq_t seqno, uint8_t *data, int len) {
         ab_write = seqno;
     } else if (seq_order(ab_write, seqno)) {    // newer than expected
 	// Be careful with new packets that are in advance
-	// Those more than a buffer size in advance should cause a resync
-	// When buffering the valid threshold should be the buffer fill target itself
-	if (seq_diff(ab_read, seqno) > (ab_buffering ? config.buffer_start_fill : BUFFER_FRAMES)) {
+	// Those more than a buffer size in advance will cause an Overrun
+	// When buffering the valid threshold should be the buffer fill target itself which should re-sync
+	if (ab_buffering && (seq_diff(ab_read, seqno) > config.buffer_start_fill)) {
 	   warn("out of range re-sync %04X (%04X:%04X)", seqno, ab_read, ab_write);
 	   ab_resync();
 	   ab_synced = 1;
