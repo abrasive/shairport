@@ -87,6 +87,7 @@ void usage(char *progname) {
     printf("    -h, --help          show this help\n");
     printf("    -p, --port=PORT     set RTSP listening port\n");
     printf("    -a, --name=NAME     set advertised name\n");
+    printf("    -k, --password=PW   require password to stream audio\n");
     printf("    -b FILL             set how full the buffer must be before audio output\n");
     printf("                        starts. This value is in frames; default %d\n", config.buffer_start_fill);
     printf("    -d, --daemon        fork (daemonise). The PID of the child process is\n");
@@ -124,6 +125,7 @@ int parse_options(int argc, char **argv) {
         {"error",   required_argument,  NULL, 'e'},
         {"port",    required_argument,  NULL, 'p'},
         {"name",    required_argument,  NULL, 'a'},
+        {"password",required_argument,  NULL, 'k'},
         {"output",  required_argument,  NULL, 'o'},
         {"on-start",required_argument,  NULL, 'B'},
         {"on-stop", required_argument,  NULL, 'E'},
@@ -134,7 +136,7 @@ int parse_options(int argc, char **argv) {
 
     int opt;
     while ((opt = getopt_long(argc, argv,
-                              "+hdvP:l:e:p:a:o:b:B:E:wm:",
+                              "+hdvP:l:e:p:a:k:o:b:B:E:wm:",
                               long_options, NULL)) > 0) {
         switch (opt) {
             default:
@@ -155,6 +157,9 @@ int parse_options(int argc, char **argv) {
                 break;
             case 'o':
                 config.output_name = optarg;
+                break;
+            case 'k':
+                config.password = optarg;
                 break;
             case 'b':
                 config.buffer_start_fill = atoi(optarg);
