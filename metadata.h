@@ -7,13 +7,15 @@ typedef struct {
     char *artist;
     char *title;
     char *album;
+    char *artwork;
     char *comment;
     char *genre;
 } metadata;
 
-metadata* metadata_init(void);
-void      metadata_free(metadata* meta);
-FILE*     metadata_open(const char* mode);
-void      metadata_write(metadata* meta, const char* dir);
+void  metadata_set(char** field, const char* value);
+FILE* metadata_open(const char* mode);
+void  metadata_write(const char* dir);
+
+extern metadata player_meta;
 
 #endif // _METADATA_H

@@ -453,12 +453,11 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn,
 }
 
 static void handle_set_parameter_metadata(rtsp_conn_info *conn,
-                                          rtsp_message *req, rtsp_message *resp) {
+                                          rtsp_message   *req,
+                                          rtsp_message   *resp) {
     char *cp = req->content;
-    int cl = req->contentlength;
-
-    metadata *meta = metadata_init();
-
+    int cl   = req->contentlength;
+  
     unsigned int off = 8;
 
     while (off < cl) {
@@ -477,28 +476,27 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn,
 
         debug(2, "Tag: %s   Content: %s\n", tag, val);
 
-        if (!strncmp(tag, "asal ", 4) && meta->album == NULL) {
+        if (!strncmp(tag, "asal ", 4)) {
             debug(1, "META Album: %s\n", val);
-            meta->album = strdup(val);
-        } else if (!strncmp(tag, "asar ", 4) && meta->artist == NULL) {
+            metadata_set(&player_meta.album, val);
+        } else if (!strncmp(tag, "asar ", 4)) {
             debug(1, "META Artist: %s\n", val);
-            meta->artist = strdup(val);
-        } else if (!strncmp(tag, "ascm ", 4) && meta->comment == NULL) {
+            metadata_set(&player_meta.artist, val);
+        } else if (!strncmp(tag, "ascm ", 4)) {
             debug(1, "META Comment: %s\n", val);
-            meta->comment = strdup(val);
-        } else if (!strncmp(tag, "asgn ", 4) && meta->genre == NULL) {
+            metadata_set(&player_meta.comment, val);
+        } else if (!strncmp(tag, "asgn ", 4)) {
             debug(1, "META Genre: %s\n", val);
-            meta->genre = strdup(val);
-        } else if (!strncmp(tag, "minm ", 4) && meta->title == NULL) {
+            metadata_set(&player_meta.genre, val);
+        } else if (!strncmp(tag, "minm ", 4)) {
             debug(1, "META Title: %s\n", val);
-            meta->title = strdup(val);
+            metadata_set(&player_meta.title, val);
         }
 
-        free(val);    
+        free(val);
     }
-
-    player_metadata(meta);
-    metadata_free(meta);
+  
+    player_metadata();
 }
 
 static void handle_set_parameter_coverart(rtsp_conn_info *conn,

@@ -499,13 +499,14 @@ void player_volume(double f) {
     }
 }
 
-void player_metadata(metadata *meta) {
-    debug(1, "Metadata Artist: %s  Title: %s  Album: %s  Genre: %s  Comment: %s\n",
-           meta->artist, meta->title, meta->album, meta->genre, meta->comment);
+void player_metadata() {
+    debug(1, "Artist: %s  Title: %s  Album: %s  Genre: %s  Comment: %s\n",
+          player_meta.artist, player_meta.title, player_meta.album,
+          player_meta.genre, player_meta.comment);
 
-  if (config.cover_dir) {
-    metadata_write(meta, config.cover_dir);
-  }
+    if (config.cover_dir) {
+        metadata_write(config.cover_dir);
+    }
 }
 
 void player_cover_image(char *buf, int len, char *ext) {
@@ -539,11 +540,6 @@ void player_cover_image(char *buf, int len, char *ext) {
             if (write(cover_fd, buf, len) < len) {
                 warn("writing failed\n");
             } else {
-                FILE* fh = metadata_open("a");
-                if (fh) {
-                  fprintf(fh, "%s%s.%s\n", prefix,img_md5_str,ext);
-                  fclose(fh);
-                }
                 success = 1;
             }
 
@@ -559,6 +555,8 @@ void player_cover_image(char *buf, int len, char *ext) {
 
         if (success) {
             debug(1, "Cover Art file is %s\n", path);
+            metadata_set(&player_meta.artwork, path+strlen(dir)+1);
+            metadata_write(config.cover_dir);
         }
 
         free(path);

@@ -33,26 +33,12 @@
 #include "common.h"
 #include "metadata.h"
 
+metadata player_meta;
 
-metadata * metadata_init(void) {
-    metadata *meta = malloc(sizeof(metadata));
-    memset(meta, 0, sizeof(metadata));
-    return meta;
-}
-
-void metadata_free(metadata *meta) {
-    int i;
-    if (meta->artist)
-        free(meta->artist);
-    if (meta->title)
-        free(meta->title);    
-    if (meta->album)
-        free(meta->album);       
-    if (meta->comment)
-        free(meta->comment);
-    if (meta->genre)
-        free(meta->genre);
-    free(meta);
+void  metadata_set(char** field, const char* value) {
+    if (*field)
+      free(*field);
+    *field = strdup(value);
 }
 
 FILE* metadata_open(const char* mode) {
@@ -70,14 +56,15 @@ FILE* metadata_open(const char* mode) {
   return fh;
 }
 
-void metadata_write(metadata* meta, const char* dir) {
+void metadata_write(const char* dir) {
   FILE* fh = metadata_open("w");
   if (fh) {
-    fprintf(fh, "%s\n", meta->artist);
-    fprintf(fh, "%s\n", meta->title);
-    fprintf(fh, "%s\n", meta->album);
-    fprintf(fh, "%s\n", meta->genre);
-    fprintf(fh, "%s\n", (meta->comment == NULL) ? "" : meta->comment);
+    fprintf(fh, "%s\n", player_meta.artist);
+    fprintf(fh, "%s\n", player_meta.title);
+    fprintf(fh, "%s\n", player_meta.album);
+    fprintf(fh, "%s\n", player_meta.artwork);
+    fprintf(fh, "%s\n", player_meta.genre);
+    fprintf(fh, "%s\n", (player_meta.comment == NULL) ? "" : player_meta.comment);
     fclose(fh);
   }
 }
