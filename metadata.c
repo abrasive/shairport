@@ -54,3 +54,30 @@ void metadata_free(metadata *meta) {
         free(meta->genre);
     free(meta);
 }
+
+FILE* metadata_open(const char* mode) {
+  FILE* fh = NULL;
+  if (config.cover_dir) {
+    const char fn[] = "now_playing.txt";
+    size_t pl = strlen(config.cover_dir) + 1 + strlen(fn);
+    
+    char* path = malloc(pl+1);
+    snprintf(path, pl+1, "%s/%s", config.cover_dir, fn);
+    
+    fh = fopen(path, mode);
+    free(path);
+  }
+  return fh;
+}
+
+void metadata_write(metadata* meta, const char* dir) {
+  FILE* fh = metadata_open("w");
+  if (fh) {
+    fprintf(fh, "%s\n", meta->artist);
+    fprintf(fh, "%s\n", meta->title);
+    fprintf(fh, "%s\n", meta->album);
+    fprintf(fh, "%s\n", meta->genre);
+    fprintf(fh, "%s\n", (meta->comment == NULL) ? "" : meta->comment);
+    fclose(fh);
+  }
+}

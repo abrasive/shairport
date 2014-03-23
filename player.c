@@ -500,12 +500,16 @@ void player_volume(double f) {
 }
 
 void player_metadata(metadata *meta) {
-    printf("Metadata Artist: %s  Title: %s  Album: %s  Genre: %s  Comment: %s\n",
+    debug(1, "Metadata Artist: %s  Title: %s  Album: %s  Genre: %s  Comment: %s\n",
            meta->artist, meta->title, meta->album, meta->genre, meta->comment);
+
+  if (config.cover_dir) {
+    metadata_write(meta, config.cover_dir);
+  }
 }
 
 void player_cover_image(char *buf, int len, char *ext) {
-    printf("Cover Art set\n");
+    debug(1, "Cover Art set\n");
 
     if (config.cover_dir) {
         uint8_t img_md5[16];
@@ -522,7 +526,7 @@ void player_cover_image(char *buf, int len, char *ext) {
         char *dir = config.cover_dir;
         char *prefix = "cover-";
 
-        int pl = strlen(dir) + 1 + strlen(prefix) + strlen(img_md5_str) + 1 + strlen(ext);
+        size_t pl = strlen(dir) + 1 + strlen(prefix) + strlen(img_md5_str) + 1 + strlen(ext);
 
         char *path = malloc(pl+1);
         snprintf(path, pl+1, "%s/%s%s.%s", dir, prefix, img_md5_str, ext);
@@ -535,6 +539,11 @@ void player_cover_image(char *buf, int len, char *ext) {
             if (write(cover_fd, buf, len) < len) {
                 warn("writing failed\n");
             } else {
+                FILE* fh = metadata_open("a");
+                if (fh) {
+                  fprintf(fh, "%s%s.%s\n", prefix,img_md5_str,ext);
+                  fclose(fh);
+                }
                 success = 1;
             }
 
@@ -549,7 +558,7 @@ void player_cover_image(char *buf, int len, char *ext) {
         }
 
         if (success) {
-            printf("Cover Art file is %s\n", path);
+            debug(1, "Cover Art file is %s\n", path);
         }
 
         free(path);
@@ -557,7 +566,7 @@ void player_cover_image(char *buf, int len, char *ext) {
 }
 
 void player_cover_clear() {
-    printf("Cover Art cleared\n");
+    debug(1, "Cover Art cleared\n");
 }
 
 void player_flush(void) {
