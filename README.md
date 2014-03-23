@@ -54,6 +54,29 @@ The backends prefixed by 'external' rely on external programs that should be pre
 By default, shairport will try all backends, in the order they are listed by `shairport -h`, until one works.
 You can force the use of a specific backend using `shairport -m tinysvcmdns` for example.
 
+Metadata
+--------
+
+The following metadata can be sent to the player for the currently playing track:
+
+  * artist
+  * title
+  * album
+  * artwork
+  * genre
+  * comment
+
+To enable the output of metadata, the `-C <directory name>` flag must be set to instruct `shairport` where
+to save the `now_playing.txt` file and cover art.  The `now_playing.txt`  file will then contain the fields
+listed above, in that order, with each field on its own line.  Example output::
+
+	Tame Impala
+	Elephant
+	Lonerism
+	cover-0c7b6d4c572d0936a5b94e37b6ef0408.jpg
+	
+In this example there is no `genre` or `comment` data, hence the last two lines are empty.
+
 
 Thanks
 ------

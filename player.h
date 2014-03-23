@@ -21,7 +21,7 @@ int player_play(stream_cfg *cfg);
 void player_stop(void);
 
 void player_volume(double f);
-void player_metadata(metadata *meta);
+void player_metadata();
 void player_cover_image(char *buf, int len, char *ext);
 void player_cover_clear();
 void player_flush(void);
