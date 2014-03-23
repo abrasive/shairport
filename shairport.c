@@ -103,7 +103,7 @@ void usage(char *progname) {
     printf("    -w, --wait-cmd          block while the shell command(s) run\n");
 
     printf("    -o, --output=BACKEND    select audio output method\n");
-    printf("    -m, --mdns=BACKEND      force the use of BACKEND to advertize the service\n");
+    printf("    -m, --mdns=BACKEND      force the use of BACKEND to advertise the service\n");
     printf("                            if no mdns provider is specified,\n");
     printf("                            shairport tries them all until one works.\n");
 
