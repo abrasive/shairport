@@ -14,7 +14,7 @@
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DESC="Shairport Airtunes emulator"
 NAME=shairport
-DAEMON=/usr/bin/shairport
+DAEMON=/usr/local/bin/shairport
 
 # Configuration defaults
 USER=shairport
