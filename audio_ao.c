@@ -32,6 +32,7 @@
 #include "common.h"
 #include "audio.h"
 
+audio_output audio_ao;
 ao_device *dev = NULL;
 ao_option *ao_opts = NULL;
 ao_sample_format fmt;

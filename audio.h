@@ -11,7 +11,7 @@ typedef struct {
     // at end of program
     void (*deinit)(void);
     // after idle timeouts
-    void (*reinit)(void);
+    int (*reinit)(void);
 
     void (*start)(int sample_rate);
     // block of samples
