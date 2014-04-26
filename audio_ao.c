@@ -34,6 +34,7 @@
 
 ao_device *dev = NULL;
 ao_option *ao_opts = NULL;
+ao_sample_format fmt;
 int driver;
 
 static void help(void) {
@@ -86,11 +87,6 @@ static int init(int argc, char **argv) {
     if (optind < argc)
         die("Invalid audio argument: %s", argv[optind]);
 
-    return reinit();
-}
-
-static int reinit(void) {
-    ao_sample_format fmt;
     memset(&fmt, 0, sizeof(fmt));
 
     fmt.bits = 16;
@@ -98,6 +94,13 @@ static int reinit(void) {
     fmt.channels = 2;
     fmt.byte_format = AO_FMT_NATIVE;
 
+    dev = ao_open_live(driver, &fmt, ao_opts);
+    audio_ao.is_initialized = (dev ? 1 : 0);
+    return dev ? 0 : 1;    
+}
+
+static int reinit(void) {
+    ao_initialize();
     dev = ao_open_live(driver, &fmt, ao_opts);
     audio_ao.is_initialized = (dev ? 1 : 0);
     return dev ? 0 : 1;    
@@ -131,6 +134,7 @@ audio_output audio_ao = {
     .help = &help,
     .init = &init,
     .deinit = &deinit,
+    .reinit = &reinit,
     .start = &start,
     .stop = &stop,
     .play = &play,
