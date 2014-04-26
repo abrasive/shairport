@@ -4,11 +4,14 @@
 typedef struct {
     void (*help)(void);
     char *name;
+    int is_initialized;
 
     // start of program
     int (*init)(int argc, char **argv);
     // at end of program
     void (*deinit)(void);
+    // after idle timeouts
+    void (*reinit)(void);
 
     void (*start)(int sample_rate);
     // block of samples
