@@ -848,9 +848,10 @@ void rtsp_listen_loop(void) {
             }
         }
         if (acceptfd < 0) {   // timeout
-            if (config.idle_timeout && nconns == 0) {
+            if (config.idle_timeout && config.output->is_initialized && nconns == 0) {
                 debug(2, "idle_timeout: shutting down audio.\n");
                 config.output->deinit();
+                continue;
             }
             else {
                 continue;
