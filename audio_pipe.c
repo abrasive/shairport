@@ -31,7 +31,7 @@
 #include "common.h"
 #include "audio.h"
 
-int fd = -1;
+static int fd = -1;
 
 char *pipename = NULL;
 
@@ -82,6 +82,8 @@ audio_output audio_pipe = {
     .deinit = &deinit,
     .start = &start,
     .stop = &stop,
+    .flush = NULL,
+    .delay = NULL,
     .play = &play,
     .volume = NULL
 };
