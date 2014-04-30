@@ -79,6 +79,8 @@ audio_output audio_sndio = {
 	.deinit = &deinit,
 	.start = &start,
 	.stop = &stop,
+	.flush = NULL,
+	.delay = NULL,
 	.play = &play,
 	.volume = &volume
 };
