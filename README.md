@@ -7,20 +7,20 @@ It is very experimental, and only works with Linux and ALSA.
 
 Some of the support files, e.g. PKGBUILD and shairport.service files, are out of date.
 
-What it is
+What is Shairport?
 ----------
-This program emulates an AirPort Express for the purpose of streaming music from iTunes and compatible iPods and iPhones. It implements a server for the Apple RAOP protocol.
+Shairport emulates an AirPort Express for the purpose of streaming music from iTunes and compatible iPods and iPhones. It implements a server for the Apple RAOP protocol.
 ShairPort does not support AirPlay v2 (video and photo streaming).
 
 What's new in Shairport 2.0
 ---------------------------
-Synchronisation.
+Shairport 2.0 does Synchronisation.
 
 (1) Shairport 2.0 sets a delay (a "latency") from when music is sent by iTunes to when it is played in the Shairport audio device. The duration of the latency can be set to match the delay through other iTunes output devices, (including other Shairplay 2.0 devices). Latency is actively kept at the set level, so synchronisation is actively maintained.
 
 (2) Shairport 2.0 is developed for ALSA, so is ALSA and Linux only.
 
-(3) Lots of little changes, e.g. volume control profile, muting, autotools build control...
+(3) There are lots of little changes, e.g. volume control profile, muting, autotools build control...
 
 Status
 ------
