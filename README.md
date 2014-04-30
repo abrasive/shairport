@@ -44,7 +44,7 @@ Debian users can get the basics with
 
 Building Instructions
 ---------------------
-`$ autotools -i`
+`$ autoreconf -i`
 
 `$ ./configure --with-alsa --with-avahi`
 
