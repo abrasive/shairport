@@ -23,6 +23,6 @@ void player_volume(double f);
 void player_flush(void);
 void player_resync(void);
 
-void player_put_packet(seq_t seqno, uint8_t *data, int len);
+void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len);
 
 #endif //_PLAYER_H
