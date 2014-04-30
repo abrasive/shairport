@@ -359,6 +359,12 @@ static void msg_write_response(int fd, rtsp_message *resp) {
     write(fd, pkt, p-pkt+2);
 }
 
+static void handle_record(rtsp_conn_info *conn,
+                           rtsp_message *req, rtsp_message *resp) {
+    resp->respcode = 200;
+    msg_add_header(resp, "Audio-Latency","100000");
+}
+
 static void handle_options(rtsp_conn_info *conn,
                            rtsp_message *req, rtsp_message *resp) {
     resp->respcode = 200;
@@ -388,6 +394,8 @@ static void handle_flush(rtsp_conn_info *conn,
 static void handle_setup(rtsp_conn_info *conn,
                          rtsp_message *req, rtsp_message *resp) {
     int cport, tport;
+    int lsport,lcport,ltport;
+
     char *hdr = msg_get_header(req, "Transport");
     if (!hdr)
         return;
@@ -406,15 +414,30 @@ static void handle_setup(rtsp_conn_info *conn,
     tport = atoi(p);
 
     rtsp_take_player();
-    int sport = rtp_setup(&conn->remote, cport, tport);
-    if (!sport)
+    rtp_setup(&conn->remote, cport, tport,&lsport,&lcport,&ltport);
+    if (!lsport)
         return;
-
+    char *q;
+    p = strstr(hdr,"control_port=");
+    if (p) {
+    	q = strchr(p,';'); // get past the control port entry
+    	*p++=0;
+    	if (q++)
+    		strcat(hdr,q); // should unsplice the control port entry
+    }
+    p = strstr(hdr,"timing_port=");
+    if (p) {
+    	q = strchr(p,';'); // get past the timing port entry
+    	*p++=0;
+    	if (q++)
+    		strcat(hdr,q); // should unsplice the timing port entry
+    }
     player_play(&conn->stream);
 
-    char *resphdr = malloc(strlen(hdr) + 20);
-    strcpy(resphdr, hdr);
-    sprintf(resphdr + strlen(resphdr), ";server_port=%d", sport);
+    char *resphdr = malloc(200);
+    *resphdr=0;
+    sprintf(resphdr, "RTP/AVP/UDP;unicast;interleaved=0-1;mode=record;control_port=%d;timing_port=%d;server_port=%d", lcport, ltport, lsport);
+
     msg_add_header(resp, "Transport", resphdr);
 
     msg_add_header(resp, "Session", "1");
@@ -524,7 +547,7 @@ static struct method_handler {
     {"SETUP",           handle_setup},
     {"GET_PARAMETER",   handle_ignore},
     {"SET_PARAMETER",   handle_set_parameter},
-    {"RECORD",          handle_ignore},
+    {"RECORD",          handle_record},
     {NULL,              NULL}
 };
 
