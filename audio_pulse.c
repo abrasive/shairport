@@ -123,6 +123,8 @@ audio_output audio_pulse = {
     .deinit = &deinit,
     .start = &start,
     .stop = &stop,
+    .flush = NULL,
+    .delay = NULL,
     .play = &play,
     .volume = NULL
 };
