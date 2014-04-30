@@ -36,7 +36,7 @@
 #include "daemon.h"
 #include "rtsp.h"
 #include "mdns.h"
-#include "getopt_long.h"
+// #include "getopt_long.h"
 
 static void log_setup();
 
@@ -89,6 +89,8 @@ void usage(char *progname) {
     printf("    -a, --name=NAME     set advertised name\n");
     printf("    -b FILL             set how full the buffer must be before audio output\n");
     printf("                        starts. This value is in frames; default %d\n", config.buffer_start_fill);
+    printf("    -L  --latency=FRAMES set how many frames between a just-received frame and audio output\n");
+    printf("                        starts. This value is in frames; default %d\n", config.latency);
     printf("    -d, --daemon        fork (daemonise). The PID of the child process is\n");
     printf("                        written to stdout, unless a pidfile is used.\n");
     printf("    -P, --pidfile=FILE  write daemon's pid to FILE on startup.\n");
@@ -127,12 +129,13 @@ int parse_options(int argc, char **argv) {
         {"on-start",required_argument,  NULL, 'B'},
         {"on-stop", required_argument,  NULL, 'E'},
         {"mdns",    required_argument,  NULL, 'm'},
+        {"latency", required_argument,  NULL, 'L'},
         {NULL, 0, NULL, 0}
     };
 
     int opt;
     while ((opt = getopt_long(argc, argv,
-                              "+hdvP:l:e:p:a:o:b:B:E:m:",
+                              "+hdvP:l:e:p:a:o:b:B:E:m:L:",
                               long_options, NULL)) > 0) {
         switch (opt) {
             default:
@@ -156,6 +159,9 @@ int parse_options(int argc, char **argv) {
                 break;
             case 'b':
                 config.buffer_start_fill = atoi(optarg);
+                break;
+            case 'L':
+                config.latency = atoi(optarg);
                 break;
             case 'B':
                 config.cmd_start = optarg;
@@ -254,6 +260,7 @@ int main(int argc, char **argv) {
     memset(&config, 0, sizeof(config));
 
     // set defaults
+    config.latency = 99400; // this seems to work pretty well -- two left-ear headphones, one from the iMac jack, one from an NSLU2 running a cheap "3D Sound" USB Soundcard
     config.buffer_start_fill = 220;
     config.port = 5002;
     char hostname[100];
