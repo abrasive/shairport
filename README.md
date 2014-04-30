@@ -14,7 +14,7 @@ What's new in Shairport 2.0?
 ---------------------------
 Shairport 2.0 does Audio Synchronisation.
 
-(1) Shairport 2.0 allows you to set a delay (a "latency") from when music is sent by iTunes or your iOS device to when it is played in the Shairport audio device. The latency can be set to match the latency of other output devices playing the music, thus achieving audio synchronisation. Latency is actively kept at the set level, thus synchronisation is actively maintained.
+(1) Shairport 2.0 allows you to set a delay (a "latency") from when music is sent by iTunes or your iOS device to when it is played in the Shairport audio device. The latency can be set to match the latency of other output devices playing the music, achieving audio synchronisation. Latency is actively kept at the set level, so synchronisation is actively maintained.
 
 (2) Shairport 2.0 is developed for ALSA, so is ALSA and Linux only.
 
