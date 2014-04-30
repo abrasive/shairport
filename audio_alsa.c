@@ -39,7 +39,11 @@ static void deinit(void);
 static void start(int sample_rate);
 static void play(short buf[], int samples);
 static void stop(void);
+static void flush(void);
+static uint32_t delay(void);
 static void volume(double vol);
+static int has_mute=0;
+static int has_db_vol=0;
 
 audio_output audio_alsa = {
     .name = "alsa",
@@ -48,6 +52,8 @@ audio_output audio_alsa = {
     .deinit = &deinit,
     .start = &start,
     .stop = &stop,
+    .flush = &flush,
+    .delay = &delay,
     .play = &play,
     .volume = NULL
 };
@@ -64,6 +70,9 @@ static char *alsa_out_dev = "default";
 static char *alsa_mix_dev = NULL;
 static char *alsa_mix_ctrl = "Master";
 static int alsa_mix_index = 0;
+
+static int play_number;
+static int64_t accumulated_delay,accumulated_da_delay;
 
 static void help(void) {
     printf("    -d output-device    set the output device [default*|...]\n"
@@ -115,7 +124,7 @@ static int init(int argc, char **argv) {
 
     if (alsa_mix_dev == NULL)
         alsa_mix_dev = alsa_out_dev;
-    audio_alsa.volume = &volume;
+    
 
     int ret = 0;
     long alsa_mix_maxv;
@@ -137,8 +146,20 @@ static int init(int argc, char **argv) {
     alsa_mix_elem = snd_mixer_find_selem(alsa_mix_handle, alsa_mix_sid);
     if (!alsa_mix_elem)
         die ("Failed to find mixer element");
-    snd_mixer_selem_get_playback_volume_range (alsa_mix_elem, &alsa_mix_minv, &alsa_mix_maxv);
-    alsa_mix_range = alsa_mix_maxv - alsa_mix_minv;
+    if (snd_mixer_selem_get_playback_dB_range (alsa_mix_elem, &alsa_mix_minv, &alsa_mix_maxv)==0) {
+       has_db_vol=1;
+       debug(1,"Hardware mixer has dB volume from %ld to %ld.\n",alsa_mix_minv,alsa_mix_maxv);
+       audio_alsa.volume = &volume;
+       alsa_mix_range = alsa_mix_maxv - alsa_mix_minv;
+    } else {
+       debug(1,"Hardware mixer does not have dB volume -- linear only??\n");
+    }
+    
+    if (snd_mixer_selem_has_playback_switch(alsa_mix_elem)) {
+        has_mute=1;
+        debug(1,"Has mute ability.\n");
+    }
+
 
     return 0;
 }
@@ -151,33 +172,76 @@ static void deinit(void) {
 }
 
 static void start(int sample_rate) {
-    if (sample_rate != 44100)
-        die("Unexpected sample rate!");
+  if (sample_rate != 44100)
+    die("Unexpected sample rate!");
+  unsigned int mysamplerate=sample_rate;
 
-    int ret, dir = 0;
-    snd_pcm_uframes_t frames = 64;
-    ret = snd_pcm_open(&alsa_handle, alsa_out_dev, SND_PCM_STREAM_PLAYBACK, 0);
-    if (ret < 0)
-        die("Alsa initialization failed: unable to open pcm device: %s\n", snd_strerror(ret));
+  int ret, dir = 0;
+  snd_pcm_uframes_t frames = 441*10;
+  snd_pcm_uframes_t buffer_size = frames*4;
+  ret = snd_pcm_open(&alsa_handle, alsa_out_dev, SND_PCM_STREAM_PLAYBACK, 0);
+  if (ret < 0)
+    die("Alsa initialization failed: unable to open pcm device: %s\n", snd_strerror(ret));
 
-    snd_pcm_hw_params_alloca(&alsa_params);
-    snd_pcm_hw_params_any(alsa_handle, alsa_params);
-    snd_pcm_hw_params_set_access(alsa_handle, alsa_params, SND_PCM_ACCESS_RW_INTERLEAVED);
-    snd_pcm_hw_params_set_format(alsa_handle, alsa_params, SND_PCM_FORMAT_S16);
-    snd_pcm_hw_params_set_channels(alsa_handle, alsa_params, 2);
-    snd_pcm_hw_params_set_rate_near(alsa_handle, alsa_params, (unsigned int *)&sample_rate, &dir);
-    snd_pcm_hw_params_set_period_size_near(alsa_handle, alsa_params, &frames, &dir);
-    ret = snd_pcm_hw_params(alsa_handle, alsa_params);
-    if (ret < 0)
-        die("unable to set hw parameters: %s\n", snd_strerror(ret));
+  snd_pcm_hw_params_alloca(&alsa_params);
+  snd_pcm_hw_params_any(alsa_handle, alsa_params);
+  snd_pcm_hw_params_set_access(alsa_handle, alsa_params, SND_PCM_ACCESS_RW_INTERLEAVED);
+  snd_pcm_hw_params_set_format(alsa_handle, alsa_params, SND_PCM_FORMAT_S16);
+  snd_pcm_hw_params_set_channels(alsa_handle, alsa_params, 2);
+  snd_pcm_hw_params_set_rate_near(alsa_handle, alsa_params, (unsigned int *)&mysamplerate, &dir);
+  // snd_pcm_hw_params_set_period_size_near(alsa_handle, alsa_params, &frames, &dir);
+  // snd_pcm_hw_params_set_buffer_size_near(alsa_handle, alsa_params, &buffer_size);
+  ret = snd_pcm_hw_params(alsa_handle, alsa_params);
+  if (ret < 0)
+    die("unable to set hw parameters: %s\n", snd_strerror(ret));
+  if (mysamplerate!=sample_rate) {
+    die("Can't set the D/A converter to %d -- set to %d instead./n",sample_rate,mysamplerate);
+  }
+}
+
+static uint32_t delay() {
+  snd_pcm_sframes_t current_delay = 0;
+  int derr;
+  if ((snd_pcm_state(alsa_handle)==SND_PCM_STATE_PREPARED) || (snd_pcm_state(alsa_handle)==SND_PCM_STATE_RUNNING))
+    if (derr = snd_pcm_delay(alsa_handle,&current_delay)) {
+      // debug(1,"Error getting delay in delay(): %s\n", snd_strerror(derr));
+      current_delay=0;
+    }
+  return current_delay;
 }
 
 static void play(short buf[], int samples) {
-    int err = snd_pcm_writei(alsa_handle, (char*)buf, samples);
-    if (err < 0)
-        err = snd_pcm_recover(alsa_handle, err, 0);
-    if (err < 0)
-        die("Failed to write to PCM device: %s\n", snd_strerror(err));
+  snd_pcm_sframes_t current_delay = 0;
+  int err;
+  if ((snd_pcm_state(alsa_handle)==SND_PCM_STATE_PREPARED) || (snd_pcm_state(alsa_handle)==SND_PCM_STATE_RUNNING)) {
+    if (err = snd_pcm_delay(alsa_handle,&current_delay)) {
+      debug(1,"Error getting delay in play(): %s\n", snd_strerror(err));
+      current_delay=0;
+    }
+    err = snd_pcm_writei(alsa_handle, (char*)buf, samples);
+    if (err < 0) {
+      err = snd_pcm_recover(alsa_handle, err, 0);
+      debug(1,"Error writing in play(): %s\n", snd_strerror(err));
+    }
+    //if (err < 0)
+    //  die("Failed to write to PCM device: %s.\n", snd_strerror(err));
+  } //else {
+    //debug(1,"Playing blocked -- state is %d.\n",snd_pcm_state(alsa_handle));
+  //}
+//  return current_delay;
+}
+
+static void flush(void) {
+    int derr;
+    if (alsa_handle) {
+//        debug(1,"Dropping frames for flush...\n");
+        if (derr = snd_pcm_drop(alsa_handle))
+          debug(1,"Error dropping frames: %s\n", snd_strerror(derr));
+//        debug(1,"Dropped frames ok. State is %d.\n",snd_pcm_state(alsa_handle));
+        if (derr = snd_pcm_prepare(alsa_handle))
+          debug(1,"Error preparing after flush: %s\n", snd_strerror(derr));
+//        debug(1,"Frames successfully dropped.\n");
+    }
 }
 
 static void stop(void) {
@@ -189,7 +253,15 @@ static void stop(void) {
 }
 
 static void volume(double vol) {
-    long alsa_volume = (vol*alsa_mix_range)+alsa_mix_minv;
-    if(snd_mixer_selem_set_playback_volume_all(alsa_mix_elem, alsa_volume) != 0)
-        die ("Failed to set playback volume");
+  if (has_db_vol) {
+    // guess that if the range is 60db or greater, that it's amplitude rather than power, do multiply by 2, i.e. 200
+    uint32_t multiplier = 200;
+    if (alsa_mix_range<6000)
+      multiplier=alsa_mix_range/30;
+    // otherwise multiply by <range in db>/30
+    if(snd_mixer_selem_set_playback_dB_all(alsa_mix_elem, vol*multiplier+alsa_mix_range+alsa_mix_minv, -1) != 0)
+      die ("Failed to set playback dB volume");
+  }
+  if (has_mute)
+    snd_mixer_selem_set_playback_switch_all(alsa_mix_elem, (vol!=-144.0));
 }
