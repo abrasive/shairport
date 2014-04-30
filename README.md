@@ -1,9 +1,7 @@
 ShairPort 2.0
 =============
 
-Shairport 2.0 is a pretty big rewrite of Shairport 1.0 by James Laird.
-
-It is very experimental, and only works with Linux and ALSA.
+Shairport 2.0 is a pretty substantial rewrite of Shairport 1.0 by James Laird. It is still very experimental, and only works with Linux and ALSA.
 
 Some of the support files, e.g. PKGBUILD and shairport.service files, are out of date.
 
@@ -12,7 +10,7 @@ What is Shairport?
 Shairport emulates an AirPort Express for the purpose of streaming music from iTunes and compatible iPods and iPhones. It implements a server for the Apple RAOP protocol.
 ShairPort does not support AirPlay v2 (video and photo streaming).
 
-What's new in Shairport 2.0
+What's new in Shairport 2.0?
 ---------------------------
 Shairport 2.0 does Synchronisation.
 
@@ -26,7 +24,7 @@ Status
 ------
 Shairport 2.0 is working on Raspberry Pi and Linksys NSLU2, both using OpenWrt. It works on an Ubuntu laptop. It works well with built-in audio and with a variety of USB-connected Amplifiers and DACs.
 
-Shairport 2.0 DOES NOT WORK WITH RASPIAN. It runs, but it's very glitchy. This seems to be a known problem with Raspian. On the other hand, Shairport 2.0 runs well on the exact same hardware but using OpenWrt in place of Raspian.
+Shairport 2.0 DOES NOT WORK WITH RASPIAN. It runs, but it's very glitchy. This seems to be due to a known problem with Raspian. On the other hand, Shairport 2.0 runs well on the exact same hardware but using OpenWrt in place of Raspian.
 
 Shairport 2.0 runs on Ubuntu inside VMWare Fusion on a Mac, but syncronisation is off when using the built-in emulated soundcard.
 
