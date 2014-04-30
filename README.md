@@ -50,6 +50,8 @@ Building Instructions
 
 `$ make`
 
+Note that `shairport` is not installed automatically, so where it says `shairport` below, you might have to enter its path name, e.g. `./shairport` if you are still in the make directory.
+
 
 Running Shairport 2.0
 ---------------------
