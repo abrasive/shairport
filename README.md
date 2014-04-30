@@ -55,7 +55,7 @@ Note that `shairport` is not installed automatically, so where it says `shairpor
 
 Running Shairport 2.0
 ---------------------
-The `'L'` setting is for the amount of latency -- the units are frames, with 44,100 frames to the second. Although 99,000 frames  is slightly more than two seconds, it sounds good, as does 99,300 -- YMMV.
+The `-L` setting is for the amount of latency -- the units are frames, with 44,100 frames to the second. Although 99,000 frames  is slightly more than two seconds, it sounds good, as does 99,300 -- YMMV.
 
 Examples
 --------
