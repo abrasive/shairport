@@ -1,7 +1,11 @@
 ShairPort 2.0
 =============
 
-Shairport 2.0 is a pretty big rewrite of Shairport 1.0 by James Laird. It is very experimental, and only works with Linux and ALSA.
+Shairport 2.0 is a pretty big rewrite of Shairport 1.0 by James Laird.
+
+It is very experimental, and only works with Linux and ALSA.
+
+Some of the support files, e.g. PKGBUILD and shairport.service files, are out of date.
 
 What it is
 ----------
@@ -37,3 +41,38 @@ Required:
 
 Debian users can get the basics with
 `apt-get install libssl-dev libavahi-client-dev libasound2-dev`
+
+Building Instructions
+---------------------
+$ autotools -i
+$ ./configure --with-alsa --with-avahi
+$ make
+
+Running Shairport 2.0
+---------------------
+Settings are for the amount of latency -- the units are "frames", with 44100 frames to the second. Although 99000 is slightly more than two seconds, it works pretty well, as does 99300 -- YMMV.
+
+Examples
+--------
+In the following are examples of the Raspberry Pi and the NSLU2, little-endian and a big-endian ARM systems running OpenWrt. Also an example of a standard Ubuntu based laptop.
+
+For a Ubuntu laptop:
+
+shairport -d -L 99000 -a "Shairport"
+
+For best results, you should access the hardware volume control. Use alsamixer or similar to find out the name of the volume controller to be used after the -c option. For a Raspberry Pi using its internal soundcard that drives the headphone jack:
+
+shairport -d -L 99000 -a "Shairport" -- -d hw:0 -t hardware -c PCM
+
+For a cheapo "3D Sound" USB card (Stereo output and input only) on a Raspberry Pi
+
+shairport -d -L 99000 -a "Shairport" -- -d hw:1 -t hardware -c Speaker
+
+For a first generation Griffin iMic on a Raspberry Pi
+
+shairport -d -L 99000 -a "Shairport" -- -d hw:1 -t hardware -c PCM
+
+For an NSLU2, which has not internal soundcard, to drive the "3D Sound" USB card:
+
+shairport -d -L 99000 -a "Shairport" -- -d hw:0 -t hardware -c Speaker
+
