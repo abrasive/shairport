@@ -60,7 +60,6 @@ static void play(short buf[], int samples) {
     samples_played += samples;
 
     long long finishtime = starttime + samples_played * 1e6 / Fs;
-
     usleep(finishtime - nowtime);
 }
 
@@ -79,6 +78,8 @@ audio_output audio_dummy = {
     .deinit = &deinit,
     .start = &start,
     .stop = &stop,
+    .flush = NULL,
+    .delay = NULL,
     .play = &play,
     .volume = NULL
 };
