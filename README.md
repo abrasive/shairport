@@ -44,13 +44,15 @@ Debian users can get the basics with
 
 Building Instructions
 ---------------------
+To build Shairport, `cd` into the shairport directory and execute the following commands:
+
 `$ autoreconf -i`
 
 `$ ./configure --with-alsa --with-avahi`
 
 `$ make`
 
-Note that `shairport` is not installed automatically, so where it says `shairport` below, you might have to enter its path name, e.g. `./shairport` if you are still in the make directory.
+Note that `shairport` is not installed automatically, so where it says `shairport` below, you might have to enter its path name, e.g. `./shairport` if you are still in the shairport directory.
 
 
 Running Shairport 2.0
