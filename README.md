@@ -44,11 +44,9 @@ Debian users can get the basics with
 
 Building Instructions
 ---------------------
-$ autotools -i
-
-$ ./configure --with-alsa --with-avahi
-
-$ make
+`$ autotools -i`
+`$ ./configure --with-alsa --with-avahi`
+`$ make`
 
 
 Running Shairport 2.0
@@ -61,21 +59,21 @@ In the following are examples of the Raspberry Pi and the NSLU2, little-endian a
 
 For a Ubuntu laptop:
 
-shairport -d -L 99000 -a "Shairport"
+`shairport -d -L 99000 -a "Shairport"`
 
 For best results, you should access the hardware volume control. Use alsamixer or similar to find out the name of the volume controller to be used after the -c option. For a Raspberry Pi using its internal soundcard that drives the headphone jack:
 
-shairport -d -L 99000 -a "Shairport" -- -d hw:0 -t hardware -c PCM
+`shairport -d -L 99000 -a "Shairport" -- -d hw:0 -t hardware -c PCM`
 
 For a cheapo "3D Sound" USB card (Stereo output and input only) on a Raspberry Pi:
 
-shairport -d -L 99000 -a "Shairport" -- -d hw:1 -t hardware -c Speaker
+`shairport -d -L 99000 -a "Shairport" -- -d hw:1 -t hardware -c Speaker`
 
 For a first generation Griffin iMic on a Raspberry Pi:
 
-shairport -d -L 99000 -a "Shairport" -- -d hw:1 -t hardware -c PCM
+`shairport -d -L 99000 -a "Shairport" -- -d hw:1 -t hardware -c PCM`
 
 For an NSLU2, which has no internal soundcard, to drive the "3D Sound" USB card:
 
-shairport -d -L 99000 -a "Shairport" -- -d hw:0 -t hardware -c Speaker
+`shairport -d -L 99000 -a "Shairport" -- -d hw:0 -t hardware -c Speaker`
 
