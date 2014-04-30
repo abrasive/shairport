@@ -57,11 +57,11 @@ The `'L'` setting is for the amount of latency -- the units are frames, with 44,
 
 Examples
 --------
-In the following are examples of the Raspberry Pi and the NSLU2, little-endian and a big-endian ARM systems running OpenWrt. The first is an example of a standard Ubuntu based laptop. For a Ubuntu laptop:
+In the following are examples of the Raspberry Pi and the NSLU2, little-endian and a big-endian ARM systems running OpenWrt. But the first is an example of a standard Ubuntu based laptop, defaulting to device `0`:
 
 `shairport -d -L 99000 -a "Shairport"`
 
-For best results, you should access the hardware volume control as shown in the following examples. Use alsamixer or similar to find out the name of the volume controller to be used after the `-c` option. For a Raspberry Pi using its internal soundcard that drives the headphone jack:
+For best results, you should access the hardware volume control as shown in the following examples. Use `alsamixer` or similar to find out the name of the volume controller to be used after the `-c` option. For a Raspberry Pi using its internal soundcard that drives the headphone jack:
 
 `shairport -d -L 99000 -a "Shairport" -- -d hw:0 -t hardware -c PCM`
 
