@@ -12,9 +12,9 @@ ShairPort does not support AirPlay v2 (video and photo streaming).
 
 What's new in Shairport 2.0?
 ---------------------------
-Shairport 2.0 does Synchronisation.
+Shairport 2.0 does Audio Synchronisation.
 
-(1) Shairport 2.0 sets a delay (a "latency") from when music is sent by iTunes to when it is played in the Shairport audio device. The duration of the latency can be set to match the delay through other iTunes output devices, (including other Shairplay 2.0 devices). Latency is actively kept at the set level, so synchronisation is actively maintained.
+(1) Shairport 2.0 allows you to set a delay (a "latency") from when music is sent by iTunes or your iOS device to when it is played in the Shairport audio device. The latency can be set to match the latency of other output devices playing the music, thus achieving audio synchronisation. Latency is actively kept at the set level, thus synchronisation is actively maintained.
 
 (2) Shairport 2.0 is developed for ALSA, so is ALSA and Linux only.
 
