@@ -53,17 +53,15 @@ Building Instructions
 
 Running Shairport 2.0
 ---------------------
-Settings are for the amount of latency -- the units are "frames", with 44100 frames to the second. Although 99000 is slightly more than two seconds, it works pretty well, as does 99300 -- YMMV.
+The `'L'` setting is for the amount of latency -- the units are frames, with 44,100 frames to the second. Although 99,000 frames  is slightly more than two seconds, it sounds good, as does 99,300 -- YMMV.
 
 Examples
 --------
-In the following are examples of the Raspberry Pi and the NSLU2, little-endian and a big-endian ARM systems running OpenWrt. Also an example of a standard Ubuntu based laptop.
-
-For a Ubuntu laptop:
+In the following are examples of the Raspberry Pi and the NSLU2, little-endian and a big-endian ARM systems running OpenWrt. The first is an example of a standard Ubuntu based laptop. For a Ubuntu laptop:
 
 `shairport -d -L 99000 -a "Shairport"`
 
-For best results, you should access the hardware volume control. Use alsamixer or similar to find out the name of the volume controller to be used after the -c option. For a Raspberry Pi using its internal soundcard that drives the headphone jack:
+For best results, you should access the hardware volume control as shown in the following examples. Use alsamixer or similar to find out the name of the volume controller to be used after the `-c` option. For a Raspberry Pi using its internal soundcard that drives the headphone jack:
 
 `shairport -d -L 99000 -a "Shairport" -- -d hw:0 -t hardware -c PCM`
 
