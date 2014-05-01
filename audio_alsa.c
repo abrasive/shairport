@@ -202,11 +202,23 @@ static void start(int sample_rate) {
 static uint32_t delay() {
   snd_pcm_sframes_t current_delay = 0;
   int derr;
-  if ((snd_pcm_state(alsa_handle)==SND_PCM_STATE_PREPARED) || (snd_pcm_state(alsa_handle)==SND_PCM_STATE_RUNNING))
+  if ((snd_pcm_state(alsa_handle)==SND_PCM_STATE_PREPARED) || (snd_pcm_state(alsa_handle)==SND_PCM_STATE_RUNNING)) {
     if (derr = snd_pcm_delay(alsa_handle,&current_delay)) {
-      // debug(1,"Error getting delay in delay(): %s\n", snd_strerror(derr));
-      current_delay=0;
+      if (derr < 0) {
+        derr = snd_pcm_recover(alsa_handle, derr, 0);
+        debug(1,"Error in delay(): %s\n", snd_strerror(derr));
+      }
+      current_delay=-1;
     }
+  } else {
+    debug(1,"Error -- ALSA device not in correct state for delay.\n");
+    if (derr = snd_pcm_prepare(alsa_handle)) {
+      derr = snd_pcm_recover(alsa_handle, derr, 0);
+      debug(1,"Error preparing after delay error: %s\n", snd_strerror(derr));
+    }
+
+    current_delay = -1;
+  }
   return current_delay;
 }
 
@@ -214,24 +226,22 @@ static void play(short buf[], int samples) {
   snd_pcm_sframes_t current_delay = 0;
   int err;
   if ((snd_pcm_state(alsa_handle)==SND_PCM_STATE_PREPARED) || (snd_pcm_state(alsa_handle)==SND_PCM_STATE_RUNNING)) {
-    if (err = snd_pcm_delay(alsa_handle,&current_delay)) {
-      debug(1,"Error getting delay in play(): %s\n", snd_strerror(err));
-      current_delay=0;
-    }
     err = snd_pcm_writei(alsa_handle, (char*)buf, samples);
     if (err < 0) {
       err = snd_pcm_recover(alsa_handle, err, 0);
       debug(1,"Error writing in play(): %s\n", snd_strerror(err));
     }
-    //if (err < 0)
-    //  die("Failed to write to PCM device: %s.\n", snd_strerror(err));
-  } //else {
-    //debug(1,"Playing blocked -- state is %d.\n",snd_pcm_state(alsa_handle));
-  //}
-//  return current_delay;
+  } else {
+    debug(1,"Error -- ALSA device not in correct state for play.\n");
+    if (err = snd_pcm_prepare(alsa_handle)) {
+      err = snd_pcm_recover(alsa_handle, err, 0);
+      debug(1,"Error preparing after play error: %s\n", snd_strerror(err));
+    }
+  }
 }
 
 static void flush(void) {
+  debug(1,"ALSA flush called.\n");
     int derr;
     if (alsa_handle) {
 //        debug(1,"Dropping frames for flush...\n");
@@ -245,6 +255,7 @@ static void flush(void) {
 }
 
 static void stop(void) {
+  debug(1,"ALSA stop called.\n");
     if (alsa_handle) {
         snd_pcm_drain(alsa_handle);
         snd_pcm_close(alsa_handle);
