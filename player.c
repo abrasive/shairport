@@ -94,8 +94,12 @@ static abuf_t audio_buffer[BUFFER_FRAMES];
 static seq_t ab_read, ab_write;
 static int ab_buffering = 1, ab_synced = 0;
 static uint32_t first_packet_timestamp = 0;
+static int flush_requested = 0;
 
+// mutexes and condition variables
 static pthread_mutex_t ab_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t flush_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 static pthread_cond_t flowcontrol;
 
 static int64_t first_packet_time_to_play; // nanoseconds
@@ -371,6 +375,15 @@ static abuf_t *buffer_get_frame(void) {
   int wait;
   uint32_t dac_delay = 0;
   do {
+    pthread_mutex_lock(&flush_mutex);
+    if (flush_requested==1) {
+     if (config.output->flush)
+      config.output->flush();
+     ab_resync();
+     flush_requested=0;
+    }
+    pthread_mutex_unlock(&flush_mutex);
+
     curframe = audio_buffer + BUFIDX(ab_read);
     if (config.output->delay) 
       dac_delay = config.output->delay();
@@ -746,12 +759,18 @@ void player_volume(double f) {
 }
 
 void player_flush(void) {
+  pthread_mutex_lock(&flush_mutex);
+  flush_requested=1;
+  pthread_mutex_unlock(&flush_mutex);
+}
+
+/*
     if (config.output->flush)
       config.output->flush();
     pthread_mutex_lock(&ab_mutex);
     ab_resync();
     pthread_mutex_unlock(&ab_mutex);
-}
+*/
 
 int player_play(stream_cfg *stream) {
 	debug(1,"player_play called...\n");
