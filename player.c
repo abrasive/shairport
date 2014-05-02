@@ -682,6 +682,12 @@ static void *player_thread_func(void *arg) {
         // this is the actual delay, which will fluctuate a good bit about a potentially rising or falling trend.
         int64_t delay = td_in_frames+rt-(nt-current_delay);
         
+        if (initial_latency==0) {
+            initial_latency=delay;
+            debug(1,"Initial latency error: %d frames.\n",config.latency-initial_latency);
+        }
+
+        
         if (number_of_delays==averaging_interval) { // the array of delays is full
           sum_of_delays-=delays[oldest_delay];
           oldest_delay=(oldest_delay+1)%averaging_interval;
@@ -707,10 +713,6 @@ static void *player_thread_func(void *arg) {
               debug(1,"Valid frames: %lld; overall frames added/subtracted %lld; frames added + frames deleted %lld; average D/A delay, average latency (frames): %llu, %llu; average buffers in use: %llu, moving average delay (number of delays): %llu (%lu).\n",
                 frames-(additions-deletions), additions-deletions, additions+deletions, accumulated_da_delay/print_interval,current_latency,accumulated_buffers_in_use/print_interval,moving_average_delay,number_of_delays);
           // this is misleading!    debug(1,"Moving average correction (ppm) (number of frames): %.4f (%d).\n", moving_average_correction*1000000/252,number_of_corrections);
-          }
-          if (initial_latency==0) {
-            initial_latency=moving_average_delay;
-            debug(1,"Initial latency error: %d frames.\n",config.latency-initial_latency);
           }
           if (previous_latency==0)
             previous_latency=current_latency;
