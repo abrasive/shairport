@@ -95,16 +95,17 @@ static seq_t ab_read, ab_write;
 static int ab_buffering = 1, ab_synced = 0;
 static uint32_t first_packet_timestamp = 0;
 static int flush_requested = 0;
+static uint32_t flush_rtp_timestamp;
 
 // mutexes and condition variables
 static pthread_mutex_t ab_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t flush_mutex = PTHREAD_MUTEX_INITIALIZER;
-
 static pthread_cond_t flowcontrol;
 
 static int64_t first_packet_time_to_play; // nanoseconds
 
-
+// stats
+static uint64_t missing_packets,late_packets,too_late_packets,resend_requests; 
 
 static void bf_est_reset(short fill);
 
@@ -114,10 +115,6 @@ static void ab_resync(void) {
         audio_buffer[i].ready = 0;
     ab_synced = 0;
     ab_buffering = 1;
-    first_packet_timestamp = 0;
-    first_packet_time_to_play = 0;
-    clear_reference_timestamp();
-
 }
 
 // the sequence numbers will wrap pretty often.
@@ -224,18 +221,21 @@ void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
         ab_write = seqno;
     } else if (seq_order(ab_write, seqno)) {    // newer than expected
         rtp_request_resend(ab_write+1, seqno-1);
+        resend_requests++;
         abuf = audio_buffer + BUFIDX(seqno);
         ab_write = seqno;
     } else if (seq_order(ab_read, seqno)) {     // late but not yet played
+        late_packets++;
         abuf = audio_buffer + BUFIDX(seqno);
     }  else {    // too late.
+      too_late_packets++;
       if (!late_packet_message_sent) {
         debug(1, "late packet %04X (%04X:%04X).\n", seqno, ab_read, ab_write);
         late_packet_message_sent=1;
       }
     }
     buf_fill = seq_diff(ab_read, ab_write);
-    pthread_mutex_unlock(&ab_mutex);
+//    pthread_mutex_unlock(&ab_mutex);
 
     if (abuf) {
         alac_decode(abuf->data, data, len);
@@ -244,7 +244,7 @@ void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
     }
     
 
-    pthread_mutex_lock(&ab_mutex);
+//    pthread_mutex_lock(&ab_mutex);
     
     int rc = pthread_cond_signal(&flowcontrol);
     if (rc)
@@ -377,9 +377,16 @@ static abuf_t *buffer_get_frame(void) {
   do {
     pthread_mutex_lock(&flush_mutex);
     if (flush_requested==1) {
+ //   if (0) {
+     debug(1,"Flush executed.\n");
      if (config.output->flush)
       config.output->flush();
      ab_resync();
+     first_packet_timestamp = 0;
+     first_packet_time_to_play = 0;
+ //    clear_reference_timestamp();
+     curframe = audio_buffer + BUFIDX(ab_read);
+     debug(1,"Current frame ready = %d.\n",curframe->ready);
      flush_requested=0;
     }
     pthread_mutex_unlock(&flush_mutex);
@@ -387,15 +394,20 @@ static abuf_t *buffer_get_frame(void) {
     curframe = audio_buffer + BUFIDX(ab_read);
     if (config.output->delay) 
       dac_delay = config.output->delay();
-    
+        
     if (curframe->ready) {
-      if (ab_buffering) { // if we are getting packets but not yet forwarding them to the player
+      if ((flush_rtp_timestamp) && (flush_rtp_timestamp>=curframe->timestamp)) {
+        debug(1,"Dropping flushed packet %u.\n",curframe->timestamp);
+        curframe->ready=0;
+        ab_read++;
+      } else if (ab_buffering) { // if we are getting packets but not yet forwarding them to the player
         if (first_packet_timestamp==0) { // if this is the very first packet
-          uint32_t reference_timestamp;
+         debug(1,"First frame seen, time %u, with %d frames...\n",curframe->timestamp,seq_diff(ab_read, ab_write));
+         uint32_t reference_timestamp;
           uint64_t reference_timestamp_time;
           get_reference_timestamp_stuff(&reference_timestamp,&reference_timestamp_time);
           if (reference_timestamp) { // if we have a reference time
-
+            debug(1,"First frame seen with timestamp...\n");
             first_packet_timestamp=curframe->timestamp; // we will keep buffering until we are supposed to start playing this
  
             // here, see if we should start playing. We need to know when to allow the packets to be sent to the player
@@ -410,7 +422,8 @@ static abuf_t *buffer_get_frame(void) {
             int64_t delta = ((int64_t)first_packet_timestamp-(int64_t)reference_timestamp);
 
             first_packet_time_to_play = reference_timestamp_time+((delta+(int64_t)config.latency)<<32)/44100; // using the latency requested...
-
+            if (local_time_now>=first_packet_time_to_play)
+              debug(1,"First packet is late! It should have played before now...");
           }
         }      
 
@@ -494,6 +507,7 @@ static abuf_t *buffer_get_frame(void) {
       abuf = audio_buffer + BUFIDX(next);
       if (!abuf->ready) {
         rtp_request_resend(next, next);
+        resend_requests++;
       }
     }
   }
@@ -501,6 +515,7 @@ static abuf_t *buffer_get_frame(void) {
   
   if (!curframe->ready) {
     // debug(1, "missing frame %04X. Supplying a silent frame.\n", read);
+    missing_packets++;
     memset(curframe->data, 0, FRAME_BYTES(frame_size));
   }
   curframe->ready = 0;
@@ -596,6 +611,8 @@ static void *player_thread_func(void *arg) {
   sum_of_delays=0;
   oldest_correction=newest_correction=number_of_corrections=0;
   sum_of_corrections=0;
+  missing_packets=late_packets=too_late_packets=resend_requests=0;
+  flush_rtp_timestamp=0;
   while (!please_stop) {
     abuf_t *inframe = buffer_get_frame();
     if (inframe) {
@@ -673,20 +690,23 @@ static void *player_thread_func(void *arg) {
         
         int64_t td_in_frames;
         int64_t td = local_time_now-reference_timestamp_time;
-        //debug(1,"td is %lld.\n",td);
-        if (td>=0)
+        // debug(1,"td is %lld.\n",td);          
+        if (td>=0) {
           td_in_frames = (td*44100)>>32;
-        else {
+        } else {
           td_in_frames = -((-td*44100)>>32);
         }
         // this is the actual delay, which will fluctuate a good bit about a potentially rising or falling trend.
         int64_t delay = td_in_frames+rt-(nt-current_delay);
         
+        if (play_number<(44100*4/252))
+          debug(1,"Latency error for packet %d: %d frames.\n",play_number,delay-config.latency);
+        /*
         if (initial_latency==0) {
             initial_latency=delay;
             debug(1,"Initial latency error: %d frames.\n",config.latency-initial_latency);
         }
-
+        */
         
         if (number_of_delays==averaging_interval) { // the array of delays is full
           sum_of_delays-=delays[oldest_delay];
@@ -709,9 +729,14 @@ static void *player_thread_func(void *arg) {
         accumulated_buffers_in_use += seq_diff(ab_read, ab_write);
         if (play_number%print_interval==0) {
           current_latency=accumulated_delay/print_interval;                    
-          if ((play_number/print_interval)%50==0) { // only print every fiftieth one, in verbose mode
-              debug(1,"Valid frames: %lld; overall frames added/subtracted %lld; frames added + frames deleted %lld; average D/A delay, average latency (frames): %llu, %llu; average buffers in use: %llu, moving average delay (number of delays): %llu (%lu).\n",
-                frames-(additions-deletions), additions-deletions, additions+deletions, accumulated_da_delay/print_interval,current_latency,accumulated_buffers_in_use/print_interval,moving_average_delay,number_of_delays);
+//          if ((play_number/print_interval)%50==0)
+          { // only print every fiftieth one, in verbose mode
+              //debug(1,"Valid frames: %lld; overall frames added/subtracted %lld; frames added + frames deleted %lld; average D/A delay, average latency (frames): %llu, %llu; average buffers in use: %llu, moving average delay (number of delays): %llu (%lu).\n",
+              //  frames-(additions-deletions), additions-deletions, additions+deletions, accumulated_da_delay/print_interval,current_latency,accumulated_buffers_in_use/print_interval,moving_average_delay,number_of_delays);
+
+              debug(1,"Frames %lld, correction %lld, mods %lld, dac_buffer %llu, latency %llu, missing_packets %llu, late_packets %llu, too_late_packets %llu resend_requests %llu, buffers %llu.\n",
+                frames-(additions-deletions), additions-deletions, additions+deletions,accumulated_da_delay/print_interval,moving_average_delay,missing_packets,late_packets,too_late_packets,resend_requests,accumulated_buffers_in_use/print_interval);
+                
           // this is misleading!    debug(1,"Moving average correction (ppm) (number of frames): %.4f (%d).\n", moving_average_correction*1000000/252,number_of_corrections);
           }
           if (previous_latency==0)
@@ -760,9 +785,10 @@ void player_volume(double f) {
     pthread_mutex_unlock(&vol_mutex);
 }
 
-void player_flush(void) {
+void player_flush(uint32_t timestamp) {
   pthread_mutex_lock(&flush_mutex);
   flush_requested=1;
+  flush_rtp_timestamp=timestamp; // flush all packets up to (and including?) this
   pthread_mutex_unlock(&flush_mutex);
 }
 

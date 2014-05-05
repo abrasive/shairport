@@ -287,6 +287,8 @@ static void *rtp_timing_receiver(void *arg) {
         
         processing_time = distant_transmit_time-distant_receive_time;
         
+        debug(1,"Timing packet received.\n");
+        
         // debug(1,"Return trip time: %lluuS, remote processing time: %lluuS\n",(return_time*1000000)>>32,(processing_time*1000000)>>32); 
 
         uint64_t local_time_by_remote_clock = distant_transmit_time+return_time/2;

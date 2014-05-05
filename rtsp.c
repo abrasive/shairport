@@ -361,8 +361,31 @@ static void msg_write_response(int fd, rtsp_message *resp) {
 
 static void handle_record(rtsp_conn_info *conn,
                            rtsp_message *req, rtsp_message *resp) {
-    resp->respcode = 200;
-    msg_add_header(resp, "Audio-Latency","100000");
+
+  if (req) {
+    debug(1,"Record message received: \"%s\".\n",req);
+   } else {
+    debug(1,"Empty RECORD message.\n");
+  }
+/*
+  if (req) {
+    char * hdr = msg_get_header(req,"RTP-Info");
+    debug(1,"Record message received: \"%s\".\n",hdr);
+    // get the rtp timestamp
+    char *p;
+    uint32_t rtptime=0;
+    p = strstr(hdr, "rtptime=");
+    if (p) {
+      p = strchr(p, '=') + 1;
+      if (p)
+        rtptime = atoi(p);
+    }
+  } else {
+    debug(1,"Empty RECORD message.\n");
+  }
+ */
+  resp->respcode = 200;
+  msg_add_header(resp, "Audio-Latency","88200");
 }
 
 static void handle_options(rtsp_conn_info *conn,
@@ -387,7 +410,19 @@ static void handle_flush(rtsp_conn_info *conn,
                          rtsp_message *req, rtsp_message *resp) {
     if (!rtsp_playing())
         return;
-    player_flush();
+    char * hdr = msg_get_header(req,"RTP-Info");
+    
+    debug(1,"Flush message received: \"%s\".\n",hdr);
+    // get the rtp timestamp
+    char *p;
+    uint32_t rtptime=0;
+    p = strstr(hdr, "rtptime=");
+    if (p) {
+      p = strchr(p, '=') + 1;
+      if (p)
+        rtptime = atoi(p);
+    }
+    player_flush(rtptime);
     resp->respcode = 200;
 }
 
