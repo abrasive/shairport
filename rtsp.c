@@ -207,7 +207,7 @@ static int msg_handle_line(rtsp_message **pmsg, char *line) {
         *pmsg = msg;
         char *sp, *p;
 
-        debug(1, "received request: %s\n", line);
+        // debug(1, "received request: %s\n", line);
 
         p = strtok_r(line, " ", &sp);
         if (!p)
@@ -339,7 +339,7 @@ static void msg_write_response(int fd, rtsp_message *resp) {
     n = snprintf(p, pktfree,
                  "RTSP/1.0 %d %s\r\n", resp->respcode,
                  resp->respcode==200 ? "OK" : "Error");
-    debug(1, "sending response: %s", pkt);
+    // debug(1, "sending response: %s", pkt);
     pktfree -= n;
     p += n;
 
@@ -361,29 +361,6 @@ static void msg_write_response(int fd, rtsp_message *resp) {
 
 static void handle_record(rtsp_conn_info *conn,
                            rtsp_message *req, rtsp_message *resp) {
-
-  if (req) {
-    debug(1,"Record message received: \"%s\".\n",req);
-   } else {
-    debug(1,"Empty RECORD message.\n");
-  }
-/*
-  if (req) {
-    char * hdr = msg_get_header(req,"RTP-Info");
-    debug(1,"Record message received: \"%s\".\n",hdr);
-    // get the rtp timestamp
-    char *p;
-    uint32_t rtptime=0;
-    p = strstr(hdr, "rtptime=");
-    if (p) {
-      p = strchr(p, '=') + 1;
-      if (p)
-        rtptime = atoi(p);
-    }
-  } else {
-    debug(1,"Empty RECORD message.\n");
-  }
- */
   resp->respcode = 200;
   msg_add_header(resp, "Audio-Latency","88200");
 }
@@ -412,7 +389,7 @@ static void handle_flush(rtsp_conn_info *conn,
         return;
     char * hdr = msg_get_header(req,"RTP-Info");
     
-    debug(1,"Flush message received: \"%s\".\n",hdr);
+    // debug(1,"Flush message received: \"%s\".\n",hdr);
     // get the rtp timestamp
     char *p;
     uint32_t rtptime=0;
@@ -499,7 +476,7 @@ static void handle_set_parameter(rtsp_conn_info *conn,
 
         if (!strncmp(cp, "volume: ", 8)) {
             float volume = atof(cp + 8);
-            debug(1, "volume: %f\n", volume);
+            // debug(1, "volume: %f\n", volume);
             player_volume(volume);
         } else {
             debug(1, "unrecognised parameter: >>%s<< (%d)\n", cp, strlen(cp));
