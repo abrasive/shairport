@@ -93,8 +93,8 @@ void usage(char *progname) {
     printf("    -p, --port=PORT     set RTSP listening port\n");
     printf("    -a, --name=NAME     set advertised name\n");
     printf("    -k, --password=PW   require password to stream audio\n");
-    printf("    -b FILL             set how full the buffer must be before audio output\n");
-    printf("                        starts. This value is in frames; default %d\n", config.buffer_start_fill);
+    printf("    -t, --delay=TIME    set by how much audio is delayed.\n");
+    printf("                        This value is in ms; default %d\n", config.delay/1000);
     printf("    -d, --daemon        fork (daemonise). The PID of the child process is\n");
     printf("                        written to stdout, unless a pidfile is used.\n");
     printf("    -P, --pidfile=FILE  write daemon's pid to FILE on startup.\n");
@@ -138,12 +138,13 @@ int parse_options(int argc, char **argv) {
         {"wait-cmd",  no_argument,        NULL, 'w'},
         {"meta-dir",  required_argument,  NULL, 'M'},
         {"mdns",      required_argument,  NULL, 'm'},
+        {"delay",     required_argument,  NULL, 't'},
         {NULL,        0,                  NULL,   0}
     };
 
     int opt;
     while ((opt = getopt_long(argc, argv,
-                              "+hdvP:l:e:p:a:k:o:b:B:E:M:wm:",
+                              "+hdvP:l:e:p:a:k:o:t:B:E:M:wm:",
                               long_options, NULL)) > 0) {
         switch (opt) {
             default:
@@ -170,8 +171,8 @@ int parse_options(int argc, char **argv) {
             case 'k':
                 config.password = optarg;
                 break;
-            case 'b':
-                config.buffer_start_fill = atoi(optarg);
+            case 't':
+                config.delay = atoi(optarg) * 1000;
                 break;
             case 'B':
                 config.cmd_start = optarg;
@@ -278,7 +279,7 @@ int main(int argc, char **argv) {
     memset(&config, 0, sizeof(config));
 
     // set defaults
-    config.buffer_start_fill = 220;
+    config.delay = 2205000; //todo: check with an airport express what this should be
     config.port = 5002;
     char hostname[100];
     gethostname(hostname, 100);

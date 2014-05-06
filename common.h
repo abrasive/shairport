@@ -27,6 +27,7 @@ typedef struct {
     char *mdns_name;
     mdns_backend *mdns;
     int buffer_start_fill;
+    int delay;
     int daemonise;
     char *cmd_start, *cmd_stop;
     int cmd_blocking;
