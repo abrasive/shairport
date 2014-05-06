@@ -209,8 +209,8 @@ static void free_buffer(void) {
 
 void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
   packet_count++;
-  if (packet_count<10)
-    debug(1,"Packet %llu received.\n",packet_count);
+  //if (packet_count<10)
+  //  debug(1,"Packet %llu received.\n",packet_count);
   abuf_t *abuf = 0;
   int16_t buf_fill;
 
@@ -433,24 +433,36 @@ static abuf_t *buffer_get_frame(void) {
           if (config.output->delay) {
             dac_delay = config.output->delay();
             if (dac_delay==0) 
-              filler_size = 2048*15;
+              filler_size = 22050; // half a second
           }
           struct timespec time_now;
           clock_gettime(CLOCK_MONOTONIC,&time_now);
           uint64_t tn = ((uint64_t)time_now.tv_sec<<32)+((uint64_t)time_now.tv_nsec<<32)/1000000000;
-          uint64_t exact_frame_gap = (((first_packet_time_to_play-tn)*44100)>>32)-dac_delay;
-          if (dac_delay==0)
-            debug(2,"exact_frame_gap is %llu.\n",exact_frame_gap);
-          uint32_t fs=filler_size;
-          if (exact_frame_gap<=filler_size) {
-            fs=exact_frame_gap;
+          if (tn>=first_packet_time_to_play) {
+            // we've gone past the time...
+            debug(1,"Run past the exact start time by %llu frames...\n",(((tn-first_packet_time_to_play)*44100)>>32)+dac_delay);
             ab_buffering = 0;
+          } else {
+            uint64_t gross_frame_gap = ((first_packet_time_to_play-tn)*44100)>>32;
+            int64_t exact_frame_gap = gross_frame_gap-dac_delay;
+            if (exact_frame_gap<=0) {
+              // we've gone past the time...
+              debug(1,"Run a bit past the exact start time by %lld frames...\n",-exact_frame_gap);
+              ab_buffering = 0;          
+            } else {
+              uint32_t fs=filler_size;
+              if ((exact_frame_gap<=filler_size) || (exact_frame_gap<=frame_size*2)) {
+                fs=exact_frame_gap;
+                ab_buffering = 0;
+              }
+              signed short *silence;
+              silence = malloc(FRAME_BYTES(fs));
+              memset(silence, 0, FRAME_BYTES(fs));
+              // debug(1,"Exact frame gap is %llu; play %d frames of silence.\n",exact_frame_gap,fs);
+              config.output->play(silence, fs);
+              free(silence);
+            }
           }
-          signed short *silence;
-          silence = malloc(FRAME_BYTES(fs));
-          memset(silence, 0, FRAME_BYTES(fs));
-          config.output->play(silence, fs);
-          free(silence);
         }
       }
     }
@@ -718,8 +730,8 @@ static void *player_thread_func(void *arg) {
         int64_t delay = td_in_frames+rt-(nt-current_delay);
         
 //        if ((play_number<(10)) || (play_number%500==0))
-        if ((play_number<(10)))
-          debug(1,"Latency error for packet %d: %d frames.\n",play_number,delay-config.latency);
+//        if ((play_number<(10)))
+//          debug(1,"Latency error for packet %d: %d frames.\n",play_number,delay-config.latency);
         
         if (number_of_delays==averaging_interval) { // the array of delays is full
           sum_of_delays-=delays[oldest_delay];
@@ -815,6 +827,7 @@ void player_flush(uint32_t timestamp) {
 
 int player_play(stream_cfg *stream) {
 	debug(1,"player_play called...\n");
+	packet_count = 0;
     if (config.buffer_start_fill > BUFFER_FRAMES)
         die("specified buffer starting fill %d > buffer size %d",
             config.buffer_start_fill, BUFFER_FRAMES);
