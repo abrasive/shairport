@@ -24,7 +24,7 @@ Status
 ------
 Shairport 2.0 is working on Raspberry Pi and Linksys NSLU2, both using OpenWrt. It works on an Ubuntu laptop. It works well with built-in audio and with a variety of USB-connected Amplifiers and DACs.
 
-Shairport 2.0 DOES NOT WORK WITH RASPIAN at present. It does run, but it's very glitchy. This seems to be due to a known problem with Raspian. On the other hand, Shairport 2.0 runs well on the exact same hardware but using OpenWrt in place of Raspian.
+Shairport 2.0 DOES NOT WORK WITH RASPIAN. It does run, but it's very glitchy. This seems to be due to a known problem with Raspian. On the other hand, Shairport 2.0 runs well on the exact same hardware but using OpenWrt in place of Raspian.
 
 Shairport 2.0 does not run reliably on Ubuntu inside VMWare Fusion on a Mac, possibly due to the emulated soundcard.
 
@@ -42,7 +42,9 @@ Debian users can get the basics with
 
 Building Instructions
 ---------------------
-To build Shairport, `cd` into the shairport directory and execute the following commands:
+If you're building ShairPort for OpenWrt, there's an OpenWrt package at https://github.com/mikebrady/shairport.
+
+Otherwise, to build Shairport, `cd` into the shairport directory and execute the following commands:
 
 `$ autoreconf -i`
 
@@ -55,27 +57,29 @@ Note that `shairport` is not installed automatically, so where it says `shairpor
 
 Running Shairport 2.0
 ---------------------
-The `-L` setting is for the amount of latency -- the units are frames, with 44,100 frames to the second. Although 99,000 frames  is slightly more than two seconds, it sounds good, as does 99,300 -- YMMV.
+The `-L` setting is for the amount of latency -- the units are frames, with 44,100 frames to the second. Although 99,400 frames  is slightly more than two seconds, it sounds good -- YMMV.
 
 Examples
 --------
-In the following are examples of the Raspberry Pi and the NSLU2, little-endian and a big-endian ARM systems running OpenWrt. But the first is an example of a standard Ubuntu based laptop, defaulting to device `0`:
+The first is an example of a standard Ubuntu based laptop:
 
-`shairport -d -L 99000 -a "Shairport"`
+`shairport -d -L 99400 -a "Shairport 2.0" -- -d hw:0`
 
-For best results, you should access the hardware volume control as shown in the following examples. Use `alsamixer` or similar to find out the name of the volume controller to be used after the `-c` option. For a Raspberry Pi using its internal soundcard that drives the headphone jack:
+In the following are examples of the Raspberry Pi and the NSLU2 -- little-endian and a big-endian ARM systems running OpenWrt. For best results, you should access the hardware volume controls as shown. Use `alsamixer` or similar to discover the name of the volume controller to be used after the `-c` option.
 
-`shairport -d -L 99000 -a "Shairport" -- -d hw:0 -t hardware -c PCM`
+For a Raspberry Pi using its internal soundcard that drives the headphone jack:
+
+`shairport -d -L 99400 -a "Shairport 2.0" -- -d hw:0 -t hardware -c PCM`
 
 For a cheapo "3D Sound" USB card (Stereo output and input only) on a Raspberry Pi:
 
-`shairport -d -L 99000 -a "Shairport" -- -d hw:1 -t hardware -c Speaker`
+`shairport -d -L 99400 -a "Shairport 2.0" -- -d hw:1 -t hardware -c Speaker`
 
 For a first generation Griffin iMic on a Raspberry Pi:
 
-`shairport -d -L 99000 -a "Shairport" -- -d hw:1 -t hardware -c PCM`
+`shairport -d -L 99400 -a "Shairport 2.0" -- -d hw:1 -t hardware -c PCM`
 
 For an NSLU2, which has no internal soundcard, to drive the "3D Sound" USB card:
 
-`shairport -d -L 99000 -a "Shairport" -- -d hw:0 -t hardware -c Speaker`
+`shairport -d -L 99400 -a "Shairport 2.0" -- -d hw:0 -t hardware -c Speaker`
 
