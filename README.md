@@ -1,4 +1,4 @@
-ShairPort 2.0
+Shairport 2.0
 =============
 
 Shairport 2.0 allows you to synchronise the audio coming from all your devices. Specifically, Shairport 2.0 allows you to set the "latency" -- the time between when a sound is sent and when it is played. This allows you to synchronise Shairport 2.0 devices reliably with other devices playing the same source.
@@ -8,7 +8,7 @@ Shairport 2.0 is a pretty substantial rewrite of Shairport 1.0 by James Laird. I
 What is Shairport?
 ----------
 Shairport emulates an AirPort Express for the purpose of streaming music from iTunes and compatible iPods and iPhones. It implements a server for the Apple RAOP protocol.
-ShairPort does not support AirPlay v2 (video and photo streaming).
+Shairport does not support AirPlay v2 (video and photo streaming).
 
 Shairport 2.0 does Audio Synchronisation
 ---------------------------
@@ -18,9 +18,9 @@ Status
 ------
 Shairport 2.0 is working on Raspberry Pi and Linksys NSLU2, both using OpenWrt. It works on an Ubuntu laptop. It works well with built-in audio and with a variety of USB-connected Amplifiers and DACs.
 
-Shairport 2.0 does not work with Raspian. It does run, but it's very glitchy. This seems to be due to a known problem with Raspian -- see http://www.raspberrypi.org/forums/viewtopic.php?t=23544. On the other hand, Shairport 2.0 runs well on the exact same hardware but using OpenWrt in place of Raspian.
+Shairport 2.0 compiles and runs pretty well on the built-in sound card of a Raspberry Pi model B under Raspian. Due to the limitations of the sound card, you wouldn't mistake the output for HiFi, but it's really not too shabby. However, driving any USB-based audio output device is glitchy if you are using Ethernet at the same time. It works, but it's very glitchy. This seems to be due to a known problem -- see http://www.raspberrypi.org/forums/viewtopic.php?t=23544 -- and it will hopefully be fixed in a forthcoming update to Raspian. Right now, though, Shairport 2.0 runs well on the same hardware but using OpenWrt in place of Raspian.
 
-Shairport 2.0 sorta runs on Ubuntu 13.10 inside VMWare Fusion 6.0.3 on a Mac, but synchronisation does not work -- possibly because the soundcard is being emulated. Also, Shairport doesn't always start properly.
+Shairport 2.0 sort-of runs on Ubuntu 13.10 inside VMWare Fusion 6.0.3 on a Mac, but synchronisation does not work too well -- possibly because the soundcard is being emulated. Also, Shairport doesn't always start properly. Still being investigated, this.
 
 Please note that Shairport 2.0 works only with the ALSA back end. You can compile the other back ends in as you wish, but it definitely will not work properly with them. Maybe someday...
 
@@ -33,12 +33,12 @@ Required:
 * Avahi
 * ALSA
 
-Debian users can get the basics with
+Debian (and Raspian) users can get the basics with
 `apt-get install avahi-daemon autoconf libtool libssl-dev libavahi-client-dev libasound2-dev`
 
 Building Instructions
 ---------------------
-If you're building ShairPort for OpenWrt, there's an OpenWrt package at https://github.com/mikebrady/shairport.
+If you're interested in Shairport for OpenWrt, there's an OpenWrt package at https://github.com/mikebrady/shairport.
 
 Otherwise, to build Shairport, `cd` into the shairport directory and execute the following commands:
 
@@ -48,8 +48,9 @@ Otherwise, to build Shairport, `cd` into the shairport directory and execute the
 
 `$ make`
 
-Note that `shairport` is not installed automatically, so where it says `shairport` below, you might have to enter its path name, e.g. `./shairport` if you are still in the shairport directory.
+Note that `shairport` is not installed automatically, so where it says `shairport` below, you might have to enter its path name, e.g. if you are still in the shairport directory:
 
+`$ ./shairport -v` will execute the just-compiled shairport in the slightly verbose mode.
 
 Running Shairport 2.0
 ---------------------
