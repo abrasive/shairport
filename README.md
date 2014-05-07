@@ -1,11 +1,7 @@
 ShairPort 2.0
 =============
 
-ShairPort 2.0 adds Audio Synchronisation capability to ShairPort.
-
-Specifically, by controlling the latency of the system precisely, ShairPort 2.0 allows you go synchronise with other audio devices.
-
-It is a pretty substantial rewrite of ShairPort 1.0 by James Laird.  It is still very experimental, and only works with Linux and ALSA.
+Shairport 2.0 is a pretty substantial rewrite of Shairport 1.0 by James Laird. It is still very experimental, and only works with Linux and ALSA.
 
 Some of the support files, e.g. PKGBUILD and shairport.service files, are out of date.
 
@@ -14,20 +10,25 @@ What is Shairport?
 Shairport emulates an AirPort Express for the purpose of streaming music from iTunes and compatible iPods and iPhones. It implements a server for the Apple RAOP protocol.
 ShairPort does not support AirPlay v2 (video and photo streaming).
 
-Shairport 2.0 does Audio Synchronisation
-----------------------------------------
-Shairport 2.0 allows you to set a delay called the "latency", which is the time delay from when music is received to when it is played by the Shairport audio device. The latency can be set to match the latency of other output devices playing music from the same source, so that exactly the same sound can come from all devices at exactly the same time, thus achieving audio synchronisation. Shairport 2.0 uses extra timing information from the audio source to maintain the accuracy of the latency.
+What's new in Shairport 2.0?
+---------------------------
+Shairport 2.0 does Audio Synchronisation.
+
+(1) Shairport 2.0 allows you to set a delay (a "latency") from when music is sent by iTunes or your iOS device to when it is played in the Shairport audio device. The latency can be set to match the latency of other output devices playing the music, achieving audio synchronisation. Latency is actively kept at the set level, so synchronisation is actively maintained.
+
+(2) Shairport 2.0 is developed for ALSA, so is ALSA and Linux only.
+
+(3) There are lots of little changes, e.g. volume control profile, muting, autotools build control...
 
 Status
 ------
-Shairport 2.0 is working on the Raspberry Pi model B (i.e. with the Ethernet port) and Linksys NSLU2, both using OpenWrt. It works on an Ubuntu laptop. It works well with built-in audio and with a variety of USB-connected Amplifiers and DACs.
+Shairport 2.0 is working on Raspberry Pi and Linksys NSLU2, both using OpenWrt. It works on an Ubuntu laptop. It works well with built-in audio and with a variety of USB-connected Amplifiers and DACs.
 
-Shairport 2.0 does not work properly with Raspian. It does run, but it's very glitchy. This seems to be due to a known problem with Raspian -- see http://www.raspberrypi.org/forums/viewtopic.php?t=23544. However, Shairport 2.0 runs well on the exact same hardware but using OpenWrt in place of Raspian -- there's an OpenWrt package at https://github.com/mikebrady/shairport.
+Shairport 2.0 does not work wih Raspian. It does run, but it's very glitchy. This seems to be due to a known problem with Raspian -- see http://www.raspberrypi.org/forums/viewtopic.php?t=23544. On the other hand, Shairport 2.0 runs well on the exact same hardware but using OpenWrt in place of Raspian.
 
 Shairport 2.0 does not run reliably on Ubuntu inside VMWare Fusion on a Mac, possibly due to the emulated soundcard.
 
-Please note that Shairport 2.0 only works with the ALSA back end. This is because ALSA allows you to measure latency pretty accurately. (You can compile the other back ends in as you wish, but they may not work at all. Maybe someday...)
-
+Please note that Shairport 2.0 only works with the ALSA back end. You can compile the other back ends in as you wish, but it will not work properly with them. Maybe someday...
 
 Build Requirements
 ------------------
