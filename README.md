@@ -68,7 +68,7 @@ For a Raspberry Pi using its internal soundcard that drives the headphone jack:
 
 `shairport -d -L 99400 -a "Shairport 2.0" -- -d hw:0 -t hardware -c PCM`
 
-For a Raspberry Pi driving a Topping TP30 Digital Amplifier, which has an integrated USB DAC":
+For a Raspberry Pi driving a Topping TP30 Digital Amplifier, which has an integrated USB DAC:
 
 `shairport -d -a Kitchen -L 99400 -- -d hw:1 -t hardware -c PCM`
 
