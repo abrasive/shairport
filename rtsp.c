@@ -361,6 +361,9 @@ static void msg_write_response(int fd, rtsp_message *resp) {
 
 static void handle_record(rtsp_conn_info *conn,
                            rtsp_message *req, rtsp_message *resp) {
+  char * hdr = msg_get_header(req,"Range");
+    
+  // debug(1,"RECORD message received: \"%s\".\n",hdr);
   resp->respcode = 200;
   msg_add_header(resp, "Audio-Latency","88200");
 }
@@ -389,7 +392,7 @@ static void handle_flush(rtsp_conn_info *conn,
         return;
     char * hdr = msg_get_header(req,"RTP-Info");
     
-    // debug(1,"Flush message received: \"%s\".\n",hdr);
+    // debug(1,"FLUSH message received: \"%s\".\n",hdr);
     // get the rtp timestamp
     char *p;
     uint32_t rtptime=0;
