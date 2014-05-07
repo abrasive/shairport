@@ -1,6 +1,9 @@
 ShairPort 2.0
 =============
 
+Shairport 2.0 allows you to set the "latency" -- the time between when a sound is sent and when Shairport plays it. This allows you to synchronise Shairport 2.0 devices reliably with other devices playing the same source.
+
+
 Shairport 2.0 is a pretty substantial rewrite of Shairport 1.0 by James Laird. It is still very experimental, and only works with Linux and ALSA.
 
 Some of the support files, e.g. PKGBUILD and shairport.service files, are out of date.
@@ -10,15 +13,9 @@ What is Shairport?
 Shairport emulates an AirPort Express for the purpose of streaming music from iTunes and compatible iPods and iPhones. It implements a server for the Apple RAOP protocol.
 ShairPort does not support AirPlay v2 (video and photo streaming).
 
-What's new in Shairport 2.0?
+Shairport 2.0 gives you Audio Synchronisation
 ---------------------------
-Shairport 2.0 does Audio Synchronisation.
-
-(1) Shairport 2.0 allows you to set a delay (a "latency") from when music is sent by iTunes or your iOS device to when it is played in the Shairport audio device. The latency can be set to match the latency of other output devices playing the music, achieving audio synchronisation. Latency is actively kept at the set level, so synchronisation is actively maintained.
-
-(2) Shairport 2.0 is developed for ALSA, so is ALSA and Linux only.
-
-(3) There are lots of little changes, e.g. volume control profile, muting, autotools build control...
+Shairport 2.0 allows you to set a delay (a "latency") from when music is sent by iTunes or your iOS device to when it is played in the Shairport audio device. The latency can be set to match the latency of other output devices playing the music, achieving audio synchronisation. Latency is actively kept at the set level, so synchronisation is actively maintained.
 
 Status
 ------
@@ -26,9 +23,11 @@ Shairport 2.0 is working on Raspberry Pi and Linksys NSLU2, both using OpenWrt. 
 
 Shairport 2.0 does not work wih Raspian. It does run, but it's very glitchy. This seems to be due to a known problem with Raspian -- see http://www.raspberrypi.org/forums/viewtopic.php?t=23544. On the other hand, Shairport 2.0 runs well on the exact same hardware but using OpenWrt in place of Raspian.
 
-Shairport 2.0 does not run reliably on Ubuntu inside VMWare Fusion on a Mac, possibly due to the emulated soundcard.
+Shairport 2.0 runs reasonably well on Ubuntu 13.10 inside VMWare Fusion 6.0.3 on a Mac, but you need to set the latency (option -L) to 88200 to bring it into sync with iTunes on the same machine. I don't know why :) 
 
-Please note that Shairport 2.0 only works with the ALSA back end. You can compile the other back ends in as you wish, but it will not work properly with them. Maybe someday...
+Please note that Shairport 2.0 only works with the ALSA back end. You can compile the other back ends in as you wish, but it definitely will not work properly with them. Maybe someday...
+
+There are lots of little changes, e.g. volume control profile, muting, autotools build control...
 
 Build Requirements
 ------------------
@@ -71,6 +70,10 @@ For a Raspberry Pi using its internal soundcard that drives the headphone jack:
 
 `shairport -d -L 99400 -a "Shairport 2.0" -- -d hw:0 -t hardware -c PCM`
 
+For a Raspberry Pi driving a Topping TP30 Digital Amplifier, which has an integrated USB DAC":
+
+`shairport -d -a Kitchen -L 99400 -- -d hw:1 -t hardware -c PCM`
+
 For a cheapo "3D Sound" USB card (Stereo output and input only) on a Raspberry Pi:
 
 `shairport -d -L 99400 -a "Shairport 2.0" -- -d hw:1 -t hardware -c Speaker`
@@ -83,3 +86,20 @@ For an NSLU2, which has no internal soundcard, to drive the "3D Sound" USB card:
 
 `shairport -d -L 99400 -a "Shairport 2.0" -- -d hw:0 -t hardware -c Speaker`
 
+Notes
+-----
+If you run Shairport from the command line without daemonising it (omit the `-d`), and if you turn on one level of verbosity (include `-v`), e.g. as follows for the Raspberry Pi with "3D Sound" card:
+
+`shairport -L 99400 -a "Shairport 2.0" -v -- -d hw:1 -t hardware -c Speaker`
+
+it will print statistics like this occasionally:
+
+`Drift: -15.3 (ppm); Corrections: 21.6 (ppm), missing_packets 0, late_packets 0, too_late_packets 0 resend_requests 0.`
+
+"Drift" is the net corrections -- the number of frame insertions less the number of frame deletions made, given as a moving average in parts per million. After an initials settling period, it represents the divergence between the source clock and the sound device's clock.
+
+"Corrections" is the number of frame insertions plus the number of frame deletions (i.e. the total number of "corrections" made), given as a moving average in parts per million. The closer this is to the absolute value of the drift, the fewer "unnecessary" corrections that are being made.
+
+For reference, a drift of 1 second per day is approximately 11.57 ppm. Left uncorrected, even a drift this small between two audio outputs will be audible after a short time.
+
+It's not unusual to have resend requests, late packets and even missing packets if some part of the connection to the Shairport device is over WiFi.
