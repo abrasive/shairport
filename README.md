@@ -93,7 +93,7 @@ it will print statistics like this occasionally:
 
 `Drift: -15.3 (ppm); Corrections: 21.6 (ppm), missing_packets 0, late_packets 0, too_late_packets 0 resend_requests 0.`
 
-"Drift" is the net corrections -- the number of frame insertions less the number of frame deletions made, given as a moving average in parts per million. After an initials settling period, it represents the divergence between the source clock and the sound device's clock.
+"Drift" is the net corrections -- the number of frame insertions less the number of frame deletions made, given as a moving average in parts per million. After an initial settling period, it represents the divergence between the source clock and the sound device's clock.
 
 "Corrections" is the number of frame insertions plus the number of frame deletions (i.e. the total number of "corrections" made), given as a moving average in parts per million. The closer this is to the absolute value of the drift, the fewer "unnecessary" corrections that are being made.
 
