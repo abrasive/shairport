@@ -433,7 +433,7 @@ static abuf_t *buffer_get_frame(void) {
           if (config.output->delay) {
             dac_delay = config.output->delay();
             if (dac_delay==0) 
-              filler_size = 22050; // half a second
+              filler_size = 11025; // quarter of a second
           }
           struct timespec time_now;
           clock_gettime(CLOCK_MONOTONIC,&time_now);
@@ -569,7 +569,7 @@ static int stuff_buffer(short *inptr, short *outptr, int32_t stuff) {
 
 static void *player_thread_func(void *arg) {
 #define averaging_interval 71
-#define trend_interval 44100 
+#define trend_interval 44100
     int64_t corrections[trend_interval];
     int64_t sum_of_corrections, sum_of_insertions_and_deletions;
     double moving_average_correction, moving_average_insertions_and_deletions;
@@ -666,7 +666,7 @@ static void *player_thread_func(void *arg) {
           amount_to_stuff= -abs_change_in_latency/change_in_latency;
         }
         
-        // prevent dithering...
+        // prevent dithering by +/- 1...
         if (abs_change_in_latency<20)
           amount_to_stuff=0;
           
@@ -690,7 +690,7 @@ static void *player_thread_func(void *arg) {
           sum_of_insertions_and_deletions+=amount_to_stuff;
         else
           sum_of_insertions_and_deletions-=amount_to_stuff;           
-       newest_correction=(newest_correction+1)%trend_interval;
+        newest_correction=(newest_correction+1)%trend_interval;
         number_of_corrections++;
         
         moving_average_correction = (1.0*sum_of_corrections)/number_of_corrections;
@@ -762,7 +762,7 @@ static void *player_thread_func(void *arg) {
             //debug(1,"Frames %lld, correction %lld, mods %lld, dac_buffer %llu, latency %llu, missing_packets %llu, late_packets %llu, too_late_packets %llu resend_requests %llu.\n",
               //frames-(additions-deletions), additions-deletions, additions+deletions,accumulated_da_delay/print_interval,moving_average_delay,missing_packets,late_packets,too_late_packets,resend_requests);
                 
-            debug(1,"Correction: %.1f (ppm); Insertions+deletions: %.1f (ppm). (%d-second moving averages.)\n", moving_average_correction*1000000/352, moving_average_insertions_and_deletions*1000000/352,(number_of_corrections*352)/44100);
+            debug(1,"Drift: %.1f (ppm); Corrections: %.1f (ppm), missing_packets %llu, late_packets %llu, too_late_packets %llu resend_requests %llu.\n", moving_average_correction*1000000/352, moving_average_insertions_and_deletions*1000000/352,missing_packets,late_packets,too_late_packets,resend_requests);
           }
           if (previous_latency==0)
             previous_latency=current_latency;
