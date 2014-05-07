@@ -378,7 +378,7 @@ static abuf_t *buffer_get_frame(void) {
   abuf_t *curframe;
   pthread_mutex_lock(&ab_mutex);
   int wait;
-  uint32_t dac_delay = 0;
+  int32_t dac_delay = 0;
   do {
     pthread_mutex_lock(&flush_mutex);
     if (flush_requested==1) {
@@ -397,7 +397,7 @@ static abuf_t *buffer_get_frame(void) {
         
     if (curframe->ready) {
       if ((flush_rtp_timestamp) && (flush_rtp_timestamp>=curframe->timestamp)) {
-        // debug(1,"Dropping flushed packet %u.\n",curframe->timestamp);
+        debug(1,"Dropping flushed packet %u.\n",curframe->timestamp);
         curframe->ready=0;
         ab_read++;
       } else if (ab_buffering) { // if we are getting packets but not yet forwarding them to the player
@@ -433,22 +433,31 @@ static abuf_t *buffer_get_frame(void) {
           if (config.output->delay) {
             dac_delay = config.output->delay();
             if (dac_delay==0) 
-              filler_size = 11025; // quarter of a second
+              filler_size = 22050; // half of a second
           }
           struct timespec time_now;
           clock_gettime(CLOCK_MONOTONIC,&time_now);
           uint64_t tn = ((uint64_t)time_now.tv_sec<<32)+((uint64_t)time_now.tv_nsec<<32)/1000000000;
           if (tn>=first_packet_time_to_play) {
             // we've gone past the time...
-            debug(1,"Run past the exact start time by %llu frames...\n",(((tn-first_packet_time_to_play)*44100)>>32)+dac_delay);
-            ab_buffering = 0;
+            // debug(1,"Run past the exact start time by %llu frames, with time now of %llx, fpttp of %llx and dac_delay of %d and %d packets; flush.\n",(((tn-first_packet_time_to_play)*44100)>>32)+dac_delay,tn,first_packet_time_to_play,dac_delay,seq_diff(ab_read, ab_write));
+            
+            if (config.output->flush)
+              config.output->flush();
+            ab_resync();
+            first_packet_timestamp = 0;
+            first_packet_time_to_play = 0;
           } else {
             uint64_t gross_frame_gap = ((first_packet_time_to_play-tn)*44100)>>32;
             int64_t exact_frame_gap = gross_frame_gap-dac_delay;
             if (exact_frame_gap<=0) {
               // we've gone past the time...
-              debug(1,"Run a bit past the exact start time by %lld frames...\n",-exact_frame_gap);
-              ab_buffering = 0;          
+              // debug(1,"Run a bit past the exact start time by %lld frames, with time now of %llx, fpttp of %llx and dac_delay of %d and %d packets; flush.\n",-exact_frame_gap,tn,first_packet_time_to_play,dac_delay,seq_diff(ab_read, ab_write));
+              if (config.output->flush)
+                config.output->flush();
+              ab_resync();
+              first_packet_timestamp = 0;
+              first_packet_time_to_play = 0;
             } else {
               uint32_t fs=filler_size;
               if ((exact_frame_gap<=filler_size) || (exact_frame_gap<=frame_size*2)) {
@@ -458,7 +467,7 @@ static abuf_t *buffer_get_frame(void) {
               signed short *silence;
               silence = malloc(FRAME_BYTES(fs));
               memset(silence, 0, FRAME_BYTES(fs));
-              // debug(1,"Exact frame gap is %llu; play %d frames of silence.\n",exact_frame_gap,fs);
+              //debug(1,"Exact frame gap is %llu; play %d frames of silence. Dac_delay is %d, with %d packets.\n",exact_frame_gap,fs,dac_delay,seq_diff(ab_read, ab_write));
               config.output->play(silence, fs);
               free(silence);
             }
@@ -466,7 +475,8 @@ static abuf_t *buffer_get_frame(void) {
         }
       }
     }
-    wait = (ab_buffering || (dac_delay>=4410) || (!ab_synced)) && (!please_stop);
+    // allow to DAC to have a quarter of a second -- seems necessary for VMWare Fusion and a WiFi connection.
+    wait = (ab_buffering || (dac_delay>=11025) || (!ab_synced)) && (!please_stop);
 //    wait = (ab_buffering ||  (seq_diff(ab_read, ab_write) < (config.latency-22000)/(352)) || (!ab_synced)) && (!please_stop);
     if (wait) {
       struct timespec to;
