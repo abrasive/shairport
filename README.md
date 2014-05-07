@@ -97,6 +97,6 @@ it will print statistics like this occasionally:
 
 "Corrections" is the number of frame insertions plus the number of frame deletions (i.e. the total number of "corrections" made), given as a moving average in parts per million. The closer this is to the absolute value of the drift, the fewer "unnecessary" corrections that are being made.
 
-For reference, a drift of 1 second per day is approximately 11.57 ppm. Left uncorrected, even a drift this small between two audio outputs will be audible after a short time.
+For reference, a drift of one second per day is approximately 11.57 ppm. Left uncorrected, even a drift this small between two audio outputs will be audible after a short time.
 
 It's not unusual to have resend requests, late packets and even missing packets if some part of the connection to the Shairport device is over WiFi.
