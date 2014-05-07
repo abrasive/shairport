@@ -34,7 +34,7 @@ Required:
 * ALSA
 
 Debian users can get the basics with
-`apt-get install autoconf libtool libssl-dev libavahi-client-dev libasound2-dev`
+`apt-get install avahi-daemon autoconf libtool libssl-dev libavahi-client-dev libasound2-dev`
 
 Building Instructions
 ---------------------
