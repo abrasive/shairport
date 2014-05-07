@@ -202,7 +202,9 @@ static void *rtp_timing_sender(void *arg) {
     uint32_t filler;
     uint64_t origin,receive,transmit;
   };
-
+  
+  uint64_t request_number=0;
+  
   debug(1, "Timing requester startup.\n");
 
   struct timing_request req;  // *not* a standard RTCP NACK
@@ -229,7 +231,11 @@ static void *rtp_timing_sender(void *arg) {
 
     clock_gettime(CLOCK_MONOTONIC,&dtt);
     sendto(timing_socket, &req, sizeof(req), 0, (struct sockaddr*)&rtp_client_timing_socket, sizeof(rtp_client_timing_socket));
-    sleep(3);
+    request_number++;
+    if (request_number<=4)
+      usleep(500000);
+    else
+      sleep(3);
   }
   debug(1, "rtp_timing_sender thread interrupted. terminating.\n");    
   return NULL;
