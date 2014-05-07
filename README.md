@@ -18,7 +18,7 @@ Status
 ------
 Shairport 2.0 is working on Raspberry Pi and Linksys NSLU2, both using OpenWrt. It works on an Ubuntu laptop. It works well with built-in audio and with a variety of USB-connected Amplifiers and DACs.
 
-Shairport 2.0 does not work wih Raspian. It does run, but it's very glitchy. This seems to be due to a known problem with Raspian -- see http://www.raspberrypi.org/forums/viewtopic.php?t=23544. On the other hand, Shairport 2.0 runs well on the exact same hardware but using OpenWrt in place of Raspian.
+Shairport 2.0 does not work with Raspian. It does run, but it's very glitchy. This seems to be due to a known problem with Raspian -- see http://www.raspberrypi.org/forums/viewtopic.php?t=23544. On the other hand, Shairport 2.0 runs well on the exact same hardware but using OpenWrt in place of Raspian.
 
 Shairport 2.0 sorta runs on Ubuntu 13.10 inside VMWare Fusion 6.0.3 on a Mac, but synchronisation does not work -- possibly because the soundcard is being emulated. Also, Shairport doesn't always start properly.
 
