@@ -397,7 +397,7 @@ static abuf_t *buffer_get_frame(void) {
         
     if (curframe->ready) {
       if ((flush_rtp_timestamp) && (flush_rtp_timestamp>=curframe->timestamp)) {
-        debug(1,"Dropping flushed packet %u.\n",curframe->timestamp);
+        // debug(1,"Dropping flushed packet %u.\n",curframe->timestamp);
         curframe->ready=0;
         ab_read++;
       } else if (ab_buffering) { // if we are getting packets but not yet forwarding them to the player
