@@ -1,8 +1,7 @@
 ShairPort 2.0
 =============
 
-Shairport 2.0 allows you to set the "latency" -- the time between when a sound is sent and when Shairport plays it. This allows you to synchronise Shairport 2.0 devices reliably with other devices playing the same source.
-
+Shairport 2.0 allows you do synchronise the sound coming from all your devices. Specifically, Shairport 2.0 allows you to set the "latency" -- the time between when a sound is sent and when it is played. This allows you to synchronise Shairport 2.0 devices reliably with other devices playing the same source.
 
 Shairport 2.0 is a pretty substantial rewrite of Shairport 1.0 by James Laird. It is still very experimental, and only works with Linux and ALSA.
 
@@ -13,9 +12,9 @@ What is Shairport?
 Shairport emulates an AirPort Express for the purpose of streaming music from iTunes and compatible iPods and iPhones. It implements a server for the Apple RAOP protocol.
 ShairPort does not support AirPlay v2 (video and photo streaming).
 
-Shairport 2.0 gives you Audio Synchronisation
+Shairport 2.0 does Audio Synchronisation
 ---------------------------
-Shairport 2.0 allows you to set a delay (a "latency") from when music is sent by iTunes or your iOS device to when it is played in the Shairport audio device. The latency can be set to match the latency of other output devices playing the music, achieving audio synchronisation. Latency is actively kept at the set level, so synchronisation is actively maintained.
+Shairport 2.0 allows you to set a delay (a "latency") from when music is sent by iTunes or your iOS device to when it is played in the Shairport audio device. The latency can be set to match the latency of other output devices playing the music, achieving audio synchronisation. Shairport 2.0 uses extra timing information to stay in sync with the source's time signals.
 
 Status
 ------
