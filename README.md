@@ -18,11 +18,11 @@ Status
 ------
 Shairport 2.0 is working on Raspberry Pi and Linksys NSLU2, both using OpenWrt. It works on an Ubuntu laptop. It works well with built-in audio and with a variety of USB-connected Amplifiers and DACs.
 
-Shairport 2.0 does not work wih Raspian. It does run, but it's very glitchy. This seems to be due to a known problem with Raspian -- see http://www.raspberrypi.org/forums/viewtopic.php?t=23544. On the other hand, Shairport 2.0 runs well on the exact same hardware but using OpenWrt in place of Raspian.
+Shairport 2.0 does not work with Raspian. It does run, but it's very glitchy. This seems to be due to a known problem with Raspian -- see http://www.raspberrypi.org/forums/viewtopic.php?t=23544. On the other hand, Shairport 2.0 runs well on the exact same hardware but using OpenWrt in place of Raspian.
 
-Shairport 2.0 sorta runs on Ubuntu 13.10 inside VMWare Fusion 6.0.3 on a Mac, but you need to set the latency (option -L) to 88200 to bring it into sync with iTunes on the same machine. I don't know why :) It doesn't always start properly.
+Shairport 2.0 sorta runs on Ubuntu 13.10 inside VMWare Fusion 6.0.3 on a Mac, but synchronisation does not work -- possibly because the soundcard is being emulated. Also, Shairport doesn't always start properly.
 
-Please note that Shairport 2.0 only works with the ALSA back end. You can compile the other back ends in as you wish, but it definitely will not work properly with them. Maybe someday...
+Please note that Shairport 2.0 works only with the ALSA back end. You can compile the other back ends in as you wish, but it definitely will not work properly with them. Maybe someday...
 
 There are lots of little changes, e.g. volume control profile, muting, autotools build control...
 
