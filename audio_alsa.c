@@ -146,18 +146,22 @@ static int init(int argc, char **argv) {
   alsa_mix_elem = snd_mixer_find_selem(alsa_mix_handle, alsa_mix_sid);
   if (!alsa_mix_elem)
       die ("Failed to find mixer element");
-  if ((snd_mixer_selem_ask_playback_vol_dB(alsa_mix_elem,alsa_mix_minv,&alsa_mix_mindb)==0) &&
-     (snd_mixer_selem_ask_playback_vol_dB(alsa_mix_elem,alsa_mix_maxv,&alsa_mix_maxdb)==0)) {
-    has_db_vol=1;
-    audio_alsa.volume = &volume; // insert the volume function now we know it can do dB stuff
-    if (alsa_mix_mindb==-9999999) {
-      // trying to say that the lowest vol is mute, maybe? Raspberry Pi does this
-      if (snd_mixer_selem_ask_playback_vol_dB(alsa_mix_elem,alsa_mix_minv+1,&alsa_mix_mindb)==0)
-        debug(1,"Can't get dB value corresponding to a \"volume\" of 1.\n");
+  if (snd_mixer_selem_get_playback_volume_range(alsa_mix_elem, &alsa_mix_minv, &alsa_mix_maxv)<0)
+    debug(1,"Can't read mixer's [linear] min and max volumes.");
+  else {
+    if ((snd_mixer_selem_ask_playback_vol_dB(alsa_mix_elem,alsa_mix_minv,&alsa_mix_mindb)==0) &&
+       (snd_mixer_selem_ask_playback_vol_dB(alsa_mix_elem,alsa_mix_maxv,&alsa_mix_maxdb)==0)) {
+      has_db_vol=1;
+      audio_alsa.volume = &volume; // insert the volume function now we know it can do dB stuff
+      if (alsa_mix_mindb==-9999999) {
+        // trying to say that the lowest vol is mute, maybe? Raspberry Pi does this
+        if (snd_mixer_selem_ask_playback_vol_dB(alsa_mix_elem,alsa_mix_minv+1,&alsa_mix_mindb)==0)
+          debug(1,"Can't get dB value corresponding to a \"volume\" of 1.\n");
+      }
+      debug(1,"Hardware mixer has dB volume from %f to %f.\n",(1.0*alsa_mix_mindb)/100.0,(1.0*alsa_mix_maxdb)/100.0);
+    } else {
+      debug(1,"Hardware mixer does not have dB volume -- not used.\n");
     }
-    debug(1,"Hardware mixer has dB volume from %f to %f.\n",(1.0*alsa_mix_mindb)/100.0,(1.0*alsa_mix_maxdb)/100.0);
-  } else {
-    debug(1,"Hardware mixer does not have dB volume -- not used.\n");
   }
   if (snd_mixer_selem_has_playback_switch(alsa_mix_elem)) {
     has_mute=1;
@@ -274,9 +278,8 @@ static void stop(void) {
 
 static void volume(double vol) {
   double vol_setting = vol2attn(vol,alsa_mix_maxdb,alsa_mix_mindb);
-  long vs = (long) (vol_setting+0.5);
-  debug(1,"Setting volume db to %f, i.e. %d for volume input of %f.\n",vol_setting,vs,vol);
-  if (snd_mixer_selem_set_playback_dB_all(alsa_mix_elem, vs, -1) != 0)
+  debug(1,"Setting volume db to %f, for volume input of %f.\n",vol_setting,vol);
+  if (snd_mixer_selem_set_playback_dB_all(alsa_mix_elem, vol_setting, -1) != 0)
     die ("Failed to set playback dB volume"); 
   if (has_mute)
     snd_mixer_selem_set_playback_switch_all(alsa_mix_elem, (vol!=-144.0));
