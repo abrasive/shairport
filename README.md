@@ -14,6 +14,12 @@ Shairport 2.0 does Audio Synchronisation
 ---------------------------
 Shairport 2.0 allows you to set a delay (a "latency") from when music is sent by iTunes or your iOS device to when it is played in the Shairport audio device. The latency can be set to match the latency of other output devices playing the music, achieving audio synchronisation. Shairport 2.0 uses extra timing information to stay in sync with the source's time signals.
 
+What else?
+--------------
+* Shairport 2.0 tries to offer finer control at very top and very bottom of the volume range. See http://tangentsoft.net/audio/atten.html a good discussion.
+* Shairport 2.0 will mute properly if the hardware supports it.
+* If it has to use software volume and mute controls, the response time is shorter than before.
+
 Status
 ------
 Shairport 2.0 is working on Raspberry Pi and Linksys NSLU2, both using OpenWrt. It works on an Ubuntu laptop. It works well with built-in audio and with a variety of USB-connected Amplifiers and DACs.
@@ -80,9 +86,15 @@ For a first generation Griffin iMic on a Raspberry Pi:
 
 `shairport -d -L 99400 -a "Shairport 2.0" -- -d hw:1 -t hardware -c PCM`
 
-For an NSLU2, which has no internal soundcard, to drive the "3D Sound" USB card:
+For an NSLU2, which has no internal soundcard, to drive a first generation Griffin iMic:
 
-`shairport -d -L 99400 -a "Shairport 2.0" -- -d hw:0 -t hardware -c Speaker`
+`shairport -d -L 99400 -a "Shairport 2.0" -- -d hw:0 -t hardware -c PCM`
+
+For an NSLU2, to drive the "3D Sound" USB card:
+
+`shairport -d -L 99400 -a "Shairport 2.0" -- -d hw:0`
+
+Note that the mixer in the "3D Sound" card doesn't work on the NSLU2. Maybe this is because the NSLU2 is a big-ending device, whereas most other devices are little-endian.
 
 Notes
 -----
@@ -92,7 +104,7 @@ If you run Shairport from the command line without daemonising it (omit the `-d`
 
 it will print statistics like this occasionally:
 
-`Drift: -15.3 (ppm); Corrections: 21.6 (ppm), missing_packets 0, late_packets 0, too_late_packets 0 resend_requests 0.`
+`Drift: -15.3 (ppm); Corrections: 21.6 (ppm); missing_packets 0; late_packets 0; too_late_packets 0; resend_requests 0.`
 
 "Drift" is the net corrections -- the number of frame insertions less the number of frame deletions made, given as a moving average in parts per million. After an initial settling period, it represents the divergence between the source clock and the sound device's clock.
 
