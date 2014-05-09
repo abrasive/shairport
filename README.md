@@ -16,7 +16,7 @@ Shairport 2.0 allows you to set a delay (a "latency") from when music is sent by
 
 What else?
 --------------
-* Shairport 2.0 tries to offer finer control at very top and very bottom of the volume range. See http://tangentsoft.net/audio/atten.html a good discussion.
+* Shairport 2.0 tries to offer finer control at very top and very bottom of the volume range. See http://tangentsoft.net/audio/atten.html for a good discussion.
 * Shairport 2.0 will mute properly if the hardware supports it.
 * If it has to use software volume and mute controls, the response time is shorter than before.
 
