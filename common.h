@@ -47,6 +47,9 @@ char *base64_enc(uint8_t *input, int length);
 #define RSA_MODE_KEY  (1)
 uint8_t *rsa_apply(uint8_t *input, int inlen, int *outlen, int mode);
 
+// given a volume (0 to -30) and high and low attenuations in dB*100 (e.g. 0 to -6000 for 0 to -60 dB), return an attenuation depending on the transfer function
+double vol2attn(double vol, long max_db, long min_db);
+
 extern shairport_cfg config;
 
 void shairport_shutdown(int retval);
