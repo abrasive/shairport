@@ -64,7 +64,8 @@ static snd_pcm_hw_params_t *alsa_params = NULL;
 static snd_mixer_t *alsa_mix_handle = NULL;
 static snd_mixer_elem_t *alsa_mix_elem = NULL;
 static snd_mixer_selem_id_t *alsa_mix_sid = NULL;
-static long alsa_mix_minv, alsa_mix_range;
+static long alsa_mix_minv, alsa_mix_maxv;
+static long alsa_mix_mindb, alsa_mix_maxdb;
 
 static char *alsa_out_dev = "default";
 static char *alsa_mix_dev = NULL;
@@ -128,7 +129,6 @@ static int init(int argc, char **argv) {
     
 
     int ret = 0;
-    long alsa_mix_maxv;
 
     snd_mixer_selem_id_alloca(&alsa_mix_sid);
     snd_mixer_selem_id_set_index(alsa_mix_sid, alsa_mix_index);
@@ -147,14 +147,28 @@ static int init(int argc, char **argv) {
     alsa_mix_elem = snd_mixer_find_selem(alsa_mix_handle, alsa_mix_sid);
     if (!alsa_mix_elem)
         die ("Failed to find mixer element");
-    if (snd_mixer_selem_get_playback_dB_range (alsa_mix_elem, &alsa_mix_minv, &alsa_mix_maxv)==0) {
-       has_db_vol=1;
-       debug(1,"Hardware mixer has dB volume from %ld to %ld.\n",alsa_mix_minv,alsa_mix_maxv);
+    if (snd_mixer_selem_get_playback_volume_range(alsa_mix_elem, &alsa_mix_minv, &alsa_mix_maxv)==0) {
+       //has_db_vol=1;
+       // debug(1,"Hardware mixer has dB volume from %ld to %ld.\n",alsa_mix_minv,alsa_mix_maxv);
        audio_alsa.volume = &volume;
-       alsa_mix_range = alsa_mix_maxv - alsa_mix_minv;
+    } // else {
+      //  debug(1,"Hardware mixer does not have dB volume -- linear only??\n");
+    //}
+    if ((snd_mixer_selem_ask_playback_vol_dB(alsa_mix_elem,alsa_mix_minv,&alsa_mix_mindb)==0) &&
+	(snd_mixer_selem_ask_playback_vol_dB(alsa_mix_elem,alsa_mix_maxv,&alsa_mix_maxdb)==0)) {
+       has_db_vol=1;
+       if (alsa_mix_mindb==-9999999) {
+         // trying to say that the lowest vol is mute, maybe? Raspberry Pi does this
+         if (snd_mixer_selem_ask_playback_vol_dB(alsa_mix_elem,alsa_mix_minv+1,&alsa_mix_mindb)==0)
+	   debug(1,"Can't get dB corresponding to a volume of 1.\n");
+       }
+       debug(1,"Hardware mixer has dB volume from %ld to %ld.\n",alsa_mix_mindb,alsa_mix_maxdb);
     } else {
        debug(1,"Hardware mixer does not have dB volume -- linear only??\n");
     }
+
+
+
     
     if (snd_mixer_selem_has_playback_switch(alsa_mix_elem)) {
         has_mute=1;
@@ -273,15 +287,42 @@ static void stop(void) {
 }
 
 static void volume(double vol) {
-  if (has_db_vol) {
-    // guess that if the range is 60db or greater, that it's amplitude rather than power, do multiply by 2, i.e. 200
-    uint32_t multiplier = 200;
-    if (alsa_mix_range<6000)
-      multiplier=alsa_mix_range/30;
-    // otherwise multiply by <range in db>/30
-    if(snd_mixer_selem_set_playback_dB_all(alsa_mix_elem, vol*multiplier+alsa_mix_range+alsa_mix_minv, -1) != 0)
+// We use a little coordinate geometry to build a transfer function from the volume passed in to the device's dynamic range.
+// The x axis is the "volume in" which will be from -30 to 0. The y axis will be the "volume out" which will be from the bottom of the range to the top.
+// We build the transfer function from one or more lines. We characterise each line with two numbers:
+// the first is where on x the line starts when y=0 (from 0 to -30); the second is where on y the line stops when when x is -30.
+// thus, if the line was characterised as {0,-30}, it would be an identity transfer.
+// Assuming, for example, a dynamic range of lv=-70 to hv=0
+// Typically we'll use three lines -- a three order transfer function
+// First: {0,25} giving a gentle slope
+// Second: {-17,-25-(lv+25)/2} giving a faster slope from y=0 at x=-17 to y=-50 at x=-30
+// Third: {-23,lv} giving a fast slope from y=0 at x=-23 to y=-70 at x=-30
+
+#define order 3
+
+  if ((vol<=0.0) && (vol>=-30.0)) {
+    long alsa_mix_rangedb = alsa_mix_maxdb-alsa_mix_mindb;
+    debug(1,"Volume min %ddB, max %ddB, range %ddB.\n",alsa_mix_mindb,alsa_mix_maxdb,alsa_mix_rangedb);
+    double first_slope = -2500.0; // this is the slope of the attenuatioon at the high end -- 25dB for the full rotation.
+    if (alsa_mix_rangedb<first_slope)
+	first_slope = alsa_mix_rangedb;
+    double lines[order][2] = {{0,first_slope},{-17,first_slope-(alsa_mix_rangedb+first_slope)/2},{-23,-alsa_mix_rangedb}};
+    double vol_setting = 0.0;
+    int i;
+    for (i=0;i<order;i++) {
+      if (vol<=lines[i][0]) {
+        double tvol = lines[i][1]*(vol-lines[i][0])/(-30-lines[i][0]);
+	debug(1,"On line %d, input vol %f yields output vol %f.\n",i,vol,tvol);
+        if (tvol<vol_setting)
+          vol_setting=tvol;
+      }
+    }
+    vol_setting+=alsa_mix_maxdb;
+
+    debug(1,"Setting volume db to %f for volume input of %f.\n",vol_setting,vol);
+    if(snd_mixer_selem_set_playback_dB_all(alsa_mix_elem, vol_setting, -1) != 0)
       die ("Failed to set playback dB volume");
-  }
+  } 
   if (has_mute)
     snd_mixer_selem_set_playback_switch_all(alsa_mix_elem, (vol!=-144.0));
 }
