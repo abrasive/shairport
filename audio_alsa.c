@@ -86,105 +86,91 @@ static void help(void) {
 }
 
 static int init(int argc, char **argv) {
-  debug(1,"ALSA init.\n");
-    int hardware_mixer = 0;
+  int hardware_mixer = 0;
 
-    optind = 1; // optind=0 is equivalent to optind=1 plus special behaviour
-    argv--;     // so we shift the arguments to satisfy getopt()
-    argc++;
-    // some platforms apparently require optreset = 1; - which?
-    int opt;
-    while ((opt = getopt(argc, argv, "d:t:m:c:i:")) > 0) {
-        switch (opt) {
-            case 'd':
-                alsa_out_dev = optarg;
-                break;
-            case 't':
-                if (strcmp(optarg, "hardware") == 0)
-                    hardware_mixer = 1;
-                break;
-            case 'm':
-                alsa_mix_dev = optarg;
-                break;
-            case 'c':
-                alsa_mix_ctrl = optarg;
-                break;
-            case 'i':
-                alsa_mix_index = strtol(optarg, NULL, 10);
-                break;
-            default:
-                help();
-                die("Invalid audio option -%c specified", opt);
-        }
+  optind = 1; // optind=0 is equivalent to optind=1 plus special behaviour
+  argv--;     // so we shift the arguments to satisfy getopt()
+  argc++;
+  // some platforms apparently require optreset = 1; - which?
+  int opt;
+  while ((opt = getopt(argc, argv, "d:t:m:c:i:")) > 0) {
+      switch (opt) {
+          case 'd':
+              alsa_out_dev = optarg;
+              break;
+          case 't':
+              if (strcmp(optarg, "hardware") == 0)
+                  hardware_mixer = 1;
+              break;
+          case 'm':
+              alsa_mix_dev = optarg;
+              break;
+          case 'c':
+              alsa_mix_ctrl = optarg;
+              break;
+          case 'i':
+              alsa_mix_index = strtol(optarg, NULL, 10);
+              break;
+          default:
+              help();
+              die("Invalid audio option -%c specified", opt);
+      }
+  }
+
+  if (optind < argc)
+      die("Invalid audio argument: %s", argv[optind]);
+
+  if (!hardware_mixer)
+      return 0;
+
+  if (alsa_mix_dev == NULL)
+      alsa_mix_dev = alsa_out_dev;
+  
+
+  int ret = 0;
+
+  snd_mixer_selem_id_alloca(&alsa_mix_sid);
+  snd_mixer_selem_id_set_index(alsa_mix_sid, alsa_mix_index);
+  snd_mixer_selem_id_set_name(alsa_mix_sid, alsa_mix_ctrl);
+
+  if ((snd_mixer_open(&alsa_mix_handle, 0)) < 0)
+      die ("Failed to open mixer");
+  if ((snd_mixer_attach(alsa_mix_handle, alsa_mix_dev)) < 0)
+      die ("Failed to attach mixer");
+  if ((snd_mixer_selem_register(alsa_mix_handle, NULL, NULL)) < 0)
+      die ("Failed to register mixer element");
+
+  ret = snd_mixer_load(alsa_mix_handle);
+  if (ret < 0)
+      die ("Failed to load mixer element");
+  alsa_mix_elem = snd_mixer_find_selem(alsa_mix_handle, alsa_mix_sid);
+  if (!alsa_mix_elem)
+      die ("Failed to find mixer element");
+  if ((snd_mixer_selem_ask_playback_vol_dB(alsa_mix_elem,alsa_mix_minv,&alsa_mix_mindb)==0) &&
+     (snd_mixer_selem_ask_playback_vol_dB(alsa_mix_elem,alsa_mix_maxv,&alsa_mix_maxdb)==0)) {
+    has_db_vol=1;
+    audio_alsa.volume = &volume; // insert the volume function now we know it can do dB stuff
+    if (alsa_mix_mindb==-9999999) {
+      // trying to say that the lowest vol is mute, maybe? Raspberry Pi does this
+      if (snd_mixer_selem_ask_playback_vol_dB(alsa_mix_elem,alsa_mix_minv+1,&alsa_mix_mindb)==0)
+        debug(1,"Can't get dB value corresponding to a \"volume\" of 1.\n");
     }
-
-    if (optind < argc)
-        die("Invalid audio argument: %s", argv[optind]);
-
-    if (!hardware_mixer)
-        return 0;
-
-    if (alsa_mix_dev == NULL)
-        alsa_mix_dev = alsa_out_dev;
-    
-
-    int ret = 0;
-
-    snd_mixer_selem_id_alloca(&alsa_mix_sid);
-    snd_mixer_selem_id_set_index(alsa_mix_sid, alsa_mix_index);
-    snd_mixer_selem_id_set_name(alsa_mix_sid, alsa_mix_ctrl);
-
-    if ((snd_mixer_open(&alsa_mix_handle, 0)) < 0)
-        die ("Failed to open mixer");
-    if ((snd_mixer_attach(alsa_mix_handle, alsa_mix_dev)) < 0)
-        die ("Failed to attach mixer");
-    if ((snd_mixer_selem_register(alsa_mix_handle, NULL, NULL)) < 0)
-        die ("Failed to register mixer element");
-
-    ret = snd_mixer_load(alsa_mix_handle);
-    if (ret < 0)
-        die ("Failed to load mixer element");
-    alsa_mix_elem = snd_mixer_find_selem(alsa_mix_handle, alsa_mix_sid);
-    if (!alsa_mix_elem)
-        die ("Failed to find mixer element");
-    if (snd_mixer_selem_get_playback_volume_range(alsa_mix_elem, &alsa_mix_minv, &alsa_mix_maxv)==0) {
-       //has_db_vol=1;
-       // debug(1,"Hardware mixer has dB volume from %ld to %ld.\n",alsa_mix_minv,alsa_mix_maxv);
-       audio_alsa.volume = &volume;
-    } // else {
-      //  debug(1,"Hardware mixer does not have dB volume -- linear only??\n");
-    //}
-    if ((snd_mixer_selem_ask_playback_vol_dB(alsa_mix_elem,alsa_mix_minv,&alsa_mix_mindb)==0) &&
-	(snd_mixer_selem_ask_playback_vol_dB(alsa_mix_elem,alsa_mix_maxv,&alsa_mix_maxdb)==0)) {
-       has_db_vol=1;
-       if (alsa_mix_mindb==-9999999) {
-         // trying to say that the lowest vol is mute, maybe? Raspberry Pi does this
-         if (snd_mixer_selem_ask_playback_vol_dB(alsa_mix_elem,alsa_mix_minv+1,&alsa_mix_mindb)==0)
-	   debug(1,"Can't get dB corresponding to a volume of 1.\n");
-       }
-       debug(1,"Hardware mixer has dB volume from %ld to %ld.\n",alsa_mix_mindb,alsa_mix_maxdb);
-    } else {
-       debug(1,"Hardware mixer does not have dB volume -- linear only??\n");
-    }
-
-
-
-    
-    if (snd_mixer_selem_has_playback_switch(alsa_mix_elem)) {
-        has_mute=1;
-        debug(1,"Has mute ability.\n");
-    }
-
-
-    return 0;
+    debug(1,"Hardware mixer has dB volume from %f to %f.\n",(1.0*alsa_mix_mindb)/100.0,(1.0*alsa_mix_maxdb)/100.0);
+  } else {
+    debug(1,"Hardware mixer does not have dB volume -- not used.\n");
+  }
+  if (snd_mixer_selem_has_playback_switch(alsa_mix_elem)) {
+    has_mute=1;
+    debug(1,"Has mute ability.\n");
+  }
+  return 0;
 }
 
 static void deinit(void) {
-  debug(1,"ALSA deinit.\n");
-    stop();
-    if (alsa_mix_handle) {
-        snd_mixer_close(alsa_mix_handle);
-    }
+  stop();
+  if (alsa_mix_handle) {
+      snd_mixer_close(alsa_mix_handle);
+  }
 }
 
 static void start(int sample_rate) {
@@ -287,42 +273,11 @@ static void stop(void) {
 }
 
 static void volume(double vol) {
-// We use a little coordinate geometry to build a transfer function from the volume passed in to the device's dynamic range.
-// The x axis is the "volume in" which will be from -30 to 0. The y axis will be the "volume out" which will be from the bottom of the range to the top.
-// We build the transfer function from one or more lines. We characterise each line with two numbers:
-// the first is where on x the line starts when y=0 (from 0 to -30); the second is where on y the line stops when when x is -30.
-// thus, if the line was characterised as {0,-30}, it would be an identity transfer.
-// Assuming, for example, a dynamic range of lv=-70 to hv=0
-// Typically we'll use three lines -- a three order transfer function
-// First: {0,25} giving a gentle slope
-// Second: {-17,-25-(lv+25)/2} giving a faster slope from y=0 at x=-17 to y=-50 at x=-30
-// Third: {-23,lv} giving a fast slope from y=0 at x=-23 to y=-70 at x=-30
-
-#define order 3
-
-  if ((vol<=0.0) && (vol>=-30.0)) {
-    long alsa_mix_rangedb = alsa_mix_maxdb-alsa_mix_mindb;
-    debug(1,"Volume min %ddB, max %ddB, range %ddB.\n",alsa_mix_mindb,alsa_mix_maxdb,alsa_mix_rangedb);
-    double first_slope = -2500.0; // this is the slope of the attenuatioon at the high end -- 25dB for the full rotation.
-    if (alsa_mix_rangedb<first_slope)
-	first_slope = alsa_mix_rangedb;
-    double lines[order][2] = {{0,first_slope},{-17,first_slope-(alsa_mix_rangedb+first_slope)/2},{-23,-alsa_mix_rangedb}};
-    double vol_setting = 0.0;
-    int i;
-    for (i=0;i<order;i++) {
-      if (vol<=lines[i][0]) {
-        double tvol = lines[i][1]*(vol-lines[i][0])/(-30-lines[i][0]);
-	debug(1,"On line %d, input vol %f yields output vol %f.\n",i,vol,tvol);
-        if (tvol<vol_setting)
-          vol_setting=tvol;
-      }
-    }
-    vol_setting+=alsa_mix_maxdb;
-
-    debug(1,"Setting volume db to %f for volume input of %f.\n",vol_setting,vol);
-    if(snd_mixer_selem_set_playback_dB_all(alsa_mix_elem, vol_setting, -1) != 0)
-      die ("Failed to set playback dB volume");
-  } 
+  double vol_setting = vol2attn(vol,alsa_mix_maxdb,alsa_mix_mindb);
+  long vs = (long) (vol_setting+0.5);
+  debug(1,"Setting volume db to %f, i.e. %d for volume input of %f.\n",vol_setting,vs,vol);
+  if (snd_mixer_selem_set_playback_dB_all(alsa_mix_elem, vs, -1) != 0)
+    die ("Failed to set playback dB volume"); 
   if (has_mute)
     snd_mixer_selem_set_playback_switch_all(alsa_mix_elem, (vol!=-144.0));
 }

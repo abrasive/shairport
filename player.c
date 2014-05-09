@@ -793,31 +793,26 @@ static void *player_thread_func(void *arg) {
 // takes the volume as specified by the airplay protocol
 void player_volume(double f) {
 
-// the volume ranges -144.0 (mute) or -30 -- 0. See http://git.zx2c4.com/Airtunes2/about/#setting-volume
-// see http://sound.westhost.com/project01.htm
-// see also http://tangentsoft.net/audio/atten.html for data on good attenuators. Seems as if 30 dB power (60 dB amplitude) is about right
-// by examination, the -30 -- 0 range is linear on the slider; i.e. the slider is calibrated in 30 equal increments
-// so, we will pass this on without any weighting if we have a hardware mixer, as we expect the mixer to be calibrated in dB.
+// The volume ranges -144.0 (mute) or -30 -- 0. See http://git.zx2c4.com/Airtunes2/about/#setting-volume
+// By examination, the -30 -- 0 range is linear on the slider; i.e. the slider is calibrated in 30 equal increments
+// So, we will pass this on without any weighting if we have a hardware mixer, as we expect the mixer to be calibrated in dB.
 
-// I'm guessing the dB are often expressing amplitude ratios, as -57 dB on the iMic mixer sounds quite like a ratio of about 0.001 on the soft volume control
-
-    double linear_volume = pow(10.0, 0.10*f); // gives an exponentially weighted volume control from about 0.001 to 1
-    // 0.001 is just audible on an iMic with headphones -- to 1
-    // the level sorta corresponds to the same setting via the iMic's hardware mixer
+// Here, we ask for an attenuation we will apply in software. The dB range of a value from 1 to 65536 is about 48.1 dB (log10 of 65536 is 4.8164).
+// Thus, we ask out vol2attn function for an appropriate dB between -48.1 and 0 dB and translate it back to a number.
+ 
+  double linear_volume = pow(10,vol2attn(f,0,-4810)/1000);
     
-    if(f == -144.0)
-      linear_volume = 0.0;
-        	
-    debug(2,"iTunes volume: %f, linear volume: %f.\n",f,linear_volume);
-    
-    if (config.output->volume) {
-        config.output->volume(f);
-        linear_volume=1.0; // no attenuation needed
-    } 
-    pthread_mutex_lock(&vol_mutex);
-    volume = linear_volume;
-    fix_volume = 65536.0 * volume;
-    pthread_mutex_unlock(&vol_mutex);
+  if(f == -144.0)
+    linear_volume = 0.0;
+  
+  if (config.output->volume) {
+      config.output->volume(f);
+      linear_volume=1.0; // no attenuation needed
+  } 
+  pthread_mutex_lock(&vol_mutex);
+  volume = linear_volume;
+  fix_volume = 65536.0 * volume;
+  pthread_mutex_unlock(&vol_mutex);
 }
 
 void player_flush(uint32_t timestamp) {
