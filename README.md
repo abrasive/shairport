@@ -94,7 +94,7 @@ For an NSLU2, to drive the "3D Sound" USB card:
 
 `shairport -d -L 99400 -a "Shairport 2.0" -- -d hw:0`
 
-Note that the mixer in the "3D Sound" card doesn't work on the NSLU2. Maybe this is because the NSLU2 is a big-ending device, whereas most other devices are little-endian.
+Note that the mixer in the "3D Sound" card doesn't work on the NSLU2. Maybe this is because the NSLU2 is a big-endian device, whereas most other devices are little-endian.
 
 Notes
 -----
