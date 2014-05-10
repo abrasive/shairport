@@ -40,6 +40,7 @@ Required:
 * ALSA
 
 Debian (and Raspian) users can get the basics with
+
 `apt-get install avahi-daemon autoconf libtool libssl-dev libavahi-client-dev libasound2-dev`
 
 Building Instructions
