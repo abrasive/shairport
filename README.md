@@ -1,9 +1,9 @@
 Shairport 2.0
 =============
 
-Shairport 2.0 allows you to synchronise the audio coming from all your devices. Specifically, Shairport 2.0 allows you to set the "latency" -- the time between when a sound is sent and when it is played. This allows you to synchronise Shairport 2.0 devices reliably with other devices playing the same source.
+Shairport 2.0 allows you to synchronise the audio coming from all your devices. Specifically, Shairport 2.0 allows you to set the "latency" -- the time between when a sound is sent and when it is played. This allows you to synchronise Shairport 2.0 devices reliably with other devices playing the same source. For example, synchronised multi-room audio is possible without difficulty.
 
-Shairport 2.0 is a pretty substantial rewrite of Shairport 1.0 by James Laird. It is still very experimental, and only works with Linux and ALSA. Some of the support files, e.g. PKGBUILD and shairport.service files, are out of date.
+Shairport 2.0 is a pretty substantial rewrite of Shairport 1.0 by James Laird. It is still experimental, and only works with Linux and ALSA. Some of the support files, e.g. PKGBUILD and shairport.service files, are out of date.
 
 What is Shairport?
 ----------
@@ -12,11 +12,11 @@ Shairport does not support AirPlay v2 (video and photo streaming).
 
 Shairport 2.0 does Audio Synchronisation
 ---------------------------
-Shairport 2.0 allows you to set a delay (a "latency") from when music is sent by iTunes or your iOS device to when it is played in the Shairport audio device. The latency can be set to match the latency of other output devices playing the music, achieving audio synchronisation. Shairport 2.0 uses extra timing information to stay in sync with the source's time signals.
+Shairport 2.0 allows you to set a delay (a "latency") from when music is sent by iTunes or your iOS device to when it is played in the Shairport audio device. The latency can be set to match the latency of other output devices playing the music, achieving audio synchronisation. Shairport 2.0 uses extra timing information to stay in sync with the source's time signals, eliminating "drift", where audio streams slowly drift out of synchronisation.
 
 What else?
 --------------
-* Shairport 2.0 tries to offer finer control at very top and very bottom of the volume range. See http://tangentsoft.net/audio/atten.html for a good discussion.
+* Shairport 2.0 offers finer control at very top and very bottom of the volume range. See http://tangentsoft.net/audio/atten.html for a good discussion of audio "attenuators", upon which volume control in Shairport 2 is modelled.
 * Shairport 2.0 will mute properly if the hardware supports it.
 * If it has to use software volume and mute controls, the response time is shorter than before.
 
@@ -28,9 +28,9 @@ Shairport 2.0 compiles and runs pretty well on the built-in sound card of a Rasp
 
 Shairport 2.0 sort-of runs on Ubuntu 13.10 inside VMWare Fusion 6.0.3 on a Mac, but synchronisation does not work too well -- possibly because the soundcard is being emulated. Also, Shairport doesn't always start properly. Still being investigated, this.
 
-Please note that Shairport 2.0 works only with the ALSA back end. You can compile the other back ends in as you wish, but it definitely will not work properly with them. Maybe someday...
+Shairport 2.0 works only with the ALSA back end. You can compile the other back ends in as you wish, but it definitely will not work properly with them. Maybe someday...
 
-There are lots of little changes, e.g. volume control profile, muting, autotools build control...
+One other change of note is that the Shairport 2.0 build process now uses autotools to examine and configure the build environment -- very important for cross compilation. All previous versions looked in the current system to determine which packages were available, instead of looking at what packages were available in the target system.
 
 Build Requirements
 ------------------
@@ -69,7 +69,7 @@ The first is an example of a standard Ubuntu based laptop:
 
 `shairport -d -L 99400 -a "Shairport 2.0" -- -d hw:0`
 
-In the following are examples of the Raspberry Pi and the NSLU2 -- little-endian and a big-endian ARM systems running OpenWrt. For best results, including true mute and instant response to volume control and pause commands, you should access the hardware volume controls as shown. Use `alsamixer` or similar to discover the name of the volume controller to be used after the `-c` option.
+In the following are examples of the Raspberry Pi and the NSLU2 -- little-endian and a big-endian ARM systems running OpenWrt. For best results, including getting true mute and instant response to volume control and pause commands, you should access the hardware volume controls as shown. Use `amixer` or `alsamixer` or similar to discover the name of the volume controller to be used after the `-c` option.
 
 For a Raspberry Pi using its internal soundcard that drives the headphone jack:
 
@@ -97,8 +97,14 @@ On an NSLU2, to drive the "3D Sound" USB card:
 
 `shairport -d -L 99400 -a "Shairport 2.0" -- -t hardware -c Speaker`
 
-Notes
------
+Latency
+-------
+The latency you set with the -L option is the exact time from a sound signal's original timestamp until that signal actually "appears" on the output of the DAC, irrespective of any internal delays, processing times, etc. in the computer. Thus, to get perfect audio synchronisation, the latency should be the same for all Shairport 2.0 devices, no matter what output devices they use -- build-in audio, USB DACs, etc. In the writer's experience, this is true.
+
+What is slightly curious is that the latency that most closely matches that of the Airport Express is around 99,400 frames, a little over the two seconds that most people report as the Airport Express's latency.
+
+Some Statistics
+---------------
 If you run Shairport from the command line without daemonising it (omit the `-d`), and if you turn on one level of verbosity (include `-v`), e.g. as follows for the Raspberry Pi with "3D Sound" card:
 
 `shairport -L 99400 -a "Shairport 2.0" -v -- -d hw:1 -t hardware -c Speaker`
