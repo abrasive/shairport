@@ -14,7 +14,7 @@ Shairport 2.0 does Audio Synchronisation
 ---------------------------
 Shairport 2.0 allows you to set a delay (a "latency") from when music is sent by iTunes or your iOS device to when it is played in the Shairport audio device. The latency can be set to match the latency of other output devices playing the music, achieving audio synchronisation. Shairport 2.0 uses extra timing information to stay synchronised with the source's time signals, eliminating "drift", where audio streams slowly drift out of synchronisation.
 
-To stay synchronised, if an output device is running slow, Shairport will delete frames of audio to allow it to keep up; if the device is running fast, Shairport 2.0 will insert interpolated frames to keep time. The number of frames inserted or deleted is so small as to be inaudible. Frames are inserted or deleted as necessary at pseudorandom intervals.
+To stay synchronised, if an output device is running slow, Shairport 2.0 will delete frames of audio to allow it to keep up; if the device is running fast, Shairport 2.0 will insert interpolated frames to keep time. The number of frames inserted or deleted is so small as to be inaudible. Frames are inserted or deleted as necessary at pseudorandom intervals.
 
 What else?
 --------------
@@ -47,9 +47,9 @@ Debian (and Raspian) users can get the basics with
 
 Building Instructions
 ---------------------
-If you're interested in Shairport for OpenWrt, there's an OpenWrt package at https://github.com/mikebrady/shairport.
+If you're interested in Shairport 2.0 for OpenWrt, there's an OpenWrt package at https://github.com/mikebrady/shairport.
 
-Otherwise, to build Shairport, `cd` into the shairport directory and execute the following commands:
+Otherwise, to build Shairport 2.0, `cd` into the shairport directory and execute the following commands:
 
 `$ autoreconf -i`
 
@@ -115,9 +115,9 @@ it will print statistics like this occasionally:
 
 `Drift: -15.3 (ppm); Corrections: 21.6 (ppm); missing_packets 0; late_packets 0; too_late_packets 0; resend_requests 0.`
 
-"Drift" is the negative of the net corrections -- the number of frame insertions less the number of frame deletions made, given as a moving average in parts per million. After an initial settling period, it represents the divergence between the source clock and the sound device's clock. The example above indicates that the output DAC's clock is running 15.3 ppm slower than the source's clock.
+"Drift" is the negative of the net corrections -- the number of frame insertions less the number of frame deletions -- given as a moving average in parts per million. After an initial settling period, it represents the divergence between the source clock and the sound device's clock. The example above indicates that the output DAC's clock is running 15.3 ppm slower than the source's clock.
 
-"Corrections" is the number of frame insertions plus the number of frame deletions (i.e. the total number of "corrections" made), given as a moving average in parts per million. The closer this is to the absolute value of the drift, the fewer "unnecessary" corrections that are being made.
+"Corrections" is the number of frame insertions plus the number of frame deletions (i.e. the total number of "corrections"), given as a moving average in parts per million. The closer this is to the absolute value of the drift, the fewer "unnecessary" corrections that are being made.
 
 For reference, a drift of one second per day is approximately 11.57 ppm. Left uncorrected, even a drift this small between two audio outputs will be audible after a short time.
 
