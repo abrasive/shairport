@@ -69,7 +69,7 @@ The first is an example of a standard Ubuntu based laptop:
 
 `shairport -d -L 99400 -a "Shairport 2.0" -- -d hw:0`
 
-In the following are examples of the Raspberry Pi and the NSLU2 -- little-endian and a big-endian ARM systems running OpenWrt. For best results, you should access the hardware volume controls as shown. Use `alsamixer` or similar to discover the name of the volume controller to be used after the `-c` option.
+In the following are examples of the Raspberry Pi and the NSLU2 -- little-endian and a big-endian ARM systems running OpenWrt. For best results, including true mute and instant response to volume control and pause commands, you should access the hardware volume controls as shown. Use `alsamixer` or similar to discover the name of the volume controller to be used after the `-c` option.
 
 For a Raspberry Pi using its internal soundcard that drives the headphone jack:
 
