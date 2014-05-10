@@ -86,15 +86,15 @@ For a first generation Griffin iMic on a Raspberry Pi:
 
 `shairport -d -L 99400 -a "Shairport 2.0" -- -d hw:1 -t hardware -c PCM`
 
-For an NSLU2, which has no internal soundcard, to drive a first generation Griffin iMic:
+For an NSLU2, which has no internal soundcard, there appears to be a bug in ALSA -- you can not specify a device other than "default". Thus:
 
-`shairport -d -L 99400 -a "Shairport 2.0" -- -d hw:0 -t hardware -c PCM`
+On an NSLU2, to drive a first generation Griffin iMic:
 
-For an NSLU2, to drive the "3D Sound" USB card:
+`shairport -d -L 99400 -a "Shairport 2.0" -- -t hardware -c PCM`
 
-`shairport -d -L 99400 -a "Shairport 2.0" -- -d hw:0`
+On an NSLU2, to drive the "3D Sound" USB card:
 
-Note that the mixer in the "3D Sound" card doesn't work on the NSLU2. Maybe this is because the NSLU2 is a big-endian device, whereas most other devices are little-endian.
+`shairport -d -L 99400 -a "Shairport 2.0" -- -t hardware -c Speaker`
 
 Notes
 -----
