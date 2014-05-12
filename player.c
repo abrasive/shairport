@@ -3,6 +3,10 @@
  * Copyright (c) James Laird 2011, 2013
  * All rights reserved.
  *
+ * Modifications for audio synchronisation
+ * and related work, copyright (c) Mike Brady 2014
+ * All rights reserved.
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -423,7 +427,7 @@ static abuf_t *buffer_get_frame(void) {
 
             first_packet_time_to_play = reference_timestamp_time+((delta+(int64_t)config.latency)<<32)/44100; // using the latency requested...
             if (local_time_now>=first_packet_time_to_play)
-              debug(1,"First packet is late! It should have played before now...");
+              debug(1,"First packet is late! It should have played before now...\n");
           }
         }      
 
