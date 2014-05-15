@@ -48,7 +48,7 @@ shairport -o ao -- -d mydriver -o setting=thing
 
 mDNS Backends
 -------------
-Shairport uses mDNS to advertize the service. Multiple backends are available to perform the task.
+Shairport uses mDNS to advertise the service. Multiple backends are available to perform the task.
 For a list of available backends, run `shairport -h`.
 The backends prefixed by 'external' rely on external programs that should be present in your path.
 By default, shairport will try all backends, in the order they are listed by `shairport -h`, until one works.
