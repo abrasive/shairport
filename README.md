@@ -40,10 +40,13 @@ Required:
 * OpenSSL
 * Avahi
 * ALSA
+* libdaemon
+* autoconf
+* libtool
 
 Debian (and Raspian) users can get the basics with
 
-`apt-get install avahi-daemon autoconf libtool libssl-dev libavahi-client-dev libasound2-dev`
+`apt-get install avahi-daemon autoconf libtool libdaemon-dev libssl-dev libavahi-client-dev libasound2-dev`
 
 Building Instructions
 ---------------------
