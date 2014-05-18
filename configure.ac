@@ -12,7 +12,9 @@ AC_PROG_CC
 AC_PROG_INSTALL
 
 # Checks for libraries.
-# This is a bit messy, because if the relevant library is requested, a compiler flag is defined, a file is included in the compilation
+AC_CHECK_LIB([daemon],[daemon_log])
+
+# What follows is a bit messy, because if the relevant library is requested, a compiler flag is defined, a file is included in the compilation
 # and the relevant link files are added.
 
 # Look for avahi flag
