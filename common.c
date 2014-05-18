@@ -35,44 +35,44 @@
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
 #include "common.h"
-#include "daemon.h"
+#include <libdaemon/dlog.h>
+
 
 shairport_cfg config;
 
 int debuglev = 0;
 
 void die(char *format, ...) {
-    fprintf(stderr, "FATAL: ");
-
+    char s[1024];
+    s[0]=0;
     va_list args;
     va_start(args, format);
-
-    vfprintf(stderr, format, args);
-    if (config.daemonise)
-        daemon_fail(format, args); // Send error message to parent
-
+    vsprintf(s,format,args);
     va_end(args);
-
-    fprintf(stderr, "\n");
+    daemon_log(LOG_EMERG,"%s", s);
     shairport_shutdown(1);
 }
 
 void warn(char *format, ...) {
-    fprintf(stderr, "WARNING: ");
+    char s[1024];
+    s[0]=0;
     va_list args;
     va_start(args, format);
-    vfprintf(stderr, format, args);
+    vsprintf(s,format,args);
     va_end(args);
-    fprintf(stderr, "\n");
+    daemon_log(LOG_WARNING,"%s", s);
 }
 
 void debug(int level, char *format, ...) {
     if (level > debuglev)
         return;
+    char s[1024];
+    s[0]=0;
     va_list args;
     va_start(args, format);
-    vfprintf(stderr, format, args);
+    vsprintf(s,format,args);
     va_end(args);
+    daemon_log(LOG_DEBUG,"%s", s);
 }
 
 
@@ -182,9 +182,10 @@ uint8_t *rsa_apply(uint8_t *input, int inlen, int *outlen, int mode) {
 double vol2attn(double vol, long max_db, long min_db) { 
 
 // We use a little coordinate geometry to build a transfer function from the volume passed in to the device's dynamic range.
+// (See the diagram in the documents folder.)
 // The x axis is the "volume in" which will be from -30 to 0. The y axis will be the "volume out" which will be from the bottom of the range to the top.
 // We build the transfer function from one or more lines. We characterise each line with two numbers:
-// the first is where on x the line starts when y=0 (from 0 to -30); the second is where on y the line stops when when x is -30.
+// the first is where on x the line starts when y=0 (x can be fromfrom 0 to -30); the second is where on y the line stops when when x is -30.
 // thus, if the line was characterised as {0,-30}, it would be an identity transfer.
 // Assuming, for example, a dynamic range of lv=-60 to hv=0
 // Typically we'll use three lines -- a three order transfer function

@@ -25,6 +25,7 @@
  */
 
 #include <signal.h>
+#include <errno.h>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -33,12 +34,15 @@
 #include <sys/wait.h>
 #include <getopt.h>
 #include "common.h"
-#include "daemon.h"
 #include "rtsp.h"
 #include "mdns.h"
-// #include "getopt_long.h"
 
-static void log_setup();
+#include <libdaemon/dfork.h>
+#include <libdaemon/dsignal.h>
+#include <libdaemon/dlog.h>
+#include <libdaemon/dpid.h>
+#include <libdaemon/dexec.h>
+
 
 static int shutting_down = 0;
 
@@ -51,8 +55,6 @@ void shairport_shutdown(int retval) {
     rtsp_shutdown_stream();
     if (config.output)
         config.output->deinit();
-    daemon_exit(); // This does nothing if not in daemon mode
-
     exit(retval);
 }
 
@@ -72,7 +74,7 @@ static void sig_child(int foo, siginfo_t *bar, void *baz) {
 }
 
 static void sig_logrotate(int foo, siginfo_t *bar, void *baz) {
-    log_setup();
+//    log_setup();
 }
 
 void usage(char *progname) {
@@ -87,18 +89,10 @@ void usage(char *progname) {
     printf("    -h, --help          show this help\n");
     printf("    -p, --port=PORT     set RTSP listening port\n");
     printf("    -a, --name=NAME     set advertised name\n");
-    printf("    -b FILL             set how full the buffer must be before audio output\n");
-    printf("                        starts. This value is in frames; default %d\n", config.buffer_start_fill);
     printf("    -L  --latency=FRAMES set how many frames between a just-received frame and audio output\n");
     printf("                        starts. This value is in frames; default %d\n", config.latency);
-    printf("    -d, --daemon        fork (daemonise). The PID of the child process is\n");
-    printf("                        written to stdout, unless a pidfile is used.\n");
-    printf("    -P, --pidfile=FILE  write daemon's pid to FILE on startup.\n");
-    printf("                        Has no effect if -d is not specified\n");
-    printf("    -l, --log=FILE      redirect shairport's standard output to FILE\n");
-    printf("                        If --error is not specified, it also redirects\n");
-    printf("                        error output to FILE\n");
-    printf("    -e, --error=FILE    redirect shairport's standard error output to FILE\n");
+    printf("    -d, --daemon        daemonise.\n");
+    printf("    -k, --kill          kill the existing shairport daemon.\n");
     printf("    -B, --on-start=COMMAND  run a shell command when playback begins\n");
     printf("    -E, --on-stop=COMMAND   run a shell command when playback ends\n");
 
@@ -120,9 +114,7 @@ int parse_options(int argc, char **argv) {
     static struct option long_options[] = {
         {"help",    no_argument,        NULL, 'h'},
         {"daemon",  no_argument,        NULL, 'd'},
-        {"pidfile", required_argument,  NULL, 'P'},
-        {"log",     required_argument,  NULL, 'l'},
-        {"error",   required_argument,  NULL, 'e'},
+        {"kill",    no_argument,        NULL, 'k'},
         {"port",    required_argument,  NULL, 'p'},
         {"name",    required_argument,  NULL, 'a'},
         {"output",  required_argument,  NULL, 'o'},
@@ -135,7 +127,7 @@ int parse_options(int argc, char **argv) {
 
     int opt;
     while ((opt = getopt_long(argc, argv,
-                              "+hdvP:l:e:p:a:o:b:B:E:m:L:",
+                              "+hdvkp:a:o:b:B:E:m:L:",
                               long_options, NULL)) > 0) {
         switch (opt) {
             default:
@@ -157,9 +149,6 @@ int parse_options(int argc, char **argv) {
             case 'o':
                 config.output_name = optarg;
                 break;
-            case 'b':
-                config.buffer_start_fill = atoi(optarg);
-                break;
             case 'L':
                 config.latency = atoi(optarg);
                 break;
@@ -168,15 +157,6 @@ int parse_options(int argc, char **argv) {
                 break;
             case 'E':
                 config.cmd_stop = optarg;
-                break;
-            case 'P':
-                config.pidfile = optarg;
-                break;
-            case 'l':
-                config.logfile = optarg;
-                break;
-            case 'e':
-                config.errfile = optarg;
                 break;
             case 'm':
                 config.mdns_name = optarg;
@@ -222,10 +202,11 @@ void signal_setup(void) {
 // should be called only once!
 void shairport_startup_complete(void) {
     if (config.daemonise) {
-        daemon_ready();
+//        daemon_ready();
     }
 }
 
+/*
 void log_setup() {
     if (config.logfile) {
         int log_fd = open(config.logfile,
@@ -254,9 +235,47 @@ void log_setup() {
         setvbuf (stderr, NULL, _IOLBF, BUFSIZ);
     }
 }
-
+*/
 int main(int argc, char **argv) {
-    signal_setup();
+
+    pid_t pid;
+    daemon_set_verbosity(LOG_DEBUG);
+
+    /* Reset signal handlers */
+    if (daemon_reset_sigs(-1) < 0) {
+        daemon_log(LOG_ERR, "Failed to reset all signal handlers: %s", strerror(errno));
+        return 1;
+    }
+
+    /* Unblock signals */
+    if (daemon_unblock_sigs(-1) < 0) {
+        daemon_log(LOG_ERR, "Failed to unblock all signals: %s", strerror(errno));
+        return 1;
+    }
+
+    /* Set indentification string for the daemon for both syslog and PID file */
+    daemon_pid_file_ident = daemon_log_ident = daemon_ident_from_argv0(argv[0]);
+
+    /* Check if we are called with -k parameter */
+    if (argc >= 2 && !strcmp(argv[1], "-k")) {
+        int ret;
+
+        /* Kill daemon with SIGTERM */
+
+        /* Check if the new function daemon_pid_file_kill_wait() is available, if it is, use it. */
+        if ((ret = daemon_pid_file_kill_wait(SIGTERM, 5)) < 0)
+            daemon_log(LOG_WARNING, "Failed to kill daemon: %s", strerror(errno));
+        else
+          daemon_pid_file_remove(); // 
+        return ret < 0 ? 1 : 0;
+    }
+
+    /* Check that the daemon is not running twice at the same time */
+    if ((pid = daemon_pid_file_is_running()) >= 0) {
+        daemon_log(LOG_ERR, "Daemon already running on PID file %u", pid);
+        return 1;
+    }
+
     memset(&config, 0, sizeof(config));
 
     // set defaults
@@ -266,7 +285,7 @@ int main(int argc, char **argv) {
     char hostname[100];
     gethostname(hostname, 100);
     config.apname = malloc(20 + 100);
-    snprintf(config.apname, 20 + 100, "Shairport on %s", hostname);
+    snprintf(config.apname, 20 + 100, "Shairport Sync on %s", hostname);
 
     // parse arguments into config
     int audio_arg = parse_options(argc, argv);
@@ -274,12 +293,62 @@ int main(int argc, char **argv) {
     // mDNS supports maximum of 63-character names (we append 13).
     if (strlen(config.apname) > 50)
         die("Supplied name too long (max 50 characters)");
-
+        
+    
+    /* here, daemonise with libdaemon */
+    
     if (config.daemonise) {
-        daemon_init();
+      /* Prepare for return value passing from the initialization procedure of the daemon process */
+      if (daemon_retval_init() < 0) {
+          daemon_log(LOG_ERR, "Failed to create pipe.");
+          return 1;
+      }
+
+      /* Do the fork */
+      if ((pid = daemon_fork()) < 0) {
+
+          /* Exit on error */
+          daemon_retval_done();
+          return 1;
+
+      } else if (pid) { /* The parent */
+          int ret;
+
+          /* Wait for 20 seconds for the return value passed from the daemon process */
+          if ((ret = daemon_retval_wait(20)) < 0) {
+              daemon_log(LOG_ERR, "Could not recieve return value from daemon process: %s", strerror(errno));
+              return 255;
+          }
+
+          if (ret != 0) 
+          	daemon_log(ret != 0 ? LOG_ERR : LOG_INFO, "Daemon returned %i as return value.", ret);
+          return ret;
+
+      } else { /* The daemon */
+
+          /* Close FDs */
+          if (daemon_close_all(-1) < 0) {
+              daemon_log(LOG_ERR, "Failed to close all file descriptors: %s", strerror(errno));
+
+              /* Send the error condition to the parent process */
+              daemon_retval_send(1);
+              goto finish;
+          }
+          
+          /* Create the PID file */
+          if (daemon_pid_file_create() < 0) {
+              daemon_log(LOG_ERR, "Could not create PID file (%s).", strerror(errno));
+              daemon_retval_send(2);
+              goto finish;
+          }
+                    
+          /* Send OK to parent process */
+          daemon_retval_send(0);
+      }
+      /* end libdaemon stuff */
     }
 
-    log_setup();
+    signal_setup();
 
     config.output = audio_get_output(config.output_name);
     if (!config.output) {
@@ -300,5 +369,11 @@ int main(int argc, char **argv) {
 
     // should not.
     shairport_shutdown(1);
-    return 1;
+finish:
+    daemon_log(LOG_INFO, "Exiting...");
+    daemon_retval_send(255);
+    daemon_pid_file_remove();
+    
+//    return 1;
+
 }
