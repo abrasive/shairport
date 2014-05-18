@@ -1,5 +1,5 @@
 bin_PROGRAMS = shairport
-shairport_SOURCES = shairport.c daemon.c rtsp.c mdns.c mdns_external.c mdns_tinysvcmdns.c common.c rtp.c player.c alac.c audio.c audio_dummy.c audio_pipe.c tinysvcmdns.c mdns_avahi.c
+shairport_SOURCES = shairport.c rtsp.c mdns.c mdns_external.c mdns_tinysvcmdns.c common.c rtp.c player.c alac.c audio.c audio_dummy.c audio_pipe.c tinysvcmdns.c mdns_avahi.c
 
 if USE_ALSA
 shairport_SOURCES += audio_alsa.c
