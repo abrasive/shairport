@@ -50,7 +50,8 @@ void die(char *format, ...) {
     vsprintf(s,format,args);
     va_end(args);
     daemon_log(LOG_EMERG,"%s", s);
-    shairport_shutdown(1);
+    shairport_shutdown();
+    exit(1);
 }
 
 void warn(char *format, ...) {

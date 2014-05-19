@@ -52,7 +52,7 @@ double vol2attn(double vol, long max_db, long min_db);
 
 extern shairport_cfg config;
 
-void shairport_shutdown(int retval);
-void shairport_startup_complete(void);
+void shairport_shutdown();
+// void shairport_startup_complete(void);
 
 #endif // _COMMON_H
