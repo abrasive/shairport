@@ -101,7 +101,7 @@ static void *rtp_audio_receiver(void *arg) {
             uint32_t timestamp = ntohl(*(unsigned long *)(pktp+4));
             
             //if (packet[1]&0x10)
-            //	debug(1,"Audio packet Extension bit set.\n");
+            //	debug(1,"Audio packet Extension bit set.");
 
             pktp += 12;
             plen -= 12;
@@ -112,15 +112,15 @@ static void *rtp_audio_receiver(void *arg) {
                 continue;
             }
             if (type == 0x56 && seqno == 0) {
-                debug(2, "resend-related request packet received, ignoring.\n");
+                debug(2, "resend-related request packet received, ignoring.");
                 continue;
             }
-            debug(1, "Unknown RTP packet of type 0x%02X length %d seqno %d\n", type, nread, seqno);
+            debug(1, "Unknown RTP packet of type 0x%02X length %d seqno %d", type, nread, seqno);
         }
-        warn("Unknown RTP packet of type 0x%02X length %d", type, nread);
+        warn("Unknown RTP packet of type 0x%02X length %d.", type, nread);
     }
 
-    debug(1, "Server RTP thread interrupted. terminating.\n");
+    debug(1, "Server RTP thread interrupted. terminating.");
     close(audio_socket);
 
     return NULL;
@@ -155,14 +155,14 @@ static void *rtp_control_receiver(void *arg) {
           obfp+=2;
         };
         *obfp=0;
-        debug(1,"Sync Packet Received: \"%s\"\n",obf);
+        debug(1,"Sync Packet Received: \"%s\"",obf);
         */
           if (local_to_remote_time_difference) { // need a time packet to be interchanged first...
           	
           	remote_time_of_sync = (uint64_t)ntohl(*((uint32_t*)&packet[8]))<<32;
             remote_time_of_sync += ntohl(*((uint32_t*)&packet[12]));
             
-            // debug(1,"Remote Sync Time: %0llx.\n",remote_time_of_sync);
+            // debug(1,"Remote Sync Time: %0llx.",remote_time_of_sync);
           
           	rtp_timestamp_less_latency = ntohl(*((uint32_t*)&packet[4]));
            	sync_rtp_timestamp = ntohl(*((uint32_t*)&packet[16]));
@@ -179,16 +179,16 @@ static void *rtp_control_receiver(void *arg) {
           	// get estimated remote time now
           	remote_time_now = local_time_now+local_to_remote_time_difference;          	
           	
-             //debug(1,"Sync Time is %lld us late (remote times).\n",((remote_time_now-remote_time_of_sync)*1000000)>>32);      				
-             //debug(1,"Sync Time is %lld us late (local times).\n",((local_time_now-reference_timestamp_time)*1000000)>>32);      				
+             //debug(1,"Sync Time is %lld us late (remote times).",((remote_time_now-remote_time_of_sync)*1000000)>>32);      				
+             //debug(1,"Sync Time is %lld us late (local times).",((local_time_now-reference_timestamp_time)*1000000)>>32);      				
           } else {
-            debug(1,"Sync packet received before we got a timing packet back.\n");
+            debug(1,"Sync packet received before we got a timing packet back.");
           }
         } else 
-          debug(1,"Control Port -- Unknown RTP packet of type 0x%02X length %d\n", packet[1], nread);
+          debug(1,"Control Port -- Unknown RTP packet of type 0x%02X length %d.", packet[1], nread);
     }
 
-    debug(1, "Control RTP thread interrupted. terminating.\n");
+    debug(1, "Control RTP thread interrupted. terminating.");
     close(control_socket);
 
     return NULL;
@@ -205,7 +205,7 @@ static void *rtp_timing_sender(void *arg) {
   
   uint64_t request_number=0;
   
-  debug(1, "Timing requester startup.\n");
+  debug(1, "Timing requester startup.");
 
   struct timing_request req;  // *not* a standard RTCP NACK
  
@@ -224,7 +224,7 @@ static void *rtp_timing_sender(void *arg) {
     if (!running)
       die("rtp_timing_sender called without active stream!");
 
-    //debug(1, "Requesting ntp timestamp exchange.\n");
+    //debug(1, "Requesting ntp timestamp exchange.");
 
     req.filler = 0;
     req.origin = req.receive = req.transmit=0;
@@ -237,7 +237,7 @@ static void *rtp_timing_sender(void *arg) {
     else
       sleep(3);
   }
-  debug(1, "rtp_timing_sender thread interrupted. terminating.\n");    
+  debug(1, "rtp_timing_sender thread interrupted. terminating.");    
   return NULL;
 }
 
@@ -260,7 +260,7 @@ static void *rtp_timing_receiver(void *arg) {
           break;
 
       ssize_t plen = nread;
-      //debug(1,"Packet Received on Timing Port.\n");
+      //debug(1,"Packet Received on Timing Port.");
       if (packet[1] == 0xd3) {   // timing reply
         /*
         char obf[4096];
@@ -271,7 +271,7 @@ static void *rtp_timing_receiver(void *arg) {
           obfp+=2;
         };
         *obfp=0;
-        //debug(1,"Timing Packet Received: \"%s\"\n",obf);
+        //debug(1,"Timing Packet Received: \"%s\"",obf);
         */  
         
         arrival_time = ((uint64_t)att.tv_sec<<32)+((uint64_t)att.tv_nsec<<32)/1000000000;
@@ -279,7 +279,7 @@ static void *rtp_timing_receiver(void *arg) {
         
         return_time = arrival_time-departure_time;
 
-        // uint64_t rtus = (return_time*1000000)>>32; debug(1,"Time ping turnaround time: %lld us.\n",rtus); 
+        // uint64_t rtus = (return_time*1000000)>>32; debug(1,"Time ping turnaround time: %lld us.",rtus); 
         
         //distant_receive_time = ((uint64_t)ntohl(*((uint32_t*)&packet[16])))<<32+ntohl(*((uint32_t*)&packet[20]));
         
@@ -293,7 +293,7 @@ static void *rtp_timing_receiver(void *arg) {
         
         processing_time = distant_transmit_time-distant_receive_time;
                 
-        // debug(1,"Return trip time: %lluuS, remote processing time: %lluuS\n",(return_time*1000000)>>32,(processing_time*1000000)>>32); 
+        // debug(1,"Return trip time: %lluuS, remote processing time: %lluuS.",(return_time*1000000)>>32,(processing_time*1000000)>>32); 
 
         uint64_t local_time_by_remote_clock = distant_transmit_time+return_time/2;
         
@@ -315,20 +315,20 @@ static void *rtp_timing_receiver(void *arg) {
             local_to_remote_time_difference=time_pings[cc].local_to_remote_difference;
             tld=time_pings[cc].dispersion;
           }
-        // rtus = (tld*1000000)>>32; debug(1,"Choosing time difference with dispersion of %lld us.\n",rtus);
+        // rtus = (tld*1000000)>>32; debug(1,"Choosing time difference with dispersion of %lld us.",rtus);
             
 
         } else {
-      	debug(1, "Unknown RTP packet of type 0x%02X length %d.\n", packet[1], nread);
+      	debug(1, "Unknown RTP packet of type 0x%02X length %d.", packet[1], nread);
       }
     }
 
-    debug(1, "Timing RTP thread interrupted. terminating.\n");
+    debug(1, "Timing RTP thread interrupted. terminating.");
     void *retval;
     pthread_kill(timer_requester, SIGUSR1);
     pthread_join(timer_requester, &retval);
-    debug(1,"Closed and terminated timer requester thread.\n");
-    debug(1, "Timing RTP thread terminated.\n");
+    debug(1,"Closed and terminated timer requester thread.");
+    debug(1, "Timing RTP thread terminated.");
     close(timing_socket);
 
     return NULL;
@@ -349,7 +349,7 @@ static int bind_port(SOCKADDR *remote,int *sock, int desired_port ) {
     int ret = getaddrinfo(NULL,buffer, &hints, &info);
 
     if (ret < 0)
-        die("failed to get usable addrinfo?! %s\n", gai_strerror(ret));
+        die("failed to get usable addrinfo?! %s.", gai_strerror(ret));
 
     *sock = socket(remote->SAFAMILY, SOCK_DGRAM, IPPROTO_UDP);
     ret = bind(*sock, info->ai_addr, info->ai_addrlen);
@@ -357,7 +357,7 @@ static int bind_port(SOCKADDR *remote,int *sock, int desired_port ) {
     freeaddrinfo(info);
 
     if (ret < 0)
-        die("could not bind a UDP port!\n");
+        die("could not bind a UDP port!");
 
     int sport;
     SOCKADDR local;
@@ -380,9 +380,9 @@ static int bind_port(SOCKADDR *remote,int *sock, int desired_port ) {
 
 void rtp_setup(SOCKADDR *remote, int cport, int tport, int *lsport, int *lcport, int *ltport) {
     if (running)
-        die("rtp_setup called with active stream!\n");
+        die("rtp_setup called with active stream!");
 
-    debug(2, "rtp_setup: cport=%d tport=%d\n", cport, tport);
+    debug(2, "rtp_setup: cport=%d tport=%d.", cport, tport);
 
     // we do our own timing and ignore the timing port.
     // an audio perfectionist may wish to learn the protocol.
@@ -421,7 +421,7 @@ void rtp_setup(SOCKADDR *remote, int cport, int tport, int *lsport, int *lcport,
      *lcport = bind_port(remote,&control_socket,6001);
      *ltport = bind_port(remote,&timing_socket,6002);
 
-    debug(2, "listening for audio, control and timing on ports %d, %d, %d\n", *lsport, *lcport, *ltport);
+    debug(2, "listening for audio, control and timing on ports %d, %d, %d.", *lsport, *lcport, *ltport);
 
     please_shutdown = 0;
     reference_timestamp=0;
@@ -449,9 +449,9 @@ void clear_reference_timestamp(void) {
 
 void rtp_shutdown(void) {
     if (!running)
-        die("rtp_shutdown called without active stream!\n");
+        die("rtp_shutdown called without active stream!");
 
-    debug(2, "shutting down RTP thread\n");
+    debug(2, "shutting down RTP thread");
     please_shutdown = 1;
     void *retval;
     reference_timestamp=0;
@@ -467,7 +467,7 @@ void rtp_shutdown(void) {
 void rtp_request_resend(seq_t first, seq_t last) {
     if (running) {
       if (!request_sent) {
-        debug(2, "requesting resend on %d packets (%04X:%04X).\n",
+        debug(2, "requesting resend on %d packets (%04X:%04X).",
            seq_diff(first,last) + 1, first, last);
         request_sent=1;
       }
@@ -482,7 +482,7 @@ void rtp_request_resend(seq_t first, seq_t last) {
       sendto(audio_socket, req, sizeof(req), 0, (struct sockaddr*)&rtp_client_control_socket, sizeof(rtp_client_control_socket));
     } else {
       if (!request_sent) {
-        debug(2,"rtp_request_resend called without active stream!\n");
+        debug(2,"rtp_request_resend called without active stream!");
         request_sent=1;
       }
     }

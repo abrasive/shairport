@@ -200,7 +200,7 @@ double vol2attn(double vol, long max_db, long min_db) {
   
   if ((vol<=0.0) && (vol>=-30.0)) {
     long range_db = max_db-min_db; // this will be a positive nunmber
-    // debug(1,"Volume min %ddB, max %ddB, range %ddB.\n",min_db,max_db,range_db);
+    // debug(1,"Volume min %ddB, max %ddB, range %ddB.",min_db,max_db,range_db);
     double first_slope = -2500.0; // this is the slope of the attenuation at the high end -- 25dB for the full rotation.
     if (-range_db>first_slope)
       first_slope = range_db;
@@ -209,18 +209,18 @@ double vol2attn(double vol, long max_db, long min_db) {
     for (i=0;i<order;i++) {
       if (vol<=lines[i][0]) {
         double tvol = lines[i][1]*(vol-lines[i][0])/(-30-lines[i][0]);
-	      // debug(1,"On line %d, end point of %f, input vol %f yields output vol %f.\n",i,lines[i][1],vol,tvol);
+	      // debug(1,"On line %d, end point of %f, input vol %f yields output vol %f.",i,lines[i][1],vol,tvol);
         if (tvol<vol_setting)
           vol_setting=tvol;
       }
     }
     vol_setting+=max_db;
   } else if (vol!=-144.0) {
-    debug(1,"Volume request value %f is out of range: should be from 0.0 to -30.0 or -144.0.\n",vol);
+    debug(1,"Volume request value %f is out of range: should be from 0.0 to -30.0 or -144.0.",vol);
   } else {
     vol_setting = min_db; // for safety, return the lowest setting...
   }
-  // debug(1,"returning an attenuation of %f.\n",vol_setting);
+  // debug(1,"returning an attenuation of %f.",vol_setting);
   return vol_setting;
 }
 

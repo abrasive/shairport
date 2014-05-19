@@ -214,13 +214,13 @@ static void free_buffer(void) {
 void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
   packet_count++;
   //if (packet_count<10)
-  //  debug(1,"Packet %llu received.\n",packet_count);
+  //  debug(1,"Packet %llu received.",packet_count);
   abuf_t *abuf = 0;
   int16_t buf_fill;
 
   pthread_mutex_lock(&ab_mutex);
   if (!ab_synced) {
-      debug(2, "syncing to first seqno %04X\n", seqno);
+      debug(2, "syncing to first seqno %04X.", seqno);
       ab_write = seqno-1;
       ab_read = seqno;
       ab_synced = 1;
@@ -239,7 +239,7 @@ void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
   }  else {    // too late.
     too_late_packets++;
     if (!late_packet_message_sent) {
-      debug(1, "late packet %04X (%04X:%04X).\n", seqno, ab_read, ab_write);
+      debug(1, "late packet %04X (%04X:%04X).", seqno, ab_read, ab_write);
       late_packet_message_sent=1;
     }
   }
@@ -257,7 +257,7 @@ void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
   
   int rc = pthread_cond_signal(&flowcontrol);
   if (rc)
-  	debug(1,"Error signalling flowcontrol.\n");
+  	debug(1,"Error signalling flowcontrol.");
 
   pthread_mutex_unlock(&ab_mutex);
 }
@@ -312,17 +312,17 @@ static abuf_t *buffer_get_frame(void) {
         
     if (curframe->ready) {
       if ((flush_rtp_timestamp) && (flush_rtp_timestamp>=curframe->timestamp)) {
-        // debug(1,"Dropping flushed packet %u.\n",curframe->timestamp);
+        // debug(1,"Dropping flushed packet %u.",curframe->timestamp);
         curframe->ready=0;
         ab_read++;
       } else if (ab_buffering) { // if we are getting packets but not yet forwarding them to the player
         if (first_packet_timestamp==0) { // if this is the very first packet
-         // debug(1,"First frame seen, time %u, with %d frames...\n",curframe->timestamp,seq_diff(ab_read, ab_write));
+         // debug(1,"First frame seen, time %u, with %d frames...",curframe->timestamp,seq_diff(ab_read, ab_write));
          uint32_t reference_timestamp;
           uint64_t reference_timestamp_time;
           get_reference_timestamp_stuff(&reference_timestamp,&reference_timestamp_time);
           if (reference_timestamp) { // if we have a reference time
-            // debug(1,"First frame seen with timestamp...\n");
+            // debug(1,"First frame seen with timestamp...");
             first_packet_timestamp=curframe->timestamp; // we will keep buffering until we are supposed to start playing this
  
             // here, see if we should start playing. We need to know when to allow the packets to be sent to the player
@@ -338,7 +338,7 @@ static abuf_t *buffer_get_frame(void) {
 
             first_packet_time_to_play = reference_timestamp_time+((delta+(int64_t)config.latency)<<32)/44100; // using the latency requested...
             if (local_time_now>=first_packet_time_to_play)
-              debug(1,"First packet is late! It should have played before now...\n");
+              debug(1,"First packet is late! It should have played before now...");
           }
         }      
 
@@ -355,7 +355,7 @@ static abuf_t *buffer_get_frame(void) {
           uint64_t tn = ((uint64_t)time_now.tv_sec<<32)+((uint64_t)time_now.tv_nsec<<32)/1000000000;
           if (tn>=first_packet_time_to_play) {
             // we've gone past the time...
-            // debug(1,"Run past the exact start time by %llu frames, with time now of %llx, fpttp of %llx and dac_delay of %d and %d packets; flush.\n",(((tn-first_packet_time_to_play)*44100)>>32)+dac_delay,tn,first_packet_time_to_play,dac_delay,seq_diff(ab_read, ab_write));
+            // debug(1,"Run past the exact start time by %llu frames, with time now of %llx, fpttp of %llx and dac_delay of %d and %d packets; flush.",(((tn-first_packet_time_to_play)*44100)>>32)+dac_delay,tn,first_packet_time_to_play,dac_delay,seq_diff(ab_read, ab_write));
             
             if (config.output->flush)
               config.output->flush();
@@ -367,7 +367,7 @@ static abuf_t *buffer_get_frame(void) {
             int64_t exact_frame_gap = gross_frame_gap-dac_delay;
             if (exact_frame_gap<=0) {
               // we've gone past the time...
-              // debug(1,"Run a bit past the exact start time by %lld frames, with time now of %llx, fpttp of %llx and dac_delay of %d and %d packets; flush.\n",-exact_frame_gap,tn,first_packet_time_to_play,dac_delay,seq_diff(ab_read, ab_write));
+              // debug(1,"Run a bit past the exact start time by %lld frames, with time now of %llx, fpttp of %llx and dac_delay of %d and %d packets; flush.",-exact_frame_gap,tn,first_packet_time_to_play,dac_delay,seq_diff(ab_read, ab_write));
               if (config.output->flush)
                 config.output->flush();
               ab_resync();
@@ -382,7 +382,7 @@ static abuf_t *buffer_get_frame(void) {
               signed short *silence;
               silence = malloc(FRAME_BYTES(fs));
               memset(silence, 0, FRAME_BYTES(fs));
-              //debug(1,"Exact frame gap is %llu; play %d frames of silence. Dac_delay is %d, with %d packets.\n",exact_frame_gap,fs,dac_delay,seq_diff(ab_read, ab_write));
+              //debug(1,"Exact frame gap is %llu; play %d frames of silence. Dac_delay is %d, with %d packets.",exact_frame_gap,fs,dac_delay,seq_diff(ab_read, ab_write));
               config.output->play(silence, fs);
               free(silence);
             }
@@ -413,14 +413,14 @@ static abuf_t *buffer_get_frame(void) {
 //    if (buf_fill < 1 || !ab_synced) {
 //      if (buf_fill < 1)
 	if (dac_delay==0) {// we just got underrun
-      debug(1,"Underrun!\n");
+      debug(1,"Underrun!");
       ab_resync(); // starting over
     }
   }
   
   if (please_stop) {
     pthread_mutex_unlock(&ab_mutex);
-    debug(1,"Exiting from buffer_get_frame.\n");
+    debug(1,"Exiting from buffer_get_frame.");
     return 0;
   }
 
@@ -451,7 +451,7 @@ static abuf_t *buffer_get_frame(void) {
   
   
   if (!curframe->ready) {
-    // debug(1, "missing frame %04X. Supplying a silent frame.\n", read);
+    // debug(1, "missing frame %04X. Supplying a silent frame.", read);
     missing_packets++;
     memset(curframe->data, 0, FRAME_BYTES(frame_size));
   }
@@ -473,12 +473,12 @@ static int stuff_buffer(short *inptr, short *outptr, int32_t stuff) {
     };
     if (stuff) {
         if (stuff==1) {
-            debug(3, "+++++++++\n");
+            debug(3, "+++++++++");
             // interpolate one sample
             *outptr++ = dithered_vol(((long)inptr[-2] + (long)inptr[0]) >> 1);
             *outptr++ = dithered_vol(((long)inptr[-1] + (long)inptr[1]) >> 1);
         } else if (stuff==-1) {
-            debug(3, "---------\n");
+            debug(3, "---------");
             inptr++;
             inptr++;
         }
@@ -645,7 +645,7 @@ static void *player_thread_func(void *arg) {
         
         int64_t td_in_frames;
         int64_t td = local_time_now-reference_timestamp_time;
-        // debug(1,"td is %lld.\n",td);          
+        // debug(1,"td is %lld.",td);          
         if (td>=0) {
           td_in_frames = (td*44100)>>32;
         } else {
@@ -656,7 +656,7 @@ static void *player_thread_func(void *arg) {
         
 //        if ((play_number<(10)) || (play_number%500==0))
 //        if ((play_number<(10)))
-//          debug(1,"Latency error for packet %d: %d frames.\n",play_number,delay-config.latency);
+//          debug(1,"Latency error for packet %d: %d frames.",play_number,delay-config.latency);
         
         if (number_of_delays==averaging_interval) { // the array of delays is full
           sum_of_delays-=delays[oldest_delay];
@@ -681,13 +681,13 @@ static void *player_thread_func(void *arg) {
           current_latency=accumulated_delay/print_interval;                    
           if ((play_number/print_interval)%100==0)
             { // only print every hundredth one, in verbose mode
-              //debug(1,"Valid frames: %lld; overall frames added/subtracted %lld; frames added + frames deleted %lld; average D/A delay, average latency (frames): %llu, %llu; average buffers in use: %llu, moving average delay (number of delays): %llu (%lu).\n",
+              //debug(1,"Valid frames: %lld; overall frames added/subtracted %lld; frames added + frames deleted %lld; average D/A delay, average latency (frames): %llu, %llu; average buffers in use: %llu, moving average delay (number of delays): %llu (%lu).",
               //  frames-(additions-deletions), additions-deletions, additions+deletions, accumulated_da_delay/print_interval,current_latency,accumulated_buffers_in_use/print_interval,moving_average_delay,number_of_delays);
 
-            //debug(1,"Frames %lld, correction %lld, mods %lld, dac_buffer %llu, latency %llu, missing_packets %llu, late_packets %llu, too_late_packets %llu resend_requests %llu.\n",
+            //debug(1,"Frames %lld, correction %lld, mods %lld, dac_buffer %llu, latency %llu, missing_packets %llu, late_packets %llu, too_late_packets %llu resend_requests %llu.",
               //frames-(additions-deletions), additions-deletions, additions+deletions,accumulated_da_delay/print_interval,moving_average_delay,missing_packets,late_packets,too_late_packets,resend_requests);
                 
-            debug(1,"Drift: %.1f (ppm); Corrections: %.1f (ppm); missing_packets %llu; late_packets %llu; too_late_packets %llu; resend_requests %llu.\n", -moving_average_correction*1000000/352, moving_average_insertions_and_deletions*1000000/352,missing_packets,late_packets,too_late_packets,resend_requests);
+            debug(1,"Drift: %.1f (ppm); Corrections: %.1f (ppm); missing_packets %llu; late_packets %llu; too_late_packets %llu; resend_requests %llu.", -moving_average_correction*1000000/352, moving_average_insertions_and_deletions*1000000/352,missing_packets,late_packets,too_late_packets,resend_requests);
           }
           if (previous_latency==0)
             previous_latency=current_latency;
@@ -746,7 +746,7 @@ void player_flush(uint32_t timestamp) {
 */
 
 int player_play(stream_cfg *stream) {
-	debug(1,"player_play called...\n");
+	debug(1,"player_play called...");
 	packet_count = 0;
     if (config.buffer_start_fill > BUFFER_FRAMES)
         die("specified buffer starting fill %d > buffer size %d",
@@ -773,7 +773,7 @@ int player_play(stream_cfg *stream) {
     pthread_condattr_setclock( &attr, CLOCK_MONOTONIC);
     int rc = pthread_cond_init(&flowcontrol,&attr);
     if (rc)
-    	debug(1,"Error initialising condition variable.\n");
+    	debug(1,"Error initialising condition variable.");
     config.output->start(sampling_rate);
     pthread_create(&player_thread, NULL, player_thread_func, NULL);
 
@@ -781,7 +781,7 @@ int player_play(stream_cfg *stream) {
 }
 
 void player_stop(void) {
-	debug(1,"player_stop called...\n");
+	debug(1,"player_stop called...");
     please_stop = 1;
     pthread_cond_signal(&flowcontrol); // tell it to give up
     pthread_join(player_thread, NULL);
@@ -798,6 +798,6 @@ void player_stop(void) {
 #endif
     int rc = pthread_cond_destroy(&flowcontrol);
     if (rc)
-    	debug(1,"Error destroying condition variable.\n");
-	debug(1,"player_stop finished...\n");
+    	debug(1,"Error destroying condition variable.");
+	debug(1,"player_stop finished...");
 }

@@ -50,7 +50,7 @@ static void egroup_callback(AvahiEntryGroup *g,
 }
 
 static void register_service(AvahiClient *c) {
-    debug(1, "avahi: register_service\n");
+    debug(1, "avahi: register_service.");
     if (!group)
         group = avahi_entry_group_new(c, egroup_callback, NULL);
     if (!group)
@@ -102,7 +102,7 @@ static void client_callback(AvahiClient *c,
 }
 
 static int avahi_register(char *srvname, int srvport) {
-    debug(1, "avahi: avahi_register\n");
+    debug(1, "avahi: avahi_register.");
     name = strdup(srvname);
     port = srvport;
 
@@ -129,7 +129,7 @@ static int avahi_register(char *srvname, int srvport) {
 }
 
 static void avahi_unregister(void) {
-    debug(1, "avahi: avahi_unregister\n");
+    debug(1, "avahi: avahi_unregister.");
     if (tpoll)
         avahi_threaded_poll_stop(tpoll);
     tpoll = NULL;

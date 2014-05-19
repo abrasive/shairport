@@ -156,16 +156,16 @@ static int init(int argc, char **argv) {
       if (alsa_mix_mindb==-9999999) {
         // trying to say that the lowest vol is mute, maybe? Raspberry Pi does this
         if (snd_mixer_selem_ask_playback_vol_dB(alsa_mix_elem,alsa_mix_minv+1,&alsa_mix_mindb)==0)
-          debug(1,"Can't get dB value corresponding to a \"volume\" of 1.\n");
+          debug(1,"Can't get dB value corresponding to a \"volume\" of 1.");
       }
-      debug(1,"Hardware mixer has dB volume from %f to %f.\n",(1.0*alsa_mix_mindb)/100.0,(1.0*alsa_mix_maxdb)/100.0);
+      debug(1,"Hardware mixer has dB volume from %f to %f.",(1.0*alsa_mix_mindb)/100.0,(1.0*alsa_mix_maxdb)/100.0);
     } else {
-      debug(1,"Hardware mixer does not have dB volume -- not used.\n");
+      debug(1,"Hardware mixer does not have dB volume -- not used.");
     }
   }
   if (snd_mixer_selem_has_playback_switch(alsa_mix_elem)) {
     has_mute=1;
-    debug(1,"Has mute ability.\n");
+    debug(1,"Has mute ability.");
   }
   return 0;
 }
@@ -187,7 +187,7 @@ static void start(int sample_rate) {
   snd_pcm_uframes_t buffer_size = frames*4;
   ret = snd_pcm_open(&alsa_handle, alsa_out_dev, SND_PCM_STREAM_PLAYBACK, 0);
   if (ret < 0)
-    die("Alsa initialization failed: unable to open pcm device: %s\n", snd_strerror(ret));
+    die("Alsa initialization failed: unable to open pcm device: %s.", snd_strerror(ret));
 
   snd_pcm_hw_params_alloca(&alsa_params);
   snd_pcm_hw_params_any(alsa_handle, alsa_params);
@@ -199,7 +199,7 @@ static void start(int sample_rate) {
   // snd_pcm_hw_params_set_buffer_size_near(alsa_handle, alsa_params, &buffer_size);
   ret = snd_pcm_hw_params(alsa_handle, alsa_params);
   if (ret < 0)
-    die("unable to set hw parameters: %s\n", snd_strerror(ret));
+    die("unable to set hw parameters: %s.", snd_strerror(ret));
   if (mysamplerate!=sample_rate) {
     die("Can't set the D/A converter to %d -- set to %d instead./n",sample_rate,mysamplerate);
   }
@@ -212,17 +212,17 @@ static uint32_t delay() {
     if (derr = snd_pcm_delay(alsa_handle,&current_delay)) {
       if (derr != 0) {
         derr = snd_pcm_recover(alsa_handle, derr, 0);
-        debug(1,"Error in delay(): %s\n", snd_strerror(derr));
+        debug(1,"Error in delay(): %s.", snd_strerror(derr));
       }
       current_delay=-1;
     }
   } else if (snd_pcm_state(alsa_handle)==SND_PCM_STATE_PREPARED) {
     current_delay=0;
   } else {
-    debug(1,"Error -- ALSA device not in correct state (%d) for delay.\n",snd_pcm_state(alsa_handle));
+    debug(1,"Error -- ALSA device not in correct state (%d) for delay.",snd_pcm_state(alsa_handle));
     if (derr = snd_pcm_prepare(alsa_handle)) {
       derr = snd_pcm_recover(alsa_handle, derr, 0);
-      debug(1,"Error preparing after delay error: %s\n", snd_strerror(derr));
+      debug(1,"Error preparing after delay error: %s.", snd_strerror(derr));
     }
     current_delay = -1;
   }
@@ -236,13 +236,13 @@ static void play(short buf[], int samples) {
     err = snd_pcm_writei(alsa_handle, (char*)buf, samples);
     if (err < 0) {
       err = snd_pcm_recover(alsa_handle, err, 0);
-      debug(1,"Error writing in play(): %s\n", snd_strerror(err));
+      debug(1,"Error writing in play(): %s.", snd_strerror(err));
     }
   } else {
-    debug(1,"Error -- ALSA device not in correct state (%d) for play.\n",snd_pcm_state(alsa_handle));
+    debug(1,"Error -- ALSA device not in correct state (%d) for play.",snd_pcm_state(alsa_handle));
     if (err = snd_pcm_prepare(alsa_handle)) {
       err = snd_pcm_recover(alsa_handle, err, 0);
-      debug(1,"Error preparing after play error: %s\n", snd_strerror(err));
+      debug(1,"Error preparing after play error: %s.", snd_strerror(err));
     }
   }
 }
@@ -250,21 +250,21 @@ static void play(short buf[], int samples) {
 static void flush(void) {
   int derr;
   if (alsa_handle) {
-    // debug(1,"Dropping frames for flush...\n");
+    // debug(1,"Dropping frames for flush...");
     if (derr = snd_pcm_drop(alsa_handle))
-      debug(1,"Error dropping frames: %s\n", snd_strerror(derr));
-    // debug(1,"Dropped frames ok. State is %d.\n",snd_pcm_state(alsa_handle));
+      debug(1,"Error dropping frames: %s.", snd_strerror(derr));
+    // debug(1,"Dropped frames ok. State is %d.",snd_pcm_state(alsa_handle));
     if (derr = snd_pcm_prepare(alsa_handle))
-      debug(1,"Error preparing after flush: %s\n", snd_strerror(derr));
-    // debug(1,"Frames successfully dropped.\n");
+      debug(1,"Error preparing after flush: %s.", snd_strerror(derr));
+    // debug(1,"Frames successfully dropped.");
     /*
     if (snd_pcm_state(alsa_handle)==SND_PCM_STATE_PREPARED)
-      debug(1,"Flush returns to SND_PCM_STATE_PREPARED state.\n");      
+      debug(1,"Flush returns to SND_PCM_STATE_PREPARED state.");      
     if (snd_pcm_state(alsa_handle)==SND_PCM_STATE_RUNNING)
-      debug(1,"Flush returns to SND_PCM_STATE_RUNNING state.\n");
+      debug(1,"Flush returns to SND_PCM_STATE_RUNNING state.");
     */    
     if (!((snd_pcm_state(alsa_handle)==SND_PCM_STATE_PREPARED) || (snd_pcm_state(alsa_handle)==SND_PCM_STATE_RUNNING)))
-      debug(1,"Flush returning unexpected state -- %d.\n",snd_pcm_state(alsa_handle));
+      debug(1,"Flush returning unexpected state -- %d.",snd_pcm_state(alsa_handle));
   }
 }
 
@@ -278,7 +278,7 @@ static void stop(void) {
 
 static void volume(double vol) {
   double vol_setting = vol2attn(vol,alsa_mix_maxdb,alsa_mix_mindb);
-  debug(1,"Setting volume db to %f, for volume input of %f.\n",vol_setting,vol);
+  debug(1,"Setting volume db to %f, for volume input of %f.",vol_setting,vol);
   if (snd_mixer_selem_set_playback_dB_all(alsa_mix_elem, vol_setting, -1) != 0)
     die ("Failed to set playback dB volume"); 
   if (has_mute)

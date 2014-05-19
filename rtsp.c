@@ -81,7 +81,7 @@ static void rtsp_take_player(void) {
         return;
 
     if (pthread_mutex_trylock(&playing_mutex)) {
-        debug(1, "shutting down playing thread\n");
+        debug(1, "shutting down playing thread.");
         // XXX minor race condition between please_shutdown and signal delivery
         please_shutdown = 1;
         pthread_kill(playing_thread, SIGUSR1);
@@ -107,12 +107,12 @@ static void track_thread(rtsp_conn_info *conn) {
 static void cleanup_threads(void) {
     void *retval;
     int i;
-    debug(2, "culling threads.\n");
+    debug(2, "culling threads.");
     for (i=0; i<nconns; ) {
         if (conns[i]->running == 0) {
             pthread_join(conns[i]->thread, &retval);
             free(conns[i]);
-            debug(2, "one joined\n");
+            debug(2, "one joined...");
             nconns--;
             if (nconns)
                 conns[i] = conns[nconns];
@@ -207,7 +207,7 @@ static int msg_handle_line(rtsp_message **pmsg, char *line) {
         *pmsg = msg;
         char *sp, *p;
 
-        // debug(1, "received request: %s\n", line);
+        // debug(1, "received request: %s", line);
 
         p = strtok_r(line, " ", &sp);
         if (!p)
@@ -237,7 +237,7 @@ static int msg_handle_line(rtsp_message **pmsg, char *line) {
         *p = 0;
         p += 2;
         msg_add_header(msg, line, p);
-        debug(2, "    %s: %s\n", line, p);
+        debug(2, "    %s: %s.", line, p);
         return -1;
     } else {
         char *cl = msg_get_header(msg, "Content-Length");
@@ -265,12 +265,12 @@ static rtsp_message * rtsp_read_request(int fd) {
 
     while (msg_size < 0) {
         if (please_shutdown) {
-            debug(1, "RTSP shutdown requested\n");
+            debug(1, "RTSP shutdown requested.");
             goto shutdown;
         }
         nread = read(fd, buf+inbuf, buflen - inbuf);
         if (!nread) {
-            debug(1, "RTSP connection closed\n");
+            debug(1, "RTSP connection closed.");
             goto shutdown;
         }
         if (nread < 0) {
@@ -344,7 +344,7 @@ static void msg_write_response(int fd, rtsp_message *resp) {
     p += n;
 
     for (i=0; i<resp->nheaders; i++) {
-        debug(2, "    %s: %s\n", resp->name[i], resp->value[i]);
+        debug(2, "    %s: %s.", resp->name[i], resp->value[i]);
         n = snprintf(p, pktfree, "%s: %s\r\n", resp->name[i], resp->value[i]);
         pktfree -= n;
         p += n;
@@ -363,7 +363,7 @@ static void handle_record(rtsp_conn_info *conn,
                            rtsp_message *req, rtsp_message *resp) {
   char * hdr = msg_get_header(req,"Range");
     
-  // debug(1,"RECORD message received: \"%s\".\n",hdr);
+  // debug(1,"RECORD message received: \"%s\".",hdr);
   resp->respcode = 200;
   msg_add_header(resp, "Audio-Latency","88200");
 }
@@ -392,7 +392,7 @@ static void handle_flush(rtsp_conn_info *conn,
         return;
     char * hdr = msg_get_header(req,"RTP-Info");
     
-    // debug(1,"FLUSH message received: \"%s\".\n",hdr);
+    // debug(1,"FLUSH message received: \"%s\".",hdr);
     // get the rtp timestamp
     char *p;
     uint32_t rtptime=0;
@@ -468,7 +468,7 @@ static void handle_ignore(rtsp_conn_info *conn,
 static void handle_set_parameter(rtsp_conn_info *conn,
                                  rtsp_message *req, rtsp_message *resp) {
     if (!req->contentlength)
-        debug(1, "received empty SET_PARAMETER request\n");
+        debug(1, "received empty SET_PARAMETER request.");
 
     char *cp = req->content;
     int cp_left = req->contentlength;
@@ -479,10 +479,10 @@ static void handle_set_parameter(rtsp_conn_info *conn,
 
         if (!strncmp(cp, "volume: ", 8)) {
             float volume = atof(cp + 8);
-            // debug(1, "volume: %f\n", volume);
+            // debug(1, "volume: %f.", volume);
             player_volume(volume);
         } else {
-            debug(1, "unrecognised parameter: >>%s<< (%d)\n", cp, strlen(cp));
+            debug(1, "unrecognised parameter: >>%s<< (%d).", cp, strlen(cp));
         }
         cp = next;
     }
@@ -758,7 +758,7 @@ respond:
         msg_free(resp);
     }
 
-    debug(1, "closing RTSP connection\n");
+    debug(1, "closing RTSP connection.");
     if (conn->fd > 0)
         close(conn->fd);
     if (rtsp_playing()) {
@@ -770,7 +770,7 @@ respond:
     if (auth_nonce)
         free(auth_nonce);
     conn->running = 0;
-    debug(2, "terminating RTSP thread\n");
+    debug(2, "terminating RTSP thread.");
     return NULL;
 }
 
@@ -830,10 +830,10 @@ void rtsp_listen_loop(void) {
         // one of the address families will fail on some systems that
         // report its availability. do not complain.
         if (ret) {
-            debug(1, "Failed to bind to address %s\n", format_address(p->ai_addr));
+            debug(1, "Failed to bind to address %s.", format_address(p->ai_addr));
             continue;
         }
-        debug(1, "Bound to address %s\n", format_address(p->ai_addr));
+        debug(1, "Bound to address %s.", format_address(p->ai_addr));
 
         listen(fd, 5);
         nsock++;
@@ -857,8 +857,8 @@ void rtsp_listen_loop(void) {
 
     mdns_register();
 
-    printf("Listening for connections.\n");
-    shairport_startup_complete();
+    // printf("Listening for connections.");
+    // shairport_startup_complete();
 
     int acceptfd;
     struct timeval tv;
@@ -892,7 +892,7 @@ void rtsp_listen_loop(void) {
         memset(conn, 0, sizeof(rtsp_conn_info));
         socklen_t slen = sizeof(conn->remote);
 
-        debug(1, "new RTSP connection\n");
+        debug(1, "new RTSP connection.");
         conn->fd = accept(acceptfd, (struct sockaddr *)&conn->remote, &slen);
         if (conn->fd < 0) {
             perror("failed to accept connection");
