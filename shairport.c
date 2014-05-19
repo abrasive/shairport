@@ -46,22 +46,24 @@
 
 static int shutting_down = 0;
 
-void shairport_shutdown(int retval) {
+void shairport_shutdown() {
     if (shutting_down)
         return;
     shutting_down = 1;
-    printf("Shutting down...\n");
     mdns_unregister();
     rtsp_shutdown_stream();
     if (config.output)
         config.output->deinit();
-    exit(retval);
 }
 
 static void sig_ignore(int foo, siginfo_t *bar, void *baz) {
 }
 static void sig_shutdown(int foo, siginfo_t *bar, void *baz) {
-    shairport_shutdown(0);
+    shairport_shutdown();
+    daemon_log(LOG_INFO, "Exiting...");
+    daemon_retval_send(255);
+    daemon_pid_file_remove();
+    exit(0);
 }
 
 static void sig_child(int foo, siginfo_t *bar, void *baz) {
@@ -206,39 +208,10 @@ void shairport_startup_complete(void) {
     }
 }
 
-/*
-void log_setup() {
-    if (config.logfile) {
-        int log_fd = open(config.logfile,
-                O_WRONLY | O_CREAT | O_APPEND,
-                S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-        if (log_fd < 0)
-            die("Could not open logfile");
-
-        dup2(log_fd, STDOUT_FILENO);
-        setvbuf (stdout, NULL, _IOLBF, BUFSIZ);
-
-        if (!config.errfile) {
-            dup2(log_fd, STDERR_FILENO);
-            setvbuf (stderr, NULL, _IOLBF, BUFSIZ);
-        }
-    }
-
-    if (config.errfile) {
-        int err_fd = open(config.errfile,
-                O_WRONLY | O_CREAT | O_APPEND,
-                S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-        if (err_fd < 0)
-            die("Could not open logfile");
-
-        dup2(err_fd, STDERR_FILENO);
-        setvbuf (stderr, NULL, _IOLBF, BUFSIZ);
-    }
-}
-*/
 int main(int argc, char **argv) {
 
     pid_t pid;
+    
     daemon_set_verbosity(LOG_DEBUG);
 
     /* Reset signal handlers */
@@ -357,6 +330,8 @@ int main(int argc, char **argv) {
     }
     config.output->init(argc-audio_arg, argv+audio_arg);
 
+    daemon_log(LOG_INFO, "Successful startup.");
+
     uint8_t ap_md5[16];
     MD5_CTX ctx;
     MD5_Init(&ctx);
@@ -367,13 +342,12 @@ int main(int argc, char **argv) {
 
     rtsp_listen_loop();
 
-    // should not.
-    shairport_shutdown(1);
+    // should not rerach this...
+    shairport_shutdown();
 finish:
     daemon_log(LOG_INFO, "Exiting...");
     daemon_retval_send(255);
     daemon_pid_file_remove();
-    
-//    return 1;
+    return 1;
 
 }
