@@ -60,7 +60,7 @@ static void sig_ignore(int foo, siginfo_t *bar, void *baz) {
 }
 static void sig_shutdown(int foo, siginfo_t *bar, void *baz) {
     shairport_shutdown();
-    daemon_log(LOG_INFO, "Exiting...");
+    daemon_log(LOG_NOTICE, "Exit...");
     daemon_retval_send(255);
     daemon_pid_file_remove();
     exit(0);
@@ -330,7 +330,7 @@ int main(int argc, char **argv) {
     }
     config.output->init(argc-audio_arg, argv+audio_arg);
 
-    daemon_log(LOG_INFO, "Successful startup.");
+    daemon_log(LOG_NOTICE, "Successful startup.");
 
     uint8_t ap_md5[16];
     MD5_CTX ctx;
@@ -345,7 +345,7 @@ int main(int argc, char **argv) {
     // should not rerach this...
     shairport_shutdown();
 finish:
-    daemon_log(LOG_INFO, "Exiting...");
+    daemon_log(LOG_NOTICE, "Unexpected exit...");
     daemon_retval_send(255);
     daemon_pid_file_remove();
     return 1;
