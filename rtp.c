@@ -115,12 +115,12 @@ static void *rtp_audio_receiver(void *arg) {
                 debug(2, "resend-related request packet received, ignoring.");
                 continue;
             }
-            debug(1, "Unknown RTP packet of type 0x%02X length %d seqno %d", type, nread, seqno);
+            debug(1, "Audio receiver -- Unknown RTP packet of type 0x%02X length %d seqno %d", type, nread, seqno);
         }
-        warn("Unknown RTP packet of type 0x%02X length %d.", type, nread);
+        warn("Audio receiver -- Unknown RTP packet of type 0x%02X length %d.", type, nread);
     }
 
-    debug(1, "Server RTP thread interrupted. terminating.");
+    debug(1, "Audio receiver -- Server RTP thread interrupted. terminating.");
     close(audio_socket);
 
     return NULL;
@@ -319,7 +319,7 @@ static void *rtp_timing_receiver(void *arg) {
             
 
         } else {
-      	debug(1, "Unknown RTP packet of type 0x%02X length %d.", packet[1], nread);
+      	debug(1, "Timing port -- Unknown RTP packet of type 0x%02X length %d.", packet[1], nread);
       }
     }
 
