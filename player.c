@@ -696,13 +696,13 @@ static void *player_thread_func(void *arg) {
           current_latency=accumulated_delay/print_interval;                    
           if ((play_number/print_interval)%100==0)
             { // only print every hundredth one, in verbose mode
-              debug(1,"Valid frames: %lld; overall frames added/subtracted %lld; frames added + frames deleted %lld; average D/A delay, average latency (frames): %llu, %llu; average buffers in use: %llu, moving average delay (number of delays): %llu (%lu).",
-                frames-(additions-deletions), additions-deletions, additions+deletions, accumulated_da_delay/print_interval,current_latency,accumulated_buffers_in_use/print_interval,moving_average_delay,number_of_delays);
+              //debug(1,"Valid frames: %lld; overall frames added/subtracted %lld; frames added + frames deleted %lld; average D/A delay, average latency (frames): %llu, %llu; average buffers in use: %llu, moving average delay (number of delays): %llu (%lu).",
+              //  frames-(additions-deletions), additions-deletions, additions+deletions, accumulated_da_delay/print_interval,current_latency,accumulated_buffers_in_use/print_interval,moving_average_delay,number_of_delays);
 
             //debug(1,"Frames %lld, correction %lld, mods %lld, dac_buffer %llu, latency %llu, missing_packets %llu, late_packets %llu, too_late_packets %llu resend_requests %llu.",
               //frames-(additions-deletions), additions-deletions, additions+deletions,accumulated_da_delay/print_interval,moving_average_delay,missing_packets,late_packets,too_late_packets,resend_requests);
                 
-            debug(1,"Drift: %.1f (ppm); Corrections: %.1f (ppm); missing_packets %llu; late_packets %llu; too_late_packets %llu; resend_requests %llu.", -moving_average_correction*1000000/352, moving_average_insertions_and_deletions*1000000/352,missing_packets,late_packets,too_late_packets,resend_requests);
+            debug(1,"Output clock divergence: %.1f (ppm); Corrections: %.1f (ppm); missing_packets %llu; late_packets %llu; too_late_packets %llu; resend_requests %llu.", -moving_average_correction*1000000/352, moving_average_insertions_and_deletions*1000000/352,missing_packets,late_packets,too_late_packets,resend_requests);
           }
           if (previous_latency==0)
             previous_latency=current_latency;
