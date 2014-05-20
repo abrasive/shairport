@@ -641,9 +641,10 @@ static void *player_thread_func(void *arg) {
         
         if (config.output->delay) {
           current_delay = config.output->delay();
-          if (current_delay==-1)
+          if (current_delay==-1) {
             debug(1,"Delay error when checking running latency.");
             current_delay=0;
+          }
         }
 
         config.output->play(outbuf, play_samples);
@@ -695,8 +696,8 @@ static void *player_thread_func(void *arg) {
           current_latency=accumulated_delay/print_interval;                    
           if ((play_number/print_interval)%100==0)
             { // only print every hundredth one, in verbose mode
-              //debug(1,"Valid frames: %lld; overall frames added/subtracted %lld; frames added + frames deleted %lld; average D/A delay, average latency (frames): %llu, %llu; average buffers in use: %llu, moving average delay (number of delays): %llu (%lu).",
-              //  frames-(additions-deletions), additions-deletions, additions+deletions, accumulated_da_delay/print_interval,current_latency,accumulated_buffers_in_use/print_interval,moving_average_delay,number_of_delays);
+              debug(1,"Valid frames: %lld; overall frames added/subtracted %lld; frames added + frames deleted %lld; average D/A delay, average latency (frames): %llu, %llu; average buffers in use: %llu, moving average delay (number of delays): %llu (%lu).",
+                frames-(additions-deletions), additions-deletions, additions+deletions, accumulated_da_delay/print_interval,current_latency,accumulated_buffers_in_use/print_interval,moving_average_delay,number_of_delays);
 
             //debug(1,"Frames %lld, correction %lld, mods %lld, dac_buffer %llu, latency %llu, missing_packets %llu, late_packets %llu, too_late_packets %llu resend_requests %llu.",
               //frames-(additions-deletions), additions-deletions, additions+deletions,accumulated_da_delay/print_interval,moving_average_delay,missing_packets,late_packets,too_late_packets,resend_requests);
