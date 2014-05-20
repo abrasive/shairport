@@ -1,3 +1,5 @@
+Note: right now, May 20 11:30 EDT, sync is temporarily -- I hope -- not working properly. Stand by.
+
 Shairport 2.0
 =============
 
