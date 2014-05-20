@@ -307,8 +307,13 @@ static abuf_t *buffer_get_frame(void) {
     pthread_mutex_unlock(&flush_mutex);
 
     curframe = audio_buffer + BUFIDX(ab_read);
-    if (config.output->delay) 
+    if (config.output->delay) {
       dac_delay = config.output->delay();
+      if (dac_delay==-1) {
+        debug(1,"Error getting dac_delay at start of loop.");
+        dac_delay=0;
+      }
+    }
         
     if (curframe->ready) {
       if ((flush_rtp_timestamp) && (flush_rtp_timestamp>=curframe->timestamp)) {
@@ -347,8 +352,12 @@ static abuf_t *buffer_get_frame(void) {
 
           if (config.output->delay) {
             dac_delay = config.output->delay();
-            if (dac_delay==0) 
-              filler_size = 22050; // half of a second
+            if (dac_delay==-1) {
+              debug(1,"Delay error when setting a filler size.");
+              dac_delay=0;
+            }
+            if (dac_delay==0)
+              filler_size = 11025; // 0.25 second
           }
           struct timespec time_now;
           clock_gettime(CLOCK_MONOTONIC,&time_now);
@@ -391,7 +400,7 @@ static abuf_t *buffer_get_frame(void) {
       }
     }
     // allow to DAC to have a quarter of a second -- seems necessary for VMWare Fusion and a WiFi connection.
-    wait = (ab_buffering || (dac_delay>=11025) || (!ab_synced)) && (!please_stop);
+    wait = (ab_buffering || (dac_delay>=4410) || (!ab_synced)) && (!please_stop);
 //    wait = (ab_buffering ||  (seq_diff(ab_read, ab_write) < (config.latency-22000)/(352)) || (!ab_synced)) && (!please_stop);
     if (wait) {
       struct timespec to;
@@ -630,8 +639,13 @@ static void *player_thread_func(void *arg) {
           deletions -= amount_to_stuff;
         frames += play_samples;
         
-        if (config.output->delay)
+        if (config.output->delay) {
           current_delay = config.output->delay();
+          if (current_delay==-1)
+            debug(1,"Delay error when checking running latency.");
+            current_delay=0;
+        }
+
         config.output->play(outbuf, play_samples);
         // now see if we can calculate how early or late the first frame would be
         uint32_t reference_timestamp;
