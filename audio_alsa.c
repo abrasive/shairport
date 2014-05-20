@@ -219,7 +219,7 @@ static uint32_t delay() {
   } else if (snd_pcm_state(alsa_handle)==SND_PCM_STATE_PREPARED) {
     current_delay=0;
   } else {
-    debug(1,"Error -- ALSA device not in correct state (%d) for delay.",snd_pcm_state(alsa_handle));
+    debug(1,"Error -- ALSA device is in an incorrect state  -- %d -- to ask for current delay.",snd_pcm_state(alsa_handle));
     if (derr = snd_pcm_prepare(alsa_handle)) {
       derr = snd_pcm_recover(alsa_handle, derr, 0);
       debug(1,"Error preparing after delay error: %s.", snd_strerror(derr));
@@ -278,7 +278,7 @@ static void stop(void) {
 
 static void volume(double vol) {
   double vol_setting = vol2attn(vol,alsa_mix_maxdb,alsa_mix_mindb);
-  debug(1,"Setting volume db to %f, for volume input of %f.",vol_setting,vol);
+  // debug(1,"Setting volume db to %f, for volume input of %f.",vol_setting,vol);
   if (snd_mixer_selem_set_playback_dB_all(alsa_mix_elem, vol_setting, -1) != 0)
     die ("Failed to set playback dB volume"); 
   if (has_mute)
