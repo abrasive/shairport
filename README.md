@@ -18,20 +18,20 @@ To stay synchronised, if an output device is running slow, Shairport 2.0 will de
 
 What else?
 --------------
-* Shairport 2.0 offers finer control at very top and very bottom of the volume range. See http://tangentsoft.net/audio/atten.html for a good discussion of audio "attenuators", upon which volume control in Shairport 2 is modelled.
+* Shairport 2.0 offers finer control at very top and very bottom of the volume range. See http://tangentsoft.net/audio/atten.html for a good discussion of audio "attenuators", upon which volume control in Shairport 2 is modelled. See also the diagram of the volume transfer function in the documents folder.
 * Shairport 2.0 will mute properly if the hardware supports it.
-* If it has to use software volume and mute controls, the response time is shorter than before.
+* If it has to use software volume and mute controls, the response time is shorter than before -- now it responds in 0.15 seconds.
 
 Status
 ------
-Shairport 2.0 is working on Raspberry Pi with Raspian and OpenWrt, and it runs on a Linksys NSLU2 using OpenWrt. It also works on a standard Ubuntu laptop. It works well with built-in audio and with a variety of USB-connected Amplifiers and DACs.
+Shairport 2.0 is working on Raspberry Pi with Raspian and OpenWrt, and it runs on a Linksys NSLU2 using OpenWrt. It also works on a standard Ubuntu laptop. It works well with built-in audio and with a variety of USB-connected Amplifiers and DACs, including a cheapo USB "3D Sound" dongle, a first generation iMic and a Topping TP30 amplifier with a USB DAC input.
 
 Shairport 2.0 compiles and runs pretty well on the built-in sound card of a Raspberry Pi model B under Raspian. Due to the limitations of the sound card, you wouldn't mistake the output for HiFi, but it's really not too shabby.
 USB-connected sound cards work well, so long as the wired Ethernet  port is not in use -- WiFi is fine.
 However, driving any USB-based audio output device is glitchy if you are using Ethernet at the same time. It works, but it's very glitchy. This seems to be due to a known problem -- see http://www.raspberrypi.org/forums/viewtopic.php?t=23544 -- and it will hopefully be fixed in a forthcoming update to Raspian.
-Shairport 2.0 runs well on the same hardware but using OpenWrt in place of Raspian and works properly with Ethernet.
+Shairport 2.0 runs well on the same hardware using OpenWrt in place of Raspian and then it works properly with Ethernet.
 
-Shairport 2.0 runs on Ubuntu inside VMWare Fusion 6.0.3 on a Mac, but synchronisation does not work -- possibly because the soundcard is being emulated.
+Shairport 2.0 runs on Ubuntu and Debian 7 inside VMWare Fusion 6.0.3 on a Mac, but synchronisation does not work -- possibly because the soundcard is being emulated.
 
 Shairport 2.0 works only with the ALSA back end. You can try compiling the other back ends in as you wish, but it definitely will not work properly with them. Maybe someday...
 
@@ -55,7 +55,11 @@ Building Instructions
 ---------------------
 If you're interested in Shairport 2.0 for OpenWrt, there's an OpenWrt package at https://github.com/mikebrady/shairport.
 
-Otherwise, to build Shairport 2.0, `cd` into the shairport directory and execute the following commands:
+Otherwise, to build Shairport 2.0, download it:
+
+`git clone https://github.com/mikebrady/shairport-sync.git`
+
+Next, `cd` into the shairport-sync directory and execute the following commands:
 
 `$ autoreconf -i`
 
@@ -117,9 +121,9 @@ If you run Shairport from the command line without daemonising it (omit the `-d`
 
 it will print statistics like this occasionally:
 
-`Drift: -15.3 (ppm); Corrections: 21.6 (ppm); missing_packets 0; late_packets 0; too_late_packets 0; resend_requests 0.`
+`Divergence: -15.3 (ppm); Corrections: 21.6 (ppm); missing_packets 0; late_packets 0; too_late_packets 0; resend_requests 0.`
 
-"Drift" is the negative of the net corrections -- the number of frame insertions less the number of frame deletions -- given as a moving average in parts per million. After an initial settling period, it represents the divergence between the source clock and the sound device's clock. The example above indicates that the output DAC's clock is running 15.3 ppm slower than the source's clock.
+"Divergence" is the negative of the net corrections -- the number of frame insertions less the number of frame deletions -- given as a moving average in parts per million. After an initial settling period, it represents the divergence between the source clock and the sound device's clock. The example above indicates that the output DAC's clock is running 15.3 ppm slower than the source's clock.
 
 "Corrections" is the number of frame insertions plus the number of frame deletions (i.e. the total number of "corrections"), given as a moving average in parts per million. The closer this is to the absolute value of the drift, the fewer "unnecessary" corrections that are being made.
 
