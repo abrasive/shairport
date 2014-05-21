@@ -258,7 +258,7 @@ int main(int argc, char **argv) {
     char hostname[100];
     gethostname(hostname, 100);
     config.apname = malloc(20 + 100);
-    snprintf(config.apname, 20 + 100, "Shairport Sync on %s", hostname);
+    snprintf(config.apname, 20 + 100, "%s Shairport Sync", hostname);
 
     // parse arguments into config
     int audio_arg = parse_options(argc, argv);
