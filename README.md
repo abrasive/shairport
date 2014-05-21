@@ -24,13 +24,16 @@ What else?
 
 Status
 ------
-Shairport 2.0 is working on Raspberry Pi and Linksys NSLU2, both using OpenWrt. It works on an Ubuntu laptop. It works well with built-in audio and with a variety of USB-connected Amplifiers and DACs.
+Shairport 2.0 is working on Raspberry Pi with Raspian and OpenWrt, and it runs on a Linksys NSLU2 using OpenWrt. It also works on a standard Ubuntu laptop. It works well with built-in audio and with a variety of USB-connected Amplifiers and DACs.
 
-Shairport 2.0 compiles and runs pretty well on the built-in sound card of a Raspberry Pi model B under Raspian. Due to the limitations of the sound card, you wouldn't mistake the output for HiFi, but it's really not too shabby. However, driving any USB-based audio output device is glitchy if you are using Ethernet at the same time. It works, but it's very glitchy. This seems to be due to a known problem -- see http://www.raspberrypi.org/forums/viewtopic.php?t=23544 -- and it will hopefully be fixed in a forthcoming update to Raspian. Right now, though, Shairport 2.0 runs well on the same hardware but using OpenWrt in place of Raspian.
+Shairport 2.0 compiles and runs pretty well on the built-in sound card of a Raspberry Pi model B under Raspian. Due to the limitations of the sound card, you wouldn't mistake the output for HiFi, but it's really not too shabby.
+USB-connected sound cards work well, so long as the wired Ethernet  port is not in use -- WiFi is fine.
+However, driving any USB-based audio output device is glitchy if you are using Ethernet at the same time. It works, but it's very glitchy. This seems to be due to a known problem -- see http://www.raspberrypi.org/forums/viewtopic.php?t=23544 -- and it will hopefully be fixed in a forthcoming update to Raspian.
+Shairport 2.0 runs well on the same hardware but using OpenWrt in place of Raspian and works properly with Ethernet.
 
-Shairport 2.0 sort-of runs on Ubuntu 13.10 inside VMWare Fusion 6.0.3 on a Mac, but synchronisation does not work too well -- possibly because the soundcard is being emulated. Also, Shairport doesn't always start properly. Still being investigated, this.
+Shairport 2.0 runs on Ubuntu inside VMWare Fusion 6.0.3 on a Mac, but synchronisation does not work -- possibly because the soundcard is being emulated.
 
-Shairport 2.0 works only with the ALSA back end. You can compile the other back ends in as you wish, but it definitely will not work properly with them. Maybe someday...
+Shairport 2.0 works only with the ALSA back end. You can try compiling the other back ends in as you wish, but it definitely will not work properly with them. Maybe someday...
 
 One other change of note is that the Shairport 2.0 build process now uses autotools to examine and configure the build environment -- very important for cross compilation. All previous versions looked in the current system to determine which packages were available, instead of looking at what packages were available in the target system.
 
@@ -44,7 +47,7 @@ Required:
 * autoconf
 * libtool
 
-Debian (and Raspian) users can get the basics with
+Debian, Ubuntu and Raspian users can get the basics with:
 
 `apt-get install avahi-daemon autoconf libtool libdaemon-dev libssl-dev libavahi-client-dev libasound2-dev`
 
@@ -58,11 +61,9 @@ Otherwise, to build Shairport 2.0, `cd` into the shairport directory and execute
 
 `$ ./configure --with-alsa --with-avahi`
 
-`$ make`
+`$ make` 
 
-Note that `shairport` is not installed automatically, so where it says `shairport` below, you might have to enter its path name, e.g. if you are still in the shairport directory:
-
-`$ ./shairport -v` will execute the just-compiled shairport in the slightly verbose mode.
+If you run `$sudo make install`, `shairport` will be installed along with an initscript which will automatically launch it at startup. The settings used are the most basic defaults, so you will want to edit the file `/etc/init.d/shairport` to give the service a name, use a different card, use the hardware mixer and volume control, etc.
 
 Running Shairport 2.0
 ---------------------
