@@ -399,8 +399,8 @@ static abuf_t *buffer_get_frame(void) {
         }
       }
     }
-    // allow to DAC to have a quarter of a second -- seems necessary for VMWare Fusion and a WiFi connection.
-    wait = (ab_buffering || (dac_delay>=4410) || (!ab_synced)) && (!please_stop);
+    // allow to DAC to have a 0.1 seconds -- seems necessary for VMWare Fusion and a WiFi connection.
+    wait = (ab_buffering || (dac_delay>=6615) || (!ab_synced)) && (!please_stop);
 //    wait = (ab_buffering ||  (seq_diff(ab_read, ab_write) < (config.latency-22000)/(352)) || (!ab_synced)) && (!please_stop);
     if (wait) {
       struct timespec to;
@@ -702,7 +702,7 @@ static void *player_thread_func(void *arg) {
             //debug(1,"Frames %lld, correction %lld, mods %lld, dac_buffer %llu, latency %llu, missing_packets %llu, late_packets %llu, too_late_packets %llu resend_requests %llu.",
               //frames-(additions-deletions), additions-deletions, additions+deletions,accumulated_da_delay/print_interval,moving_average_delay,missing_packets,late_packets,too_late_packets,resend_requests);
                 
-            debug(1,"Output clock divergence: %.1f (ppm); Corrections: %.1f (ppm); missing_packets %llu; late_packets %llu; too_late_packets %llu; resend_requests %llu.", -moving_average_correction*1000000/352, moving_average_insertions_and_deletions*1000000/352,missing_packets,late_packets,too_late_packets,resend_requests);
+            debug(1,"Divergence: %.1f (ppm); Corrections: %.1f (ppm); missing_packets %llu; late_packets %llu; too_late_packets %llu; resend_requests %llu.", -moving_average_correction*1000000/352, moving_average_insertions_and_deletions*1000000/352,missing_packets,late_packets,too_late_packets,resend_requests);
           }
           if (previous_latency==0)
             previous_latency=current_latency;
