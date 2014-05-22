@@ -206,10 +206,11 @@ static void start(int sample_rate) {
 }
 
 static uint32_t delay() {
-  snd_pcm_sframes_t current_delay = 0;
+  snd_pcm_sframes_t current_avail,current_delay = 0;
   int derr;
   if (snd_pcm_state(alsa_handle)==SND_PCM_STATE_RUNNING) {
-    if (derr = snd_pcm_delay(alsa_handle,&current_delay)) {
+    if (derr = snd_pcm_avail_delay(alsa_handle,&current_avail,&current_delay)) {
+    // current_avail not used
       if (derr != 0) {
         derr = snd_pcm_recover(alsa_handle, derr, 0);
         debug(1,"Error in delay(): %s.", snd_strerror(derr));
