@@ -8,7 +8,7 @@ Shairport 2.0 is a pretty substantial rewrite of Shairport 1.0 by James Laird an
 What is Shairport?
 ----------
 Shairport emulates an AirPort Express for the purpose of streaming music from iTunes and compatible iPods and iPhones. It implements a server for the Apple RAOP protocol.
-Shairport does not support AirPlay v2 (video and photo streaming).
+Shairport does not support AirPlay video and photo streaming.
 
 Shairport 2.0 does Audio Synchronisation
 ---------------------------
