@@ -3,7 +3,7 @@ Shairport 2.0
 
 Shairport 2.0 allows you to synchronise the audio coming from all your devices. Specifically, Shairport 2.0 allows you to set the "latency" -- the time between when a sound is sent and when it is played. This allows you to synchronise Shairport 2.0 devices reliably with other devices playing the same source. For example, synchronised multi-room audio is possible without difficulty.
 
-Shairport 2.0 is a pretty substantial rewrite of Shairport 1.0 by James Laird. It is still experimental, and only works with Linux and ALSA. Some of the support files, e.g. PKGBUILD and shairport.service files, are out of date.
+Shairport 2.0 is a pretty substantial rewrite of Shairport 1.0 by James Laird and others. It is still experimental, and only works with Linux and ALSA. Some of the support files, e.g. PKGBUILD and shairport.service files, are out of date.
 
 What is Shairport?
 ----------
