@@ -35,7 +35,7 @@ Shairport 2.0 runs on Ubuntu and Debian 7 inside VMWare Fusion 6.0.3 on a Mac, b
 
 Shairport 2.0 works only with the ALSA back end. You can try compiling the other back ends in as you wish, but it definitely will not work properly with them. Maybe someday...
 
-One other change of note is that the Shairport 2.0 build process now uses autotools to examine and configure the build environment -- very important for cross compilation. All previous versions looked in the current system to determine which packages were available, instead of looking at what packages were available in the target system.
+One other change of note is that the Shairport 2.0 build process now uses GNU autotools and libtool to examine and configure the build environment -- very important for cross compilation. All previous versions looked in the current system to determine which packages were available, instead of looking at what packages were available in the target system.
 
 Build Requirements
 ------------------
