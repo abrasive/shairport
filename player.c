@@ -702,7 +702,7 @@ static void *player_thread_func(void *arg) {
             //debug(1,"Frames %lld, correction %lld, mods %lld, dac_buffer %llu, latency %llu, missing_packets %llu, late_packets %llu, too_late_packets %llu resend_requests %llu.",
               //frames-(additions-deletions), additions-deletions, additions+deletions,accumulated_da_delay/print_interval,moving_average_delay,missing_packets,late_packets,too_late_packets,resend_requests);
                 
-            debug(1,"Divergence: %.1f (ppm); Corrections: %.1f (ppm); missing_packets %llu; late_packets %llu; too_late_packets %llu; resend_requests %llu.", -moving_average_correction*1000000/352, moving_average_insertions_and_deletions*1000000/352,missing_packets,late_packets,too_late_packets,resend_requests);
+            debug(1,"Divergence: %.1f (ppm); corrections: %.1f (ppm); missing packets %llu; late packets %llu; too late packets %llu; resend requests %llu.", moving_average_correction*1000000/352, moving_average_insertions_and_deletions*1000000/352,missing_packets,late_packets,too_late_packets,resend_requests);
           }
           if (previous_latency==0)
             previous_latency=current_latency;
