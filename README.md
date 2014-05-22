@@ -129,3 +129,8 @@ it will print statistics like this occasionally:
 For reference, a drift of one second per day is approximately 11.57 ppm. Left uncorrected, even a drift this small between two audio outputs will be audible after a short time.
 
 It's not unusual to have resend requests, late packets and even missing packets if some part of the connection to the Shairport device is over WiFi.
+
+Miscelleanous
+-------------
+Shairport 2.0 actively maintains synchronisation with the source. 
+If synchronisation is lost -- say due to a very busy iTunes host or a very congested network -- then Shairport 2.0 will mute its output and resynchronise. The loss-of-sync threshold is a very conservative 30 ms -- i.e. the actual time and the expected time must differ by more than 30 ms to trigger a resynchronisation. Smaller disparities are corrected by insertions or deletions, as described above.
