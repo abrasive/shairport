@@ -669,7 +669,7 @@ static void *player_thread_func(void *arg) {
         // this is the actual delay, which will fluctuate a good bit about a potentially rising or falling trend.
         int64_t delay = td_in_frames+rt-(nt-current_delay);
 
-	if (abs(delay-config.latency)>441*3) { // 30 ms
+	if ((! please_stop) && (abs(delay-config.latency)>441*3)) { // 30 ms
 	  debug(1,"Lost sync with source -- flushing and resyncing. Error of %lld frames.",delay-config.latency);
 	  player_flush(nt);
 	}
