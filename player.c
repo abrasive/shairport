@@ -399,7 +399,7 @@ static abuf_t *buffer_get_frame(void) {
         }
       }
     }
-    // allow to DAC to have a 0.1 seconds -- seems necessary for VMWare Fusion and a WiFi connection.
+    // allow to DAC to have a 0.15 seconds -- seems necessary for VMWare Fusion and a WiFi connection.
     wait = (ab_buffering || (dac_delay>=6615) || (!ab_synced)) && (!please_stop);
 //    wait = (ab_buffering ||  (seq_diff(ab_read, ab_write) < (config.latency-22000)/(352)) || (!ab_synced)) && (!please_stop);
     if (wait) {
@@ -668,6 +668,11 @@ static void *player_thread_func(void *arg) {
         }
         // this is the actual delay, which will fluctuate a good bit about a potentially rising or falling trend.
         int64_t delay = td_in_frames+rt-(nt-current_delay);
+
+	if (abs(delay-config.latency)>441*3) { // 30 ms
+	  debug(1,"Lost sync with source -- flushing and resyncing. Error of %lld frames.",delay-config.latency);
+	  player_flush(nt);
+	}
         
 //        if ((play_number<(10)) || (play_number%500==0))
 //        if ((play_number<(10)))
