@@ -120,7 +120,7 @@ If you run Shairport from the command line without daemonising it (omit the `-d`
 
 it will print statistics like this occasionally:
 
-`Divergence: 15.3 (ppm); Corrections: 21.6 (ppm); missing_packets 0; late_packets 0; too_late_packets 0; resend_requests 0.`
+`Divergence: 15.3 (ppm); corrections: 21.6 (ppm); missing packets 0; late packets 0; too late packets 0; resend requests 0.`
 
 "Divergence" is actually the net sum of corrections -- the number of frame insertions less the number of frame deletions -- given as a moving average in parts per million. After an initial settling period, it represents the divergence between the source clock and the sound device's clock. The example above indicates that the output DAC's clock is running 15.3 ppm faster than the source's clock.
 
