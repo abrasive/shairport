@@ -26,7 +26,7 @@ Status
 ------
 Shairport 2.0 is working on Raspberry Pi with Raspian and OpenWrt, and it runs on a Linksys NSLU2 using OpenWrt. It also works on a standard Ubuntu laptop. It works well with built-in audio and with a variety of USB-connected Amplifiers and DACs, including a cheapo USB "3D Sound" dongle, a first generation iMic and a Topping TP30 amplifier with a USB DAC input.
 
-Shairport 2.0 compiles and runs pretty well on the built-in sound card of a Raspberry Pi model B under Raspian. Due to the limitations of the sound card, you wouldn't mistake the output for HiFi, but it's really not too shabby.
+Shairport 2.0 compiles and runs pretty well on the built-in sound card of a Raspberry Pi model B under Raspian. Due to the limitations of the sound card, you wouldn't mistake the output for HiFi, but it's really not too shabby. You should set the latency to about 98500 for the built-in soundcard.
 USB-connected sound cards work well, so long as the wired Ethernet  port is not in use -- WiFi is fine if the network is not too busy. However, driving any USB-based audio output device is glitchy if you are using Ethernet at the same time or if you're on a busy WiFi network. It works, but it's very glitchy. This seems to be due to a known problem -- see http://www.raspberrypi.org/forums/viewtopic.php?t=23544 -- and it will hopefully be fixed in a forthcoming update to Raspian.
 Shairport 2.0 runs well on the same hardware using OpenWrt in place of Raspian and then it works properly with both Ethernet and WiFi.
 
@@ -70,7 +70,7 @@ If you run `$sudo make install`, `shairport` will be installed along with an ini
 
 Running Shairport 2.0
 ---------------------
-The `-L` setting is for the amount of latency -- the units are frames, with 44,100 frames to the second. Although 99,400 frames  is slightly more than two seconds, it sounds good -- YMMV.
+The `-L` setting is for the amount of latency -- the units are frames, with 44,100 frames to the second. Although 99,400 frames  is slightly more than two seconds, it sounds good -- YMMV. For the built-in soundcard on the Raspberry Pi, a latency of about 98500 seems to be better.
 
 Examples
 --------
@@ -82,7 +82,7 @@ In the following are examples of the Raspberry Pi and the NSLU2 -- little-endian
 
 For a Raspberry Pi using its internal soundcard that drives the headphone jack:
 
-`shairport -d -L 99400 -a "Shairport 2.0" -- -d hw:0 -t hardware -c PCM`
+`shairport -d -L 98500 -a "Shairport 2.0" -- -d hw:0 -t hardware -c PCM`
 
 For a Raspberry Pi driving a Topping TP30 Digital Amplifier, which has an integrated USB DAC:
 
@@ -108,7 +108,7 @@ On an NSLU2, to drive the "3D Sound" USB card:
 
 Latency
 -------
-The latency you set with the -L option is the exact time from a sound signal's original timestamp until that signal actually "appears" on the output of the DAC, irrespective of any internal delays, processing times, etc. in the computer. Thus, to get perfect audio synchronisation, the latency should be the same for all Shairport 2.0 devices, no matter what output devices they use -- build-in audio, USB DACs, etc. In the writer's experience, this is true.
+The latency you set with the -L option is the exact time from a sound signal's original timestamp until that signal actually "appears" on the output of the DAC, irrespective of any internal delays, processing times, etc. in the computer. Thus, to get perfect audio synchronisation, the latency should be the same for all Shairport 2.0 devices, no matter what output devices they use -- build-in audio, USB DACs, etc. In the writer's experience, this is true, apart from the built-in soundcard on the Raspberry Pi (see above).
 
 What is slightly curious is that the latency that most closely matches that of the Airport Express is around 99,400 frames, a little over the two seconds that most people report as the Airport Express's latency.
 
