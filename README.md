@@ -26,7 +26,7 @@ Status
 ------
 Shairport 2.0 is working on Raspberry Pi with Raspian and OpenWrt, and it runs on a Linksys NSLU2 using OpenWrt. It also works on a standard Ubuntu laptop. It works well with built-in audio and with a variety of USB-connected Amplifiers and DACs, including a cheapo USB "3D Sound" dongle, a first generation iMic and a Topping TP30 amplifier with a USB DAC input.
 
-Shairport 2.0 compiles and runs pretty well on the built-in sound card of a Raspberry Pi model B under Raspian. Due to the limitations of the sound card, you wouldn't mistake the output for HiFi, but it's really not too shabby. You should set the latency to about 98500 for the built-in soundcard.
+Shairport 2.0 compiles and runs pretty well on the built-in sound card of a Raspberry Pi model B under Raspian. Due to the limitations of the sound card, you wouldn't mistake the output for HiFi, but it's really not too shabby.
 USB-connected sound cards work well, so long as the wired Ethernet  port is not in use -- WiFi is fine if the network is not too busy. However, driving any USB-based audio output device is glitchy if you are using Ethernet at the same time or if you're on a busy WiFi network. It works, but it's very glitchy. This seems to be due to a known problem -- see http://www.raspberrypi.org/forums/viewtopic.php?t=23544 -- and it will hopefully be fixed in a forthcoming update to Raspian.
 Shairport 2.0 runs well on the same hardware using OpenWrt in place of Raspian and then it works properly with both Ethernet and WiFi.
 
@@ -34,7 +34,7 @@ Shairport 2.0 runs on Ubuntu and Debian 7 inside VMWare Fusion 6.0.3 on a Mac, b
 
 Shairport 2.0 works only with the ALSA back end. You can try compiling the other back ends in as you wish, but it definitely will not work properly with them. Maybe someday...
 
-One other change of note is that the Shairport 2.0 build process now uses GNU autotools and libtool to examine and configure the build environment -- very important for cross compilation. All previous versions looked in the current system to determine which packages were available, instead of looking at what packages were available in the target system.
+One other change of note is that the Shairport 2.0 build process uses GNU autotools and libtool to examine and configure the build environment -- very important for cross compilation. All previous versions looked in the current system to determine which packages were available, instead of looking at what packages were available in the target system.
 
 Build Requirements
 ------------------
@@ -82,7 +82,7 @@ In the following are examples of the Raspberry Pi and the NSLU2 -- little-endian
 
 For a Raspberry Pi using its internal soundcard that drives the headphone jack:
 
-`shairport -d -L 98500 -a "Shairport 2.0" -- -d hw:0 -t hardware -c PCM`
+`shairport -d -L 99400 -a "Shairport 2.0" -- -d hw:0 -t hardware -c PCM`
 
 For a Raspberry Pi driving a Topping TP30 Digital Amplifier, which has an integrated USB DAC:
 
@@ -108,7 +108,9 @@ On an NSLU2, to drive the "3D Sound" USB card:
 
 Latency
 -------
-The latency you set with the -L option is the exact time from a sound signal's original timestamp until that signal actually "appears" on the output of the DAC, irrespective of any internal delays, processing times, etc. in the computer. Thus, to get perfect audio synchronisation, the latency should be the same for all Shairport 2.0 devices, no matter what output devices they use -- build-in audio, USB DACs, etc. In the writer's experience, this is true, apart from the built-in soundcard on the Raspberry Pi (see above).
+The latency you set with the -L option is the exact time from a sound signal's original timestamp until that signal actually "appears" on the output of the DAC, irrespective of any internal delays, processing times, etc. in the computer. Thus, to get perfect audio synchronisation, the latency should be the same for all Shairport 2.0 devices, no matter what output devices they use -- build-in audio, USB DACs, etc. In the writer's experience, this is true.
+
+(When you're checking latency, be aware that many noise-cancelling headphones add a short but noticeable delay to their audio output.)
 
 What is slightly curious is that the latency that most closely matches that of the Airport Express is around 99,400 frames, a little over the two seconds that most people report as the Airport Express's latency.
 
