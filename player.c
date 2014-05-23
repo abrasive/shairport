@@ -463,6 +463,7 @@ static abuf_t *buffer_get_frame(void) {
     // debug(1, "missing frame %04X. Supplying a silent frame.", read);
     missing_packets++;
     memset(curframe->data, 0, FRAME_BYTES(frame_size));
+    curframe->timestamp=0;    
   }
   curframe->ready = 0;
   pthread_mutex_unlock(&ab_mutex);
@@ -668,11 +669,14 @@ static void *player_thread_func(void *arg) {
         }
         // this is the actual delay, which will fluctuate a good bit about a potentially rising or falling trend.
         int64_t delay = td_in_frames+rt-(nt-current_delay);
+        
+        int64_t sync_error = delay-config.latency;
 
-	if ((! please_stop) && (abs(delay-config.latency)>441*3)) { // 30 ms
-	  debug(1,"Lost sync with source -- flushing and resyncing. Error of %lld frames.",delay-config.latency);
-	  player_flush(nt);
-	}
+        // timestamp of zero means an inserted silent frame in place of a missing frame
+	      if ((inframe->timestamp!=0) && (! please_stop) && (abs(sync_error)>441*3)) { // 30 ms 
+	        debug(1,"Lost sync with source -- flushing and resyncing. Error of %lld frames.",sync_error);
+	        player_flush(nt);
+	      }
         
 //        if ((play_number<(10)) || (play_number%500==0))
 //        if ((play_number<(10)))
