@@ -70,8 +70,7 @@ If you run `$sudo make install`, `shairport` will be installed along with an ini
 
 Running Shairport 2.0
 ---------------------
-The `-L` setting is for the amount of latency -- the units are frames, with 44,100 frames to the second. Although 99,400 frames  is slightly more than two seconds, it sounds good -- YMMV. For the built-in soundcard on the Raspberry Pi, a latency of about 98500 seems to be better.
-
+The `-L` setting is for the amount of latency -- the units are frames, with 44,100 frames to the second. Although 99,400 frames  is slightly more than two seconds, it sounds good -- YMMV.
 Examples
 --------
 The first is an example of a standard Ubuntu based laptop:
