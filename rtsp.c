@@ -187,6 +187,13 @@ static char *msg_get_header(rtsp_message *msg, char *name) {
     return NULL;
 }
 
+static void msg_print_debug_headers(rtsp_message *msg) {
+  int i;
+  for (i=0; i<msg->nheaders; i++) {
+    debug(1,"  Type: \"%s\", content: \"%s\"",msg->name[i],msg->value[i]);
+  }
+}
+
 static void msg_free(rtsp_message *msg) {
     int i;
     for (i=0; i<msg->nheaders; i++) {
@@ -361,9 +368,6 @@ static void msg_write_response(int fd, rtsp_message *resp) {
 
 static void handle_record(rtsp_conn_info *conn,
                            rtsp_message *req, rtsp_message *resp) {
-  char * hdr = msg_get_header(req,"Range");
-    
-  // debug(1,"RECORD message received: \"%s\".",hdr);
   resp->respcode = 200;
   msg_add_header(resp, "Audio-Latency","88200");
 }
@@ -410,6 +414,24 @@ static void handle_setup(rtsp_conn_info *conn,
                          rtsp_message *req, rtsp_message *resp) {
     int cport, tport;
     int lsport,lcport,ltport;
+    
+    if (config.userSuppliedLatency==0) {
+      char * ua = msg_get_header(req,"User-Agent");
+      if (!ua) {
+        debug(1,"No User-Agent string found in the SETUP message and no user-supplied latency. Using AirP;ay latency of %d frames.",config.AirPlayLatency);
+        return;
+      }
+      if (strstr(ua,"iTunes")==ua) {
+        debug(1,"User-Agent is iTunes; selecting the iTunes latency of %d frames.",config.iTunesLatency);
+        config.latency=config.iTunesLatency;
+      } else if (strstr(ua,"AirPlay")==ua) {
+        debug(1,"User-Agent is AirPlay; selecting the AirPlay latency of %d frames.",config.AirPlayLatency);
+        config.latency=config.AirPlayLatency;
+      }
+    } else {
+      debug(1,"Selecting the latency of %d frames supplied with the -L option.",config.userSuppliedLatency);
+      config.latency=config.userSuppliedLatency;
+    }
 
     char *hdr = msg_get_header(req, "Transport");
     if (!hdr)
