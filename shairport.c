@@ -91,8 +91,13 @@ void usage(char *progname) {
     printf("    -h, --help          show this help\n");
     printf("    -p, --port=PORT     set RTSP listening port\n");
     printf("    -a, --name=NAME     set advertised name\n");
+    printf("    -A  --AirPlayLatency=FRAMES set how many frames between a just-received frame and audio output\n");
+    printf("                        if the source's User Agent is \"AirPlay\". The default value is %u frames.\n", config.AirPlayLatency);
+    printf("    -i  --iTunesLatency=FRAMES set how many frames between a just-received frame and audio output\n");
+    printf("                        if the source's User Agent is \"iTunes\". The default value is %u frames.\n", config.iTunesLatency);
     printf("    -L  --latency=FRAMES set how many frames between a just-received frame and audio output\n");
-    printf("                        starts. This value is in frames; default %d\n", config.latency);
+    printf("                        starts. This value is in frames; if non-zero overrides all other latencies.\n");
+    printf("                        Default latency without \"AirPlay\" or \"iTunes\" User Agent is %u frames.\n", config.AirPlayLatency);
     printf("    -d, --daemon        daemonise.\n");
     printf("    -k, --kill          kill the existing shairport daemon.\n");
     printf("    -B, --on-start=COMMAND  run a shell command when playback begins\n");
@@ -124,12 +129,14 @@ int parse_options(int argc, char **argv) {
         {"on-stop", required_argument,  NULL, 'E'},
         {"mdns",    required_argument,  NULL, 'm'},
         {"latency", required_argument,  NULL, 'L'},
+        {"AirPlayLatency", required_argument,  NULL, 'A'},
+        {"iTunesLatency", required_argument,  NULL, 'i'},
         {NULL, 0, NULL, 0}
     };
 
     int opt;
     while ((opt = getopt_long(argc, argv,
-                              "+hdvkp:a:o:b:B:E:m:L:",
+                              "+hdvkp:a:o:b:B:E:m:L:A:i:",
                               long_options, NULL)) > 0) {
         switch (opt) {
             default:
@@ -152,7 +159,13 @@ int parse_options(int argc, char **argv) {
                 config.output_name = optarg;
                 break;
             case 'L':
-                config.latency = atoi(optarg);
+                config.userSuppliedLatency = atoi(optarg);
+                break;
+            case 'A':
+                config.AirPlayLatency = atoi(optarg);
+                break;
+            case 'i':
+                config.iTunesLatency = atoi(optarg);
                 break;
             case 'B':
                 config.cmd_start = optarg;
@@ -252,9 +265,12 @@ int main(int argc, char **argv) {
     memset(&config, 0, sizeof(config));
 
     // set defaults
-    config.latency = 99400; // this seems to work pretty well -- two left-ear headphones, one from the iMac jack, one from an NSLU2 running a cheap "3D Sound" USB Soundcard
+    config.latency = 99400; // iTunes
+    config.userSuppliedLatency = 0; // zero means none supplied
+    config.iTunesLatency = 99400; // this seems to work pretty well for iTunes -- two left-ear headphones, one from the iMac jack, one from an NSLU2 running a cheap "3D Sound" USB Soundcard
+    config.AirPlayLatency = 88200; // this seems to work pretty well for AirPlay -- Syncs sound and vision on AppleTV, but also used for iPhone/iPod/iPad sources
     config.buffer_start_fill = 220;
-    config.port = 5002;
+    config.port = 5000;
     char hostname[100];
     gethostname(hostname, 100);
     config.apname = malloc(20 + 100);

@@ -28,6 +28,9 @@ typedef struct {
     mdns_backend *mdns;
     int buffer_start_fill;
     uint32_t latency;
+    uint32_t userSuppliedLatency; // overrides all other latencies -- use with caution
+    uint32_t iTunesLatency; // supplied with --iTunesLatency option
+    uint32_t AirPlayLatency; //supplied with --AirPlayLatency option
     int daemonise;
     char *cmd_start, *cmd_stop;
     char *pidfile;
