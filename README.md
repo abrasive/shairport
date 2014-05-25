@@ -12,9 +12,11 @@ Shairport does not support AirPlay video and photo streaming.
 
 Shairport 2.0 does Audio Synchronisation
 ---------------------------
-Shairport 2.0 allows you to set a delay (a "latency") from when music is sent by iTunes or your iOS device to when it is played in the Shairport audio device. The latency can be set to match the latency of other output devices playing the music, achieving audio synchronisation. Shairport 2.0 uses extra timing information to stay synchronised with the source's time signals, eliminating "drift", where audio streams slowly drift out of synchronisation.
+Shairport 2.0 allows you to set a delay (a "latency") from when music is sent by iTunes or your iOS device to when it is played in the Shairport audio device. The latency can be set to match the latency of other output devices playing the music (or video in the case of the AppleTV or Quicktime), achieving audio synchronisation. Shairport 2.0 uses extra timing information to stay synchronised with the source's time signals, eliminating "drift", where audio streams slowly drift out of synchronisation.
 
 To stay synchronised, if an output device is running slow, Shairport 2.0 will delete frames of audio to allow it to keep up; if the device is running fast, Shairport 2.0 will insert interpolated frames to keep time. The number of frames inserted or deleted is so small as to be inaudible. Frames are inserted or deleted as necessary at pseudorandom intervals.
+
+Shairplay 2.0 will automatically choose a suitable latency for iTunes and for AirPlay devices such as the AppleTV.
 
 What else?
 --------------
@@ -34,7 +36,7 @@ Shairport 2.0 runs on Ubuntu and Debian 7 inside VMWare Fusion 6.0.3 on a Mac, b
 
 Shairport 2.0 works only with the ALSA back end. You can try compiling the other back ends in as you wish, but it definitely will not work properly with them. Maybe someday...
 
-One other change of note is that the Shairport 2.0 build process uses GNU autotools and libtool to examine and configure the build environment -- very important for cross compilation. All previous versions looked in the current system to determine which packages were available, instead of looking at what packages were available in the target system.
+One other change of note is that the Shairport 2.0 build process now uses GNU autotools and libtool to examine and configure the build environment -- very important for cross compilation. All previous versions looked in the current system to determine which packages were available, instead of looking at what packages were available in the target system.
 
 Build Requirements
 ------------------
@@ -70,55 +72,57 @@ If you run `$sudo make install`, `shairport` will be installed along with an ini
 
 Running Shairport 2.0
 ---------------------
-The `-L` setting is for the amount of latency -- the units are frames, with 44,100 frames to the second. Although 99,400 frames  is slightly more than two seconds, it sounds good -- YMMV. For the built-in soundcard on the Raspberry Pi, a latency of about 98500 seems to be better.
+The `-L` setting is for the amount of latency -- the units are frames, with 44,100 frames to the second. Although 99,400 frames  is slightly more than two seconds, it sounds good -- YMMV.
 
 Examples
 --------
 The first is an example of a standard Ubuntu based laptop:
 
-`shairport -d -L 99400 -a "Shairport 2.0" -- -d hw:0`
+`shairport -d -a "Shairport 2.0" -- -d hw:0`
 
 In the following are examples of the Raspberry Pi and the NSLU2 -- little-endian and a big-endian ARM systems running OpenWrt. For best results, including getting true mute and instant response to volume control and pause commands, you should access the hardware volume controls as shown. Use `amixer` or `alsamixer` or similar to discover the name of the volume controller to be used after the `-c` option.
 
 For a Raspberry Pi using its internal soundcard that drives the headphone jack:
 
-`shairport -d -L 99400 -a "Shairport 2.0" -- -d hw:0 -t hardware -c PCM`
+`shairport -d -a "Shairport 2.0" -- -d hw:0 -t hardware -c PCM`
 
 For a Raspberry Pi driving a Topping TP30 Digital Amplifier, which has an integrated USB DAC:
 
-`shairport -d -a Kitchen -L 99400 -- -d hw:1 -t hardware -c PCM`
+`shairport -d -a Kitchen -- -d hw:1 -t hardware -c PCM`
 
 For a cheapo "3D Sound" USB card (Stereo output and input only) on a Raspberry Pi:
 
-`shairport -d -L 99400 -a "Shairport 2.0" -- -d hw:1 -t hardware -c Speaker`
+`shairport -d -a "Shairport 2.0" -- -d hw:1 -t hardware -c Speaker`
 
 For a first generation Griffin iMic on a Raspberry Pi:
 
-`shairport -d -L 99400 -a "Shairport 2.0" -- -d hw:1 -t hardware -c PCM`
+`shairport -d -a "Shairport 2.0" -- -d hw:1 -t hardware -c PCM`
 
 For an NSLU2, which has no internal soundcard, there appears to be a bug in ALSA -- you can not specify a device other than "default". Thus:
 
 On an NSLU2, to drive a first generation Griffin iMic:
 
-`shairport -d -L 99400 -a "Shairport 2.0" -- -t hardware -c PCM`
+`shairport -d -a "Shairport 2.0" -- -t hardware -c PCM`
 
 On an NSLU2, to drive the "3D Sound" USB card:
 
-`shairport -d -L 99400 -a "Shairport 2.0" -- -t hardware -c Speaker`
+`shairport -d -a "Shairport 2.0" -- -t hardware -c Speaker`
 
 Latency
 -------
-The latency you set with the -L option is the exact time from a sound signal's original timestamp until that signal actually "appears" on the output of the DAC, irrespective of any internal delays, processing times, etc. in the computer. Thus, to get perfect audio synchronisation, the latency should be the same for all Shairport 2.0 devices, no matter what output devices they use -- build-in audio, USB DACs, etc. In the writer's experience, this is true.
+Latency is the exact time from a sound signal's original timestamp until that signal actually "appears" on the output of the DAC, irrespective of any internal delays, processing times, etc. in the computer. From listening tests, it seems that there are two latencies in current use:
+* If the source is iTunes, then a latency of 99,400 frames seems to bring Shairport into exact synchronisation both with the speakers on the iTunes computer itself and with AirPort Extreme receivers.
+* If the source is an AppleTV, the latency seems to be exactly 88,200 frames. The AppleTV, iPod, iPad and iPhone all identify themselves as AirPlay sources, so they all have a latency set, by default, to 88,200.
 
-(When you're checking latency, be aware that many noise-cancelling headphones add a short but noticeable delay to their audio output.)
+Shairport has default latencies for these two types of sources: 99,400 frames for iTunes and 88,200 for all AirPlay devices -- iPods, iPads, iPhones and Apple TV.
 
-What is slightly curious is that the latency that most closely matches that of the Airport Express is around 99,400 frames, a little over the two seconds that most people report as the Airport Express's latency.
+You can set an iTunes latency with the -i or --iTunesLatency option (e.g. -i 99400 or --iTunesLatency=99400). Similarly you can set an AirPlay latency with the -A or --AirPlayLatency option. If you set a latency with -L it overrides both the AirPLay and iTunes latency values. Basically, you shouldn't use it except for experimentation.
 
 Some Statistics
 ---------------
 If you run Shairport from the command line without daemonising it (omit the `-d`), and if you turn on one level of verbosity (include `-v`), e.g. as follows for the Raspberry Pi with "3D Sound" card:
 
-`shairport -L 99400 -a "Shairport 2.0" -v -- -d hw:1 -t hardware -c Speaker`
+`shairport -a "Shairport 2.0" -v -- -d hw:1 -t hardware -c Speaker`
 
 it will print statistics like this occasionally:
 
