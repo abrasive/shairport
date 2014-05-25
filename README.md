@@ -70,10 +70,6 @@ Next, `cd` into the shairport-sync directory and execute the following commands:
 
 If you run `$sudo make install`, `shairport` will be installed along with an initscript which will automatically launch it at startup. The settings used are the most basic defaults, so you will want to edit the file `/etc/init.d/shairport` to give the service a name, use a different card, use the hardware mixer and volume control, etc.
 
-Running Shairport 2.0
----------------------
-The `-L` setting is for the amount of latency -- the units are frames, with 44,100 frames to the second. Although 99,400 frames  is slightly more than two seconds, it sounds good -- YMMV.
-
 Examples
 --------
 The first is an example of a standard Ubuntu based laptop:
@@ -116,7 +112,7 @@ Latency is the exact time from a sound signal's original timestamp until that si
 
 Shairport has default latencies for these two types of sources: 99,400 frames for iTunes and 88,200 for all AirPlay devices -- iPods, iPads, iPhones and Apple TV.
 
-You can set an iTunes latency with the -i or --iTunesLatency option (e.g. -i 99400 or --iTunesLatency=99400). Similarly you can set an AirPlay latency with the -A or --AirPlayLatency option. If you set a latency with -L it overrides both the AirPLay and iTunes latency values. Basically, you shouldn't use it except for experimentation.
+You can set an iTunes latency with the `-i` or `--iTunesLatency` option (e.g. `-i 99400` or `--iTunesLatency=99400`). Similarly you can set an AirPlay latency with the `-A` or `--AirPlayLatency` option. If you set a latency with `-L` it overrides both the AirPLay and iTunes latency values. Basically, you shouldn't use it except for experimentation.
 
 Some Statistics
 ---------------
@@ -136,7 +132,7 @@ For reference, a drift of one second per day is approximately 11.57 ppm. Left un
 
 It's not unusual to have resend requests, late packets and even missing packets if some part of the connection to the Shairport device is over WiFi.
 
-Miscelleanous
+Miscellaneous
 -------------
 Shairport 2.0 actively maintains synchronisation with the source. 
 If synchronisation is lost -- say due to a very busy iTunes host or a very congested network -- then Shairport 2.0 will mute its output and resynchronise. The loss-of-sync threshold is a very conservative 30 ms -- i.e. the actual time and the expected time must differ by more than 30 ms to trigger a resynchronisation. Smaller disparities are corrected by insertions or deletions, as described above.
