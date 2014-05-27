@@ -343,8 +343,8 @@ static abuf_t *buffer_get_frame(void) {
 
             first_packet_time_to_play = reference_timestamp_time+((delta+(int64_t)config.latency)<<32)/44100; // using the latency requested...
             if (local_time_now>=first_packet_time_to_play) {
-              debug(1,"First packet is late! It should have played before now. Flushing...");
-              player_flush(first_packet_timestamp);
+              debug(1,"First packet is late! It should have played before now. Flushing 0.1 seconds");
+              player_flush(first_packet_timestamp+4410);
             }
           }
         }      
