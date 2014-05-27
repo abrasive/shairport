@@ -788,11 +788,11 @@ static void *rtsp_conversation_thread_func(void *pconn) {
         struct method_handler *mh;
         for (mh=method_handlers; mh->method; mh++) {
             if (!strcmp(mh->method, req->method)) {
-                debug(1,"RTSP Packet received of type \"%s\":",mh->method),
-                msg_print_debug_headers(req);
+                // debug(1,"RTSP Packet received of type \"%s\":",mh->method),
+                // msg_print_debug_headers(req);
                 mh->handler(conn, req, resp);
-                debug(1,"RTSP Response:");
-                 msg_print_debug_headers(resp);
+                // debug(1,"RTSP Response:");
+                // msg_print_debug_headers(resp);
                 break;
             }
         }
