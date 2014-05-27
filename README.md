@@ -24,6 +24,7 @@ What else?
 * Shairport 2.0 will mute properly if the hardware supports it.
 * If it has to use software volume and mute controls, the response time is shorter than before -- now it responds in 0.15 seconds.
 * Sends back a "busy" signal if it's already playing audio from another source.
+
 Status
 ------
 Shairport 2.0 is working on Raspberry Pi with Raspian and OpenWrt, and it runs on a Linksys NSLU2 using OpenWrt. It also works on a standard Ubuntu laptop. It works well with built-in audio and with a variety of USB-connected Amplifiers and DACs, including a cheapo USB "3D Sound" dongle, a first generation iMic and a Topping TP30 amplifier with a USB DAC input.
