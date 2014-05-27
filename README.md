@@ -23,7 +23,7 @@ What else?
 * Shairport 2.0 offers finer control at very top and very bottom of the volume range. See http://tangentsoft.net/audio/atten.html for a good discussion of audio "attenuators", upon which volume control in Shairport 2 is modelled. See also the diagram of the volume transfer function in the documents folder.
 * Shairport 2.0 will mute properly if the hardware supports it.
 * If it has to use software volume and mute controls, the response time is shorter than before -- now it responds in 0.15 seconds.
-
+* Sends back a "busy" signal if it's already playing audio from another source.
 Status
 ------
 Shairport 2.0 is working on Raspberry Pi with Raspian and OpenWrt, and it runs on a Linksys NSLU2 using OpenWrt. It also works on a standard Ubuntu laptop. It works well with built-in audio and with a variety of USB-connected Amplifiers and DACs, including a cheapo USB "3D Sound" dongle, a first generation iMic and a Topping TP30 amplifier with a USB DAC input.
@@ -76,7 +76,7 @@ The first is an example of a standard Ubuntu based laptop:
 
 `shairport -d -a "Shairport 2.0" -- -d hw:0`
 
-In the following are examples of the Raspberry Pi and the NSLU2 -- little-endian and a big-endian ARM systems running OpenWrt. For best results, including getting true mute and instant response to volume control and pause commands, you should access the hardware volume controls as shown. Use `amixer` or `alsamixer` or similar to discover the name of the volume controller to be used after the `-c` option.
+In the following are examples of the Raspberry Pi and the NSLU2. For best results, including getting true mute and instant response to volume control and pause commands, you should access the hardware volume controls as shown. Use `amixer` or `alsamixer` or similar to discover the name of the volume controller to be used after the `-c` option.
 
 For a Raspberry Pi using its internal soundcard that drives the headphone jack:
 
@@ -107,12 +107,12 @@ On an NSLU2, to drive the "3D Sound" USB card:
 Latency
 -------
 Latency is the exact time from a sound signal's original timestamp until that signal actually "appears" on the output of the DAC, irrespective of any internal delays, processing times, etc. in the computer. From listening tests, it seems that there are two latencies in current use:
-* If the source is iTunes, then a latency of 99,400 frames seems to bring Shairport into exact synchronisation both with the speakers on the iTunes computer itself and with AirPort Extreme receivers.
-* If the source is an AppleTV, the latency seems to be exactly 88,200 frames. The AppleTV, iPod, iPad and iPhone all identify themselves as AirPlay sources, so they all have a latency set, by default, to 88,200.
+* If the source is iTunes, a latency of 99,400 frames seems to bring Shairport into exact synchronisation both with the speakers on the iTunes computer itself and with AirPort Extreme receivers.
+* If the source is an AirPlay device, the latency seems to be exactly 88,200 frames. AirPlay devices include AppleTV, iPod, iPad and iPhone and Quicktime Player on Mac.
 
-Shairport has default latencies for these two types of sources: 99,400 frames for iTunes and 88,200 for all AirPlay devices -- iPods, iPads, iPhones and Apple TV.
+Shairport therefore has default latencies for iTunes and AirPlay sources: 99,400 frames for iTunes and 88,200 for all AirPlay devices.
 
-You can set an iTunes latency with the `-i` or `--iTunesLatency` option (e.g. `-i 99400` or `--iTunesLatency=99400`). Similarly you can set an AirPlay latency with the `-A` or `--AirPlayLatency` option. If you set a latency with `-L` it overrides both the AirPLay and iTunes latency values. Basically, you shouldn't use it except for experimentation.
+You can set your own iTunes latency with the `-i` or `--iTunesLatency` option (e.g. `-i 99400` or `--iTunesLatency=99400`). Similarly you can set an AirPlay latency with the `-A` or `--AirPlayLatency` option. If you set a latency with `-L` it overrides both the AirPLay and iTunes latency values. Basically, you shouldn't use it except for experimentation.
 
 Some Statistics
 ---------------
@@ -135,4 +135,4 @@ It's not unusual to have resend requests, late packets and even missing packets 
 Miscellaneous
 -------------
 Shairport 2.0 actively maintains synchronisation with the source. 
-If synchronisation is lost -- say due to a very busy iTunes host or a very congested network -- then Shairport 2.0 will mute its output and resynchronise. The loss-of-sync threshold is a very conservative 30 ms -- i.e. the actual time and the expected time must differ by more than 30 ms to trigger a resynchronisation. Smaller disparities are corrected by insertions or deletions, as described above.
+If synchronisation is lost -- say due to a busy source or a congested network -- Shairport 2.0 will mute its output and resynchronise. The loss-of-sync threshold is a very conservative 30 ms -- i.e. the actual time and the expected time must differ by more than 30 ms to trigger a resynchronisation. Smaller disparities are corrected by insertions or deletions, as described above.
