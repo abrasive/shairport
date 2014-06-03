@@ -820,8 +820,8 @@ respond:
     if (conn->fd > 0)
         close(conn->fd);
     if (rtsp_playing()) {
-        rtp_shutdown();
         player_stop();
+        rtp_shutdown();
         please_shutdown = 0;
         pthread_mutex_unlock(&playing_mutex);
     }
