@@ -61,7 +61,7 @@ static int is_playing = 0;
 // it monitors the request variable (at least when interrupted)
 static pthread_mutex_t playing_mutex = PTHREAD_MUTEX_INITIALIZER;
 static int please_shutdown = 0;
-static pthread_t playing_thread;
+static pthread_t playing_thread = NULL;
 
 typedef struct {
     int fd;
@@ -81,6 +81,12 @@ static inline int rtsp_playing(void) {
     }
 }
 
+void rtsp_request_shutdown_stream(void) {
+  please_shutdown = 1;
+  pthread_kill(playing_thread, SIGUSR1);
+}
+
+
 static void rtsp_take_player(void) {
     if (rtsp_playing())
         return;
@@ -92,7 +98,7 @@ static void rtsp_take_player(void) {
         pthread_kill(playing_thread, SIGUSR1);
         pthread_mutex_lock(&playing_mutex);
     }
-    playing_thread = pthread_self();
+    playing_thread = pthread_self(); // make us the currently-playing thread (why?)
 }
 
 void rtsp_shutdown_stream(void) {
@@ -427,14 +433,14 @@ static void handle_setup(rtsp_conn_info *conn,
         return;
       }
       if (strstr(ua,"iTunes")==ua) {
-        debug(1,"User-Agent is iTunes; selecting the iTunes latency of %d frames.",config.iTunesLatency);
+        //debug(1,"User-Agent is iTunes; selecting the iTunes latency of %d frames.",config.iTunesLatency);
         config.latency=config.iTunesLatency;
       } else if (strstr(ua,"AirPlay")==ua) {
-        debug(1,"User-Agent is AirPlay; selecting the AirPlay latency of %d frames.",config.AirPlayLatency);
+        //debug(1,"User-Agent is AirPlay; selecting the AirPlay latency of %d frames.",config.AirPlayLatency);
         config.latency=config.AirPlayLatency;
       }
     } else {
-      debug(1,"Selecting the latency of %d frames supplied with the -L option.",config.userSuppliedLatency);
+      //debug(1,"Selecting the latency of %d frames supplied with the -L option.",config.userSuppliedLatency);
       config.latency=config.userSuppliedLatency;
     }
 
@@ -879,7 +885,7 @@ void rtsp_listen_loop(void) {
             debug(1, "Failed to bind to address %s.", format_address(p->ai_addr));
             continue;
         }
-        debug(1, "Bound to address %s.", format_address(p->ai_addr));
+        // debug(1, "Bound to address %s.", format_address(p->ai_addr));
 
         listen(fd, 5);
         nsock++;

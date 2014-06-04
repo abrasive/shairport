@@ -46,6 +46,7 @@
 #include "common.h"
 #include "player.h"
 #include "rtp.h"
+#include "rtsp.h"
 
 #ifdef FANCY_RESAMPLING
 #include <samplerate.h>
@@ -102,6 +103,8 @@ static int ab_buffering = 1, ab_synced = 0;
 static uint32_t first_packet_timestamp = 0;
 static int flush_requested = 0;
 static uint32_t flush_rtp_timestamp;
+static uint64_t time_of_last_audio_packet;
+static int shutdown_requested;
 
 // mutexes and condition variables
 static pthread_mutex_t ab_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -213,10 +216,7 @@ static void free_buffer(void) {
 
 void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
   packet_count++;
-  //if (packet_count<10)
-  //  debug(1,"Packet %llu received.",packet_count);
   abuf_t *abuf = 0;
-  int16_t buf_fill;
 
   pthread_mutex_lock(&ab_mutex);
   if (!ab_synced) {
@@ -243,8 +243,7 @@ void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
       late_packet_message_sent=1;
     }
   }
-  buf_fill = seq_diff(ab_read, ab_write);
-//    pthread_mutex_unlock(&ab_mutex);
+  pthread_mutex_unlock(&ab_mutex);
 
   if (abuf) {
       alac_decode(abuf->data, data, len);
@@ -253,12 +252,15 @@ void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
   }
   
 
-//    pthread_mutex_lock(&ab_mutex);
+  pthread_mutex_lock(&ab_mutex);
+  
+  struct timespec tn;
+  clock_gettime(CLOCK_MONOTONIC,&tn);
+  time_of_last_audio_packet = ((uint64_t)tn.tv_sec<<32)+((uint64_t)tn.tv_nsec<<32)/1000000000;
   
   int rc = pthread_cond_signal(&flowcontrol);
   if (rc)
   	debug(1,"Error signalling flowcontrol.");
-
   pthread_mutex_unlock(&ab_mutex);
 }
 
@@ -287,25 +289,29 @@ static inline short dithered_vol(short sample) {
 static abuf_t *buffer_get_frame(void) {
   int16_t buf_fill;
   uint64_t local_time_now;
+  struct timespec tn;
   seq_t read, next;
   abuf_t *abuf = 0;
   int i;
   abuf_t *curframe;
+  
   pthread_mutex_lock(&ab_mutex);
   int wait;
   int32_t dac_delay = 0;
   do {
+
     pthread_mutex_lock(&flush_mutex);
     if (flush_requested==1) {
-     if (config.output->flush)
-      config.output->flush();
-     ab_resync();
-     first_packet_timestamp = 0;
-     first_packet_time_to_play = 0;
+      if (config.output->flush)
+        config.output->flush();
+      ab_resync();
+      first_packet_timestamp = 0;
+      first_packet_time_to_play = 0;
       flush_requested=0;
     }
     pthread_mutex_unlock(&flush_mutex);
-
+    
+    dac_delay = 0;
     curframe = audio_buffer + BUFIDX(ab_read);
     if (config.output->delay) {
       dac_delay = config.output->delay();
@@ -315,6 +321,17 @@ static abuf_t *buffer_get_frame(void) {
       }
     }
         
+    clock_gettime(CLOCK_MONOTONIC,&tn);
+    local_time_now=((uint64_t)tn.tv_sec<<32)+((uint64_t)tn.tv_nsec<<32)/1000000000;
+
+    // if 4 seconds have elapsed since the last audio packet was received, then we should stop
+    if ((time_of_last_audio_packet!=0) && (shutdown_requested==0)) {
+      if (local_time_now-time_of_last_audio_packet>=(uint64_t)4<<32) {
+        debug(1,"As Yeats didn't say, \"Too long a silence makes a stone of the heart.\"");
+        rtsp_request_shutdown_stream();
+      }
+    }
+
     if (curframe->ready) {
       if ((flush_rtp_timestamp) && (flush_rtp_timestamp>=curframe->timestamp)) {
         // debug(1,"Dropping flushed packet %u.",curframe->timestamp);
@@ -335,10 +352,6 @@ static abuf_t *buffer_get_frame(void) {
             // the time when the packet with a particular timestamp should be played.
             // it might not be the timestamp of our first packet, however, so we might have to do some calculations.
           
-            struct timespec tn;
-            clock_gettime(CLOCK_MONOTONIC,&tn);
-            local_time_now=((uint64_t)tn.tv_sec<<32)+((uint64_t)tn.tv_nsec<<32)/1000000000;
-            
             int64_t delta = ((int64_t)first_packet_timestamp-(int64_t)reference_timestamp);
 
             first_packet_time_to_play = reference_timestamp_time+((delta+(int64_t)config.latency)<<32)/44100; // using the latency requested...
@@ -350,21 +363,12 @@ static abuf_t *buffer_get_frame(void) {
         }      
 
         if (first_packet_time_to_play!=0) {
-         uint32_t filler_size = frame_size;
 
-          if (config.output->delay) {
-            dac_delay = config.output->delay();
-            if (dac_delay==-1) {
-              debug(1,"Delay error when setting a filler size.");
-              dac_delay=0;
-            }
-            if (dac_delay==0)
-              filler_size = 11025; // 0.25 second
-          }
-          struct timespec time_now;
-          clock_gettime(CLOCK_MONOTONIC,&time_now);
-          uint64_t tn = ((uint64_t)time_now.tv_sec<<32)+((uint64_t)time_now.tv_nsec<<32)/1000000000;
-          if (tn>=first_packet_time_to_play) {
+          uint32_t filler_size = frame_size;
+          if (dac_delay==0) // i.e. if this is the first fill
+            filler_size = 11025; // 0.25 second
+
+          if (local_time_now>=first_packet_time_to_play) {
             // we've gone past the time...
             // debug(1,"Run past the exact start time by %llu frames, with time now of %llx, fpttp of %llx and dac_delay of %d and %d packets; flush.",(((tn-first_packet_time_to_play)*44100)>>32)+dac_delay,tn,first_packet_time_to_play,dac_delay,seq_diff(ab_read, ab_write));
             
@@ -374,7 +378,7 @@ static abuf_t *buffer_get_frame(void) {
             first_packet_timestamp = 0;
             first_packet_time_to_play = 0;
           } else {
-            uint64_t gross_frame_gap = ((first_packet_time_to_play-tn)*44100)>>32;
+            uint64_t gross_frame_gap = ((first_packet_time_to_play-local_time_now)*44100)>>32;
             int64_t exact_frame_gap = gross_frame_gap-dac_delay;
             if (exact_frame_gap<=0) {
               // we've gone past the time...
@@ -405,17 +409,15 @@ static abuf_t *buffer_get_frame(void) {
     wait = (ab_buffering || (dac_delay>=6615) || (!ab_synced)) && (!please_stop);
 //    wait = (ab_buffering ||  (seq_diff(ab_read, ab_write) < (config.latency-22000)/(352)) || (!ab_synced)) && (!please_stop);
     if (wait) {
-      struct timespec to;
-      clock_gettime(CLOCK_MONOTONIC, &to);
   // Watch out: should be 1^9/44100, but this causes integer overflow
       uint64_t calc = (uint64_t)(4*352*1000000)/(44*3); //four thirds of a packet time
       uint32_t calcs = calc&0xFFFFFFFF;
-      to.tv_nsec+=calcs;
-      if (to.tv_nsec>1000000000) {
-        to.tv_nsec-=1000000000;
-        to.tv_sec+=1;
+      tn.tv_nsec+=calcs;
+      if (tn.tv_nsec>1000000000) {
+        tn.tv_nsec-=1000000000;
+        tn.tv_sec+=1;
       }
-      pthread_cond_timedwait(&flowcontrol,&ab_mutex,&to); 
+      pthread_cond_timedwait(&flowcontrol,&ab_mutex,&tn); 
     }    
   } while (wait);
 
@@ -526,6 +528,8 @@ static void *player_thread_func(void *arg) {
     uint64_t accumulated_buffers_in_use = 0;
     int64_t accumulated_delay = 0;
     int64_t accumulated_da_delay = 0;
+    time_of_last_audio_packet = 0;
+    shutdown_requested = 0;
 
     const int print_interval = 71;
     // I think it's useful to keep this prime to prevent it from falling into a pattern with some other process.
@@ -675,7 +679,7 @@ static void *player_thread_func(void *arg) {
         int64_t sync_error = delay-config.latency;
 
         // timestamp of zero means an inserted silent frame in place of a missing frame
-	      if ((inframe->timestamp!=0) && (! please_stop) && (abs(sync_error)>441*3)) { // 30 ms 
+	      if ((inframe->timestamp!=0) && (! please_stop) && (abs(sync_error)>441*5)) { // 50 ms 
 	        debug(1,"Lost sync with source -- flushing and resyncing. Error of %lld frames.",sync_error);
 	        player_flush(nt);
 	      }
