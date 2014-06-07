@@ -324,11 +324,12 @@ static abuf_t *buffer_get_frame(void) {
     clock_gettime(CLOCK_MONOTONIC,&tn);
     local_time_now=((uint64_t)tn.tv_sec<<32)+((uint64_t)tn.tv_nsec<<32)/1000000000;
 
-    // if 4 seconds have elapsed since the last audio packet was received, then we should stop
+    // if 6 seconds have elapsed since the last audio packet was received, then we should stop
     if ((time_of_last_audio_packet!=0) && (shutdown_requested==0)) {
-      if (local_time_now-time_of_last_audio_packet>=(uint64_t)4<<32) {
+      if (local_time_now-time_of_last_audio_packet>=(uint64_t)6<<32) {
         debug(1,"As Yeats didn't say, \"Too long a silence makes a stone of the heart.\"");
         rtsp_request_shutdown_stream();
+	shutdown_requested=1;
       }
     }
 
