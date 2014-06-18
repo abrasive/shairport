@@ -19,12 +19,11 @@ DESC="AirPlay Service"
 NAME=shairport
 DAEMON=/usr/local/bin/$NAME
 
-#Change the options here to suit your sound cards. This is for a Raspberry Pi driving an iMic.
-#DAEMON_ARGS="-d -- -d hw:1 -t hardware -c PCM"
+# We don't use the DAEMON_ARGS variable here because some of the identifiers may have spaces in them, and so are
+# impossible to pass as arguments.
 
-#Below is the default -- default name, default soundcard, software control of volume, no h/w mute
-#Use alsamixer or amixer or similar to get infomration about your soundcards.
-DAEMON_ARGS="-d"
+# Instead, we add the arguments directly to the relevant line in the do_start() function below
+
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 
@@ -53,9 +52,15 @@ do_start()
 	#   2 if daemon could not be started
 	start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON --test > /dev/null \
 		|| return 1
-	start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON -- \
-		$DAEMON_ARGS \
-		|| return 2
+# Uncomment just one of the following start-stop-daemon lines, or comment them all out and add your own.
+# In the default script, the first line is uncommented, selecting daemon mode (-d), the default device and software volume control
+# BTW, if you're using software volume control, you may have to use alsamixer or similar to set the output device's volume to its maximum level first
+# BTW2, you can use alsamixer to find device identifiers (e.g. hw:1) and mixer names (e.g. "Speaker"). No need to change ALSA's defaults.
+# BTW3, the argument after -a is simply the name the shairport service will be visible as.
+	start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON -- -d || return 2
+#	start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON -- -d -a "Topping TP30 or Griffin iMic on Raspberry Pi" -- d hw:1 -t hardware -c "PCM" || return 2
+#	start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON -- -d -a "'3D Sound' USB Soundcard on Raspberry Pi" -- d hw:1 -t hardware -c "Speaker" || return 2
+#	start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON -- -d -a "IQAudio Player on modified Raspberry Pi" -- -t hardware -c "Playback Digital" || return 2
 	# Add code here, if necessary, that waits for the process to be ready
 	# to handle requests from services started subsequently which depend
 	# on this one.  As a last resort, sleep for some time.
