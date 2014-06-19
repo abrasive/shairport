@@ -103,8 +103,6 @@ static seq_t ab_read, ab_write;
 static int ab_buffering = 1, ab_synced = 0;
 static pthread_mutex_t ab_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-static void bf_est_reset(short fill);
-
 static void ab_resync(void) {
     int i;
     for (i=0; i<BUFFER_FRAMES; i++)
@@ -305,95 +303,6 @@ static inline short dithered_vol(short sample) {
         out -= rand_b;
     }
     return out>>16;
-}
-
-typedef struct {
-    double hist[2];
-    double a[2];
-    double b[3];
-} biquad_t;
-
-static void biquad_init(biquad_t *bq, double a[], double b[]) {
-    bq->hist[0] = bq->hist[1] = 0.0;
-    memcpy(bq->a, a, 2*sizeof(double));
-    memcpy(bq->b, b, 3*sizeof(double));
-}
-
-static void biquad_lpf(biquad_t *bq, double freq, double Q) {
-    double w0 = 2.0 * M_PI * freq * frame_size / (double)sampling_rate;
-    double alpha = sin(w0)/(2.0*Q);
-
-    double a_0 = 1.0 + alpha;
-    double b[3], a[2];
-    b[0] = (1.0-cos(w0))/(2.0*a_0);
-    b[1] = (1.0-cos(w0))/a_0;
-    b[2] = b[0];
-    a[0] = -2.0*cos(w0)/a_0;
-    a[1] = (1-alpha)/a_0;
-
-    biquad_init(bq, a, b);
-}
-
-static double biquad_filt(biquad_t *bq, double in) {
-    double w = in - bq->a[0]*bq->hist[0] - bq->a[1]*bq->hist[1];
-    double out = bq->b[1]*bq->hist[0] + bq->b[2]*bq->hist[1] + bq->b[0]*w;
-    bq->hist[1] = bq->hist[0];
-    bq->hist[0] = w;
-
-    return out;
-}
-
-static double bf_playback_rate = 1.0;
-
-static double bf_est_drift = 0.0;   // local clock is slower by
-static biquad_t bf_drift_lpf;
-static double bf_est_err = 0.0, bf_last_err;
-static biquad_t bf_err_lpf, bf_err_deriv_lpf;
-static double desired_fill;
-static int fill_count;
-
-static void bf_est_reset(short fill) {
-    biquad_lpf(&bf_drift_lpf, 1.0/180.0, 0.3);
-    biquad_lpf(&bf_err_lpf, 1.0/10.0, 0.25);
-    biquad_lpf(&bf_err_deriv_lpf, 1.0/2.0, 0.2);
-    fill_count = 0;
-    bf_playback_rate = 1.0;
-    bf_est_err = bf_last_err = 0;
-    desired_fill = fill_count = 0;
-}
-
-static void bf_est_update(short fill) {
-    // the rate-matching system needs to decide how full to keep the buffer.
-    // the initial fill is present when the system starts to output samples,
-    // but most output chains will instantly gobble their own buffer's worth of
-    // data. we average for a while to decide where to draw the line.
-    if (fill_count < 1000) {
-        desired_fill += (double)fill/1000.0;
-        fill_count++;
-        return;
-    } else if (fill_count == 1000) {
-        // this information could be used to help estimate our effective latency?
-        debug(1, "established desired fill of %f frames, "
-              "so output chain buffered about %f frames\n", desired_fill,
-              config.buffer_start_fill - desired_fill);
-        fill_count++;
-    }
-
-#define CONTROL_A   (1e-4)
-#define CONTROL_B   (1e-1)
-
-    double buf_delta = fill - desired_fill;
-    bf_est_err = biquad_filt(&bf_err_lpf, buf_delta);
-    double err_deriv = biquad_filt(&bf_err_deriv_lpf, bf_est_err - bf_last_err);
-    double adj_error = CONTROL_A * bf_est_err;
-
-    bf_est_drift = biquad_filt(&bf_drift_lpf, CONTROL_B*(adj_error + err_deriv) + bf_est_drift);
-
-    debug(3, "bf %d err %f drift %f desiring %f ed %f estd %f\n",
-          fill, bf_est_err, bf_est_drift, desired_fill, err_deriv, err_deriv + adj_error);
-    bf_playback_rate = 1.0 + adj_error + bf_est_drift;
-
-    bf_last_err = bf_est_err;
 }
 
 // get the next frame, when available. return 0 if underrun/stream reset.

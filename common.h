@@ -26,7 +26,6 @@ typedef struct {
     audio_output *output;
     char *mdns_name;
     mdns_backend *mdns;
-    int buffer_start_fill;
     int delay;
     int daemonise;
     char *cmd_start, *cmd_stop;
