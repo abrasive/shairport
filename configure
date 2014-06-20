@@ -59,6 +59,38 @@ do_pkg_config()
     fi
 }
 
+#figure out which time function to use
+check_time_function()
+{
+    cat >function_test.c <<FUNC_EOF
+#include <time.h>
+
+int main(int argc, char **argv){
+    struct timespec *tsp;
+    clock_gettime(CLOCK_MONOTONIC, tsp);
+}
+FUNC_EOF
+
+    if ${CC} ${CFLAGS} ${LDFLAGS} -c function_test.c > /dev/null 2>&1 /dev/null; then
+        echo "Found clock_gettime()"
+        echo -n "Checking if rt lib switch should be added: "
+        if ${CC} ${CFLAGS} ${LDFLAGS} function_test.c -lrt > /dev/null 2>&1 /dev/null; then
+            echo "-lrt works, adding"
+            LDFLAGS="${LDFLAGS} -lrt"
+        else
+            echo "-lrt not found, won't add"
+        fi
+    else
+        echo "Checking if we can use mach time"
+        check_header mach/mach.h
+        check_header mach/clock.h
+        export_config MACH_TIME
+    fi
+    rm -f function_test.*
+}
+
+check_time_function
+
 do_pkg_config OpenSSL       openssl
 do_pkg_config libao         ao              CONFIG_AO
 do_pkg_config PulseAudio    libpulse-simple CONFIG_PULSE
