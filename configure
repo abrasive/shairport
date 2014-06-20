@@ -89,6 +89,21 @@ FUNC_EOF
     rm -f function_test.*
 }
 
+# Check if command is installed
+check_command()
+{
+if command -v $1 > /dev/null 2>&1; then
+   echo $1 'is installed'
+else
+   echo $1 'is missing, cannot continue'
+   exit 1
+fi
+}
+
+# First check if the tools configure needs are installed
+check_command pkg-config
+check_command ${CC}
+
 check_time_function
 
 do_pkg_config OpenSSL       openssl
