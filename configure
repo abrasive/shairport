@@ -1,6 +1,6 @@
 #!/bin/sh
 
-[ -z "${CC}" ] && CC=gcc
+[ -z "${CC}" ] && CC=cc
 
 echo Configuring Shairport
 
