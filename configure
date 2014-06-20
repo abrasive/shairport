@@ -106,7 +106,14 @@ check_command ${CC}
 
 check_time_function
 
-do_pkg_config OpenSSL       openssl
+# On FreeBSD, OpenSSL is always there, but no .pc file is installed,
+# so pkg-config does not report it
+if [ `uname` = 'FreeBSD' ]; then
+   echo "FreeBSD machine, assuming OpenSSL is there"
+   LDFLAGS="${LDFLAGS} -lssl -lcrypto"
+else
+   do_pkg_config OpenSSL       openssl
+fi
 do_pkg_config libao         ao              CONFIG_AO
 do_pkg_config PulseAudio    libpulse-simple CONFIG_PULSE
 do_pkg_config ALSA          alsa            CONFIG_ALSA
