@@ -12,9 +12,10 @@ typedef struct {
     char *genre;
 } metadata;
 
-void  metadata_set(char** field, const char* value);
-FILE* metadata_open(const char* mode);
-void  metadata_write(const char* dir);
+void metadata_set(char** field, const char* value);
+void metadata_open(void);
+void metadata_write(void);
+void metadata_cover_image(const char *buf, int len, const char *ext);
 
 extern metadata player_meta;
 

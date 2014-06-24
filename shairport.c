@@ -101,7 +101,7 @@ void usage(char *progname) {
     printf("    -B, --on-start=COMMAND  run a shell command when playback begins\n");
     printf("    -E, --on-stop=COMMAND   run a shell command when playback ends\n");
     printf("    -w, --wait-cmd          block while the shell command(s) run\n");
-    printf("    -C, --cover-dir=DIR     set a directory to write the album cover art to\n");
+    printf("    -M, --meta-dir=DIR      set a directory to write metadata and album cover art to\n");
 
     printf("    -o, --output=BACKEND    select audio output method\n");
     printf("    -m, --mdns=BACKEND      force the use of BACKEND to advertise the service\n");
@@ -131,14 +131,14 @@ int parse_options(int argc, char **argv) {
         {"on-start",  required_argument,  NULL, 'B'},
         {"on-stop",   required_argument,  NULL, 'E'},
         {"wait-cmd",  no_argument,        NULL, 'w'},
-        {"cover-dir", required_argument,  NULL, 'C'},
+        {"meta-dir",  required_argument,  NULL, 'M'},
         {"mdns",      required_argument,  NULL, 'm'},
         {NULL,        0,                  NULL,   0}
     };
 
     int opt;
     while ((opt = getopt_long(argc, argv,
-                              "+hdvP:l:e:p:a:k:o:b:B:E:C:wm:",
+                              "+hdvP:l:e:p:a:k:o:b:B:E:M:wm:",
                               long_options, NULL)) > 0) {
         switch (opt) {
             default:
@@ -177,8 +177,8 @@ int parse_options(int argc, char **argv) {
             case 'w':
                 config.cmd_blocking = 1;
                 break;
-            case 'C':
-                config.cover_dir = optarg;
+            case 'M':
+                config.meta_dir = optarg;
                 break;
             case 'P':
                 config.pidfile = optarg;
@@ -305,6 +305,8 @@ int main(int argc, char **argv) {
     MD5_Final(ap_md5, &ctx);
     memcpy(config.hw_addr, ap_md5, sizeof(config.hw_addr));
 
+    if (config.meta_dir)
+        metadata_open();
 
     rtsp_listen_loop();
 
