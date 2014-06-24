@@ -133,7 +133,7 @@ int parse_options(int argc, char **argv) {
         {"wait-cmd",  no_argument,        NULL, 'w'},
         {"cover-dir", required_argument,  NULL, 'C'},
         {"mdns",      required_argument,  NULL, 'm'},
-        {NULL,        0,                  NULL,   0} 
+        {NULL,        0,                  NULL,   0}
     };
 
     int opt;

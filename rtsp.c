@@ -457,7 +457,7 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn,
                                           rtsp_message   *resp) {
     char *cp = req->content;
     int cl   = req->contentlength;
-  
+
     unsigned int off = 8;
 
     while (off < cl) {
@@ -495,7 +495,7 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn,
 
         free(val);
     }
-  
+
     player_metadata();
 }
 
@@ -508,11 +508,11 @@ static void handle_set_parameter_coverart(rtsp_conn_info *conn,
 
     if (!strncmp(ct, "image/jpeg", 10)) {
         player_cover_image(cp, cl, "jpg");
-    } 
+    }
 
     if (!strncmp(ct, "image/png", 9)) {
         player_cover_image(cp, cl, "png");
-    }    
+    }
 }
 
 static void handle_set_parameter_coverart_empty(rtsp_conn_info *conn,

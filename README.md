@@ -74,7 +74,7 @@ listed above, in that order, with each field on its own line.  Example output::
 	Elephant
 	Lonerism
 	cover-0c7b6d4c572d0936a5b94e37b6ef0408.jpg
-	
+
 In this example there is no `genre` or `comment` data, hence the last two lines are empty.
 
 

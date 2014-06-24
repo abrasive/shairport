@@ -46,10 +46,10 @@ FILE* metadata_open(const char* mode) {
   if (config.cover_dir) {
     const char fn[] = "now_playing.txt";
     size_t pl = strlen(config.cover_dir) + 1 + strlen(fn);
-    
+
     char* path = malloc(pl+1);
     snprintf(path, pl+1, "%s/%s", config.cover_dir, fn);
-    
+
     fh = fopen(path, mode);
     free(path);
   }
