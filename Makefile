@@ -5,7 +5,7 @@ config.mk:
 	$(MAKE) shairport
 endif
 
-CFLAGS ?= -O2
+CFLAGS ?= -O2 -Wall
 -include config.mk
 
 PREFIX ?= /usr/local

@@ -40,6 +40,13 @@ void die(char *format, ...);
 void warn(char *format, ...);
 void debug(int level, char *format, ...);
 
+/* functions that ignore return values without compiler warnings.
+ * for use only where return values really don't matter!
+ */
+#define write_unchecked(...) (void)(write(__VA_ARGS__)+1)
+#define read_unchecked(...)  (void)(read (__VA_ARGS__)+1)
+#define lockf_unchecked(...) (void)(lockf(__VA_ARGS__)+1)
+
 uint8_t *base64_dec(char *input, int *outlen);
 char *base64_enc(uint8_t *input, int length);
 

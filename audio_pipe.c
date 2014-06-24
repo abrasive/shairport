@@ -44,7 +44,7 @@ static void start(int sample_rate) {
 }
 
 static void play(short buf[], int samples) {
-    write(fd, buf, samples*4);
+    write_unchecked(fd, buf, samples*4);
 }
 
 static void stop(void) {

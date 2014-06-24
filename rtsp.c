@@ -356,7 +356,7 @@ static void msg_write_response(int fd, rtsp_message *resp) {
         die("Attempted to write overlong RTSP packet");
 
     strcpy(p, "\r\n");
-    write(fd, pkt, p-pkt+2);
+    write_unchecked(fd, pkt, p-pkt+2);
 }
 
 static void handle_options(rtsp_conn_info *conn,
@@ -590,7 +590,7 @@ static char *make_nonce(void) {
     int fd = open("/dev/random", O_RDONLY);
     if (fd < 0)
         die("could not open /dev/random!");
-    read(fd, random, sizeof(random));
+    read_unchecked(fd, random, sizeof(random));
     close(fd);
     return base64_enc(random, 8);
 }
