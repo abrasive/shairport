@@ -57,7 +57,7 @@ You can force the use of a specific backend using `shairport -m tinysvcmdns` for
 Metadata
 --------
 
-The following metadata can be sent to the player for the currently playing track:
+The following metadata can be output for the currently playing track:
 
   * artist
   * title
@@ -66,17 +66,22 @@ The following metadata can be sent to the player for the currently playing track
   * genre
   * comment
 
-To enable the output of metadata, the `-C <directory name>` flag must be set to instruct `shairport` where
-to save the `now_playing.txt` file and cover art.  The `now_playing.txt`  file will then contain the fields
-listed above, in that order, with each field on its own line.  Example output::
+To enable the output of metadata, the `-M <directory name>` flag must be set to
+instruct `shairport` where to save the output. This directory must exist. A
+fifo named `now_playing` will be created, and records will be written to it
+when tracks are changed. The end of a set of metadata is delimited by a
+zero-length line. Cover filenames are relative to the cover directory. Files
+are not deleted.
 
-	Tame Impala
-	Elephant
-	Lonerism
-	cover-0c7b6d4c572d0936a5b94e37b6ef0408.jpg
+An example::
 
-In this example there is no `genre` or `comment` data, hence the last two lines are empty.
-
+    artist=Arcade Fire
+    title=City With No Children
+    album=The Suburbs
+    artwork=cover-e6450a45ab900815e831434f5ee0499c.jpg
+    genre=Rock
+    comment=
+    
 
 Thanks
 ------
@@ -95,6 +100,8 @@ Contributors to version 1.x
 * [Peter Körner](http://mazdermind.de)
 * [Muffinman](http://github.com/therealmuffin)
 * [Skaman](http://github.com/skaman)
+* [Weston](http://github.com/wnielson)
+* [allesblinkt](http://github.com/allesblinkt)
 
 Contributors to version 0.x
 ---------------------------

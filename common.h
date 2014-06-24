@@ -30,7 +30,7 @@ typedef struct {
     int daemonise;
     char *cmd_start, *cmd_stop;
     int cmd_blocking;
-    char *cover_dir;
+    char *meta_dir;
     char *pidfile;
     char *logfile;
     char *errfile;

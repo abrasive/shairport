@@ -496,7 +496,7 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn,
         free(val);
     }
 
-    player_metadata();
+    metadata_write();
 }
 
 static void handle_set_parameter_coverart(rtsp_conn_info *conn,
@@ -507,17 +507,12 @@ static void handle_set_parameter_coverart(rtsp_conn_info *conn,
     char *ct = msg_get_header(req, "Content-Type");
 
     if (!strncmp(ct, "image/jpeg", 10)) {
-        player_cover_image(cp, cl, "jpg");
+        metadata_cover_image(cp, cl, "jpg");
+    } else if (!strncmp(ct, "image/png", 9)) {
+        metadata_cover_image(cp, cl, "png");
+    } else {
+        metadata_cover_image(NULL, 0, NULL);
     }
-
-    if (!strncmp(ct, "image/png", 9)) {
-        player_cover_image(cp, cl, "png");
-    }
-}
-
-static void handle_set_parameter_coverart_empty(rtsp_conn_info *conn,
-                                                rtsp_message *req, rtsp_message *resp) {
-    player_cover_clear();
 }
 
 static void handle_set_parameter(rtsp_conn_info *conn,
@@ -534,14 +529,12 @@ static void handle_set_parameter(rtsp_conn_info *conn,
             debug(1, "received metadata tags in SET_PARAMETER request\n");
 
             handle_set_parameter_metadata(conn, req, resp);
-        } else if (!strncmp(ct, "image/jpeg", 10) || !strncmp(ct, "image/png", 9)) {
+        } else if (!strncmp(ct, "image/jpeg", 10) ||
+                   !strncmp(ct, "image/png", 9)   ||
+                   !strncmp(ct, "image/none", 10)) {
             debug(1, "received image in SET_PARAMETER request\n");
 
             handle_set_parameter_coverart(conn, req, resp);
-         } else if (!strncmp(ct, "image/none", 10)) {
-            debug(1, "received empty image in SET_PARAMETER request\n");
-
-            handle_set_parameter_coverart_empty(conn, req, resp);
          } else if (!strncmp(ct, "text/parameters", 15)) {
             debug(1, "received parameters in SET_PARAMETER request\n");
 
