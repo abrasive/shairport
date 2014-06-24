@@ -94,13 +94,12 @@ static int mdns_external_avahi_register(char *apname, int port) {
 
     argv[0] = "avahi-publish-service";
     int pid = fork_execvp(argv[0], argv);
-    if (pid >= 0)
-    {
+    if (pid >= 0) {
         mdns_pid = pid;
         return 0;
     }
     else
-        warn("Calling %s failed !", argv[0]);
+        debug(1, "Calling %s failed, trying next method", argv[0]);
 
     argv[0] = "mDNSPublish";
     pid = fork_execvp(argv[0], argv);
