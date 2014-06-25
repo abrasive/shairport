@@ -67,7 +67,7 @@ static void start(int sample_rate) {
 }
 
 // Wait procedure taken from audio_dummy.c
-static void wait(int samples) {
+static void wait_samples(int samples) {
     struct timeval tv;
 
     // this is all a bit expensive but it's long-term stable.
@@ -87,7 +87,7 @@ static void wait(int samples) {
 
 static void play(short buf[], int samples) {
     if (fd < 0) {
-        wait(samples);
+        wait_samples(samples);
 
         // check if the other end is ready every 5 seconds
         if (samples_played > 5 * Fs)
