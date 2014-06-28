@@ -374,7 +374,7 @@ static int stuff_buffer(double playback_rate, short *inptr, short *outptr) {
 
     if (rand() < p_stuff * RAND_MAX) {
         stuff = playback_rate > 1.0 ? -1 : 1;
-        stuffsamp = rand() % (frame_size - 1);
+        stuffsamp = 1 + (rand() % (frame_size - 2));
     }
 
     pthread_mutex_lock(&vol_mutex);
