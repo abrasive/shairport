@@ -8,6 +8,8 @@ Shairport Sync is still experimental, and only works with Linux and ALSA. The so
 
 Some of the support files, e.g. PKGBUILD and shairport.service files, are out of date.
 
+For more about the motivation behind Shairport Sync, please see the wiki at https://github.com/mikebrady/shairport-sync/wiki.
+
 What is Shairport?
 ----------
 Shairport emulates an AirPort Express for the purpose of streaming music from iTunes and compatible iPods and iPhones. It implements a server for the Apple RAOP protocol.
