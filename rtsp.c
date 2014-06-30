@@ -412,8 +412,10 @@ static void handle_setup(rtsp_conn_info *conn,
 
     player_play(&conn->stream);
 
-    char *resphdr = malloc(strlen(hdr) + 20);
-    sprintf(resphdr, "%s;server_port=%d;control_port=%d;timing_port=%d", "RTP/AVP/UDP;unicast;mode=record", sport, sport, sport);
+    char resphdr[100];
+    snprintf(resphdr, sizeof(resphdr),
+             "RTP/AVP/UDP;unicast;mode=record;server_port=%d;control_port=%d;timing_port=%d",
+             sport, sport, sport);
     msg_add_header(resp, "Transport", resphdr);
 
     msg_add_header(resp, "Session", "1");
