@@ -23,7 +23,7 @@ DAEMON=/usr/local/bin/shairport
 
 # Configuration defaults
 USER=shairport
-GROUP=nogroup
+GROUP=audio
 LOGFILE=/var/log/$NAME.log
 ERRFILE=/var/log/$NAME.err
 PIDFILE=/var/run/$NAME.pid
