@@ -89,20 +89,21 @@ void usage(char *progname) {
 
     printf("\n");
     printf("Options:\n");
-    printf("    -h, --help          show this help\n");
-    printf("    -p, --port=PORT     set RTSP listening port\n");
-    printf("    -a, --name=NAME     set advertised name\n");
-    printf("    -k, --password=PW   require password to stream audio\n");
-    printf("    -b FILL             set how full the buffer must be before audio output\n");
-    printf("                        starts. This value is in frames; default %d\n", config.buffer_start_fill);
-    printf("    -d, --daemon        fork (daemonise). The PID of the child process is\n");
-    printf("                        written to stdout, unless a pidfile is used.\n");
-    printf("    -P, --pidfile=FILE  write daemon's pid to FILE on startup.\n");
-    printf("                        Has no effect if -d is not specified\n");
-    printf("    -l, --log=FILE      redirect shairport's standard output to FILE\n");
-    printf("                        If --error is not specified, it also redirects\n");
-    printf("                        error output to FILE\n");
-    printf("    -e, --error=FILE    redirect shairport's standard error output to FILE\n");
+    printf("    -h, --help              show this help\n");
+    printf("    -p, --port=PORT         set RTSP listening TCP port\n");
+    printf("    -D, --data-port=PORT    set RTP listening UDP port\n");
+    printf("    -a, --name=NAME         set advertised name\n");
+    printf("    -k, --password=PW       require password to stream audio\n");
+    printf("    -b FILL                 set how full the buffer must be before audio output\n");
+    printf("                            starts. This value is in frames; default %d\n", config.buffer_start_fill);
+    printf("    -d, --daemon            fork (daemonise). The PID of the child process is\n");
+    printf("                            written to stdout, unless a pidfile is used.\n");
+    printf("    -P, --pidfile=FILE      write daemon's pid to FILE on startup.\n");
+    printf("                            Has no effect if -d is not specified\n");
+    printf("    -l, --log=FILE          redirect shairport's standard output to FILE\n");
+    printf("                            If --error is not specified, it also redirects\n");
+    printf("                            error output to FILE\n");
+    printf("    -e, --error=FILE        redirect shairport's standard error output to FILE\n");
     printf("    -B, --on-start=COMMAND  run a shell command when playback begins\n");
     printf("    -E, --on-stop=COMMAND   run a shell command when playback ends\n");
     printf("    -w, --wait-cmd          block while the shell command(s) run\n");
@@ -130,6 +131,7 @@ int parse_options(int argc, char **argv) {
         {"log",       required_argument,  NULL, 'l'},
         {"error",     required_argument,  NULL, 'e'},
         {"port",      required_argument,  NULL, 'p'},
+        {"data-port", required_argument,  NULL, 'D'},
         {"name",      required_argument,  NULL, 'a'},
         {"password",  required_argument,  NULL, 'k'},
         {"output",    required_argument,  NULL, 'o'},
@@ -143,7 +145,7 @@ int parse_options(int argc, char **argv) {
 
     int opt;
     while ((opt = getopt_long(argc, argv,
-                              "+hdvP:l:e:p:a:k:o:b:B:E:M:wm:",
+                              "+hdvP:l:e:p:D:a:k:o:b:B:E:M:wm:",
                               long_options, NULL)) > 0) {
         switch (opt) {
             default:
@@ -160,6 +162,9 @@ int parse_options(int argc, char **argv) {
                 break;
             case 'p':
                 config.port = atoi(optarg);
+                break;
+            case 'D':
+                config.data_port = atoi(optarg);
                 break;
             case 'a':
                 config.apname = optarg;
@@ -280,6 +285,8 @@ int main(int argc, char **argv) {
     // set defaults
     config.buffer_start_fill = 220;
     config.port = 5002;
+    // Random port
+    config.data_port = 0;
     char hostname[100];
     gethostname(hostname, 100);
     config.apname = malloc(20 + 100);
