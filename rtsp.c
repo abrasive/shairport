@@ -45,6 +45,7 @@
 #include "player.h"
 #include "rtp.h"
 #include "mdns.h"
+#include "metadata.h"
 
 #ifdef AF_INET6
 #define INETx_ADDRSTRLEN INET6_ADDRSTRLEN
@@ -428,11 +429,8 @@ static void handle_ignore(rtsp_conn_info *conn,
     resp->respcode = 200;
 }
 
-static void handle_set_parameter(rtsp_conn_info *conn,
-                                 rtsp_message *req, rtsp_message *resp) {
-    if (!req->contentlength)
-        debug(1, "received empty SET_PARAMETER request\n");
-
+static void handle_set_parameter_parameter(rtsp_conn_info *conn,
+                                           rtsp_message *req, rtsp_message *resp) {
     char *cp = req->content;
     int cp_left = req->contentlength;
     char *next;
@@ -444,12 +442,116 @@ static void handle_set_parameter(rtsp_conn_info *conn,
             float volume = atof(cp + 8);
             debug(1, "volume: %f\n", volume);
             player_volume(volume);
+        } else if(!strncmp(cp, "progress: ", 10)) {
+            char *progress = cp + 10;
+            debug(1, "progress: %s\n", progress);
         } else {
             debug(1, "unrecognised parameter: >>%s<< (%d)\n", cp, strlen(cp));
         }
         cp = next;
     }
+}
 
+static void handle_set_parameter_metadata(rtsp_conn_info *conn,
+                                          rtsp_message   *req,
+                                          rtsp_message   *resp) {
+    char *cp = req->content;
+    int cl   = req->contentlength;
+  
+    unsigned int off = 8;
+
+    while (off < cl) {
+        char tag[5];
+        strncpy(tag, cp+off, 4);
+        tag[4] = '\0';
+        off += 4;
+
+        uint32_t vl = ntohl(*(uint32_t *)(cp+off));
+        off += sizeof(uint32_t);
+
+        char *val = malloc(vl+1);
+        strncpy(val, cp+off, vl);
+        val[vl] = '\0';
+        off += vl;
+
+        debug(2, "Tag: %s   Content: %s\n", tag, val);
+
+        if (!strncmp(tag, "asal ", 4)) {
+            debug(1, "META Album: %s\n", val);
+            metadata_set(&player_meta.album, val);
+        } else if (!strncmp(tag, "asar ", 4)) {
+            debug(1, "META Artist: %s\n", val);
+            metadata_set(&player_meta.artist, val);
+        } else if (!strncmp(tag, "ascm ", 4)) {
+            debug(1, "META Comment: %s\n", val);
+            metadata_set(&player_meta.comment, val);
+        } else if (!strncmp(tag, "asgn ", 4)) {
+            debug(1, "META Genre: %s\n", val);
+            metadata_set(&player_meta.genre, val);
+        } else if (!strncmp(tag, "minm ", 4)) {
+            debug(1, "META Title: %s\n", val);
+            metadata_set(&player_meta.title, val);
+        }
+
+        free(val);
+    }
+  
+    player_metadata();
+}
+
+static void handle_set_parameter_coverart(rtsp_conn_info *conn,
+                                          rtsp_message *req, rtsp_message *resp) {
+    char *cp = req->content;
+    int cl = req->contentlength;
+
+    char *ct = msg_get_header(req, "Content-Type");
+
+    if (!strncmp(ct, "image/jpeg", 10)) {
+        player_cover_image(cp, cl, "jpg");
+    } 
+
+    if (!strncmp(ct, "image/png", 9)) {
+        player_cover_image(cp, cl, "png");
+    }    
+}
+
+static void handle_set_parameter_coverart_empty(rtsp_conn_info *conn,
+                                                rtsp_message *req, rtsp_message *resp) {
+    player_cover_clear();
+}
+
+static void handle_set_parameter(rtsp_conn_info *conn,
+                                 rtsp_message *req, rtsp_message *resp) {
+    if (!req->contentlength)
+        debug(1, "received empty SET_PARAMETER request\n");
+
+    char *ct = msg_get_header(req, "Content-Type");
+
+    if (ct) {
+        debug(2, "SET_PARAMETER Content-Type: %s\n", ct);
+
+        if (!strncmp(ct, "application/x-dmap-tagged", 25)) {
+            debug(1, "received metadata tags in SET_PARAMETER request\n");
+
+            handle_set_parameter_metadata(conn, req, resp);
+        } else if (!strncmp(ct, "image/jpeg", 10) || !strncmp(ct, "image/png", 9)) {
+            debug(1, "received image in SET_PARAMETER request\n");
+
+            handle_set_parameter_coverart(conn, req, resp);
+         } else if (!strncmp(ct, "image/none", 10)) {
+            debug(1, "received empty image in SET_PARAMETER request\n");
+
+            handle_set_parameter_coverart_empty(conn, req, resp);
+         } else if (!strncmp(ct, "text/parameters", 15)) {
+            debug(1, "received parameters in SET_PARAMETER request\n");
+
+            handle_set_parameter_parameter(conn, req, resp);
+        } else {
+            debug(1, "received unknown Content-Type %s in SET_PARAMETER request\n", ct);
+        }
+    } else {
+        debug(1, "missing Content-Type header in SET_PARAMETER request\n");
+    }
 
     resp->respcode = 200;
 }
