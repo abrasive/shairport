@@ -48,13 +48,23 @@ install: shairport
 	install -m 755 -d $(PREFIX)/bin
 	install -m 755 shairport $(PREFIX)/bin/shairport
 
+GITREV=$(shell git describe --always)
+DIRTY:=$(shell if ! git diff --quiet --exit-code; then echo -dirty; fi)
+VERSION=\"$(GITREV)$(DIRTY)\"
+__version_file:
+	@if [ ! -f version.h -o "`cat .version 2>/dev/null`" != '$(VERSION)' ]; then \
+		echo $(VERSION) > version.h; \
+	fi
+
 %.o: %.c $(DEPS)
 	$(CC) -c $(CFLAGS) $<
+
+shairport.o: __version_file
 
 OBJS := $(SRCS:.c=.o)
 shairport: $(OBJS)
 	$(CC) $(OBJS) $(LDFLAGS) -o shairport
 
 clean:
-	rm -f shairport
+	rm -f shairport version.h
 	rm -f $(OBJS)

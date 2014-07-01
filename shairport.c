@@ -38,6 +38,10 @@
 #include "mdns.h"
 #include "getopt_long.h"
 
+static const char *version =
+    #include "version.h"
+    ;
+
 static void log_setup();
 
 static int shutting_down = 0;
@@ -267,6 +271,8 @@ void log_setup() {
 }
 
 int main(int argc, char **argv) {
+    printf("Starting Shairport %s\n", version);
+
     signal_setup();
     memset(&config, 0, sizeof(config));
 
