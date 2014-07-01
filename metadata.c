@@ -32,6 +32,8 @@
 #include <fcntl.h>
 #include <openssl/md5.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include "common.h"
 #include "metadata.h"
@@ -76,11 +78,11 @@ static void metadata_close(void) {
 }
 
 static void print_one(const char *name, const char *value) {
-    write(fd, name, strlen(name));
-    write(fd, "=", 1);
+    write_unchecked(fd, name, strlen(name));
+    write_unchecked(fd, "=", 1);
     if (value)
-        write(fd, value, strlen(value));
-    write(fd, "\n", 1);
+        write_unchecked(fd, value, strlen(value));
+    write_unchecked(fd, "\n", 1);
 }
 
 #define write_one(name) \

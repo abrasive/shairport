@@ -37,6 +37,7 @@
 #include "rtsp.h"
 #include "mdns.h"
 #include "getopt_long.h"
+#include "metadata.h"
 
 static const char *version =
     #include "version.h"
