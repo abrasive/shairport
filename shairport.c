@@ -92,6 +92,7 @@ void usage(char *progname) {
     printf("                        starts. This value is in frames; default %d\n", config.buffer_start_fill);
     printf("    -d, --daemon        fork (daemonise). The PID of the child process is\n");
     printf("                        written to stdout, unless a pidfile is used.\n");
+    printf("    -i, --idle-timeout  shutdown audio when idle\n");
     printf("    -P, --pidfile=FILE  write daemon's pid to FILE on startup.\n");
     printf("                        Has no effect if -d is not specified\n");
     printf("    -l, --log=FILE      redirect shairport's standard output to FILE\n");
@@ -120,6 +121,7 @@ int parse_options(int argc, char **argv) {
     static struct option long_options[] = {
         {"help",    no_argument,        NULL, 'h'},
         {"daemon",  no_argument,        NULL, 'd'},
+        {"idle-timeout", no_argument,   NULL, 'i'},
         {"pidfile", required_argument,  NULL, 'P'},
         {"log",     required_argument,  NULL, 'l'},
         {"error",   required_argument,  NULL, 'e'},
@@ -136,7 +138,7 @@ int parse_options(int argc, char **argv) {
 
     int opt;
     while ((opt = getopt_long(argc, argv,
-                              "+hdvP:l:e:p:a:k:o:b:B:E:wm:",
+                              "+hdivP:l:e:p:a:k:o:b:B:E:wm:",
                               long_options, NULL)) > 0) {
         switch (opt) {
             default:
@@ -147,6 +149,9 @@ int parse_options(int argc, char **argv) {
                 exit(0);
             case 'd':
                 config.daemonise = 1;
+                break;
+            case 'i':
+                config.idle_timeout = 1;
                 break;
             case 'v':
                 debuglev++;

@@ -33,6 +33,7 @@ typedef struct {
     char *pidfile;
     char *logfile;
     char *errfile;
+    int idle_timeout;
 } shairport_cfg;
 
 extern int debuglev;

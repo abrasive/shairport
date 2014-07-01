@@ -107,6 +107,7 @@ static void track_thread(rtsp_conn_info *conn) {
 static void cleanup_threads(void) {
     void *retval;
     int i;
+    if (nconns <= 0) return; // early exit if no threads (clean up log output)
     debug(2, "culling threads.\n");
     for (i=0; i<nconns; ) {
         if (conns[i]->running == 0) {
@@ -848,8 +849,16 @@ void rtsp_listen_loop(void) {
                 break;
             }
         }
-        if (acceptfd < 0) // timeout
-            continue;
+        if (acceptfd < 0) {   // timeout
+            if (config.idle_timeout && config.output->is_initialized && nconns == 0) {
+                debug(2, "idle_timeout: shutting down audio.\n");
+                config.output->deinit();
+                continue;
+            }
+            else {
+                continue;
+            }
+        }
 
         rtsp_conn_info *conn = malloc(sizeof(rtsp_conn_info));
         memset(conn, 0, sizeof(rtsp_conn_info));
@@ -862,6 +871,7 @@ void rtsp_listen_loop(void) {
             free(conn);
         } else {
             pthread_t rtsp_conversation_thread;
+            if (!(config.output->is_initialized)) config.output->reinit();
             ret = pthread_create(&rtsp_conversation_thread, NULL, rtsp_conversation_thread_func, conn);
             if (ret)
                 die("Failed to create RTSP receiver thread!");
