@@ -99,7 +99,7 @@ static int mdns_external_avahi_register(char *apname, int port) {
         return 0;
     }
     else
-        debug(1, "Calling %s failed, trying next method", argv[0]);
+        debug(1, "Calling %s failed", argv[0]);
 
     argv[0] = "mDNSPublish";
     pid = fork_execvp(argv[0], argv);
@@ -109,7 +109,7 @@ static int mdns_external_avahi_register(char *apname, int port) {
         return 0;
     }
     else
-        warn("Calling %s failed !", argv[0]);
+        debug(1, "Calling %s failed", argv[0]);
     
     // If we reach here, both execvp calls failed.
     return -1;
@@ -129,7 +129,7 @@ static int mdns_external_dns_sd_register(char *apname, int port) {
         return 0;
     }
     else
-        warn("Calling %s failed !", argv[0]);
+        debug(1, "Calling %s failed", argv[0]);
 
     return -1;
 }
