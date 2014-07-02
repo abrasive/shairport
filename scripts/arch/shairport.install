@@ -1,20 +1,10 @@
 post_install() {
-  echo "**********************************************************************"
-  echo "To modify settings, create a .conf file overriding the default"
-  echo "ExecStart in the following location:"
-  echo "/etc/systemd/system/shairport.service.d/"
-  echo "**********************************************************************"
   getent group shairport &>/dev/null || groupadd -r shairport >/dev/null
-  getent passwd shairport &> /dev/null || useradd -r -M -g shairport -s /bin/false -G audio shairport >/dev/null
+  getent passwd shairport &> /dev/null || useradd -r -M -g shairport -s /usr/bin/nologin -G audio shairport >/dev/null
   true
 }
 
 post_remove() {
-  echo "**********************************************************************"
-  echo "If you have created an options file in the following directory,"
-  echo "please remember to remove it:"
-  echo "/etc/systemd/system/shairport.service.d/"
-  echo "**********************************************************************"
   getent passwd shairport &>/dev/null && userdel shairport >/dev/null
   getent group shairport &>/dev/null && groupdel shairport >/dev/null
   true
