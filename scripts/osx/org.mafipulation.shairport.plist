@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+    "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+
+<!--
+
+Create a new user with (check the UID/GID is free first):
+
+    sudo dscl . -create /Groups/_shairport RealName "AirPlay Daemon Group"
+    sudo dscl . -create /Groups/_shairport PrimaryGroupID 235
+
+    sudo dscl . -create /Users/_shairport RealName "AirPlay Daemon"
+    sudo dscl . -create /Users/_shairport UniqueID 235
+    sudo dscl . -create /Users/_shairport PrimaryGroupID 235
+    sudo dscl . -create /Users/_shairport UserShell /usr/bin/false
+    sudo dscl . -create /Users/_shairport NFSHomeDirectory /var/empty
+
+and then place this file in:
+
+    /Library/LaunchDaemons/org.mafipulation.shairport.plist
+
+. Activate the daemon with:
+
+    sudo launchctl load /Library/LaunchDaemons/org.mafipulation.shairport.plist
+
+or deactivate with:
+
+    sudo launchctl unload /Library/LaunchDaemons/org.mafipulation.shairport.plist
+
+.
+
+-->
+
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>org.mafipulation.shairport</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/shairport</string>
+        <string>-a</string>
+        <string>AirPlay Speakers</string>
+    </array>
+
+    <key>KeepAlive</key>
+    <dict>
+       <key>NetworkState</key>
+       <true/>
+
+       <key>SuccessfulExit</key>
+       <false/>
+
+       <key>OtherJobEnabled</key>
+       <dict>
+         <key>com.apple.mDNSResponder</key>
+         <true/>
+
+         <key>com.apple.audio.coreaudiod</key>
+         <true/>
+       </dict>
+    </dict>
+
+    <key>UserName</key>
+    <string>_shairport</string>
+
+    <key>GroupName</key>
+    <string>_shairport</string>
+</dict>
+</plist>
