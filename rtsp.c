@@ -750,19 +750,19 @@ static int rtsp_auth(char **nonce, rtsp_message *req, rtsp_message *resp) {
     int i;
     char buf[33];
     for (i=0; i<16; i++)
-        sprintf(buf + 2*i, "%02X", digest_urp[i]);
+        sprintf(buf + 2*i, "%02x", digest_urp[i]);
     MD5_Init(&ctx);
     MD5_Update(&ctx, buf, 32);
     MD5_Update(&ctx, ":", 1);
     MD5_Update(&ctx, *nonce, strlen(*nonce));
     MD5_Update(&ctx, ":", 1);
     for (i=0; i<16; i++)
-        sprintf(buf + 2*i, "%02X", digest_mu[i]);
+        sprintf(buf + 2*i, "%02x", digest_mu[i]);
     MD5_Update(&ctx, buf, 32);
     MD5_Final(digest_total, &ctx);
 
     for (i=0; i<16; i++)
-        sprintf(buf + 2*i, "%02X", digest_total[i]);
+        sprintf(buf + 2*i, "%02x", digest_total[i]);
 
     if (!strcmp(response, buf))
         return 0;
