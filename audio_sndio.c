@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <sndio.h>
 #include "audio.h"
+#include "common.h"
 
 static struct sio_hdl *sio;
 static struct sio_par par;
