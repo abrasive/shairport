@@ -82,6 +82,42 @@ An example::
     genre=Rock
     comment=
     
+DACP
+----
+Most devices allow the AirPlay receiver to have basic remote control over the stream. This is done via simple HTTP GET requests from the 
+receiver to the source device. The device sends a `DACP-ID` header to allow the receiver to find hostname and port numbers from mDNS, as well as an
+`Active-Remote` header that must be used as an authentication key for issuing control commands. Similar to the Metadata feature outlined above,
+this information can be read from a fifo after a device announces an audio stream. Using the `-D <directory name>` flag will cause a fifo named
+`dacp` to be created in the directory specified. This fifo will have a similar format as the metadata.
+
+Fields:
+    dacp_id=CFAE09D9DA7527E9
+    active_remote=3951361179
+
+To issue control commands, you must do an mDNS lookup for `iTunes_Ctrl_<dacp_id>._dacp._tcp.local`. iTunes will always advertise on port 3689 so depending
+on the environment, it may be possible to skip the mDNS lookup if you already know the source IP or hostname. iOS devices seem to choose a random high-numbered 
+port. Once you have found the host and port number, you may issue HTTP GET requests in the following format:
+
+`http://<hostname>:<port>/ctrl-int/1/<cmd>`
+
+Where `<cmd>` may be one of:
+    ```
+        beginff
+        beginrew
+        mutetoggle
+        nextitem
+        previtem
+        pause
+        playpause
+        play
+        stop
+        playresume (after issuing beginff or beginrew)
+        shuffle_songs
+        volumedown
+        volumeup
+    ```
+Your HTTP request must include an `Active-Remote` header with the value obtained from the fifo.
+
 
 Thanks
 ------
