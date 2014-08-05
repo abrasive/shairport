@@ -605,9 +605,14 @@ static void handle_announce(rtsp_conn_info *conn,
     for (i=0; i<sizeof(conn->stream.fmtp)/sizeof(conn->stream.fmtp[0]); i++)
         conn->stream.fmtp[i] = atoi(strsep(&pfmtp, " \t"));
 
-	dacp_set(&player_dacp.dacp_id, "abcde");
-	dacp_set(&player_dacp.active_remote, "1234");
-	dacp_write();
+    for (int c = 0; c < req->nheaders; c++) {
+        if (!strcmp(req->name[c], "DACP-ID")) {
+            dacp_set(&player_dacp.dacp_id, req->value[c]);
+        } else if (!strcmp(req->name[c], "Active-Remote")) {
+            dacp_set(&player_dacp.active_remote, req->value[c]);
+        }
+    }
+    dacp_write();
 
     resp->respcode = 200;
 }
