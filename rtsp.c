@@ -46,6 +46,7 @@
 #include "rtp.h"
 #include "mdns.h"
 #include "metadata.h"
+#include "dacp.h"
 
 #ifdef AF_INET6
 #define INETx_ADDRSTRLEN INET6_ADDRSTRLEN
@@ -603,6 +604,10 @@ static void handle_announce(rtsp_conn_info *conn,
     int i;
     for (i=0; i<sizeof(conn->stream.fmtp)/sizeof(conn->stream.fmtp[0]); i++)
         conn->stream.fmtp[i] = atoi(strsep(&pfmtp, " \t"));
+
+	dacp_set(&player_dacp.dacp_id, "abcde");
+	dacp_set(&player_dacp.active_remote, "1234");
+	dacp_write();
 
     resp->respcode = 200;
 }
