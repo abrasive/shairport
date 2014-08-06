@@ -403,16 +403,20 @@ static int stuff_buffer(double playback_rate, short *inptr, short *outptr) {
     return frame_size + stuff;
 }
 
-//constant first-order filter
-#define ALPHA 0.945
-#define LOSS 850000.0
+// constant first-order filter
+#define ALPHA 0.05
+#define LOSS 900000.0
+
+#define SYNCS_PER_S 5
 
 static double bf_playback_rate = 1.0;
 
 static void *player_thread_func(void *arg) {
     int play_samples = frame_size;
+    int buf_count = -1;
+    int sync_count;
     sync_cfg sync_tag;
-    long long sync_time;
+    long long sync_time, last_ntp_tsp=0;
     double sync_time_diff = 0.0;
     long sync_frames = 0;
     state = BUFFERING;
@@ -421,6 +425,9 @@ static void *player_thread_func(void *arg) {
     outbuf = resbuf = malloc(OUTFRAME_BYTES(frame_size));
     inbuf = silence = malloc(OUTFRAME_BYTES(frame_size));
     memset(silence, 0, OUTFRAME_BYTES(frame_size));
+
+    sync_count = 1 + (sampling_rate / (frame_size * SYNCS_PER_S));
+    debug(2, "sync_count: %d\n", sync_count);
 
 #ifdef FANCY_RESAMPLING
     float *frame, *outframe;
@@ -506,10 +513,16 @@ static void *player_thread_func(void *arg) {
                 play_samples = srcdat.output_frames_gen;
             } else
 #endif
+            if (buf_count > -1)
+            	buf_count++;
             if (sync_tag.sync_mode == NTPSYNC) {
+            	buf_count = 0;
+            	last_ntp_tsp = sync_tag.ntp_tsp;
+            }
+            if (buf_count % sync_count == 0) {
                 //check if we're still in sync.
-                sync_time = get_sync_time(sync_tag.ntp_tsp);
-                sync_time_diff = (ALPHA * sync_time_diff) + (1.0- ALPHA) * (double)sync_time;
+                sync_time = get_sync_time(last_ntp_tsp + (long long)buf_count * (long long)frame_size * 1000000LL / (long long)sampling_rate);
+                sync_time_diff = (ALPHA * (double)sync_time) + (1.0 - ALPHA) * sync_time_diff;
                 bf_playback_rate = 1.0 - (sync_time_diff / LOSS);
                 debug(2, "Playback rate %f, sync_time %lld\n", bf_playback_rate, sync_time);
             }
