@@ -28,6 +28,7 @@
 #include <signal.h>
 #include <unistd.h>
 #include <memory.h>
+#include <math.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -41,7 +42,18 @@
 #include <mach/clock.h>
 #endif
 
-#define NTPCACHESIZE 7
+// remote clock related stuff
+#define MAXCACHESIZE 8
+
+typedef struct {
+    long long offset;
+    long long arrival_time;
+    long long delay;
+} ntp_offset_t;
+static ntp_offset_t ntp_cache[MAXCACHESIZE];
+static long long ntp_offset;
+static int ntp_cache_size;
+static float drift_est;
 
 // only one RTP session can be active at a time.
 static int running = 0;
@@ -55,7 +67,6 @@ static int timing_sock;
 static pthread_t rtp_thread;
 static pthread_t ntp_receive_thread;
 static pthread_t ntp_send_thread;
-long long ntp_cache[NTPCACHESIZE + 1];
 static int strict_rtp;
 
 void rtp_record(int rtp_mode){
@@ -81,52 +92,132 @@ static void get_current_time(struct timespec *tsp) {
 }
 
 static void reset_ntp_cache() {
-    int i;
-    for (i = 0; i < NTPCACHESIZE; i++) {
-        ntp_cache[i] = LLONG_MIN;
-    }
-    ntp_cache[NTPCACHESIZE] = 0;
+    ntp_offset = 0;
+    ntp_cache_size = 0;
+    drift_est = 0.0;
 }
 
 long long get_ntp_offset() {
-    return ntp_cache[NTPCACHESIZE];
+    return ntp_offset;
 }
 
-static void update_ntp_cache(long long offset, long long arrival_time) {
-    // average the offsets, filter out outliers
 
-    int i, d, minindex, maxindex;
-    long long total;
+static void line_fit(float xvalue[], float yvalue[], int number, float *a, float *b) {
+    int i;
+    float sumx=0, sumy=0, sumxy=0, sumx2=0;
+    float productxy[MAXCACHESIZE], square[MAXCACHESIZE];
+    float denominator;
 
-    for (i = 0; i < (NTPCACHESIZE - 1);  i++) {
-        ntp_cache[i] = ntp_cache[i+1];
+    for(i=0;i<number;i++) {
+        sumx = sumx + xvalue[i];
     }
-    ntp_cache[NTPCACHESIZE - 1] = offset;
+    for(i=0;i<number;i++) {
+        sumy = sumy + yvalue[i];
+    }
+    for(i=0;i<number;i++) {
+        productxy[i] = xvalue[i] * yvalue[i];
+        sumxy = sumxy + productxy[i];
+    }
+    for(i=0;i<number;i++) {
+        square[i] = xvalue[i] * xvalue[i];
+        sumx2 = sumx2 + square[i];
+    }
 
+    debug(3, "x         y\n");
+    for(i=0;i<number;i++) {
+        debug(3, "%0.1f         %0.1f\n", xvalue[i], yvalue[i]);
+    }
+    denominator = (number * sumx2) - (sumx * sumx);
+    *a = ((sumy * sumx2) - (sumx * sumxy)) / denominator;
+    *b = ((number * sumxy) - (sumx * sumy)) / denominator;
+    debug(2, "y = %.4fx + %.4f\n", *b, *a);
+}
+
+static void update_ntp_cache(long long offset, long long arrival_time, long long delay) {
+    int i, d, mindelayindex;
+    long long delaylimit, totaloffset, totaldelay;
+    float xvalue[MAXCACHESIZE], yvalue[MAXCACHESIZE];
+    float a, b;
+
+    // make room for the new sample
+    // move everything one up
+    for (i = MAXCACHESIZE - 1; i > 0; i--) {
+        //debug(1, "from %d to %d\n", i-1, i);
+        ntp_cache[i].offset = ntp_cache[i-1].offset;
+        ntp_cache[i].arrival_time = ntp_cache[i-1].arrival_time;
+        ntp_cache[i].delay = ntp_cache[i-1].delay;
+    }
+
+    // shift in current sample
+    ntp_cache[0].offset = offset;
+    ntp_cache[0].arrival_time = arrival_time;
+    ntp_cache[0].delay = delay;
+
+    if (ntp_cache_size < MAXCACHESIZE)
+        ntp_cache_size++;
+
+    // ntp's loop filter prefers time stamps with low round trip delay, we do too
+    // time stamps with a high round trip delay probably got 'stuck' somewhere in the loop
+    // and are thus not reliable
+    // some semantics are applied to eliminate rogue time stamps:
+    // minimum time stamp + 33% + 3000ms
+    // every time stamp with a delay below this limit is considered valid
+    mindelayindex = 0;
+    long long mindelay = delay;
+    for (i = 1; i < ntp_cache_size; i++) {
+        mindelayindex = (ntp_cache[i].delay < mindelay ? i : mindelayindex);
+    }
+    mindelay = ntp_cache[mindelayindex].delay;
+    debug(3, "ntp: low: %lld lowest delay: %lld at index %d \n", ntp_cache[mindelayindex].offset, mindelay, mindelayindex);
+    delaylimit = (ntp_cache[mindelayindex].delay / 3) * 4 + 3000LL;
+    debug(2, "mindelay: %lld, delaylimit: %lld\n", mindelay, delaylimit);
+
+    // estimate drift using line fit
     d = 0;
-    minindex = 0;
-    maxindex = 0;
-    for (i = 0; i < NTPCACHESIZE; i++) {
-        if (ntp_cache[i] != LLONG_MIN) {
+    a = b = 0.0;
+    for (i = 0; i < ntp_cache_size; i++) {
+        if (ntp_cache[i].delay < delaylimit) {
+            yvalue[d] = (float)(ntp_cache[i].offset - ntp_cache[mindelayindex].offset);
+            xvalue[d] = (float)(ntp_cache[i].arrival_time - arrival_time);
             d++;
-            minindex = (ntp_cache[i] < ntp_cache[minindex] ? i : minindex);
-            maxindex = (ntp_cache[i] > ntp_cache[maxindex] ? i : maxindex);
         }
+        debug(3, "ntp[%d]: %lld, delay: %lld, d: %d\n", i, ntp_cache[i].offset, ntp_cache[i].delay, d);
     }
-    debug(2, "ntp: valid entries: %d\n", d);
-    if (d < 5)
-        minindex = maxindex = -1;
+    if (d > 4) {
+        line_fit(xvalue, yvalue, d, &a, &b);
+
+        float yerror=0.0;
+        for(i = 0; i < d; i++) {
+            yerror = fmax(yerror, fabs(yvalue[i] - (b * xvalue[i] + a)));
+        }
+        debug(2, "max yerror: %0.1f\n", yerror);
+        if (yerror < 1000.0)
+            drift_est = drift_est * 0.8 + b * 0.2;
+        else
+            debug(2, "Not updating drift estimate: yerror too big: %0.1f\n", yerror);
+    }
+    debug(2, "drift_est: %f, b: %f\n", drift_est, b);
+
+    // 'good' delay avg
+    // take complete cache
+    totaloffset = 0;
+    totaldelay = 0;
     d = 0;
-    total = 0;
-    for (i = 0; i < NTPCACHESIZE; i++) {
-        debug(3, "ntp[%d]: %lld, d: %d\n", i, ntp_cache[i] , d);
-        if ((ntp_cache[i] != LLONG_MIN) && (i != minindex) && (i != maxindex)) {
+    for (i = 0; i < ntp_cache_size; i++) {
+        if (ntp_cache[i].delay < delaylimit) {
+            totaloffset += ntp_cache[i].offset - ntp_cache[mindelayindex].offset;
+            totaldelay += arrival_time - ntp_cache[i].arrival_time;
             d++;
-            total += ntp_cache[i];
         }
+        debug(3, "ntp[%d]: %lld, delay: %lld, d: %d, total: %lld\n", i, ntp_cache[i].offset, ntp_cache[i].delay, d, totaloffset);
     }
-    ntp_cache[NTPCACHESIZE] = total / d;
-    debug(2, "ntp: offset: %lld, d: %d\n", ntp_cache[NTPCACHESIZE], d);
+
+    totaldelay /= d;
+    ntp_offset = (totaloffset / d) + ntp_cache[mindelayindex].offset;
+    debug(3, "ntp: offset: %lld, d: %d, delay %lld\n", ntp_offset, d, totaldelay);
+    totaldelay = (long long)(drift_est * totaldelay);
+    ntp_offset += totaldelay;
+    debug(2,"ntp: mean: %lld, bump: %lld\n", ntp_offset, totaldelay);
 }
 
 static long long tspk_to_us(struct timespec tspk) {
@@ -262,6 +353,7 @@ static void *ntp_receiver(void *arg) {
             long long ntp_loc_tsp = tspk_to_us(tv);
             debug(2, "Timing packet ntp_loc_tsp %lld\n", ntp_loc_tsp);
 
+
             // from the ntp spec:
             //    d = (t4 - t1) - (t3 - t2)  and  c = (t2 - t1 + t3 - t4)/2
             long long d = (ntp_loc_tsp - ntp_ref_tsp) - (ntp_sen_tsp - ntp_rec_tsp);
@@ -269,7 +361,11 @@ static void *ntp_receiver(void *arg) {
 
             debug(2, "Round-trip delay %lld us\n", d);
             debug(2, "Clock offset %lld us\n", c);
-            update_ntp_cache(c, ntp_loc_tsp);
+            // making sure the other side's clock is sane
+            if ((ntp_rec_tsp <= ntp_sen_tsp) && (d >= 0))
+                update_ntp_cache(c, ntp_loc_tsp, d);
+            else
+                debug(1, "Remote clock is acting weird\n");
 
             continue;
         }
