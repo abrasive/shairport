@@ -416,10 +416,10 @@ void rtp_setup(SOCKADDR *remote, int cport, int tport, int *lsport, int *lcport,
     }
     
     // now, we open three sockets -- one for the audio stream, one for the timing and one for the control
-    
-     *lsport = bind_port(remote,&audio_socket,6000);
-     *lcport = bind_port(remote,&control_socket,6001);
-     *ltport = bind_port(remote,&timing_socket,6002);
+    // bind to an available port
+     *lsport = bind_port(remote,&audio_socket,0);
+     *lcport = bind_port(remote,&control_socket,0);
+     *ltport = bind_port(remote,&timing_socket,0);
 
     debug(2, "listening for audio, control and timing on ports %d, %d, %d.", *lsport, *lcport, *ltport);
 
