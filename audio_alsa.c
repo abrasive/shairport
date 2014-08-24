@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <memory.h>
+#include <pthread.h>
 #include <alsa/asoundlib.h>
 #include "common.h"
 #include "audio.h"
@@ -57,6 +58,8 @@ audio_output audio_alsa = {
     .play = &play,
     .volume = NULL
 };
+
+static pthread_mutex_t alsa_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static snd_pcm_t *alsa_handle = NULL;
 static snd_pcm_hw_params_t *alsa_params = NULL;
@@ -206,46 +209,54 @@ static void start(int sample_rate) {
 }
 
 static uint32_t delay() {
+  pthread_mutex_lock(&alsa_mutex);
   snd_pcm_sframes_t current_avail,current_delay = 0;
-  int derr;
+  int derr,ignore;
   if (snd_pcm_state(alsa_handle)==SND_PCM_STATE_RUNNING) {
-    if (derr = snd_pcm_avail_delay(alsa_handle,&current_avail,&current_delay)) {
+    derr = snd_pcm_avail_delay(alsa_handle,&current_avail,&current_delay);
     // current_avail not used
-      if (derr != 0) {
-        derr = snd_pcm_recover(alsa_handle, derr, 0);
-        debug(1,"Error in delay(): %s.", snd_strerror(derr));
-      }
+    if (derr != 0) {
+      ignore = snd_pcm_recover(alsa_handle, derr, 0);
+      debug(1,"Error %d in delay(): %s. Delay reported is %d frames.", derr, snd_strerror(derr),current_delay);
       current_delay=-1;
-    }
+    } 
   } else if (snd_pcm_state(alsa_handle)==SND_PCM_STATE_PREPARED) {
     current_delay=0;
   } else {
-    debug(1,"Error -- ALSA device is in an incorrect state  -- %d -- to ask for current delay.",snd_pcm_state(alsa_handle));
-    if (derr = snd_pcm_prepare(alsa_handle)) {
-      derr = snd_pcm_recover(alsa_handle, derr, 0);
-      debug(1,"Error preparing after delay error: %s.", snd_strerror(derr));
+    if (snd_pcm_state(alsa_handle)==SND_PCM_STATE_XRUN)
+      current_delay=0;
+    else {
+      current_delay=-1;
+      debug(1,"Error -- ALSA delay(): bad state: %d.",snd_pcm_state(alsa_handle));
     }
-    current_delay = -1;
+    if (derr = snd_pcm_prepare(alsa_handle)) {
+      ignore = snd_pcm_recover(alsa_handle, derr, 0);
+      debug(1,"Error preparing after delay error: %s.", snd_strerror(derr));
+      current_delay = -1;
+    }
   }
+  pthread_mutex_unlock(&alsa_mutex);
   return current_delay;
 }
 
 static void play(short buf[], int samples) {
+  pthread_mutex_lock(&alsa_mutex);
   snd_pcm_sframes_t current_delay = 0;
-  int err;
+  int err,ignore;
   if ((snd_pcm_state(alsa_handle)==SND_PCM_STATE_PREPARED) || (snd_pcm_state(alsa_handle)==SND_PCM_STATE_RUNNING)) {
     err = snd_pcm_writei(alsa_handle, (char*)buf, samples);
     if (err < 0) {
-      err = snd_pcm_recover(alsa_handle, err, 0);
-      debug(1,"Error writing in play(): %s.", snd_strerror(err));
+      ignore = snd_pcm_recover(alsa_handle, err, 0);
+      debug(1,"Error %d writing %d samples in play() %s.",err,samples, snd_strerror(err));
     }
   } else {
-    debug(1,"Error -- ALSA device not in correct state (%d) for play.",snd_pcm_state(alsa_handle));
+    debug(1,"Error -- ALSA device in incorrect state (%d) for play.",snd_pcm_state(alsa_handle));
     if (err = snd_pcm_prepare(alsa_handle)) {
-      err = snd_pcm_recover(alsa_handle, err, 0);
+      ignore = snd_pcm_recover(alsa_handle, err, 0);
       debug(1,"Error preparing after play error: %s.", snd_strerror(err));
     }
   }
+  pthread_mutex_unlock(&alsa_mutex);
 }
 
 static void flush(void) {
