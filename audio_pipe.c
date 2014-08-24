@@ -28,6 +28,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <memory.h>
+#include <stdlib.h>
 #include "common.h"
 #include "audio.h"
 
@@ -44,7 +45,7 @@ static void start(int sample_rate) {
 }
 
 static void play(short buf[], int samples) {
-    write(fd, buf, samples*4);
+    int ignore = write(fd, buf, samples*4);
 }
 
 static void stop(void) {
