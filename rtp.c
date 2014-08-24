@@ -33,6 +33,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <stdio.h>
+
 #include "common.h"
 #include "player.h"
 #include "rtp.h"
@@ -71,7 +73,8 @@ static int request_sent;
 static uint8_t time_ping_count;
 struct time_ping_record time_pings[time_ping_history];
 
-static struct timespec dtt; // dangerous -- this assumes that there will never be two timing request in flight at the same time
+//static struct timespec dtt; // dangerous -- this assumes that there will never be two timing request in flight at the same time
+static uint64_t departure_time;  // dangerous -- this assumes that there will never be two timing request in flight at the same time
 
 static pthread_mutex_t reference_time_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -79,6 +82,8 @@ uint64_t static local_to_remote_time_difference; // used to switch between local
 
 static void *rtp_audio_receiver(void *arg) {
     // we inherit the signal mask (SIGUSR1)
+    
+    int32_t last_seqno = -1;
     uint8_t packet[2048], *pktp;
 
     ssize_t nread;
@@ -98,6 +103,16 @@ static void *rtp_audio_receiver(void *arg) {
                 plen -= 4;
             }
             seq_t seqno = ntohs(*(unsigned short *)(pktp+2));
+            // increment last_seqno and see if it's the same as the incoming seqno
+
+						if (last_seqno==-1)
+							last_seqno=seqno;
+						else {
+							last_seqno = (last_seqno+1)&0xffff;           
+							if (seqno!=last_seqno)
+								debug(2,"RTP: Packets out of sequence: expected: %d, got %d.",last_seqno,seqno);
+								last_seqno=seqno; // reset warning...
+            }
             uint32_t timestamp = ntohl(*(unsigned long *)(pktp+4));
             
             //if (packet[1]&0x10)
@@ -138,8 +153,9 @@ static void *rtp_control_receiver(void *arg) {
         if (please_shutdown)
             break;
         nread = recv(control_socket, packet, sizeof(packet), 0);
-        clock_gettime(CLOCK_MONOTONIC,&tn);
-        local_time_now=((uint64_t)tn.tv_sec<<32)+((uint64_t)tn.tv_nsec<<32)/1000000000;
+        local_time_now=get_absolute_time_in_ns();
+//        clock_gettime(CLOCK_MONOTONIC,&tn);
+//        local_time_now=((uint64_t)tn.tv_sec<<32)+((uint64_t)tn.tv_nsec<<32)/1000000000;
         
         if (nread < 0)
             break;
@@ -175,7 +191,8 @@ static void *rtp_control_receiver(void *arg) {
           	pthread_mutex_lock(&reference_time_mutex);
           	reference_timestamp_time = remote_time_of_sync-local_to_remote_time_difference;
           	reference_timestamp = sync_rtp_timestamp;
-          	pthread_mutex_unlock(&reference_time_mutex);         	
+          	pthread_mutex_unlock(&reference_time_mutex);
+          	// debug(1,"New Reference timestamp and timestamp time...");         	
           	// get estimated remote time now
           	remote_time_now = local_time_now+local_to_remote_time_difference;          	
           	
@@ -205,8 +222,6 @@ static void *rtp_timing_sender(void *arg) {
   
   uint64_t request_number=0;
   
-  debug(1, "Timing requester startup.");
-
   struct timing_request req;  // *not* a standard RTCP NACK
  
   req.leader = 0x80;
@@ -229,7 +244,8 @@ static void *rtp_timing_sender(void *arg) {
     req.filler = 0;
     req.origin = req.receive = req.transmit=0;
 
-    clock_gettime(CLOCK_MONOTONIC,&dtt);
+//    clock_gettime(CLOCK_MONOTONIC,&dtt);
+    departure_time=get_absolute_time_in_ns();
     sendto(timing_socket, &req, sizeof(req), 0, (struct sockaddr*)&rtp_client_timing_socket, sizeof(rtp_client_timing_socket));
     request_number++;
     if (request_number<=4)
@@ -247,14 +263,17 @@ static void *rtp_timing_receiver(void *arg) {
     ssize_t nread;
     pthread_t timer_requester;
     pthread_create(&timer_requester, NULL, &rtp_timing_sender, NULL);
-    struct timespec att; 
-    uint64_t distant_receive_time,distant_transmit_time,arrival_time,departure_time,return_time,transit_time,processing_time;
-    local_to_remote_time_difference=0;
+//    struct timespec att; 
+    uint64_t distant_receive_time,distant_transmit_time,arrival_time,return_time,transit_time,processing_time;
+    local_to_remote_time_jitters = 0;
+    local_to_remote_time_jitters_count = 0;
+    uint64_t l2rtd=0;
     while (1) {
       if (please_shutdown)
           break;
       nread = recv(timing_socket, packet, sizeof(packet), 0);
-      clock_gettime(CLOCK_MONOTONIC,&att);
+      arrival_time=get_absolute_time_in_ns();
+//      clock_gettime(CLOCK_MONOTONIC,&att);
       
       if (nread < 0)
           break;
@@ -274,8 +293,8 @@ static void *rtp_timing_receiver(void *arg) {
         //debug(1,"Timing Packet Received: \"%s\"",obf);
         */  
         
-        arrival_time = ((uint64_t)att.tv_sec<<32)+((uint64_t)att.tv_nsec<<32)/1000000000;
-        departure_time = ((uint64_t)dtt.tv_sec<<32)+((uint64_t)dtt.tv_nsec<<32)/1000000000;
+        //arrival_time = ((uint64_t)att.tv_sec<<32)+((uint64_t)att.tv_nsec<<32)/1000000000;
+        //departure_time = ((uint64_t)dtt.tv_sec<<32)+((uint64_t)dtt.tv_nsec<<32)/1000000000;
         
         return_time = arrival_time-departure_time;
 
@@ -300,6 +319,7 @@ static void *rtp_timing_receiver(void *arg) {
         unsigned int cc;       
         for (cc=time_ping_history-1;cc>0;cc--) {
           time_pings[cc]=time_pings[cc-1];
+	  time_pings[cc].dispersion = (time_pings[cc].dispersion*133)/100; // make the dispersions 'age' by this rational factor
         }
         time_pings[0].local_to_remote_difference = local_time_by_remote_clock-arrival_time;
         time_pings[0].dispersion = return_time;
@@ -308,14 +328,29 @@ static void *rtp_timing_receiver(void *arg) {
         
         
         // now pick the timestamp with the lowest dispersion
-        local_to_remote_time_difference = time_pings[0].local_to_remote_difference;
+        uint64_t l2rtd = time_pings[0].local_to_remote_difference;
         uint64_t tld = time_pings[0].dispersion;
         for (cc=1;cc<time_ping_count;cc++)
           if (time_pings[cc].dispersion<tld) {
-            local_to_remote_time_difference=time_pings[cc].local_to_remote_difference;
+            l2rtd=time_pings[cc].local_to_remote_difference;
             tld=time_pings[cc].dispersion;
           }
-        // rtus = (tld*1000000)>>32; debug(1,"Choosing time difference with dispersion of %lld us.",rtus);
+  int64_t ji;
+	if (time_ping_count>1) {
+		if (l2rtd>local_to_remote_time_difference) {
+			local_to_remote_time_jitters=local_to_remote_time_jitters+l2rtd-local_to_remote_time_difference;
+			ji = l2rtd-local_to_remote_time_difference;
+		} else {
+			local_to_remote_time_jitters=local_to_remote_time_jitters+local_to_remote_time_difference-l2rtd;
+			ji = - (local_to_remote_time_difference-l2rtd);
+		}
+		local_to_remote_time_jitters_count+=1;
+	}
+	
+//        int64_t rtus = (tld*1000000)>>32; int64_t ji = ((local_to_remote_time_jitters/local_to_remote_time_jitters_count)*1000000)>>32; debug(1,"Choosing time difference with dispersion of %lld us with jitter of %lld",rtus,ji);
+//        int64_t rtus = (tld*1000000)>>32; ji = (ji*1000000)>>32; debug(1,"Choosing time difference with dispersion of %lld us with jitter of %lld us",rtus,ji);
+
+	local_to_remote_time_difference=l2rtd;
             
 
         } else {
@@ -416,7 +451,7 @@ void rtp_setup(SOCKADDR *remote, int cport, int tport, int *lsport, int *lcport,
     }
     
     // now, we open three sockets -- one for the audio stream, one for the timing and one for the control
-    // bind to an available port
+    
      *lsport = bind_port(remote,&audio_socket,0);
      *lcport = bind_port(remote,&control_socket,0);
      *ltport = bind_port(remote,&timing_socket,0);

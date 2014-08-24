@@ -10,4 +10,7 @@ void rtp_request_resend(seq_t first, seq_t last);
 void get_reference_timestamp_stuff(uint32_t *timestamp,uint64_t *timestamp_time);
 void clear_reference_timestamp(void); 
 
+uint64_t static local_to_remote_time_jitters;
+uint64_t static local_to_remote_time_jitters_count;
+
 #endif // _RTP_H
