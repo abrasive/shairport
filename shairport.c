@@ -30,9 +30,20 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <memory.h>
-#include <openssl/md5.h>
 #include <sys/wait.h>
 #include <getopt.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "config.h"
+
+#ifdef HAVE_LIBPOLARSSL
+#include <polarssl/md5.h>
+#endif
+
+#ifdef HAVE_LIBSSL
+#include <openssl/md5.h>
+#endif
+
 #include "common.h"
 #include "rtsp.h"
 #include "mdns.h"
@@ -47,36 +58,73 @@
 static int shutting_down = 0;
 
 void shairport_shutdown() {
-    if (shutting_down)
-        return;
-    shutting_down = 1;
-    mdns_unregister();
-    rtsp_shutdown_stream();
-    if (config.output)
-        config.output->deinit();
+	if (shutting_down)
+		return;
+	shutting_down = 1;
+	mdns_unregister();
+	rtsp_shutdown_stream();
+	if (config.output)
+		config.output->deinit();
 }
 
 static void sig_ignore(int foo, siginfo_t *bar, void *baz) {
 }
 static void sig_shutdown(int foo, siginfo_t *bar, void *baz) {
-    shairport_shutdown();
-    daemon_log(LOG_NOTICE, "Exit...");
-    daemon_retval_send(255);
-    daemon_pid_file_remove();
-    exit(0);
+	daemon_log(LOG_NOTICE, "Shutdown requested...");
+	shairport_shutdown();
+	daemon_log(LOG_NOTICE, "Exit...");
+	daemon_retval_send(255);
+	daemon_pid_file_remove();
+	exit(0);
 }
 
 static void sig_child(int foo, siginfo_t *bar, void *baz) {
-    pid_t pid;
-    while ((pid = waitpid((pid_t)-1, 0, WNOHANG)) > 0) {
-        if (pid == mdns_pid && !shutting_down) {
-            die("MDNS child process died unexpectedly!");
-        }
-    }
+	pid_t pid;
+	while ((pid = waitpid((pid_t)-1, 0, WNOHANG)) > 0) {
+		if (pid == mdns_pid && !shutting_down) {
+			die("MDNS child process died unexpectedly!");
+		}
+	}
 }
 
 static void sig_logrotate(int foo, siginfo_t *bar, void *baz) {
 //    log_setup();
+}
+
+void print_version(void) {
+  char version_string[200];
+	strcpy(version_string,PACKAGE_VERSION);
+#ifdef HAVE_LIBPOLARSSL
+	strcat(version_string,"-polarssl");
+#endif
+#ifdef HAVE_LIBSSL
+	strcat(version_string,"-openssl");
+#endif
+#ifdef CONFIG_TINYSVCMDNS
+	strcat(version_string,"-tinysvcmdns");
+#endif
+#ifdef CONFIG_AVAHI
+	strcat(version_string,"-Avahi");
+#endif
+#ifdef CONFIG_DNS_SD
+	strcat(version_string,"-dns_sd");
+#endif
+#ifdef CONFIG_ALSA
+	strcat(version_string,"-ALSA");
+#endif
+#ifdef CONFIG_SNDIO
+	strcat(version_string,"-sndio");
+#endif
+#ifdef CONFIG_AO
+	strcat(version_string,"-ao");
+#endif
+#ifdef CONFIG_PULSE
+	strcat(version_string,"-pulse");
+#endif
+#ifdef HAVE_LIBSOXR
+	strcat(version_string,"-soxr");
+#endif
+  printf("%s\n",version_string);
 }
 
 void usage(char *progname) {
@@ -88,25 +136,34 @@ void usage(char *progname) {
 
     printf("\n");
     printf("Options:\n");
-    printf("    -h, --help          show this help\n");
-    printf("    -p, --port=PORT     set RTSP listening port\n");
-    printf("    -a, --name=NAME     set advertised name\n");
-    printf("    -A  --AirPlayLatency=FRAMES set how many frames between a just-received frame and audio output\n");
-    printf("                        if the source's User Agent is \"AirPlay\". The default value is %u frames.\n", config.AirPlayLatency);
-    printf("    -i  --iTunesLatency=FRAMES set how many frames between a just-received frame and audio output\n");
-    printf("                        if the source's User Agent is \"iTunes\". The default value is %u frames.\n", config.iTunesLatency);
-    printf("    -L  --latency=FRAMES set how many frames between a just-received frame and audio output\n");
-    printf("                        starts. This value is in frames; if non-zero overrides all other latencies.\n");
-    printf("                        Default latency without \"AirPlay\" or \"iTunes\" User Agent is %u frames.\n", config.AirPlayLatency);
-    printf("    -d, --daemon        daemonise.\n");
-    printf("    -k, --kill          kill the existing shairport daemon.\n");
-    printf("    -B, --on-start=COMMAND  run a shell command when playback begins\n");
-    printf("    -E, --on-stop=COMMAND   run a shell command when playback ends\n");
-
+    printf("    -h, --help              show this help\n");
+    printf("    -V, --version           show version information\n");
+    printf("    -v, --verbose           -v print debug information; -vv more; -vvv lots\n");
+    printf("    -p, --port=PORT         set RTSP listening port\n");
+    printf("    -a, --name=NAME         set advertised name\n");
+    printf("    -A, --AirPlayLatency=FRAMES set how many frames between a just-received frame and audio output\n");
+    printf("                            if the source's User Agent is \"AirPlay\". The default value is %u frames.\n", config.AirPlayLatency);
+    printf("    -i, --iTunesLatency=FRAMES set how many frames between a just-received frame and audio output\n");
+    printf("                            if the source's User Agent is \"iTunes\". The default value is %u frames.\n", config.iTunesLatency);
+    printf("    -L, --latency=FRAMES set how many frames between a just-received frame and audio output\n");
+    printf("                            starts. This value is in frames; if non-zero overrides all other latencies.\n");
+    printf("                            Default latency without \"AirPlay\" or \"iTunes\" User Agent is %u frames.\n", config.AirPlayLatency);
+    printf("    -S, --stuffing=MODE set how to adjust current latency to match desired latency \n");
+    printf("                            \"basic\" (default) inserts or deletes audio frames from packet frames with low processor overhead.\n");
+    printf("                            \"soxr\" uses libsoxr to minimally resample packet frames -- moderate processor overhead.\n");
+    printf("                            \"soxr\" option only available if built with soxr support.\n");
+    printf("    -d, --daemon            daemonise.\n");
+    printf("    -k, --kill              kill the existing shairport daemon.\n");
+    printf("    -B, --on-start=PROGRAM  run PROGRAM when playback is about to begin.\n");
+    printf("    -E, --on-stop=PROGRAM   run PROGRAM when playback has ended.\n");
+    printf("                            For -B and -E options, specify the full path to the program, which must take no arguments.\n");
+    printf("                            Executable scripts work, but must have #!/bin/sh (or whatever) in the headline.\n");
+    printf("    -w, --wait-cmd          wait until the -B or -E programs finish before continuing\n");
     printf("    -o, --output=BACKEND    select audio output method\n");
     printf("    -m, --mdns=BACKEND      force the use of BACKEND to advertize the service\n");
     printf("                            if no mdns provider is specified,\n");
     printf("                            shairport tries them all until one works.\n");
+    printf("    -r, --resync=THRESHOLD  resync if error exceeds this number of frames. Set to 0 to stop resyncing.\n");
 
     printf("\n");
     mdns_ls_backends();
@@ -117,9 +174,11 @@ void usage(char *progname) {
 int parse_options(int argc, char **argv) {
     // prevent unrecognised arguments from being shunted to the audio driver
     setenv("POSIXLY_CORRECT", "", 1);
-
+    char version_string[200];
     static struct option long_options[] = {
         {"help",    no_argument,        NULL, 'h'},
+        {"version",	no_argument,     		NULL, 'V'},
+        {"verbose",	no_argument,     		NULL, 'v'},
         {"daemon",  no_argument,        NULL, 'd'},
         {"kill",    no_argument,        NULL, 'k'},
         {"port",    required_argument,  NULL, 'p'},
@@ -127,22 +186,26 @@ int parse_options(int argc, char **argv) {
         {"output",  required_argument,  NULL, 'o'},
         {"on-start",required_argument,  NULL, 'B'},
         {"on-stop", required_argument,  NULL, 'E'},
+        {"wait-cmd",no_argument,        NULL, 'w'},
         {"mdns",    required_argument,  NULL, 'm'},
         {"latency", required_argument,  NULL, 'L'},
+        {"stuffing", required_argument,	NULL,	'S'},
         {"AirPlayLatency", required_argument,  NULL, 'A'},
         {"iTunesLatency", required_argument,  NULL, 'i'},
+        {"resync",    required_argument,  NULL, 'r'},
         {NULL, 0, NULL, 0}
     };
 
     int opt;
     while ((opt = getopt_long(argc, argv,
-                              "+hdvkp:a:o:b:B:E:m:L:A:i:",
+                              "+hdvVkp:a:o:b:B:E:wm:L:S:A:i:r:",
                               long_options, NULL)) > 0) {
-        switch (opt) {
+        switch (opt) {       
+        // Note -- Version, Kill and Help done separately
             default:
-            case 'h':
-                usage(argv[0]);
-                exit(1);
+            case 'r':
+            		config.resyncthreshold = atoi(optarg);
+            		break;
             case 'd':
                 config.daemonise = 1;
                 break;
@@ -173,7 +236,23 @@ int parse_options(int argc, char **argv) {
             case 'E':
                 config.cmd_stop = optarg;
                 break;
-            case 'm':
+            case 'S':
+            		if (strcmp(optarg,"basic")==0)           		
+                	config.packet_stuffing = ST_basic;
+                else if (strcmp(optarg,"soxr")==0)
+#ifdef HAVE_LIBSOXR
+                	config.packet_stuffing = ST_soxr;
+#else
+                	die("soxr option not available -- this version of shairport-sync was built without libsoxr support");
+#endif
+                else
+                	die("Illegal stuffing option -- must be \"basic\" or \"soxr\"");
+
+                break;
+            case 'w':
+ 								config.cmd_blocking = 1;
+								break;
+           case 'm':
                 config.mdns_name = optarg;
                 break;
         }
@@ -223,9 +302,21 @@ void shairport_startup_complete(void) {
 
 int main(int argc, char **argv) {
 
-    pid_t pid;
-    
     daemon_set_verbosity(LOG_DEBUG);
+    
+    /* Check if we are called with -V or --version parameter */
+    if (argc >= 2 && ((strcmp(argv[1], "-V")==0) || (strcmp(argv[1], "--version")==0))) {
+      print_version();
+      exit(1);
+    }
+
+    /* Check if we are called with -h or --help parameter */
+    if (argc >= 2 && ((strcmp(argv[1], "-h")==0) || (strcmp(argv[1], "--help")==0))) {
+		  usage(argv[0]);
+		  exit(1);
+    }
+
+    pid_t pid;
 
     /* Reset signal handlers */
     if (daemon_reset_sigs(-1) < 0) {
@@ -242,18 +333,17 @@ int main(int argc, char **argv) {
     /* Set indentification string for the daemon for both syslog and PID file */
     daemon_pid_file_ident = daemon_log_ident = daemon_ident_from_argv0(argv[0]);
 
-    /* Check if we are called with -k parameter */
-    if (argc >= 2 && !strcmp(argv[1], "-k")) {
-        int ret;
+    /* Check if we are called with -k or --kill parameter */
+    if (argc >= 2 && ((strcmp(argv[1], "-k")==0) || (strcmp(argv[1], "--kill")==0))) {
+      int ret;
 
-        /* Kill daemon with SIGTERM */
-
-        /* Check if the new function daemon_pid_file_kill_wait() is available, if it is, use it. */
-        if ((ret = daemon_pid_file_kill_wait(SIGTERM, 5)) < 0)
-            daemon_log(LOG_WARNING, "Failed to kill daemon: %s", strerror(errno));
-        else
-          daemon_pid_file_remove(); // 
-        return ret < 0 ? 1 : 0;
+      /* Kill daemon with SIGTERM */
+      /* Check if the new function daemon_pid_file_kill_wait() is available, if it is, use it. */
+      if ((ret = daemon_pid_file_kill_wait(SIGTERM, 5)) < 0)
+        daemon_log(LOG_WARNING, "Failed to kill daemon: %s", strerror(errno));
+      else
+        daemon_pid_file_remove(); // 
+      return ret < 0 ? 1 : 0;
     }
 
     /* Check that the daemon is not running twice at the same time */
@@ -269,12 +359,14 @@ int main(int argc, char **argv) {
     config.userSuppliedLatency = 0; // zero means none supplied
     config.iTunesLatency = 99400; // this seems to work pretty well for iTunes -- two left-ear headphones, one from the iMac jack, one from an NSLU2 running a cheap "3D Sound" USB Soundcard
     config.AirPlayLatency = 88200; // this seems to work pretty well for AirPlay -- Syncs sound and vision on AppleTV, but also used for iPhone/iPod/iPad sources
+    config.resyncthreshold = 441*5; // this number of frames is 50 ms.
     config.buffer_start_fill = 220;
     config.port = 5000;
+    config.packet_stuffing = ST_basic; // simple interpolation or deletion
     char hostname[100];
     gethostname(hostname, 100);
     config.apname = malloc(20 + 100);
-    snprintf(config.apname, 20 + 100, "%s Shairport Sync", hostname);
+    snprintf(config.apname, 20 + 100, "Shairport Sync on %s", hostname);
 
     // parse arguments into config
     int audio_arg = parse_options(argc, argv);
@@ -305,7 +397,7 @@ int main(int argc, char **argv) {
 
           /* Wait for 20 seconds for the return value passed from the daemon process */
           if ((ret = daemon_retval_wait(20)) < 0) {
-              daemon_log(LOG_ERR, "Could not recieve return value from daemon process: %s", strerror(errno));
+              daemon_log(LOG_ERR, "Could not receive return value from daemon process: %s", strerror(errno));
               return 255;
           }
 
@@ -349,16 +441,25 @@ int main(int argc, char **argv) {
     daemon_log(LOG_NOTICE, "Successful startup.");
 
     uint8_t ap_md5[16];
+
+#ifdef HAVE_LIBSSL
     MD5_CTX ctx;
     MD5_Init(&ctx);
     MD5_Update(&ctx, config.apname, strlen(config.apname));
     MD5_Final(ap_md5, &ctx);
-    memcpy(config.hw_addr, ap_md5, sizeof(config.hw_addr));
+#endif
 
+#ifdef HAVE_LIBPOLARSSL
+     md5_context tctx;
+     md5_starts(&tctx);
+     md5_update(&tctx, (unsigned char *)config.apname, strlen(config.apname));
+     md5_finish(&tctx, ap_md5);
+#endif
+    memcpy(config.hw_addr, ap_md5, sizeof(config.hw_addr));
 
     rtsp_listen_loop();
 
-    // should not rerach this...
+    // should not reach this...
     shairport_shutdown();
 finish:
     daemon_log(LOG_NOTICE, "Unexpected exit...");
