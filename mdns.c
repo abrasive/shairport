@@ -27,6 +27,8 @@
 
 #include <memory.h>
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include "config.h"
 #include "common.h"
 #include "mdns.h"
@@ -52,7 +54,9 @@ static mdns_backend *mdns_backends[] = {
 #endif
     &mdns_external_avahi,
     &mdns_external_dns_sd,
+#ifdef CONFIG_TINYSVCMDNS
     &mdns_tinysvcmdns,
+#endif
     NULL
 };
 
