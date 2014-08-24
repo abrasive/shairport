@@ -1,26 +1,34 @@
-bin_PROGRAMS = shairport
-shairport_SOURCES = shairport.c rtsp.c mdns.c mdns_external.c mdns_tinysvcmdns.c common.c rtp.c player.c alac.c audio.c audio_dummy.c audio_pipe.c tinysvcmdns.c mdns_avahi.c
+bin_PROGRAMS = shairport-sync
+shairport_sync_SOURCES = shairport.c rtsp.c mdns.c mdns_external.c common.c rtp.c player.c alac.c audio.c audio_dummy.c audio_pipe.c
 
 install-exec-hook:
-	[ -f /etc/init.d/shairport ] || cp scripts/shairport /etc/init.d/
-	update-rc.d shairport defaults 90 10
+	[ -f /etc/init.d/shairport-sync ] || cp scripts/shairport-sync /etc/init.d/
+	update-rc.d shairport-sync defaults 90 10
+
+if USE_AVAHI
+shairport_sync_SOURCES += mdns_avahi.c
+endif
+
+if USE_TINYSVCMDNS
+shairport_sync_SOURCES += mdns_tinysvcmdns.c tinysvcmdns.c
+endif
 
 if USE_ALSA
-shairport_SOURCES += audio_alsa.c
+shairport_sync_SOURCES += audio_alsa.c
 endif
 
 if USE_SNDIO
-shairport_SOURCES += audio_sndio.c
+shairport_sync_SOURCES += audio_sndio.c
 endif
 
 if USE_AO
-shairport_SOURCES += audio_ao.c
+shairport_sync_SOURCES += audio_ao.c
 endif
 
 if USE_PULSE
-shairport_SOURCES += audio_pulse.c
+shairport_sync_SOURCES += audio_pulse.c
 endif
 
 if USE_DNS_SD
-shairport_SOURCES += mdns_dns_sd.c
+shairport_sync_SOURCES += mdns_dns_sd.c
 endif
