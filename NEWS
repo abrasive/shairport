@@ -1,0 +1,17 @@
+Version 2.1
+
+New features:
+	* Support for libsoxr. Libsoxr is the SoX Resampler library -- see http://sourceforge.net/projects/soxr/. Briefly, Shairport Sync keeps in step with the audio source by deleting or inserting frames of audio into the stream as needed. This "interpolation" is normally inaudible, but it can be heard in some circumstances. Libsoxr allows this interpolation to be done much more smoothly and subtly. The big problem with libsoxr is that it is very compute intensive -- specifically floating point compute intensive -- and many embedded devices aren't powerful enough. Another issue is libsoxr is not yet in all linux distributions, so you might have to build it yourself. Available via the -S option.
+	* Support for running (and optionally waiting for the completion of) programs before and after playing.  See the -B, -E and -w options.
+	* A new option to vary or turn off the resync threshold. See the -r option.
+	* Version and build options. See the -V option.
+	* Renamed init script. This is not exactly a big deal, but the default init script file is renamed from "shairport" to "shairport-sync" to avoid confusion with other versions of shairport.
+	* PolarSSL can be used in place of OpenSSL and friends.
+	
+Other stuff
+	* Tinysvcmdns works as an alternative to, say, Avahi, but is now [really] dropped if you don't select it. Saves about 100k.
+	* Lots of bug fixes.
+
+Annoying things you should know about if you're updating from 2.0:
+	* Compile options have changed.
+	* The name of the init script file has changed from shairport to shairport-sync.
