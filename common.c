@@ -29,11 +29,42 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <memory.h>
+#include <errno.h>
+#include <time.h>
+#include <unistd.h>
+
+#include <assert.h>
+#include "common.h"
+
+#ifdef COMPILE_FOR_OSX
+#include <CoreServices/CoreServices.h>
+#include <mach/mach.h>
+#include <mach/mach_time.h>
+#endif
+
+#ifdef HAVE_LIBSSL
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
 #include <openssl/evp.h>
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
+#endif
+
+#ifdef HAVE_LIBPOLARSSL
+#include <polarssl/version.h>
+#include <polarssl/base64.h>
+#include <polarssl/x509.h>
+#include <polarssl/md.h>
+#include "polarssl/entropy.h"
+#include "polarssl/ctr_drbg.h"
+
+#if POLARSSL_VERSION_NUMBER >= 0x01030000
+#include "polarssl/compat-1.2.h"
+#endif
+#endif
+
+
+
 #include "common.h"
 #include <libdaemon/dlog.h>
 
@@ -76,7 +107,56 @@ void debug(int level, char *format, ...) {
     daemon_log(LOG_DEBUG,"%s", s);
 }
 
+#ifdef HAVE_LIBPOLARSSL
+char *base64_enc(uint8_t *input, int length) {
+  char *buf = NULL;
+  size_t dlen = 0;
+  int rc = base64_encode(NULL,&dlen,input,length);
+  if (rc && (rc!=POLARSSL_ERR_BASE64_BUFFER_TOO_SMALL))
+    debug(1,"Error %d getting length of base64 encode.",rc);
+  else {
+    buf = (char *)malloc(dlen);
+    rc = base64_encode((unsigned char *)buf,&dlen,input,length);
+    if (rc!=0)
+      debug(1,"Error %d encoding base64.",rc);
+  }
+  return buf;
+}
 
+uint8_t *base64_dec(char *input, int *outlen) {
+  // slight problem here is that Apple cut the padding off their challenges. We must restore it before passing it in to the decoder, it seems
+  uint8_t *buf = NULL;
+  size_t dlen = 0;
+  int inbufsize = ((strlen(input)+3)/4)*4; // this is the size of the input buffer we will send to the decoder, but we need space for 3 extra "="s and a NULL
+  char *inbuf = malloc(inbufsize+4);
+  if (inbuf==0)
+    debug(1,"Can't malloc memory  for inbuf in base64_decode.");
+  else {
+    strcpy(inbuf,input);
+    strcat(inbuf,"===");
+    // debug(1,"base64_dec called with string \"%s\", length %d, filled string: \"%s\", length %d.",input,strlen(input),inbuf,inbufsize);
+    int rc = base64_decode(buf,&dlen,(unsigned char *)inbuf,inbufsize);
+    if (rc && (rc!=POLARSSL_ERR_BASE64_BUFFER_TOO_SMALL))
+      debug(1,"Error %d getting decode length, result is %d.",rc,dlen);
+    else {
+      // debug(1,"Decode size is %d.",dlen);
+      buf = malloc(dlen);
+      if (buf==0)
+        debug(1,"Can't allocate memory in base64_dec.");
+      else {
+        rc = base64_decode(buf,&dlen,(unsigned char *)inbuf,inbufsize);
+        if (rc!=0)
+          debug(1,"Error %d in base64_dec.",rc);
+      }
+    }
+    free(inbuf);
+  }
+  *outlen = dlen;
+  return buf;
+}
+#endif
+
+#ifdef HAVE_LIBSSL
 char *base64_enc(uint8_t *input, int length) {
     BIO *bmem, *b64;
     BUF_MEM *bptr;
@@ -125,6 +205,7 @@ uint8_t *base64_dec(char *input, int *outlen) {
     *outlen = nread;
     return buf;
 }
+#endif
 
 static char super_secret_key[] =
 "-----BEGIN RSA PRIVATE KEY-----\n"
@@ -149,31 +230,134 @@ static char super_secret_key[] =
 "1JnLYT4iyUyx6pcZBmCd8bD0iwY/FzcgNDaUmbX9+XDvRA0CgYEAkE7pIPlE71qvfJQgoA9em0gI\n"
 "LAuE4Pu13aKiJnfft7hIjbK+5kyb3TysZvoyDnb3HOKvInK7vXbKuU4ISgxB2bB3HcYzQMGsz1qJ\n"
 "2gG0N5hvJpzwwhbhXqFKA4zaaSrw622wDniAK5MlIE0tIAKKP4yxNGjoD2QYjhBGuhvkWKY=\n"
-"-----END RSA PRIVATE KEY-----";
+"-----END RSA PRIVATE KEY-----\0";
 
+#ifdef HAVE_LIBSSL
 uint8_t *rsa_apply(uint8_t *input, int inlen, int *outlen, int mode) {
-    static RSA *rsa = NULL;
+static RSA *rsa = NULL;
 
-    if (!rsa) {
-        BIO *bmem = BIO_new_mem_buf(super_secret_key, -1);
-        rsa = PEM_read_bio_RSAPrivateKey(bmem, NULL, NULL, NULL);
-        BIO_free(bmem);
-    }
+	if (!rsa) {
+		BIO *bmem = BIO_new_mem_buf(super_secret_key, -1);
+		rsa = PEM_read_bio_RSAPrivateKey(bmem, NULL, NULL, NULL);
+		BIO_free(bmem);
+	}
 
-    uint8_t *out = malloc(RSA_size(rsa));
+	uint8_t *out = malloc(RSA_size(rsa));
+	switch (mode) {
+		case RSA_MODE_AUTH:
+			*outlen = RSA_private_encrypt(inlen, input, out, rsa,
+			RSA_PKCS1_PADDING);
+			break;
+		case RSA_MODE_KEY:
+			*outlen = RSA_private_decrypt(inlen, input, out, rsa,
+			RSA_PKCS1_OAEP_PADDING);
+			break;
+		default:
+			die("bad rsa mode");
+	}
+	return out;
+}
+#endif
+
+#ifdef HAVE_LIBPOLARSSL
+uint8_t *rsa_apply(uint8_t *input, int inlen, int *outlen, int mode) {
+    rsa_context trsa;
+    const char *pers = "rsa_encrypt";
+    int rc;
+    
+    entropy_context entropy;
+    ctr_drbg_context ctr_drbg;
+    entropy_init( &entropy );
+    if( ( rc = ctr_drbg_init( &ctr_drbg, entropy_func, &entropy,(const unsigned char *) pers,strlen( pers ) ) ) != 0 )
+      debug(1, "ctr_drbg_init returned %d\n", rc );
+
+    rsa_init(&trsa,RSA_PKCS_V21,POLARSSL_MD_SHA1); // padding and hash id get overwritten
+    // BTW, this seems to reset a lot of parameters in the rsa_context
+    rc = x509parse_key(&trsa,(unsigned char *)super_secret_key,strlen(super_secret_key),NULL,0);
+    if (rc!=0)
+      debug(1,"Error %d reading the private key.");
+      
+    uint8_t *out = NULL;
+
     switch (mode) {
         case RSA_MODE_AUTH:
-            *outlen = RSA_private_encrypt(inlen, input, out, rsa,
-                                          RSA_PKCS1_PADDING);
+            trsa.padding = RSA_PKCS_V15;
+            trsa.hash_id = POLARSSL_MD_NONE;            
+            debug(2,"rsa_apply encrypt");
+            out = malloc(trsa.len);
+            rc = rsa_pkcs1_encrypt( &trsa, ctr_drbg_random, &ctr_drbg, RSA_PRIVATE, inlen, input, out );
+            if (rc!=0)
+              debug(1,"rsa_pkcs1_encrypt error %d.",rc);
+            *outlen=trsa.len;              
             break;
         case RSA_MODE_KEY:
-            *outlen = RSA_private_decrypt(inlen, input, out, rsa,
-                                          RSA_PKCS1_OAEP_PADDING);
+            debug(2,"rsa_apply decrypt"); 
+            trsa.padding=RSA_PKCS_V21;
+            trsa.hash_id=POLARSSL_MD_SHA1;
+            out = malloc(trsa.len);
+#if POLARSSL_VERSION_NUMBER >= 0x01020900
+            rc = rsa_pkcs1_decrypt(&trsa, ctr_drbg_random, &ctr_drbg, RSA_PRIVATE, (size_t *)outlen, input, out, trsa.len);
+#else
+            rc = rsa_pkcs1_decrypt(&trsa, RSA_PRIVATE, outlen, input, out, trsa.len);
+#endif
+            if (rc!=0)
+              debug(1,"decrypt error %d.",rc);
             break;
         default:
             die("bad rsa mode");
     }
+    rsa_free(&trsa);
+    debug(2,"rsa_apply exit");
     return out;
+}
+#endif
+
+void command_start(void) {
+	if (config.cmd_start) {
+		/*Spawn a child to run the program.*/
+		pid_t pid=fork();
+		if (pid==0) { /* child process */
+			char *argv[]={config.cmd_start,NULL};
+			debug(1,"Executing start command %s",config.cmd_start);
+			execv(config.cmd_start,argv);
+			warn("Execution of -B command failed to start");
+			debug(1,"Error executing start command %s",config.cmd_start);
+			exit(127); /* only if execv fails */
+		} else {
+			if (config.cmd_blocking) { /* pid!=0 means parent process and if blocking is true, wait for process to finish */
+				pid_t rc = waitpid(pid,0,0); /* wait for child to exit */
+				if (rc!=pid) {
+					warn("Execution of -B command returned an error.");
+					debug(1,"Start command %s finished with error %d",config.cmd_start,errno);
+				}
+			}
+			debug(1,"Continue after \"start\" command",config.cmd_start,errno);
+		}
+	}
+}
+
+void command_stop(void) {
+	if (config.cmd_stop) {
+		/*Spawn a child to run the program.*/
+		pid_t pid=fork();
+		if (pid==0) { /* child process */
+			char *argv[]={config.cmd_stop,NULL};
+			debug(1,"Executing stop command %s",config.cmd_stop);
+			execv(config.cmd_stop,argv);
+			warn("Execution of -E command failed to start");
+			debug(1,"Error executing stop command %s",config.cmd_stop);
+			exit(127); /* only if execv fails */
+		} else {
+			if (config.cmd_blocking) { /* pid!=0 means parent process and if blocking is true, wait for process to finish */
+				pid_t rc = waitpid(pid,0,0); /* wait for child to exit */
+				if (rc!=pid) {
+					warn("Execution of -E command returned an error.");
+					debug(1,"Stop command %s finished with error %d",config.cmd_stop,errno);
+				}
+			}
+			debug(1,"Continue after \"stop\" command",config.cmd_stop,errno);
+		}
+	}
 }
 
 // Given a volume (0 to -30) and high and low attenuations available in the mixer in dB, return an attenuation depending on the volume and the function's transfer function
@@ -186,7 +370,7 @@ double vol2attn(double vol, long max_db, long min_db) {
 // (See the diagram in the documents folder.)
 // The x axis is the "volume in" which will be from -30 to 0. The y axis will be the "volume out" which will be from the bottom of the range to the top.
 // We build the transfer function from one or more lines. We characterise each line with two numbers:
-// the first is where on x the line starts when y=0 (x can be fromfrom 0 to -30); the second is where on y the line stops when when x is -30.
+// the first is where on x the line starts when y=0 (x can be from 0 to -30); the second is where on y the line stops when when x is -30.
 // thus, if the line was characterised as {0,-30}, it would be an identity transfer.
 // Assuming, for example, a dynamic range of lv=-60 to hv=0
 // Typically we'll use three lines -- a three order transfer function
@@ -222,5 +406,41 @@ double vol2attn(double vol, long max_db, long min_db) {
   }
   // debug(1,"returning an attenuation of %f.",vol_setting);
   return vol_setting;
+}
+
+uint64_t get_absolute_time_in_ns() {
+	uint64_t time_now_ns;
+#ifdef COMPILE_FOR_LINUX
+	struct timespec tn;
+  clock_gettime(CLOCK_MONOTONIC,&tn);
+  time_now_ns=((uint64_t)tn.tv_sec<<32)+((uint64_t)tn.tv_nsec<<32)/1000000000;
+#endif
+#ifdef COMPILE_FOR_OSX
+	uint64_t        time_now_mach;
+	uint64_t        elapsedNano;
+	static mach_timebase_info_data_t    sTimebaseInfo = {0,0};
+
+	time_now_mach = mach_absolute_time();
+
+	// If this is the first time we've run, get the timebase.
+	// We can use denom == 0 to indicate that sTimebaseInfo is 
+	// uninitialised because it makes no sense to have a zero 
+	// denominator is a fraction.
+
+	if ( sTimebaseInfo.denom == 0 ) {
+		debug(1,"Mac initialise timebase info.");
+		(void) mach_timebase_info(&sTimebaseInfo);
+	}
+
+	// Do the maths. We hope that the multiplication doesn't 
+	// overflow; the price you pay for working in fixed point.
+
+	// need to turn this into NTP 64-bit fixed point format
+	// and change the very misleading title of this function to
+	// get_absolute_fp_time or something
+	time_now_ns = time_now_mach * sTimebaseInfo.numer / sTimebaseInfo.denom;
+
+#endif
+  return time_now_ns;
 }
 
