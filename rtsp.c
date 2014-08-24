@@ -39,7 +39,16 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
+
+#include "config.h"
+
+#ifdef HAVE_LIBSSL
 #include <openssl/md5.h>
+#endif
+
+#ifdef HAVE_LIBPOLARSSL
+#include <polarssl/md5.h>
+#endif
 
 #include "common.h"
 #include "player.h"
@@ -374,7 +383,7 @@ static void msg_write_response(int fd, rtsp_message *resp) {
         die("Attempted to write overlong RTSP packet");
 
     strcpy(p, "\r\n");
-    write(fd, pkt, p-pkt+2);
+    int ignore = write(fd, pkt, p-pkt+2);
 }
 
 static void handle_record(rtsp_conn_info *conn,
@@ -582,11 +591,11 @@ static void handle_announce(rtsp_conn_info *conn,
       
       char *hdr = msg_get_header(req, "X-Apple-Client-Name");
       if (hdr)
-        debug(1,"Announcement from \"%s\".",hdr);
+        debug(1,"Play connection from \"%s\".",hdr);
       else {
         hdr = msg_get_header(req, "User-Agent");
         if (hdr)
-          debug(1,"Announcement from \"%s\".",hdr);
+          debug(1,"Play connection from \"%s\".",hdr);
       }
 
       resp->respcode = 200;
@@ -676,7 +685,7 @@ static char *make_nonce(void) {
     int fd = open("/dev/random", O_RDONLY);
     if (fd < 0)
         die("could not open /dev/random!");
-    read(fd, random, sizeof(random));
+    int ignore = read(fd, random, sizeof(random));
     close(fd);
     return base64_enc(random, 8);
 }
@@ -721,7 +730,10 @@ static int rtsp_auth(char **nonce, rtsp_message *req, rtsp_message *resp) {
     *quote = 0;
 
     uint8_t digest_urp[16], digest_mu[16], digest_total[16];
+    
+#ifdef HAVE_LIBSSL
     MD5_CTX ctx;
+    
     MD5_Init(&ctx);
     MD5_Update(&ctx, username, strlen(username));
     MD5_Update(&ctx, ":", 1);
@@ -729,26 +741,59 @@ static int rtsp_auth(char **nonce, rtsp_message *req, rtsp_message *resp) {
     MD5_Update(&ctx, ":", 1);
     MD5_Update(&ctx, config.password, strlen(config.password));
     MD5_Final(digest_urp, &ctx);
-
     MD5_Init(&ctx);
     MD5_Update(&ctx, req->method, strlen(req->method));
     MD5_Update(&ctx, ":", 1);
     MD5_Update(&ctx, uri, strlen(uri));
     MD5_Final(digest_mu, &ctx);
+#endif
 
+    
+#ifdef HAVE_LIBPOLARSSL
+    md5_context tctx;
+    md5_starts(&tctx);
+    md5_update(&tctx, username, strlen(username));
+    md5_update(&tctx, (unsigned char *) ":", 1);
+    md5_update(&tctx, realm, strlen(realm));
+    md5_update(&tctx, (unsigned char *) ":", 1);
+    md5_update(&tctx, config.password, strlen(config.password));
+    md5_finish(&tctx,digest_urp);
+    md5_starts(&tctx);
+    md5_update(&tctx, req->method, strlen(req->method));
+    md5_update(&tctx, (unsigned char *) ":", 1);
+    md5_update(&tctx, uri, strlen(uri));
+    md5_finish(&tctx,digest_mu);
+#endif
+    
     int i;
-    char buf[33];
+    unsigned char buf[33];
     for (i=0; i<16; i++)
         sprintf(buf + 2*i, "%02X", digest_urp[i]);
+        
+#ifdef HAVE_LIBSSL
     MD5_Init(&ctx);
     MD5_Update(&ctx, buf, 32);
     MD5_Update(&ctx, ":", 1);
     MD5_Update(&ctx, *nonce, strlen(*nonce));
     MD5_Update(&ctx, ":", 1);
     for (i=0; i<16; i++)
-        sprintf(buf + 2*i, "%02X", digest_mu[i]);
+       sprintf(buf + 2*i, "%02X", digest_mu[i]);
     MD5_Update(&ctx, buf, 32);
     MD5_Final(digest_total, &ctx);
+    #endif
+
+    
+#ifdef HAVE_LIBPOLARSSL
+    md5_starts(&tctx);
+    md5_update(&tctx, buf, 32);
+    md5_update(&tctx, (unsigned char *) ":", 1);
+    md5_update(&tctx, *nonce, strlen(*nonce));
+    md5_update(&tctx, (unsigned char *) ":", 1);
+    for (i=0; i<16; i++)
+        sprintf(buf + 2*i, "%02X", digest_mu[i]);
+    md5_update(&tctx, buf, 32);
+    md5_finish(&tctx,digest_total);
+#endif
 
     for (i=0; i<16; i++)
         sprintf(buf + 2*i, "%02X", digest_total[i]);
@@ -882,7 +927,7 @@ void rtsp_listen_loop(void) {
         // one of the address families will fail on some systems that
         // report its availability. do not complain.
         if (ret) {
-            debug(1, "Failed to bind to address %s.", format_address(p->ai_addr));
+            // debug(1, "Failed to bind to address %s.", format_address(p->ai_addr));
             continue;
         }
         // debug(1, "Bound to address %s.", format_address(p->ai_addr));
