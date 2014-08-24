@@ -29,6 +29,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <errno.h>
+#include <stdio.h>
 #include "common.h"
 #include "mdns.h"
 
@@ -64,7 +65,7 @@ static int fork_execvp(const char *file, char *const argv[]) {
 
         // If we reach this point then execve has failed.
         // Write erno's value into the pipe and exit.
-        write(execpipe[1], &errno, sizeof(errno));
+        int ignore = write(execpipe[1], &errno, sizeof(errno));
 
         _exit(-1);
         return 0; // Just to make the compiler happy.
