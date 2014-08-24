@@ -24,6 +24,8 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include <stdlib.h>
+
 #include <avahi-client/client.h>
 #include <avahi-client/publish.h>
 #include <avahi-common/thread-watch.h>
