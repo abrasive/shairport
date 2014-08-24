@@ -34,7 +34,6 @@
 #include <string.h>
 #include <sys/types.h>
 #include <pthread.h>
-#include <openssl/aes.h>
 #include <math.h>
 #include <sys/stat.h>
 #include <sys/signal.h>
@@ -43,40 +42,53 @@
 #include <stdlib.h>
 #include <errno.h>
 
+#include "config.h"
+
+#ifdef HAVE_LIBPOLARSSL
+#include <polarssl/aes.h>
+#include <polarssl/havege.h>
+#endif
+
+#ifdef HAVE_LIBSSL
+#include <openssl/aes.h>
+#endif
+
+#ifdef HAVE_LIBSOXR
+#include <soxr.h>
+#endif
+
 #include "common.h"
 #include "player.h"
 #include "rtp.h"
 #include "rtsp.h"
 
-#ifdef FANCY_RESAMPLING
-#include <samplerate.h>
-#endif
-
 #include "alac.h"
 
 // parameters from the source
 static unsigned char *aesiv;
+#ifdef HAVE_LIBSSL
 static AES_KEY aes;
+#endif
 static int sampling_rate, frame_size;
 
 #define FRAME_BYTES(frame_size) (4*frame_size)
 // maximal resampling shift - conservative
 #define OUTFRAME_BYTES(frame_size) (4*(frame_size+3))
 
+#ifdef  HAVE_LIBPOLARSSL
+static aes_context dctx;
+#endif
+
 static pthread_t player_thread;
 static int please_stop;
 
 static alac_file *decoder_info;
 
-#ifdef FANCY_RESAMPLING
-static int fancy_resampling = 1;
-static SRC_STATE *src;
-#endif
-
-
 // debug variables
 static int late_packet_message_sent;
 static uint64_t packet_count = 0;
+static int32_t last_seqno_read;
+
 
 
 // interthread variables
@@ -89,10 +101,15 @@ static pthread_mutex_t vol_mutex = PTHREAD_MUTEX_INITIALIZER;
 #define BUFFER_FRAMES  512
 #define MAX_PACKET      2048
 
+// DAC buffer occupancy stuff
+#define DAC_BUFFER_QUEUE_DESIRED_LENGTH 6615
+#define DAC_BUFFER_QUEUE_MINIMUM_LENGTH 5000
+
 typedef struct audio_buffer_entry {   // decoded audio packets
-    int ready;
-    uint32_t timestamp;
-    signed short *data;
+  int ready;
+  uint32_t timestamp;
+  seq_t sequence_number;
+  signed short *data;
 } abuf_t;
 static abuf_t audio_buffer[BUFFER_FRAMES];
 #define BUFIDX(seqno) ((seq_t)(seqno) % BUFFER_FRAMES)
@@ -116,102 +133,132 @@ static int64_t first_packet_time_to_play; // nanoseconds
 // stats
 static uint64_t missing_packets,late_packets,too_late_packets,resend_requests; 
 
-static void bf_est_reset(short fill);
-
 static void ab_resync(void) {
-    int i;
-    for (i=0; i<BUFFER_FRAMES; i++)
-        audio_buffer[i].ready = 0;
-    ab_synced = 0;
-    ab_buffering = 1;
+  int i;
+  for (i=0; i<BUFFER_FRAMES; i++)
+    audio_buffer[i].ready = 0;
+  ab_synced = 0;
+  last_seqno_read = -1;
+  ab_buffering = 1;
+}
+
+static inline int ab_buffer_empty(void) {
+// this is just for clarity. 
+	if (ab_synced==1)
+		return 0;
+	else
+		return 1;
+}
+
+// the sequence number is a 16-bit unsigned number which wraps pretty often
+// to work out if one seqno is 'after' another therefore depends whether wrap has occurred
+// this function works out the actual ordinate of the seqno, i.e. the distance up from 
+// the zeroth element, at ab_read, taking due account of wrap.
+
+static inline seq_t SUCCESSOR(seq_t x) {
+	uint32_t p = x & 0xffff;
+	p+=1;
+	p = p & 0xffff;
+	return p;
+}
+
+static inline uint32_t ORDINATE(seq_t x) {
+	uint32_t p = x & 0xffff;
+	uint32_t q = ab_read & 0x0ffff;
+	uint32_t t = (p+0x10000-q) & 0xffff;
+	return t;
+}
+
+// wrapped number between two seq_t.
+inline int32_t seq_diff(seq_t a, seq_t b) {
+    int32_t diff = ORDINATE(b) - ORDINATE(a);
+    return diff;
 }
 
 // the sequence numbers will wrap pretty often.
 // this returns true if the second arg is after the first
 static inline int seq_order(seq_t a, seq_t b) {
-    signed short d = b - a;
+    int32_t d = ORDINATE(b) - ORDINATE(a);
     return d > 0;
 }
 
 static void alac_decode(short *dest, uint8_t *buf, int len) {
-    unsigned char packet[MAX_PACKET];
-    assert(len<=MAX_PACKET);
+  unsigned char packet[MAX_PACKET];
+  unsigned char packetp[MAX_PACKET];
+  assert(len<=MAX_PACKET);
 
-    unsigned char iv[16];
-    int aeslen = len & ~0xf;
-    memcpy(iv, aesiv, sizeof(iv));
-    AES_cbc_encrypt(buf, packet, aeslen, &aes, iv, AES_DECRYPT);
-    memcpy(packet+aeslen, buf+aeslen, len-aeslen);
+  unsigned char iv[16];
+  int aeslen = len & ~0xf;
+  memcpy(iv, aesiv, sizeof(iv));
+   
+#ifdef HAVE_LIBPOLARSSL
+  aes_crypt_cbc(&dctx,AES_DECRYPT,aeslen,iv,buf, packet);
+#endif
+#ifdef HAVE_LIBSSL
+  AES_cbc_encrypt(buf, packet, aeslen, &aes, iv, AES_DECRYPT);
+#endif
 
-    int outsize;
+/*
+  if (strncmp(packet,packetp,aeslen==0))
+    debug(1,"Packets match");
+  else
+    debug(1,"Packets differ!");
+*/
 
-    alac_decode_frame(decoder_info, packet, dest, &outsize);
+  memcpy(packet+aeslen, buf+aeslen, len-aeslen);
 
-    assert(outsize == FRAME_BYTES(frame_size));
+  int outsize;
+
+  alac_decode_frame(decoder_info, packet, dest, &outsize);
+
+  assert(outsize == FRAME_BYTES(frame_size));
 }
 
-
 static int init_decoder(int32_t fmtp[12]) {
-    alac_file *alac;
+  alac_file *alac;
 
-    frame_size = fmtp[1]; // stereo samples
-    sampling_rate = fmtp[11];
+  frame_size = fmtp[1]; // stereo samples
+  sampling_rate = fmtp[11];
 
-    int sample_size = fmtp[3];
-    if (sample_size != 16)
-        die("only 16-bit samples supported!");
+  int sample_size = fmtp[3];
+  if (sample_size != 16)
+    die("only 16-bit samples supported!");
 
-    alac = alac_create(sample_size, 2);
-    if (!alac)
-        return 1;
-    decoder_info = alac;
+  alac = alac_create(sample_size, 2);
+  if (!alac)
+    return 1;
+  decoder_info = alac;
 
-    alac->setinfo_max_samples_per_frame = frame_size;
-    alac->setinfo_7a =      fmtp[2];
-    alac->setinfo_sample_size = sample_size;
-    alac->setinfo_rice_historymult = fmtp[4];
-    alac->setinfo_rice_initialhistory = fmtp[5];
-    alac->setinfo_rice_kmodifier = fmtp[6];
-    alac->setinfo_7f =      fmtp[7];
-    alac->setinfo_80 =      fmtp[8];
-    alac->setinfo_82 =      fmtp[9];
-    alac->setinfo_86 =      fmtp[10];
-    alac->setinfo_8a_rate = fmtp[11];
-    alac_allocate_buffers(alac);
-    return 0;
+  alac->setinfo_max_samples_per_frame = frame_size;
+  alac->setinfo_7a =      fmtp[2];
+  alac->setinfo_sample_size = sample_size;
+  alac->setinfo_rice_historymult = fmtp[4];
+  alac->setinfo_rice_initialhistory = fmtp[5];
+  alac->setinfo_rice_kmodifier = fmtp[6];
+  alac->setinfo_7f =      fmtp[7];
+  alac->setinfo_80 =      fmtp[8];
+  alac->setinfo_82 =      fmtp[9];
+  alac->setinfo_86 =      fmtp[10];
+  alac->setinfo_8a_rate = fmtp[11];
+  alac_allocate_buffers(alac);
+  return 0;
 }
 
 static void free_decoder(void) {
-    alac_free(decoder_info);
+  alac_free(decoder_info);
 }
-
-#ifdef FANCY_RESAMPLING
-static int init_src(void) {
-    int err;
-    if (fancy_resampling)
-        src = src_new(SRC_SINC_MEDIUM_QUALITY, 2, &err);
-    else
-        src = NULL;
-
-    return err;
-}
-static void free_src(void) {
-    src_delete(src);
-    src = NULL;
-}
-#endif
 
 static void init_buffer(void) {
-    int i;
-    for (i=0; i<BUFFER_FRAMES; i++)
-        audio_buffer[i].data = malloc(OUTFRAME_BYTES(frame_size));
-    ab_resync();
+  int i;
+  for (i=0; i<BUFFER_FRAMES; i++)
+    audio_buffer[i].data = malloc(OUTFRAME_BYTES(frame_size));
+  ab_resync();
 }
 
 static void free_buffer(void) {
-    int i;
-    for (i=0; i<BUFFER_FRAMES; i++)
-        free(audio_buffer[i].data);
+  int i;
+  for (i=0; i<BUFFER_FRAMES; i++)
+    free(audio_buffer[i].data);
 }
 
 void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
@@ -220,67 +267,68 @@ void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
 
   pthread_mutex_lock(&ab_mutex);
   if (!ab_synced) {
-      debug(2, "syncing to first seqno %04X.", seqno);
-      ab_write = seqno-1;
-      ab_read = seqno;
-      ab_synced = 1;
+    debug(2, "syncing to first seqno %04X.", seqno);
+    ab_write = seqno;
+    ab_read = seqno;
+    ab_synced = 1;
   }
-  if (seq_diff(ab_write, seqno) == 1) {                  // expected packet
-      abuf = audio_buffer + BUFIDX(seqno);
-      ab_write = seqno;
+  if (seq_diff(ab_write, seqno) == 0) {       // expected packet
+    abuf = audio_buffer + BUFIDX(seqno);
+    ab_write = SUCCESSOR(seqno);
   } else if (seq_order(ab_write, seqno)) {    // newer than expected
-      rtp_request_resend(ab_write+1, seqno-1);
-      resend_requests++;
-      abuf = audio_buffer + BUFIDX(seqno);
-      ab_write = seqno;
+    rtp_request_resend(ab_write+1, seqno-1);
+    resend_requests++;
+    abuf = audio_buffer + BUFIDX(seqno);
+    ab_write = SUCCESSOR(seqno);
   } else if (seq_order(ab_read, seqno)) {     // late but not yet played
-      late_packets++;
-      abuf = audio_buffer + BUFIDX(seqno);
-  }  else {    // too late.
+    late_packets++;
+    abuf = audio_buffer + BUFIDX(seqno);
+  } else {                                    // too late.
     too_late_packets++;
     if (!late_packet_message_sent) {
-      debug(1, "late packet %04X (%04X:%04X).", seqno, ab_read, ab_write);
+      debug(1, "too-late packet received: %04X; ab_read: %04X; ab_write: %04X.", seqno, ab_read, ab_write);
       late_packet_message_sent=1;
     }
   }
   pthread_mutex_unlock(&ab_mutex);
 
   if (abuf) {
-      alac_decode(abuf->data, data, len);
-      abuf->ready = 1;
-      abuf->timestamp = timestamp;
+    alac_decode(abuf->data, data, len);
+    abuf->ready = 1;
+    abuf->timestamp = timestamp;
+    abuf->sequence_number = seqno;
   }
   
-
   pthread_mutex_lock(&ab_mutex);
   
-  struct timespec tn;
-  clock_gettime(CLOCK_MONOTONIC,&tn);
-  time_of_last_audio_packet = ((uint64_t)tn.tv_sec<<32)+((uint64_t)tn.tv_nsec<<32)/1000000000;
+  time_of_last_audio_packet = get_absolute_time_in_ns();
+  //struct timespec tn;
+  //clock_gettime(CLOCK_MONOTONIC,&tn);
+  //time_of_last_audio_packet = ((uint64_t)tn.tv_sec<<32)+((uint64_t)tn.tv_nsec<<32)/1000000000;
   
   int rc = pthread_cond_signal(&flowcontrol);
   if (rc)
-  	debug(1,"Error signalling flowcontrol.");
+    debug(1,"Error signalling flowcontrol.");
   pthread_mutex_unlock(&ab_mutex);
 }
 
 
-static short lcg_rand(void) {
-	static unsigned long lcg_prev = 12345;
-	lcg_prev = lcg_prev * 69069 + 3;
-	return lcg_prev & 0xffff;
+static inline short lcg_rand(void) {
+  static unsigned long lcg_prev = 12345;
+  lcg_prev = lcg_prev * 69069 + 3;
+  return lcg_prev & 0xffff;
 }
 
 static inline short dithered_vol(short sample) {
-  static short rand_a, rand_b;
+  short rand_a, rand_b;
   long out;
 
   out = (long)sample * fix_volume;
   if (fix_volume < 0x10000) {
-      rand_b = rand_a;
-      rand_a = lcg_rand();
-      out += rand_a;
-      out -= rand_b;
+    rand_b = rand_a;
+    rand_a = lcg_rand();
+    out += rand_a;
+    out -= rand_b;
   }
   return out>>16;
 }
@@ -289,7 +337,7 @@ static inline short dithered_vol(short sample) {
 static abuf_t *buffer_get_frame(void) {
   int16_t buf_fill;
   uint64_t local_time_now;
-  struct timespec tn;
+  // struct timespec tn;
   seq_t read, next;
   abuf_t *abuf = 0;
   int i;
@@ -299,7 +347,6 @@ static abuf_t *buffer_get_frame(void) {
   int wait;
   int32_t dac_delay = 0;
   do {
-
     pthread_mutex_lock(&flush_mutex);
     if (flush_requested==1) {
       if (config.output->flush)
@@ -311,146 +358,151 @@ static abuf_t *buffer_get_frame(void) {
     }
     pthread_mutex_unlock(&flush_mutex);
     
-    dac_delay = 0;
-    curframe = audio_buffer + BUFIDX(ab_read);
-    if (config.output->delay) {
-      dac_delay = config.output->delay();
-      if (dac_delay==-1) {
-        debug(1,"Error getting dac_delay at start of loop.");
-        dac_delay=0;
-      }
-    }
-        
-    clock_gettime(CLOCK_MONOTONIC,&tn);
-    local_time_now=((uint64_t)tn.tv_sec<<32)+((uint64_t)tn.tv_nsec<<32)/1000000000;
+    if (!ab_buffer_empty()) {
+    
+			dac_delay = 0;
+			curframe = audio_buffer + BUFIDX(ab_read);
+			if (config.output->delay) {
+				dac_delay = config.output->delay();
+				if (dac_delay==-1) {
+					debug(1,"Error getting dac_delay at start of loop.");
+					dac_delay=0;
+				}
+			}
+		
+			local_time_now = get_absolute_time_in_ns();    
+			//clock_gettime(CLOCK_MONOTONIC,&tn);
+			//local_time_now=((uint64_t)tn.tv_sec<<32)+((uint64_t)tn.tv_nsec<<32)/1000000000;
 
-    // if 120 seconds have elapsed since the last audio packet was received, then we should stop
-    if ((time_of_last_audio_packet!=0) && (shutdown_requested==0)) {
-      if (local_time_now-time_of_last_audio_packet>=(uint64_t)120<<32) {
-        debug(1,"As Yeats almost said, \"Too long a silence / can make a stone of the heart\"");
-        rtsp_request_shutdown_stream();
-	shutdown_requested=1;
-      }
-    }
+			// if 120 seconds have elapsed since the last audio packet was received, then we should stop
+			if ((time_of_last_audio_packet!=0) && (shutdown_requested==0)) {
+				if (local_time_now-time_of_last_audio_packet>=(uint64_t)120<<32) {
+					debug(1,"As Yeats almost said, \"Too long a silence / can make a stone of the heart\"");
+					rtsp_request_shutdown_stream();
+					shutdown_requested=1;
+				}
+			}
 
-    if (curframe->ready) {
-      if ((flush_rtp_timestamp) && (flush_rtp_timestamp>=curframe->timestamp)) {
-        // debug(1,"Dropping flushed packet %u.",curframe->timestamp);
-        curframe->ready=0;
-        ab_read++;
-      } else if (ab_buffering) { // if we are getting packets but not yet forwarding them to the player
-        if (first_packet_timestamp==0) { // if this is the very first packet
-         // debug(1,"First frame seen, time %u, with %d frames...",curframe->timestamp,seq_diff(ab_read, ab_write));
-         uint32_t reference_timestamp;
-          uint64_t reference_timestamp_time;
-          get_reference_timestamp_stuff(&reference_timestamp,&reference_timestamp_time);
-          if (reference_timestamp) { // if we have a reference time
-            // debug(1,"First frame seen with timestamp...");
-            first_packet_timestamp=curframe->timestamp; // we will keep buffering until we are supposed to start playing this
+			if (curframe->ready) {
+				if ((flush_rtp_timestamp) && (flush_rtp_timestamp>=curframe->timestamp)) {
+					// debug(1,"Dropping flushed packet %d",curframe->sequence_number);
+					curframe->ready=0;
+					ab_read++;
+				} else if (ab_buffering) { // if we are getting packets but not yet forwarding them to the player
+					if (first_packet_timestamp==0) { // if this is the very first packet
+					 // debug(1,"First frame seen, time %u, with %d frames...",curframe->timestamp,seq_diff(ab_read, ab_write));
+					 uint32_t reference_timestamp;
+						uint64_t reference_timestamp_time;
+						get_reference_timestamp_stuff(&reference_timestamp,&reference_timestamp_time);
+						if (reference_timestamp) { // if we have a reference time
+							// debug(1,"First frame seen with timestamp...");
+							first_packet_timestamp=curframe->timestamp; // we will keep buffering until we are supposed to start playing this
  
-            // here, see if we should start playing. We need to know when to allow the packets to be sent to the player
-            // we will get a fix every second or so, which will be stored as a pair consisting of
-            // the time when the packet with a particular timestamp should be played.
-            // it might not be the timestamp of our first packet, however, so we might have to do some calculations.
-          
-            int64_t delta = ((int64_t)first_packet_timestamp-(int64_t)reference_timestamp);
+							// here, see if we should start playing. We need to know when to allow the packets to be sent to the player
+							// we will get a fix every second or so, which will be stored as a pair consisting of
+							// the time when the packet with a particular timestamp should be played.
+							// it might not be the timestamp of our first packet, however, so we might have to do some calculations.
+					
+							int64_t delta = ((int64_t)first_packet_timestamp-(int64_t)reference_timestamp);
 
-            first_packet_time_to_play = reference_timestamp_time+((delta+(int64_t)config.latency)<<32)/44100; // using the latency requested...
-            if (local_time_now>=first_packet_time_to_play) {
-              debug(1,"First packet is late! It should have played before now. Flushing 0.1 seconds");
-              player_flush(first_packet_timestamp+4410);
-            }
-          }
-        }      
+							first_packet_time_to_play = reference_timestamp_time+((delta+(int64_t)config.latency)<<32)/44100; // using the latency requested...
+							if (local_time_now>=first_packet_time_to_play) {
+								debug(1,"First packet is late! It should have played before now. Flushing 0.1 seconds");
+								player_flush(first_packet_timestamp+4410);
+							}
+						}
+					}      
 
-        if (first_packet_time_to_play!=0) {
+					if (first_packet_time_to_play!=0) {
 
-          uint32_t filler_size = frame_size;
-          if (dac_delay==0) // i.e. if this is the first fill
-            filler_size = 11025; // 0.25 second
+						uint32_t filler_size = frame_size;
+						uint32_t max_dac_delay = DAC_BUFFER_QUEUE_DESIRED_LENGTH;
+						// if (dac_delay==0) // i.e. if this is the first fill
+							filler_size = 4410; // 0.1 second -- the maximum we'll add to the DAC
 
-          if (local_time_now>=first_packet_time_to_play) {
-            // we've gone past the time...
-            // debug(1,"Run past the exact start time by %llu frames, with time now of %llx, fpttp of %llx and dac_delay of %d and %d packets; flush.",(((tn-first_packet_time_to_play)*44100)>>32)+dac_delay,tn,first_packet_time_to_play,dac_delay,seq_diff(ab_read, ab_write));
-            
-            if (config.output->flush)
-              config.output->flush();
-            ab_resync();
-            first_packet_timestamp = 0;
-            first_packet_time_to_play = 0;
-          } else {
-            uint64_t gross_frame_gap = ((first_packet_time_to_play-local_time_now)*44100)>>32;
-            int64_t exact_frame_gap = gross_frame_gap-dac_delay;
-            if (exact_frame_gap<=0) {
-              // we've gone past the time...
-              // debug(1,"Run a bit past the exact start time by %lld frames, with time now of %llx, fpttp of %llx and dac_delay of %d and %d packets; flush.",-exact_frame_gap,tn,first_packet_time_to_play,dac_delay,seq_diff(ab_read, ab_write));
-              if (config.output->flush)
-                config.output->flush();
-              ab_resync();
-              first_packet_timestamp = 0;
-              first_packet_time_to_play = 0;
-            } else {
-              uint32_t fs=filler_size;
-              if ((exact_frame_gap<=filler_size) || (exact_frame_gap<=frame_size*2)) {
-                fs=exact_frame_gap;
-                ab_buffering = 0;
-              }
-              signed short *silence;
-              silence = malloc(FRAME_BYTES(fs));
-              memset(silence, 0, FRAME_BYTES(fs));
-              //debug(1,"Exact frame gap is %llu; play %d frames of silence. Dac_delay is %d, with %d packets.",exact_frame_gap,fs,dac_delay,seq_diff(ab_read, ab_write));
-              config.output->play(silence, fs);
-              free(silence);
-            }
-          }
-        }
-      }
+						if (local_time_now>=first_packet_time_to_play) {
+							// we've gone past the time...
+							// debug(1,"Run past the exact start time by %llu frames, with time now of %llx, fpttp of %llx and dac_delay of %d and %d packets; flush.",(((tn-first_packet_time_to_play)*44100)>>32)+dac_delay,tn,first_packet_time_to_play,dac_delay,seq_diff(ab_read, ab_write));
+						
+							if (config.output->flush)
+								config.output->flush();
+							ab_resync();
+							first_packet_timestamp = 0;
+							first_packet_time_to_play = 0;
+						} else {
+							uint64_t gross_frame_gap = ((first_packet_time_to_play-local_time_now)*44100)>>32;
+							int64_t exact_frame_gap = gross_frame_gap-dac_delay;
+							if (exact_frame_gap<=0) {
+								// we've gone past the time...
+								// debug(1,"Run a bit past the exact start time by %lld frames, with time now of %llx, fpttp of %llx and dac_delay of %d and %d packets; flush.",-exact_frame_gap,tn,first_packet_time_to_play,dac_delay,seq_diff(ab_read, ab_write));
+								if (config.output->flush)
+									config.output->flush();
+								ab_resync();
+								first_packet_timestamp = 0;
+								first_packet_time_to_play = 0;
+							} else {
+								uint32_t fs=filler_size;
+								if (fs>(max_dac_delay-dac_delay))
+									fs=max_dac_delay-dac_delay;
+								if ((exact_frame_gap<=fs) || (exact_frame_gap<=frame_size*2)) {
+									fs=exact_frame_gap;
+									// debug(1,"Exact frame gap is %llu; play %d frames of silence. Dac_delay is %d, with %d packets, ab_read is %04x, ab_write is %04x.",exact_frame_gap,fs,dac_delay,seq_diff(ab_read, ab_write),ab_read,ab_write);
+									ab_buffering = 0;
+								}
+								signed short *silence;
+								silence = malloc(FRAME_BYTES(fs));
+								memset(silence, 0, FRAME_BYTES(fs));
+								// debug(1,"Exact frame gap is %llu; play %d frames of silence. Dac_delay is %d, with %d packets.",exact_frame_gap,fs,dac_delay,seq_diff(ab_read, ab_write));
+								config.output->play(silence, fs);
+								free(silence);
+							}
+						}
+					}
+				}
+			}
     }
-    // allow to DAC to have a 0.15 seconds -- seems necessary for VMWare Fusion and a WiFi connection.
-    wait = (ab_buffering || (dac_delay>=6615) || (!ab_synced)) && (!please_stop);
+    wait = (ab_buffering || (dac_delay>=DAC_BUFFER_QUEUE_DESIRED_LENGTH) || (!ab_synced)) && (!please_stop);
 //    wait = (ab_buffering ||  (seq_diff(ab_read, ab_write) < (config.latency-22000)/(352)) || (!ab_synced)) && (!please_stop);
     if (wait) {
-  // Watch out: should be 1^9/44100, but this causes integer overflow
-      uint64_t calc = (uint64_t)(4*352*1000000)/(44*3); //four thirds of a packet time
-      uint32_t calcs = calc&0xFFFFFFFF;
-      tn.tv_nsec+=calcs;
-      if (tn.tv_nsec>1000000000) {
-        tn.tv_nsec-=1000000000;
-        tn.tv_sec+=1;
-      }
-      pthread_cond_timedwait(&flowcontrol,&ab_mutex,&tn); 
+  		uint64_t time_to_wait_for_wakeup_fp = ((uint64_t)1<<32)/44100; // this is time period of one frame
+  		time_to_wait_for_wakeup_fp *= 4*352; // four full 352-frame packets
+  		time_to_wait_for_wakeup_fp /= 3;  //four thirds of a packet time 
+      
+#ifdef COMPILE_FOR_LINUX
+      uint64_t time_of_wakeup_fp = local_time_now+time_to_wait_for_wakeup_fp;
+      uint64_t sec = time_of_wakeup_fp>>32;
+      uint64_t nsec = ((time_of_wakeup_fp&0xffffffff)*1000000000)>>32;
+      
+      struct timespec time_of_wakeup;
+      time_of_wakeup.tv_sec = sec;
+      time_of_wakeup.tv_nsec = nsec;
+      
+      pthread_cond_timedwait(&flowcontrol,&ab_mutex,&time_of_wakeup);      
+      // int rc = pthread_cond_timedwait(&flowcontrol,&ab_mutex,&time_of_wakeup);
+      // if (rc!=0)
+      //  debug(1,"pthread_cond_timedwait returned error code %d.",rc);
+#endif
+#ifdef COMPILE_FOR_OSX
+      uint64_t sec = time_to_wait_for_wakeup_ns>>32;;
+      uint64_t nsec = ((time_to_wait_for_wakeup_ns&0xffffffff)*1000000000)>>32;
+      struct timespec time_to_wait;
+      time_to_wait.tv_sec = sec;
+      time_to_wait.tv_nsec = nsec;
+      pthread_cond_timedwait_relative_np(&flowcontrol,&ab_mutex,&time_to_wait);     
+#endif
     }    
   } while (wait);
 
-  if (!please_stop) {
-//    buf_fill = seq_diff(ab_read, ab_write);
-//    if (buf_fill < 1 || !ab_synced) {
-//      if (buf_fill < 1)
-	if (dac_delay==0) {// we just got underrun
-      debug(1,"Underrun!");
-      ab_resync(); // starting over
-    }
-  }
-  
   if (please_stop) {
     pthread_mutex_unlock(&ab_mutex);
-    debug(1,"Exiting from buffer_get_frame.");
     return 0;
   }
 
-/*
-  if (buf_fill >= BUFFER_FRAMES) {   // overrunning! uh-oh. restart at a sane distance
-    warn("overrun.");
-    ab_read = ab_write - config.buffer_start_fill;
-  }
-*/
   read = ab_read;
   ab_read++;
 
-
   // check if t+16, t+32, t+64, t+128, ... (buffer_start_fill / 2)
   // packets have arrived... last-chance resend
-
   
   if (!ab_buffering) {
     for (i = 16; i < (seq_diff(ab_read,ab_write) / 2); i = (i * 2)) {
@@ -463,9 +515,8 @@ static abuf_t *buffer_get_frame(void) {
     }
   }
   
-  
   if (!curframe->ready) {
-    // debug(1, "missing frame %04X. Supplying a silent frame.", read);
+    // debug(1, "    %04X. Supplying a silent frame.", read);
     missing_packets++;
     memset(curframe->data, 0, FRAME_BYTES(frame_size));
     curframe->timestamp=0;    
@@ -475,11 +526,27 @@ static abuf_t *buffer_get_frame(void) {
   return curframe;
 }
 
-static int stuff_buffer(short *inptr, short *outptr, int32_t stuff) {
+static inline short shortmean(short a, short b) {
+  long al = (long)a;
+  long bl = (long)b;
+  long longmean = (al+bl)/2;
+  short r = (short)longmean;
+  if (r!=longmean)
+    debug(1,"Error calculating average of two shorts");
+  return r;
+}
+
+// stuff: 1 means add 1; 0 means do nothing; -1 means remove 1
+static int stuff_buffer_basic(short *inptr, short *outptr, int stuff) {
+    if ((stuff>1) || (stuff<-1)) {
+      debug(1,"Stuff argument to stuff_buffer must be from -1 to +1.");
+      return frame_size;
+    }
     int i;
     int stuffsamp = frame_size;
     if (stuff)
-      stuffsamp = rand() % (frame_size - 1);
+//      stuffsamp = rand() % (frame_size - 1);
+      stuffsamp = (rand() % (frame_size-2))+1; // ensure there's always a sample before and after the item
 
     pthread_mutex_lock(&vol_mutex);
     for (i=0; i<stuffsamp; i++) {   // the whole frame, if no stuffing
@@ -490,8 +557,10 @@ static int stuff_buffer(short *inptr, short *outptr, int32_t stuff) {
         if (stuff==1) {
             debug(3, "+++++++++");
             // interpolate one sample
-            *outptr++ = dithered_vol(((long)inptr[-2] + (long)inptr[0]) >> 1);
-            *outptr++ = dithered_vol(((long)inptr[-1] + (long)inptr[1]) >> 1);
+            //*outptr++ = dithered_vol(((long)inptr[-2] + (long)inptr[0]) >> 1);
+            //*outptr++ = dithered_vol(((long)inptr[-1] + (long)inptr[1]) >> 1);
+            *outptr++ = dithered_vol(shortmean(inptr[-2],inptr[0]));
+            *outptr++ = dithered_vol(shortmean(inptr[-1],inptr[1]));
         } else if (stuff==-1) {
             debug(3, "---------");
             inptr++;
@@ -507,227 +576,299 @@ static int stuff_buffer(short *inptr, short *outptr, int32_t stuff) {
     return frame_size + stuff;
 }
 
-static void *player_thread_func(void *arg) {
-#define averaging_interval 71
-#define trend_interval 44100
-    int64_t corrections[trend_interval];
-    int64_t sum_of_corrections, sum_of_insertions_and_deletions;
-    double moving_average_correction, moving_average_insertions_and_deletions;
-    int oldest_correction, newest_correction, number_of_corrections;
+#ifdef HAVE_LIBSOXR
+// stuff: 1 means add 1; 0 means do nothing; -1 means remove 1
+static int stuff_buffer_soxr(short *inptr, short *outptr, int stuff) {
+  if ((stuff>1) || (stuff<-1)) {
+    debug(1,"Stuff argument to sox_stuff_buffer must be from -1 to +1.");
+    return frame_size;
+  }
+  int i;
+  short *ip,*op;
+  ip=inptr;
+  op=outptr;
+  
+  if (stuff) {
+    // debug(1,"Stuff %d.",stuff);
+    soxr_io_spec_t io_spec;
+    io_spec.itype = SOXR_INT16_I;
+    io_spec.otype = SOXR_INT16_I;
+    io_spec.scale = 1.0; // this seems to crash if not = 1.0
+    io_spec.e = NULL;
+    io_spec.flags = 0;
+
+    size_t odone;
+
+    soxr_error_t error = soxr_oneshot(frame_size, frame_size + stuff, 2, /* Rates and # of chans. */
+      inptr, frame_size, NULL, /* Input. */
+      outptr, frame_size + stuff, &odone, /* Output. */
+      &io_spec, /* Input, output and transfer spec. */
+      NULL, NULL); /* Default configuration.*/
+
+    if (error)
+      die("soxr error: %s\n", "error: %s\n", soxr_strerror(error));
+
+    if (odone > frame_size + 1)
+      die("odone = %d!\n", odone);
+
+    const int gpm = 7;
     
-    int64_t delays[averaging_interval];
-    int64_t sum_of_delays,moving_average_delay;
-    int oldest_delay,newest_delay,number_of_delays;
-    int64_t additions,deletions =  0;
-    additions = deletions =  0;
-    int64_t frames = 0;
-    int play_samples;
-    int64_t initial_latency = 0;
-    int64_t previous_latency,current_latency,change_in_latency;
-    int64_t current_delay;
-    int play_number = 0;
-    uint64_t accumulated_buffers_in_use = 0;
-    int64_t accumulated_delay = 0;
-    int64_t accumulated_da_delay = 0;
-    time_of_last_audio_packet = 0;
-    shutdown_requested = 0;
+    // keep the last (dpm) samples, to mitigate the Gibbs phenomenon
+    //for (i=0;i<gpm;i++)
+    //	op[frame_size+stuff-1-i]=ip[frame_size+stuff-1-i];
 
-    const int print_interval = 71;
-    // I think it's useful to keep this prime to prevent it from falling into a pattern with some other process.
-    
-    struct drand48_data randBuffer;
-    srand48_r(time(NULL), &randBuffer);
-
-    
-    signed short *inbuf, *outbuf, *silence;
-    outbuf = malloc(OUTFRAME_BYTES(frame_size));
-    silence = malloc(OUTFRAME_BYTES(frame_size));
-    memset(silence, 0, OUTFRAME_BYTES(frame_size));
-
-#ifdef FANCY_RESAMPLING
-    float *frame, *outframe;
-    SRC_DATA srcdat;
-    if (fancy_resampling) {
-        frame = malloc(frame_size*2*sizeof(float));
-        outframe = malloc(2*frame_size*2*sizeof(float));
-
-        srcdat.data_in = frame;
-        srcdat.data_out = outframe;
-        srcdat.input_frames = FRAME_BYTES(frame_size);
-        srcdat.output_frames = 2*FRAME_BYTES(frame_size);
-        srcdat.src_ratio = 1.0;
-        srcdat.end_of_input = 0;
+    // keep the first (dpm) samples, to mitigate the Gibbs phenomenon
+    for (i=0;i<gpm;i++) {
+      *op++ = *ip++;
+      *op++ = *ip++;
     }
+  
+    // finally, adjust the volume, if necessary
+    if (volume!=1.0) {
+      // pthread_mutex_lock(&vol_mutex);
+      op=outptr;
+      for (i=0; i<frame_size+stuff; i++) {
+        *op = dithered_vol(*op);
+        op++;
+        *op = dithered_vol(*op);
+        op++;
+      };
+      // pthread_mutex_unlock(&vol_mutex);
+    }
+    
+  } else { // the whole frame, if no stuffing
+  
+    // pthread_mutex_lock(&vol_mutex);
+    for (i=0; i<frame_size; i++) {   
+      *op++ = dithered_vol(*ip++);
+      *op++ = dithered_vol(*ip++);
+    };
+    // pthread_mutex_unlock(&vol_mutex);
+  }
+  return frame_size + stuff;
+}
 #endif
-  change_in_latency = 0;
+
+typedef struct stats { // statistics for running averages
+  int64_t sync_error,correction,drift;
+} stats_t;
+
+static void *player_thread_func(void *arg) {
+//this is about half a minute
+#define trend_interval 3758
+  stats_t statistics[trend_interval];
+  int number_of_statistics,oldest_statistic,newest_statistic;
+  int64_t tsum_of_sync_errors,tsum_of_corrections,tsum_of_insertions_and_deletions,tsum_of_drifts;
+  int64_t previous_sync_error,previous_correction;
+  int64_t minimum_dac_queue_size = 1000000;
+  
+  int play_samples;
+  int64_t current_delay;
+  int play_number = 0;
+  time_of_last_audio_packet = 0;
+  shutdown_requested = 0;
+  number_of_statistics = oldest_statistic = newest_statistic = 0;
+  tsum_of_sync_errors = tsum_of_corrections = tsum_of_insertions_and_deletions = tsum_of_drifts = 0;
+
+  const int print_interval = trend_interval; // don't ask...
+  // I think it's useful to keep this prime to prevent it from falling into a pattern with some other process.
+  
+  char  rnstate[256];
+  initstate(time(NULL),rnstate,256);
+  
+  signed short *inbuf, *outbuf, *silence;
+  outbuf = malloc(OUTFRAME_BYTES(frame_size));
+  silence = malloc(OUTFRAME_BYTES(frame_size));
+  memset(silence, 0, OUTFRAME_BYTES(frame_size));
+
   late_packet_message_sent=0;
-  oldest_delay=newest_delay=number_of_delays=0;
-  sum_of_delays=0;
-  oldest_correction=newest_correction=number_of_corrections=0;
-  sum_of_corrections=0;
-  sum_of_insertions_and_deletions=0;
   missing_packets=late_packets=too_late_packets=resend_requests=0;
   flush_rtp_timestamp=0;
+  int sync_error_out_of_bounds = 0; // number of times in a row that there's been a serious sync error
   while (!please_stop) {
     abuf_t *inframe = buffer_get_frame();
     if (inframe) {
       inbuf = inframe->data;
       if (inbuf) {
-        #ifdef FANCY_RESAMPLING
-        if (fancy_resampling) {
-          int i;
-          pthread_mutex_lock(&vol_mutex);
-          for (i=0; i<2*FRAME_BYTES(frame_size); i++) {
-            frame[i] = (float)inbuf[i] / 32768.0;
-            frame[i] *= volume;
-          }
-          pthread_mutex_unlock(&vol_mutex);
-          srcdat.src_ratio = bf_playback_rate;
-          src_process(src, &srcdat);
-          assert(srcdat.input_frames_used == FRAME_BYTES(frame_size));
-          src_float_to_short_array(outframe, outbuf, FRAME_BYTES(frame_size)*2);
-          play_samples = srcdat.output_frames_gen;
-          } else
-        #endif
-        
-        // we need to see whether the player is a bit slow or a bit fast, so we track the overall latency
-        struct timespec tn;
-        clock_gettime(CLOCK_MONOTONIC,&tn);
-        uint64_t local_time_now=((uint64_t)tn.tv_sec<<32)+((uint64_t)tn.tv_nsec<<32)/1000000000;
-        double x;
-        drand48_r(&randBuffer, &x);
-        play_number++;
-        int32_t abs_change_in_latency = change_in_latency;
-        
-        if (abs_change_in_latency<1)
-          abs_change_in_latency=-abs_change_in_latency;
-        
-        int32_t amount_to_stuff=0;
-        
-        if (x<=(double)1.0*abs_change_in_latency/print_interval) {
-          amount_to_stuff= -abs_change_in_latency/change_in_latency;
-        }
-        
-        // prevent dithering by +/- 1...
-        if (abs_change_in_latency<20)
-          amount_to_stuff=0;
-          
-        if (number_of_corrections==trend_interval) { // the array of corrections is full
-          sum_of_corrections-=corrections[oldest_correction];
-          int64_t oldest_correction_value = corrections[oldest_correction];
-          // remove the correction from the tally of insertions and deletions
-          if (oldest_correction_value>=0)
-            sum_of_insertions_and_deletions-=oldest_correction_value;
-          else
-            sum_of_insertions_and_deletions+=oldest_correction_value;     
-                  
-          oldest_correction=(oldest_correction+1)%trend_interval;
-          number_of_corrections--;
-        }
-        
-        corrections[newest_correction]=amount_to_stuff;
-        sum_of_corrections+=amount_to_stuff;
-        // add the correction to the tally of insertions and deletions
-        if (amount_to_stuff>=0)
-          sum_of_insertions_and_deletions+=amount_to_stuff;
-        else
-          sum_of_insertions_and_deletions-=amount_to_stuff;           
-        newest_correction=(newest_correction+1)%trend_interval;
-        number_of_corrections++;
-        
-        moving_average_correction = (1.0*sum_of_corrections)/number_of_corrections;
-        moving_average_insertions_and_deletions = (1.0*sum_of_insertions_and_deletions)/number_of_corrections;
-
-
-        
-        play_samples = stuff_buffer(inbuf, outbuf,amount_to_stuff);
-        if (amount_to_stuff > 0)
-          additions += amount_to_stuff;
-        else
-          deletions -= amount_to_stuff;
-        frames += play_samples;
-        
-        if (config.output->delay) {
-          current_delay = config.output->delay();
-          if (current_delay==-1) {
-            debug(1,"Delay error when checking running latency.");
-            current_delay=0;
-          }
-        }
-
-        config.output->play(outbuf, play_samples);
-        // now see if we can calculate how early or late the first frame would be
-        uint32_t reference_timestamp;
-        uint64_t reference_timestamp_time;
-
-        get_reference_timestamp_stuff(&reference_timestamp,&reference_timestamp_time);
-
-        int64_t rt,nt;
-        rt = reference_timestamp;
-        nt = inframe->timestamp;
-        
-        int64_t td_in_frames;
-        int64_t td = local_time_now-reference_timestamp_time;
-        // debug(1,"td is %lld.",td);          
-        if (td>=0) {
-          td_in_frames = (td*44100)>>32;
+        // if it's a supplied silent frame, let us know...
+        if (inframe->timestamp==0) {
+          // debug(1,"Player has a supplied silent frame.");
+          config.output->play(inbuf, frame_size);
         } else {
-          td_in_frames = -((-td*44100)>>32);
-        }
-        // this is the actual delay, which will fluctuate a good bit about a potentially rising or falling trend.
-        int64_t delay = td_in_frames+rt-(nt-current_delay);
-        
-        int64_t sync_error = delay-config.latency;
+          // We have a frame of data. We need to see if we want to add or remove a frame from it to keep in sync.
+          // So we calculate the timing error for the first frame in the DAC.
+          // If it's ahead of time, we add one audio frame to this frame to delay a subsequent frame
+          // If it's late, we remove an audio frame from this frame to bring a subsequent frame forward in time
+          
+          uint32_t reference_timestamp;
+          uint64_t reference_timestamp_time;
+          get_reference_timestamp_stuff(&reference_timestamp,&reference_timestamp_time);
 
-        // timestamp of zero means an inserted silent frame in place of a missing frame
-	      if ((inframe->timestamp!=0) && (! please_stop) && (abs(sync_error)>441*5)) { // 50 ms 
-	        debug(1,"Lost sync with source -- flushing and resyncing. Error of %lld frames.",sync_error);
-	        player_flush(nt);
-	      }
-        
-//        if ((play_number<(10)) || (play_number%500==0))
-//        if ((play_number<(10)))
-//          debug(1,"Latency error for packet %d: %d frames.",play_number,delay-config.latency);
-        
-        if (number_of_delays==averaging_interval) { // the array of delays is full
-          sum_of_delays-=delays[oldest_delay];
-          oldest_delay=(oldest_delay+1)%averaging_interval;
-          number_of_delays--;
-        }
-        
-        delays[newest_delay]=delay;
-        sum_of_delays+=delay;
-        newest_delay=(newest_delay+1)%averaging_interval;
-        number_of_delays++;
-        
-        moving_average_delay = sum_of_delays/number_of_delays; // this doesn't seem to be right
-        
-        change_in_latency=moving_average_delay-config.latency;
-        
-        accumulated_da_delay+=current_delay;
-        accumulated_delay+=delay;
-        
-        accumulated_buffers_in_use += seq_diff(ab_read, ab_write);
-        if (play_number%print_interval==0) {
-          current_latency=accumulated_delay/print_interval;                    
-          if ((play_number/print_interval)%100==0)
-            { // only print every hundredth one, in verbose mode
-              //debug(1,"Valid frames: %lld; overall frames added/subtracted %lld; frames added + frames deleted %lld; average D/A delay, average latency (frames): %llu, %llu; average buffers in use: %llu, moving average delay (number of delays): %llu (%lu).",
-              //  frames-(additions-deletions), additions-deletions, additions+deletions, accumulated_da_delay/print_interval,current_latency,accumulated_buffers_in_use/print_interval,moving_average_delay,number_of_delays);
+          int64_t rt,nt;
+          rt = reference_timestamp;
+          nt = inframe->timestamp;
+          
+          uint64_t local_time_now = get_absolute_time_in_ns();
+          //struct timespec tn;
+          //clock_gettime(CLOCK_MONOTONIC,&tn);
+          //uint64_t local_time_now=((uint64_t)tn.tv_sec<<32)+((uint64_t)tn.tv_nsec<<32)/1000000000;
 
-            //debug(1,"Frames %lld, correction %lld, mods %lld, dac_buffer %llu, latency %llu, missing_packets %llu, late_packets %llu, too_late_packets %llu resend_requests %llu.",
-              //frames-(additions-deletions), additions-deletions, additions+deletions,accumulated_da_delay/print_interval,moving_average_delay,missing_packets,late_packets,too_late_packets,resend_requests);
-                
-            debug(1,"Divergence: %.1f (ppm); corrections: %.1f (ppm); missing packets %llu; late packets %llu; too late packets %llu; resend requests %llu.", moving_average_correction*1000000/352, moving_average_insertions_and_deletions*1000000/352,missing_packets,late_packets,too_late_packets,resend_requests);
+          int64_t td_in_frames;
+          int64_t td = local_time_now-reference_timestamp_time;
+          // debug(1,"td is %lld.",td);          
+          if (td>=0) {
+            td_in_frames = (td*44100)>>32;
+          } else {
+            td_in_frames = -((-td*44100)>>32);
           }
-          if (previous_latency==0)
-            previous_latency=current_latency;
-          else {
-            previous_latency=current_latency;
+
+          if (config.output->delay) {
+            current_delay = config.output->delay();
+            if (current_delay==-1) {
+              debug(1,"Delay error when checking running latency.");
+              current_delay=0;
+            }
+          } else {
+            current_delay = 0;
           }
-          accumulated_delay=0;
-          accumulated_da_delay=0;
-          accumulated_buffers_in_use=0;
+          if (current_delay<minimum_dac_queue_size)
+            minimum_dac_queue_size=current_delay;
+
+          // this is the actual delay, including the latency we actually want, which will fluctuate a good bit about a potentially rising or falling trend.
+          int64_t delay = td_in_frames+rt-(nt-current_delay);
+          
+          // This is the timing error for the next audio frame in the DAC.
+          int64_t sync_error = delay-config.latency;
+          
+          int amount_to_stuff = 0;
+          // require a certain error before bothering to fix it...
+          if (sync_error>88) {
+            amount_to_stuff = -1;
+          }
+          if (sync_error<-88) {
+            amount_to_stuff = 1;
+          }
+          
+          // only allow stuffing if there is enough time to do it -- check DAC buffer...
+          if (current_delay<DAC_BUFFER_QUEUE_MINIMUM_LENGTH) {
+            // debug(1,"DAC buffer too short to allow stuffing.");
+            amount_to_stuff=0;
+          }
+            
+          if ((amount_to_stuff==0) && (fix_volume==0x10000)) {
+          	// if no stuffing needed and no volume adjustment, then
+          	// don't send to stuff_buffer_* and don't copy to outbuf; just send directly to the output device...
+            config.output->play(inbuf, frame_size);
+          } else {
+#ifdef HAVE_LIBSOXR
+            switch (config.packet_stuffing) {
+              case ST_basic:
+//                if (amount_to_stuff) debug(1,"Basic stuff...");
+                  play_samples = stuff_buffer_basic(inbuf, outbuf,amount_to_stuff);
+                break;
+              case ST_soxr:
+//                if (amount_to_stuff) debug(1,"Soxr stuff...");
+                  play_samples = stuff_buffer_soxr(inbuf, outbuf,amount_to_stuff);
+                break;
+            }     
+#else
+//          if (amount_to_stuff) debug(1,"Standard stuff...");
+            play_samples = stuff_buffer_basic(inbuf, outbuf,amount_to_stuff);
+#endif
+
+      /*
+      {
+        int co;
+        int is_silent=1;
+        short *p = outbuf;
+        for (co=0;co<play_samples;co++) {
+          if (*p!=0)
+            is_silent=0;
+          p++;
+        }
+        if (is_silent)
+          debug(1,"Silence!");
+      }
+      */
+
+             config.output->play(outbuf, play_samples);
+          }
+          
+          // check for loss of sync
+          // timestamp of zero means an inserted silent frame in place of a missing frame
+          if ((inframe->timestamp!=0) && (!please_stop) && (config.resyncthreshold!=0) && (abs(sync_error)>config.resyncthreshold)) {
+            sync_error_out_of_bounds++;
+            // debug(1,"Sync error out of bounds: Error: %lld; previous error: %lld; DAC: %lld; timestamp: %llx, time now %llx",sync_error,previous_sync_error,current_delay,inframe->timestamp,local_time_now);    
+             if (sync_error_out_of_bounds>3) {
+              debug(1,"Lost sync with source for %d consecutive packets -- flushing and resyncing. Error: %lld.",sync_error_out_of_bounds,sync_error);
+              player_flush(nt);
+             }
+          } else {
+            sync_error_out_of_bounds = 0;
+          }
+
+          play_number++;
+              
+          // debug(1,"Sync error %lld frames. Amount to stuff %d." ,sync_error,amount_to_stuff);
+          
+          // new stats calculation. We want a running average of sync error, drift, adjustment, number of additions+subtractions
+          
+          if (number_of_statistics==trend_interval) {
+            // here we remove the oldest statistical data and take it from the summaries as well
+            tsum_of_sync_errors-=statistics[oldest_statistic].sync_error;
+            tsum_of_drifts -= statistics[oldest_statistic].drift;
+            if (statistics[oldest_statistic].correction>0)
+              tsum_of_insertions_and_deletions-=statistics[oldest_statistic].correction;
+            else
+              tsum_of_insertions_and_deletions+=statistics[oldest_statistic].correction;
+            tsum_of_corrections-=statistics[oldest_statistic].correction;
+            oldest_statistic=(oldest_statistic+1)%trend_interval;
+            number_of_statistics--; 
+          }
+          
+          statistics[newest_statistic].sync_error = sync_error;
+          statistics[newest_statistic].correction = amount_to_stuff;
+
+          if (number_of_statistics==0)
+            statistics[newest_statistic].drift = 0;
+          else
+            statistics[newest_statistic].drift = sync_error-previous_sync_error-previous_correction;
+
+          previous_sync_error = sync_error;
+          previous_correction = amount_to_stuff;
+
+          tsum_of_sync_errors += sync_error;
+          tsum_of_drifts += statistics[newest_statistic].drift;
+          if (amount_to_stuff>0)
+            tsum_of_insertions_and_deletions+=amount_to_stuff;
+          else
+            tsum_of_insertions_and_deletions-=amount_to_stuff;
+          tsum_of_corrections+=amount_to_stuff;
+          
+          newest_statistic=(newest_statistic+1)%trend_interval;
+          number_of_statistics++;
+          
+          // check sequencing
+          if (last_seqno_read==-1)
+							last_seqno_read=inframe->sequence_number;
+						else {
+							last_seqno_read = (last_seqno_read+1)&0xffff;           
+							if (inframe->sequence_number!=last_seqno_read)
+								debug(1,"Player: packets out of sequence: expected: %d, got %d.",last_seqno_read,inframe->sequence_number);
+								last_seqno_read=inframe->sequence_number; // reset warning...
+            }
+              
+          if (play_number%print_interval==0) {
+            // we can now calculate running averages for sync error (frames), corrections (ppm), insertions plus deletions (ppm), drift (ppm)
+            double moving_average_sync_error = (1.0*tsum_of_sync_errors)/number_of_statistics;
+            double moving_average_correction = (1.0*tsum_of_corrections)/number_of_statistics;
+            double moving_average_insertions_plus_deletions = (1.0*tsum_of_insertions_and_deletions)/number_of_statistics;
+            double moving_average_drift = (1.0*tsum_of_drifts)/number_of_statistics;
+                        uint64_t clock_jitter = ((local_to_remote_time_jitters/local_to_remote_time_jitters_count)*1000000)>>32;
+            // if ((play_number/print_interval)%20==0)
+              debug(1,"Sync error: %.1f (frames); net correction: %.1f (ppm); corrections: %.1f (ppm); missing packets %llu; late packets %llu; too late packets %llu; resend requests %llu; min DAC queue size %lli.", moving_average_sync_error, moving_average_correction*1000000/352, moving_average_insertions_plus_deletions*1000000/352,missing_packets,late_packets,too_late_packets,resend_requests,minimum_dac_queue_size);
+            minimum_dac_queue_size=1000000; // hack reset
+          }
         }
       }
     }
@@ -744,7 +885,7 @@ void player_volume(double f) {
 // So, we will pass this on without any weighting if we have a hardware mixer, as we expect the mixer to be calibrated in dB.
 
 // Here, we ask for an attenuation we will apply in software. The dB range of a value from 1 to 65536 is about 48.1 dB (log10 of 65536 is 4.8164).
-// Thus, we ask out vol2attn function for an appropriate dB between -48.1 and 0 dB and translate it back to a number.
+// Thus, we ask our vol2attn function for an appropriate dB between -48.1 and 0 dB and translate it back to a number.
  
   double linear_volume = pow(10,vol2attn(f,0,-4810)/1000);
     
@@ -768,67 +909,54 @@ void player_flush(uint32_t timestamp) {
   pthread_mutex_unlock(&flush_mutex);
 }
 
-/*
-    if (config.output->flush)
-      config.output->flush();
-    pthread_mutex_lock(&ab_mutex);
-    ab_resync();
-    pthread_mutex_unlock(&ab_mutex);
-*/
-
 int player_play(stream_cfg *stream) {
-	debug(1,"player_play called...");
-	packet_count = 0;
-    if (config.buffer_start_fill > BUFFER_FRAMES)
-        die("specified buffer starting fill %d > buffer size %d",
-            config.buffer_start_fill, BUFFER_FRAMES);
+  packet_count = 0;
+  if (config.buffer_start_fill > BUFFER_FRAMES)
+    die("specified buffer starting fill %d > buffer size %d",
+      config.buffer_start_fill, BUFFER_FRAMES);
 
-    AES_set_decrypt_key(stream->aeskey, 128, &aes);
-    aesiv = stream->aesiv;
-    init_decoder(stream->fmtp);
-    // must be after decoder init
-    init_buffer();
-#ifdef FANCY_RESAMPLING
-    init_src();
+#ifdef HAVE_LIBPOLARSSL
+  memset(&dctx,0,sizeof(aes_context));
+  aes_setkey_dec(&dctx, stream->aeskey, 128);
 #endif
-    please_stop = 0;
-    if (config.cmd_start && !fork()) {
-        if (system(config.cmd_start))
-            warn("exec of external start command failed");
-        exit(0);
-    }
-    
-    // set the flowcontrol condition variable to wait on a monotonic clock
-    pthread_condattr_t attr;
-    pthread_condattr_init(&attr);
-    pthread_condattr_setclock( &attr, CLOCK_MONOTONIC);
-    int rc = pthread_cond_init(&flowcontrol,&attr);
-    if (rc)
-    	debug(1,"Error initialising condition variable.");
-    config.output->start(sampling_rate);
-    pthread_create(&player_thread, NULL, player_thread_func, NULL);
 
-    return 0;
+#ifdef HAVE_LIBSSL
+  AES_set_decrypt_key(stream->aeskey, 128, &aes);
+#endif
+
+  aesiv = stream->aesiv;
+  init_decoder(stream->fmtp);
+  // must be after decoder init
+  init_buffer();
+  please_stop = 0;
+  command_start();  
+  // set the flowcontrol condition variable to wait on a monotonic clock
+#ifdef COMPILE_FOR_LINUX
+  pthread_condattr_t attr;
+  pthread_condattr_init(&attr);
+  pthread_condattr_setclock( &attr, CLOCK_MONOTONIC); // can't do this in OS X, and don't need it.
+  int rc = pthread_cond_init(&flowcontrol,&attr);
+#endif
+#ifdef COMPILE_FOR_OSX
+  int rc = pthread_cond_init(&flowcontrol,NULL);  
+#endif
+  if (rc)
+    debug(1,"Error initialising condition variable.");
+  config.output->start(sampling_rate);
+  pthread_create(&player_thread, NULL, player_thread_func, NULL);
+
+  return 0;
 }
 
 void player_stop(void) {
-	debug(1,"player_stop called...");
-    please_stop = 1;
-    pthread_cond_signal(&flowcontrol); // tell it to give up
-    pthread_join(player_thread, NULL);
-    config.output->stop();
-    if (config.cmd_stop && !fork()) {
-        if (system(config.cmd_stop))
-            warn("exec of external stop command failed");
-        exit(0);
-    }
-    free_buffer();
-    free_decoder();
-#ifdef FANCY_RESAMPLING
-    free_src();
-#endif
-    int rc = pthread_cond_destroy(&flowcontrol);
-    if (rc)
-    	debug(1,"Error destroying condition variable.");
-	debug(1,"player_stop finished...");
+  please_stop = 1;
+  pthread_cond_signal(&flowcontrol); // tell it to give up
+  pthread_join(player_thread, NULL);
+  config.output->stop();
+  command_stop();
+  free_buffer();
+  free_decoder();
+  int rc = pthread_cond_destroy(&flowcontrol);
+  if (rc)
+    debug(1,"Error destroying condition variable.");
 }
