@@ -26,16 +26,15 @@ Shairport does not support AirPlay video and photo streaming.
 Shairport Sync does Audio Synchronisation
 ---------------------------
 Shairport Sync allows you to set a delay (a "latency") from when music is sent by iTunes or your iOS device to when it is played in the Shairport Sync audio device. The latency can be set to match the latency of other output devices playing the music (or video in the case of the AppleTV or Quicktime), achieving audio synchronisation. Shairport Sync uses extra timing information to stay synchronised with the source's time signals, eliminating "drift", where audio streams slowly drift out of synchronisation.
+Shairplay Sync automatically chooses a suitable latency for iTunes and for AirPlay devices such as the AppleTV.
 
 To stay synchronised, if an output device is running slow, Shairport Sync will delete frames of audio to allow it to keep up; if the device is running fast, Shairport Sync will insert frames to keep time. The number of frames inserted or deleted is so small as to be almost  inaudible. Frames are inserted or deleted as necessary at pseudorandom intervals. Alternatively, Shairport Sync can resample the audio feed to ensure the output device can keep up. Resampling is even less obtrusive than insertion and deletion but requires a good deal of processing power -- most embedded devices probably can't support it.
-
-Shairplay Sync will automatically choose a suitable latency for iTunes and for AirPlay devices such as the AppleTV.
 
 What else?
 --------------
 * Shairport Sync offers finer control at very top and very bottom of the volume range. See http://tangentsoft.net/audio/atten.html for a good discussion of audio "attenuators", upon which volume control in Shairport Sync is modelled. See also the diagram of the volume transfer function in the documents folder.
 * Shairport Sync will mute properly if the hardware supports it.
-* If it has to use software volume and mute controls, the response time is shorter than before -- now it responds in 0.15 seconds.
+* If Shairport Sync has to use software volume and mute controls, the response time is shorter than before -- now it responds in 0.15 seconds.
 * Shairport Sync sends back a "busy" signal if it's already playing audio from another source, so other sources can't "barge in" on an existing Shairport Sync session. (If a source disappears without warning, the session automatically terminates after two minutes and the device becomes available again.)
 
 Status
@@ -64,22 +63,18 @@ The following libraries are required:
 * autoconf
 * libtool
 
-Optional
+Optional:
 * libsoxr
 
 Many linux distributions have Avahi and OpenSSL already in place, so normally it probably makes sense to choose those options rather than tinysvcmdns or PolarSSL. Libsoxr is available in recent linux distributions and it requires lots of horsepower -- chances are an embedded processor won't be able to keep up.
 
 Debian, Ubuntu and Raspian users can get the basics with:
 
-`apt-get install autoconf libtool libdaemon-dev libasound2-dev`
-
-`apt-get install avahi-daemon libavahi-client-dev` if you want to use Avahi (recommended), or use `--with-tinysvcmdns` otherwise.
-
-`apt-get install libopenssl-dev` if you want to use OpenSSL and libcrypto, or use PolarSSL otherwise.
-
-`apt-get install libpolarssl-dev` if you want to use PolarSSL, or use OpenSSL/libcrypto otherwise.
-
-`apt-get install libsoxr-dev` if you want support for libsoxr-based resampling. Not yet part of  Raspian.
+- `apt-get install autoconf libtool libdaemon-dev libasound2-dev`
+- `apt-get install avahi-daemon libavahi-client-dev` if you want to use Avahi (recommended).
+- `apt-get install libopenssl-dev` if you want to use OpenSSL and libcrypto, or use PolarSSL otherwise.
+- `apt-get install libpolarssl-dev` if you want to use PolarSSL, or use OpenSSL/libcrypto otherwise.
+- `apt-get install libsoxr-dev` if you want support for libsoxr-based resampling. Not yet part of  Raspian.
 
 Download Shairport Sync:
 
@@ -91,10 +86,10 @@ Next, `cd` into the shairport-sync directory and execute the following commands:
 
 Choose the appropriate `--with-*` options:
 
-`--with-alsa` for the ALSA audio back end. This is required.
-`--with-avahi` or `--with-tinysvcmdns` for mdns support support.
-`--with-openssl`  or `--with-polarssl` for encryption and related utilities.
-`--with-soxr` for libsoxr-based resampling.
+- `--with-alsa` for the ALSA audio back end. This is required.
+- `--with-avahi` or `--with-tinysvcmdns` for mdns support support.
+- `--with-openssl`  or `--with-polarssl` for encryption and related utilities.
+- `--with-soxr` for libsoxr-based resampling.
 
 Here is an example:
 
@@ -122,25 +117,21 @@ These may be also of interest:
 
 The `-B`, `-E` and `-w` options allow you to specify a program to execute before (`-B`) and after (`-E`) Shairport Sync plays. This is to facilitate situations where something has to be done before and  after playing, e.g. switching on an amplifier beforehand and switching it off afterwards. Use the `-w` option for Shairport Sync to wait until the respective commands have been completed before continuing. Please note that the full path to the programs must be specified, and script files will not be executed unless they are marked as executable and have the standard `#!/bin/...` first line. (This behaviour may be different from other Shairports.)
 
-The `-V` option gives you version information about  Shairport Sync and then quits.
-
-The `-k` option causes Shairport Sync to kill an existing Shairport Sync daemon and then quit. You need to have sudo privileges for this.
-
-The `-v` option causes Shairport Sync to print some information and debug messages.
-
-The `-d` option causes Shairport Sync to properly daemonise itself, going into the background. You may need sudo privileges for this.
+* The `-V` option gives you version information about  Shairport Sync and then quits.
+* The `-k` option causes Shairport Sync to kill an existing Shairport Sync daemon and then quit. You need to have sudo privileges for this.
+* The `-v` option causes Shairport Sync to print some information and debug messages.
+* The `-d` option causes Shairport Sync to properly daemonise itself, going into the background. You may need sudo privileges for this.
 
 Apart from arguments of Shairport Sync, there are also arguments for controlling the ALSA audio library. ALSA arguments follow a `--` on the command line -- see the examples below for layout of command line.
 
 These are important because her you specify the actual audio device you wish to use and you give Shairport Sync important information about the capabilities of the device. The important ALSA arguments are:
 
-The `-d` option which allows you to specify the audio device to use. Typical values would be `default` (default), `hw:0`, `hw:1`, etc. The importance of this setting is obvious.
+* The `-d` option which allows you to specify the audio device to use. Typical values would be `default` (default), `hw:0`, `hw:1`, etc.
 
 The following two settings are very important for maximum performance. If your audio device has a hardware mixer and volume control, then Shairport Sync can use it to give faster response to volume and mute control and it can offload some work from the processor, potentially allowing a slower processor to work.
 
-The `-t` option allows you to specify the type of audio mixer -- `software` (default) or `hardware`.
-
-The `-c` option allows you to specify the name of the volume control on the hardware mixer.
+* The `-t` option allows you to specify the type of audio mixer -- `software` (default) or `hardware`.
+* The `-c` option allows you to specify the name of the volume control on the hardware mixer.
 
 The init script at `/etc/init.d/shairport-sync` has a bare minimum set of options (see line 60):
 
