@@ -43,7 +43,7 @@ Shairport Sync is working on standard Ubuntu laptops, the Raspberry Pi with Rasp
 
 On the Raspberry Pi, Shairport Sync works well with the IQAudIO Pi-DAC -- please see http://iqaudio.com/wp-content/uploads/2014/06/IQaudIO_Doc.pdf for details. It also works pretty well with the built-in sound card under Raspian. Due to the limitations of the sound card, you wouldn't mistake the output for HiFi, but it's really not too shabby. USB-connected sound cards work well on the latest version of Raspian; however older versions of Raspian appear to suffer from a problem -- see http://www.raspberrypi.org/forums/viewtopic.php?t=23544, so it is wise to update. 
 
-Shairport Sync runs on Ubuntu and Debian inside VMWare Fusion 6.0.3 on a Mac, but synchronisation does not work -- possibly because the soundcard is being emulated.
+Shairport Sync runs on Ubuntu and Debian inside VMWare Fusion 6 on a Mac, but synchronisation does not work -- possibly because the soundcard is being emulated.
 
 Shairport Sync works only with the ALSA back end. You can try compiling the other back ends in as you wish, but it definitely will not work properly with them. Maybe someday...
 
@@ -66,7 +66,7 @@ The following libraries are required:
 Optional:
 * libsoxr
 
-Many linux distributions have Avahi and OpenSSL already in place, so normally it probably makes sense to choose those options rather than tinysvcmdns or PolarSSL. Libsoxr is available in recent linux distributions and it requires lots of horsepower -- chances are an embedded processor won't be able to keep up.
+Many linux distributions have Avahi and OpenSSL already in place, so normally it probably makes sense to choose those options rather than tinysvcmdns or PolarSSL. Libsoxr is available in recent linux distributions, but it requires lots of processor power -- chances are an embedded processor won't be able to keep up.
 
 Debian, Ubuntu and Raspian users can get the basics with:
 
@@ -87,7 +87,7 @@ Next, `cd` into the shairport-sync directory and execute the following commands:
 Choose the appropriate `--with-*` options:
 
 - `--with-alsa` for the ALSA audio back end. This is required.
-- `--with-avahi` or `--with-tinysvcmdns` for mdns support support.
+- `--with-avahi` or `--with-tinysvcmdns` for mdns support.
 - `--with-openssl`  or `--with-polarssl` for encryption and related utilities.
 - `--with-soxr` for libsoxr-based resampling.
 
@@ -124,7 +124,7 @@ The `-B`, `-E` and `-w` options allow you to specify a program to execute before
 
 Apart from arguments of Shairport Sync, there are also arguments for controlling the ALSA audio library. ALSA arguments follow a `--` on the command line -- see the examples below for layout of command line.
 
-These are important because her you specify the actual audio device you wish to use and you give Shairport Sync important information about the capabilities of the device. The important ALSA arguments are:
+These are important because here you specify the actual audio device you wish to use and you give Shairport Sync important information about the capabilities of the device. The important ALSA arguments are:
 
 * The `-d` option which allows you to specify the audio device to use. Typical values would be `default` (default), `hw:0`, `hw:1`, etc.
 
@@ -137,9 +137,9 @@ The init script at `/etc/init.d/shairport-sync` has a bare minimum set of option
 
 `-d`
 
-Basically all it does is put the program in the background ("daemon") mode, selects the default output device and uses software volume control. You should modify it, if possible, to get hardware volume control. Here are some examples of complete commands. If you are modifying the init script, you don't need the `shairport-sync` at the start, but include the `-d` option, as it puts the program into daemon mode. There are some commented-out examples in the init script; see lines 61--63.
+Basically all it does is put the program in the background ("daemon") mode, selects the default output device and uses software volume control. Here are some examples of complete commands. If you are modifying the init script, you don't need the `shairport-sync` at the start, but you should include the `-d` option, as it puts the program into daemon mode. There are some commented-out examples in the init script -- see lines 61--63.
 
-This give the service a particular name -- "Joe's Stereo" and specifies that audio device hw:0 be used.
+This gives the service a particular name -- "Joe's Stereo" and specifies that audio device hw:0 be used.
 `shairport-sync -d -a "Joe's Stereo" -- -d hw:0`
 
 For best results -- including getting true mute and instant response to volume control and pause commands -- you should access the hardware volume controls. Use `amixer` or `alsamixer` or similar to discover the name of the volume controller to be used after the `-c` option.
@@ -176,9 +176,9 @@ Latency is the exact time from a sound signal's original timestamp until that si
 * If the source is iTunes, a latency of 99,400 frames seems to bring Shairport Sync into exact synchronisation both with the speakers on the iTunes computer itself and with AirPort Express receivers.
 * If the source is an AirPlay device, the latency seems to be exactly 88,200 frames. AirPlay devices include AppleTV, iPod, iPad and iPhone and Quicktime Player on Mac.
 
-Shairport Sync therefore has default latencies for iTunes and AirPlay sources: 99,400 frames for iTunes and 88,200 for all AirPlay devices.
+Shairport Sync uses these as default latencies for iTunes and AirPlay sources.
 
-You can set your own iTunes latency with the `-i` or `--iTunesLatency` option (e.g. `-i 99400` or `--iTunesLatency=99400`). Similarly you can set an AirPlay latency with the `-A` or `--AirPlayLatency` option. If you set a latency with `-L` it overrides both the AirPlay and iTunes latency values. Basically, you shouldn't use it except for experimentation. It will be removed soon.
+You can set your own iTunes latency with the `-i` or `--iTunesLatency` option (e.g. `-i 99400` or `--iTunesLatency=99400`). Similarly you can set an AirPlay latency with the `-A` or `--AirPlayLatency` option. If you set a latency with `-L` it overrides both the AirPlay and iTunes latency values. Basically, you shouldn't use it except for experimentation. It is deprecated and will be removed soon.
 
 Resynchronisation
 -------------
@@ -202,8 +202,8 @@ it will print statistics like this occasionally:
 
 "Corrections" is the number of frame insertions plus the number of frame deletions (i.e. the total number of corrections), given as a moving average in parts per million. The closer this is to the absolute value of the drift, the fewer "unnecessary" corrections that are being made.
 
-For reference, a drift of one second per day is approximately 11.57 ppm. Left uncorrected, even a drift this small between two audio outputs will be audible after a short time. The above sample is from a second-generation iPod driving a Raspberry Pi which is connected over Ethernet.
+For reference, a drift of one second per day is approximately 11.57 ppm. Left uncorrected, even a drift this small between two audio outputs will be audible after a short time. The above sample is from a second-generation iPod driving the Raspberry Pi which is connected over Ethernet.
 
-It's not unusual to have resend requests, late packets and even missing packets if some part of the connection to the Shairport Sync device is over WiFi. Sometimes late packets can be asked for and received multiple times. Sometimes late packets are sent and arrive too late, but have already been sent, so weren't needed anyway...
+It's not unusual to have resend requests, late packets and even missing packets if some part of the connection to the Shairport Sync device is over WiFi. Sometimes late packets can be asked for and received multiple times. Sometimes late packets are sent and arrive too late, but have already been sent and received in time, so weren't needed anyway...
 
 "min DAC queue size" is the minimum size the queue of samples in the output device's hardware buffer was measured at. It is meant to stand at 0.15 seconds = 6,615 samples, and will go low if the processor is very busy. If it goes below about 2,000 then it's a sign that the processor can't really keep up.
