@@ -28,7 +28,7 @@ Shairport Sync does Audio Synchronisation
 Shairport Sync allows you to set a delay (a "latency") from when music is sent by iTunes or your iOS device to when it is played in the Shairport Sync audio device. The latency can be set to match the latency of other output devices playing the music (or video in the case of the AppleTV or Quicktime), achieving audio synchronisation. Shairport Sync uses extra timing information to stay synchronised with the source's time signals, eliminating "drift", where audio streams slowly drift out of synchronisation.
 Shairplay Sync automatically chooses a suitable latency for iTunes and for AirPlay devices such as the AppleTV.
 
-To stay synchronised, if an output device is running slow, Shairport Sync will delete frames of audio to allow it to keep up; if the device is running fast, Shairport Sync will insert frames to keep time. The number of frames inserted or deleted is so small as to be almost  inaudible. Frames are inserted or deleted as necessary at pseudorandom intervals. Alternatively, Shairport Sync can resample the audio feed to ensure the output device can keep up. Resampling is even less obtrusive than insertion and deletion but requires a good deal of processing power -- most embedded devices probably can't support it.
+To stay synchronised, if an output device is running slow, Shairport Sync will delete frames of audio to allow it to keep up; if the device is running fast, Shairport Sync will insert frames to keep time. The number of frames inserted or deleted is so small as to be almost  inaudible. Frames are inserted or deleted as necessary at pseudorandom intervals. Alternatively, with libsoxr support, Shairport Sync can resample the audio feed to ensure the output device can keep up. Resampling is even less obtrusive than insertion and deletion but requires a good deal of processing power -- most embedded devices probably can't support it.
 
 What else?
 --------------
@@ -39,9 +39,9 @@ What else?
 
 Status
 ------
-Shairport Sync is working on standard Ubuntu laptops, the Raspberry Pi with Raspian and also with OpenWrt, and it runs on a Linksys NSLU2 using OpenWrt. It works well with built-in audio and with a variety of USB-connected audio amplifiers and DACs, including a cheapo USB "3D Sound" dongle, a first generation iMic and a Topping TP30 amplifier with a USB DAC input.
+Shairport Sync works on standard Ubuntu laptops, on the Raspberry Pi with Raspian and OpenWrt, and it runs on a Linksys NSLU2 using OpenWrt. It works with built-in audio and with a variety of USB-connected audio amplifiers and DACs, including a cheapo USB "3D Sound" dongle, a first generation iMic and a Topping TP30 amplifier with a USB DAC input.
 
-On the Raspberry Pi, Shairport Sync works well with the IQAudIO Pi-DAC -- please see http://iqaudio.com/wp-content/uploads/2014/06/IQaudIO_Doc.pdf for details. It also works pretty well with the built-in sound card under Raspian. Due to the limitations of the sound card, you wouldn't mistake the output for HiFi, but it's really not too shabby. USB-connected sound cards work well on the latest version of Raspian; however older versions of Raspian appear to suffer from a problem -- see http://www.raspberrypi.org/forums/viewtopic.php?t=23544, so it is wise to update. 
+Shairport Sync runs well on the Raspberry Pi. It can drive the built-in sound card, and though you wouldn't mistake the output for HiFi, it's really not too shabby. USB-connected sound cards work well on the latest version of Raspian; however older versions of Raspian appear to suffer from a problem -- see http://www.raspberrypi.org/forums/viewtopic.php?t=23544, so it is wise to update. Shairport Sync works very well with the IQAudIO Pi-DAC -- see http://iqaudio.com/wp-content/uploads/2014/06/IQaudIO_Doc.pdf for details.
 
 Shairport Sync runs on Ubuntu and Debian inside VMWare Fusion 6 on a Mac, but synchronisation does not work -- possibly because the soundcard is being emulated.
 
@@ -120,15 +120,14 @@ The `-B`, `-E` and `-w` options allow you to specify a program to execute before
 * The `-V` option gives you version information about  Shairport Sync and then quits.
 * The `-k` option causes Shairport Sync to kill an existing Shairport Sync daemon and then quit. You need to have sudo privileges for this.
 * The `-v` option causes Shairport Sync to print some information and debug messages.
-* The `-d` option causes Shairport Sync to properly daemonise itself, going into the background. You may need sudo privileges for this.
+* The `-d` option causes Shairport Sync to properly daemonise itself, that is, to run in the background. You may need sudo privileges for this.
 
-Apart from arguments of Shairport Sync, there are also arguments for controlling the ALSA audio library. ALSA arguments follow a `--` on the command line -- see the examples below for layout of command line.
-
-These are important because here you specify the actual audio device you wish to use and you give Shairport Sync important information about the capabilities of the device. The important ALSA arguments are:
+Apart from arguments of Shairport Sync, there are also arguments for controlling the ALSA audio system. ALSA arguments follow a `--` on the command line -- see the examples below for layout of command line.
+These are important because you use them to specify the actual audio device you wish to use and you give Shairport Sync important information about the capabilities of the device. The important ALSA arguments are:
 
 * The `-d` option which allows you to specify the audio device to use. Typical values would be `default` (default), `hw:0`, `hw:1`, etc.
 
-The following two settings are very important for maximum performance. If your audio device has a hardware mixer and volume control, then Shairport Sync can use it to give faster response to volume and mute control and it can offload some work from the processor, potentially allowing a slower processor to work.
+The following two settings are very important for maximum performance. If your audio device has a hardware mixer and volume control, then Shairport Sync can use it to give faster response to volume and mute commands and it can offload some work from the processor.
 
 * The `-t` option allows you to specify the type of audio mixer -- `software` (default) or `hardware`.
 * The `-c` option allows you to specify the name of the volume control on the hardware mixer.
@@ -137,38 +136,44 @@ The init script at `/etc/init.d/shairport-sync` has a bare minimum set of option
 
 `-d`
 
-Basically all it does is put the program in the background ("daemon") mode, selects the default output device and uses software volume control. Here are some examples of complete commands. If you are modifying the init script, you don't need the `shairport-sync` at the start, but you should include the `-d` option, as it puts the program into daemon mode. There are some commented-out examples in the init script -- see lines 61--63.
+Basically all it does is put the program in daemon mode, selects the default output device and uses software volume control.
+
+*Examples*
+
+Here are some examples of complete commands. If you are modifying the init script, you don't need the `shairport-sync` at the start, but you should include the `-d` option, as it puts the program into daemon mode. There are some commented-out examples in the init script -- see lines 61--63.
+
+- `shairport-sync -d -a "Joe's Stereo" -- -d hw:0`
 
 This gives the service a particular name -- "Joe's Stereo" and specifies that audio device hw:0 be used.
-`shairport-sync -d -a "Joe's Stereo" -- -d hw:0`
+
 
 For best results -- including getting true mute and instant response to volume control and pause commands -- you should access the hardware volume controls. Use `amixer` or `alsamixer` or similar to discover the name of the volume controller to be used after the `-c` option.
 
 Here is an example for for a Raspberry Pi using its internal soundcard -- device hw:0 -- that drives the headphone jack:
 
-`shairport-sync -d -a "Mike's Boombox" -- -d hw:0 -t hardware -c PCM`
+- `shairport-sync -d -a "Mike's Boombox" -- -d hw:0 -t hardware -c PCM`
 
 Here is an example of using soxr-based resampling and driving a Topping TP30 Digital Amplifier, which has an integrated USB DAC and which is connected as audio device `hw:1`:
 
-`shairport-sync -d -a Kitchen -S soxr -- -d hw:1 -t hardware -c PCM`
+- `shairport-sync -d -a Kitchen -S soxr -- -d hw:1 -t hardware -c PCM`
 
 For a cheapo "3D Sound" USB card (Stereo output and input only) on a Raspberry Pi:
 
-`shairport-sync -d -a "Front Room" -- -d hw:1 -t hardware -c Speaker`
+- `shairport-sync -d -a "Front Room" -- -d hw:1 -t hardware -c Speaker`
 
 For a first generation Griffin iMic on a Raspberry Pi:
 
-`shairport-sync -d -a "Attic" -- -d hw:1 -t hardware -c PCM`
+- `shairport-sync -d -a "Attic" -- -d hw:1 -t hardware -c PCM`
 
 For an NSLU2, which has no internal soundcard, there appears to be a bug in ALSA -- you can not specify a device other than "default". Thus:
 
 On an NSLU2, to drive a first generation Griffin iMic:
 
-`shairport-sync -d -a "Den" -- -t hardware -c PCM`
+- `shairport-sync -d -a "Den" -- -t hardware -c PCM`
 
 On an NSLU2, to drive the "3D Sound" USB card:
 
-`shairport-sync -d -a "TV Room" -- -t hardware -c Speaker`
+- `shairport-sync -d -a "TV Room" -- -t hardware -c Speaker`
 
 Latency
 -------
@@ -184,7 +189,7 @@ Resynchronisation
 -------------
 Shairport Sync actively maintains synchronisation with the source. 
 If synchronisation is lost -- say due to a busy source or a congested network -- Shairport Sync will mute its output and resynchronise. The loss-of-sync threshold is a very conservative 50 ms -- i.e. the actual time and the expected time must differ by more than 50 ms to trigger a resynchronisation. Smaller disparities are corrected by insertions or deletions, as described above.
-You can vary the resync threshold, or turn resync off completely, with the `-r` opton.
+* You can vary the resync threshold, or turn resync off completely, with the `-r` opton.
 
 Some Statistics
 ---------------
@@ -206,4 +211,4 @@ For reference, a drift of one second per day is approximately 11.57 ppm. Left un
 
 It's not unusual to have resend requests, late packets and even missing packets if some part of the connection to the Shairport Sync device is over WiFi. Sometimes late packets can be asked for and received multiple times. Sometimes late packets are sent and arrive too late, but have already been sent and received in time, so weren't needed anyway...
 
-"min DAC queue size" is the minimum size the queue of samples in the output device's hardware buffer was measured at. It is meant to stand at 0.15 seconds = 6,615 samples, and will go low if the processor is very busy. If it goes below about 2,000 then it's a sign that the processor can't really keep up.
+"Min DAC queue size" is the minimum size the queue of samples in the output device's hardware buffer was measured at. It is meant to stand at 0.15 seconds = 6,615 samples, and will go low if the processor is very busy. If it goes below about 2,000 then it's a sign that the processor can't really keep up.
