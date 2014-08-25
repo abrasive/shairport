@@ -1,6 +1,14 @@
 Shairport Sync
 =============
-To see what's new in this version of Shairport Sync, please read the NEWS file.
+
+What's new in this version:
+-----
+* libsoxr resampling-based interpolation.
+* run (and wait for) programs before and after playing.
+* resync threshold control and disable.
+* version and build information.
+ 
+For a little more information, please read the NEWS file.
 
 Shairport Sync allows you to synchronise the audio coming from all your devices. Specifically, Shairport Sync allows you to set the "latency" -- the time between when a sound is sent and when it is played. This allows you to synchronise Shairport Sync devices reliably with other devices playing the same source. For example, synchronised multi-room audio is possible without difficulty.
 
