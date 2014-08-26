@@ -73,7 +73,7 @@ Shairport Sync runs on Ubuntu and Debian inside VMWare Fusion 6 on a Mac, but sy
 
 Shairport Sync works only with the ALSA back end. You can try compiling the other back ends in as you wish, but it definitely will not work properly with them. Maybe someday...
 
-One other difference from other versions of Shairport is that the Shairport Sync build process now uses GNU autotools and libtool to examine and configure the build environment -- very important for cross compilation. All previous versions looked in the current system to determine which packages were available, instead of looking at what packages were available in the target system.
+One other difference from other versions of Shairport is that the Shairport Sync build process uses GNU autotools and libtool to examine and configure the build environment -- very important for cross compilation. All previous versions looked in the current system to determine which packages were available, instead of looking at what packages were available in the target system.
 
 Building And Installing
 ---------------------
@@ -104,7 +104,7 @@ Debian, Ubuntu and Raspian users can get the basics with:
 
 Download Shairport Sync:
 
-`git clone -b 2.1 https://github.com/mikebrady/shairport-sync.git`
+`git clone https://github.com/mikebrady/shairport-sync.git`
 
 Next, `cd` into the shairport-sync directory and execute the following commands:
 
@@ -127,7 +127,7 @@ Run `$sudo make install` to install `shairport-sync` along with an init script w
 
 Configuring Shairport Sync
 --------
-Shairport Sync can mostly look after itself, so when you first install it, a default configuration is used which should work in almost any system with a sound card. If there is a problem, it will be noted in the logfile, normally `/etc/log/syslog`. However, to get the most out of your software and hardware, you need to adjust some of the settings.
+Shairport Sync installs a default configuration at /etc/init.d/shairport-sync (it won't replace an existing one) which should work in almost any system with a sound card. If there is a problem, it will be noted in the logfile, normally `/etc/log/syslog`. However, to get the most out of your software and hardware, you need to adjust some of the settings.
 
 To understand what follows, note that settings and parameters are passed to Shairport Sync through command line arguments. The purpose of the init script at `/etc/init.d/shairport-sync` is to launch or terminate Shairport Sync while passing the correct arguments to it. You are perfectly free to remove the init script and launch and terminate Shairport Sync yourself directly; indeed it is useful when you are troubleshooting the program. If you do launch it directly, make sure it isn't running already!
 
@@ -135,7 +135,7 @@ Don't forget you can launch Shairport Sync with the `-h` option to get some help
 
 These are the important options:
 
-The `-a` option allows you to specify the name Shairport Sync will use on the network. If you don't specify a name, the name `Shairport Sync on ...your computer's hostname` will be chosen.
+The `-a` option allows you to specify the name Shairport Sync will use on the network. If you don't specify a name, the name `Shairport Sync on ...your computer's hostname...` will be chosen.
 
 The `-S` option allows you to specify the kind of "stuffing" or interpolation to be used -- `basic` (default) for simple insertion/deletion  or `soxr` for smoother resampling-based interpolation.
 
