@@ -77,7 +77,7 @@ One other difference from other versions of Shairport is that the Shairport Sync
 
 Building And Installing
 ---------------------
-If you're interested in Shairport Sync for OpenWrt, there's an OpenWrt package at https://github.com/mikebrady/shairport (version 2.1 coming soon!). OpenWrt doesn't support the IQaudIO Pi-DAC.
+If you're interested in Shairport Sync for OpenWrt, there's an OpenWrt package at https://github.com/mikebrady/shairport-sync-for-openwrt. OpenWrt doesn't support the IQaudIO Pi-DAC.
 
 Otherwise, follow these instructions.
 
