@@ -98,7 +98,7 @@ Debian, Ubuntu and Raspian users can get the basics with:
 
 - `apt-get install autoconf libtool libdaemon-dev libasound2-dev`
 - `apt-get install avahi-daemon libavahi-client-dev` if you want to use Avahi (recommended).
-- `apt-get install libopenssl-dev` if you want to use OpenSSL and libcrypto, or use PolarSSL otherwise.
+- `apt-get install libssl-dev` if you want to use OpenSSL and libcrypto, or use PolarSSL otherwise.
 - `apt-get install libpolarssl-dev` if you want to use PolarSSL, or use OpenSSL/libcrypto otherwise.
 - `apt-get install libsoxr-dev` if you want support for libsoxr-based resampling. Not yet part of  Raspian.
 
