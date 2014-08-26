@@ -1,14 +1,38 @@
 Shairport Sync
 =============
 
-What's new in this version:
+Version 2.1:
 -----
-* libsoxr resampling-based interpolation.
-* run (and wait for) programs before and after playing.
-* resync threshold control and disable.
-* version and build information.
- 
-For a little more information, please read the NEWS file.
+
+* New features:
+
+	* Support for libsoxr. Libsoxr is the SoX Resampler library -- see http://sourceforge.net/projects/soxr/. Briefly, Shairport Sync keeps in step with the audio source by deleting or inserting frames of audio into the stream as needed. This "interpolation" is normally inaudible, but it can be heard in some circumstances. Libsoxr allows this interpolation to be done much more smoothly and subtly. You can optionally include libsoxr support when building Shairport Sync. The big problem with libsoxr is that it is very compute intensive -- specifically floating point compute intensive -- and many embedded devices aren't powerful enough. Another issue is libsoxr is not yet in all linux distributions, so you might have to build it yourself. Available via the -S option.
+	* Support for running (and optionally waiting for the completion of) programs before and after playing.  See the -B, -E and -w options.
+	* A new option to vary or turn off the resync threshold. See the -r option.
+	* Version and build options. See the -V option.
+	* Renamed program and init script. This is not exactly a big deal, but the name of the application itself and the default init script file have been renamed from "shairport" to "shairport-sync" to avoid confusion with other versions of shairport.
+	* PolarSSL can be used in place of OpenSSL and friends.
+	
+* Other stuff
+	* Tinysvcmdns works as an alternative to, say, Avahi, but is now [really] dropped if you don't select it. Saves about 100k.
+	* Lots of bug fixes.
+
+* Annoying things you should know about if you're updating from 2.0:
+	* Compile options have changed -- see the Building and Installing section below.
+	* The name of the program itself has changed from shairport to shairport-sync. You should remove the old version -- you can use `$which shairport` to locate it.
+	* The name of the init script file has changed from shairport to shairport-sync. You should remove the old one.
+
+Version 2.0
+----
+
+* New features:
+ * Audio synchronisation that works. The audio being produced by your Shairport Sync-powered device will stay in sync with the source. This allows you to synchronise Shairport Sync devices reliably with other devices playing the same source. For example, synchronised multi-room audio is possible without difficulty.
+ * True mute and instant response to mute and volume control changes -- this requires hardware mixer support, available on most audio devices. Without hardware mixer support, response is also faster than before -- around 0.15 seconds.
+ * Smoother volume control at the top and bottom of the range.
+ * Another source can not interrupt an existing source playing via Shairport Sync. it will be given a 'busy' signal.
+
+Overview
+------
 
 Shairport Sync allows you to synchronise the audio coming from all your devices. Specifically, Shairport Sync allows you to set the "latency" -- the time between when a sound is sent and when it is played. This allows you to synchronise Shairport Sync devices reliably with other devices playing the same source. For example, synchronised multi-room audio is possible without difficulty.
 
@@ -28,7 +52,9 @@ Shairport Sync does Audio Synchronisation
 Shairport Sync allows you to set a delay (a "latency") from when music is sent by iTunes or your iOS device to when it is played in the Shairport Sync audio device. The latency can be set to match the latency of other output devices playing the music (or video in the case of the AppleTV or Quicktime), achieving audio synchronisation. Shairport Sync uses extra timing information to stay synchronised with the source's time signals, eliminating "drift", where audio streams slowly drift out of synchronisation.
 Shairplay Sync automatically chooses a suitable latency for iTunes and for AirPlay devices such as the AppleTV.
 
-To stay synchronised, if an output device is running slow, Shairport Sync will delete frames of audio to allow it to keep up; if the device is running fast, Shairport Sync will insert frames to keep time. The number of frames inserted or deleted is so small as to be almost  inaudible. Frames are inserted or deleted as necessary at pseudorandom intervals. Alternatively, with libsoxr support, Shairport Sync can resample the audio feed to ensure the output device can keep up. Resampling is even less obtrusive than insertion and deletion but requires a good deal of processing power -- most embedded devices probably can't support it.
+To stay synchronised, if an output device is running slow, Shairport Sync will delete frames of audio to allow it to keep up; if the device is running fast, Shairport Sync will insert frames to keep time. The number of frames inserted or deleted is so small as to be almost  inaudible. Frames are inserted or deleted as necessary at pseudorandom intervals.
+
+Alternatively, with libsoxr support, Shairport Sync can resample the audio feed to ensure the output device can keep up. Resampling is even less obtrusive than insertion and deletion but requires a good deal of processing power -- most embedded devices probably can't support it.
 
 What else?
 --------------
