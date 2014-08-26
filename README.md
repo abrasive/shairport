@@ -26,7 +26,7 @@ Version 2.0
 ----
 
 * New features:
- * Audio synchronisation that works. The audio being produced by your Shairport Sync-powered device will stay in sync with the source. This allows you to synchronise Shairport Sync devices reliably with other devices playing the same source. For example, synchronised multi-room audio is possible without difficulty.
+ * Audio synchronisation that works. The audio being produced by a Shairport Sync-powered device will stay in sync with the source. This allows you to synchronise Shairport Sync devices reliably with other devices playing the same source. For example, synchronised multi-room audio is possible without difficulty.
  * True mute and instant response to mute and volume control changes -- this requires hardware mixer support, available on most audio devices. Without hardware mixer support, response is also faster than before -- around 0.15 seconds.
  * Smoother volume control at the top and bottom of the range.
  * Another source can not interrupt an existing source playing via Shairport Sync. it will be given a 'busy' signal.
