@@ -302,9 +302,6 @@ void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
   pthread_mutex_lock(&ab_mutex);
   
   time_of_last_audio_packet = get_absolute_time_in_ns();
-  //struct timespec tn;
-  //clock_gettime(CLOCK_MONOTONIC,&tn);
-  //time_of_last_audio_packet = ((uint64_t)tn.tv_sec<<32)+((uint64_t)tn.tv_nsec<<32)/1000000000;
   
   int rc = pthread_cond_signal(&flowcontrol);
   if (rc)
@@ -347,6 +344,18 @@ static abuf_t *buffer_get_frame(void) {
   int wait;
   int32_t dac_delay = 0;
   do {
+    // get the time
+		local_time_now = get_absolute_time_in_ns();    
+
+		// if 120 seconds have elapsed since the last audio packet was received, then we should stop
+		if ((time_of_last_audio_packet!=0) && (shutdown_requested==0)) {
+			if (local_time_now-time_of_last_audio_packet>=(uint64_t)120<<32) {
+				debug(1,"As Yeats almost said, \"Too long a silence / can make a stone of the heart\"");
+				rtsp_request_shutdown_stream();
+				shutdown_requested=1;
+			}
+		}
+  
     pthread_mutex_lock(&flush_mutex);
     if (flush_requested==1) {
       if (config.output->flush)
@@ -367,19 +376,6 @@ static abuf_t *buffer_get_frame(void) {
 				if (dac_delay==-1) {
 					debug(1,"Error getting dac_delay at start of loop.");
 					dac_delay=0;
-				}
-			}
-		
-			local_time_now = get_absolute_time_in_ns();    
-			//clock_gettime(CLOCK_MONOTONIC,&tn);
-			//local_time_now=((uint64_t)tn.tv_sec<<32)+((uint64_t)tn.tv_nsec<<32)/1000000000;
-
-			// if 120 seconds have elapsed since the last audio packet was received, then we should stop
-			if ((time_of_last_audio_packet!=0) && (shutdown_requested==0)) {
-				if (local_time_now-time_of_last_audio_packet>=(uint64_t)120<<32) {
-					debug(1,"As Yeats almost said, \"Too long a silence / can make a stone of the heart\"");
-					rtsp_request_shutdown_stream();
-					shutdown_requested=1;
 				}
 			}
 
