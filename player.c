@@ -750,6 +750,13 @@ static void *player_thread_func(void *arg) {
             // debug(1,"DAC buffer too short to allow stuffing.");
             amount_to_stuff=0;
           }
+
+          // try to keep the corrections definitely below 1 in 1000 audio frames
+          if (amount_to_stuff) {
+            uint32_t x = random()%1000;
+            if (x>352)
+              amount_to_stuff=0;
+          }
             
           if ((amount_to_stuff==0) && (fix_volume==0x10000)) {
           	// if no stuffing needed and no volume adjustment, then
