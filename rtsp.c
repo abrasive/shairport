@@ -70,7 +70,7 @@ static int is_playing = 0;
 // it monitors the request variable (at least when interrupted)
 static pthread_mutex_t playing_mutex = PTHREAD_MUTEX_INITIALIZER;
 static int please_shutdown = 0;
-static pthread_t playing_thread = NULL;
+static pthread_t playing_thread = 0;
 
 typedef struct {
     int fd;
