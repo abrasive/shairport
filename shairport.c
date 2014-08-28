@@ -37,6 +37,11 @@
 #include "rtsp.h"
 #include "mdns.h"
 #include "getopt_long.h"
+#include "metadata.h"
+
+static const char *version =
+    #include "version.h"
+    ;
 
 static void log_setup();
 
@@ -87,6 +92,7 @@ void usage(char *progname) {
     printf("    -h, --help          show this help\n");
     printf("    -p, --port=PORT     set RTSP listening port\n");
     printf("    -a, --name=NAME     set advertised name\n");
+    printf("    -k, --password=PW   require password to stream audio\n");
     printf("    -b FILL             set how full the buffer must be before audio output\n");
     printf("                        starts. This value is in frames; default %d\n", config.buffer_start_fill);
     printf("    -d, --daemon        fork (daemonise). The PID of the child process is\n");
@@ -100,9 +106,10 @@ void usage(char *progname) {
     printf("    -B, --on-start=COMMAND  run a shell command when playback begins\n");
     printf("    -E, --on-stop=COMMAND   run a shell command when playback ends\n");
     printf("    -w, --wait-cmd          block while the shell command(s) run\n");
+    printf("    -M, --meta-dir=DIR      set a directory to write metadata and album cover art to\n");
 
     printf("    -o, --output=BACKEND    select audio output method\n");
-    printf("    -m, --mdns=BACKEND      force the use of BACKEND to advertize the service\n");
+    printf("    -m, --mdns=BACKEND      force the use of BACKEND to advertise the service\n");
     printf("                            if no mdns provider is specified,\n");
     printf("                            shairport tries them all until one works.\n");
 
@@ -117,30 +124,34 @@ int parse_options(int argc, char **argv) {
     setenv("POSIXLY_CORRECT", "", 1);
 
     static struct option long_options[] = {
-        {"help",    no_argument,        NULL, 'h'},
-        {"daemon",  no_argument,        NULL, 'd'},
-        {"pidfile", required_argument,  NULL, 'P'},
-        {"log",     required_argument,  NULL, 'l'},
-        {"error",   required_argument,  NULL, 'e'},
-        {"port",    required_argument,  NULL, 'p'},
-        {"name",    required_argument,  NULL, 'a'},
-        {"output",  required_argument,  NULL, 'o'},
-        {"on-start",required_argument,  NULL, 'B'},
-        {"on-stop", required_argument,  NULL, 'E'},
-        {"wait-cmd",no_argument,        NULL, 'w'},
-        {"mdns",    required_argument,  NULL, 'm'},
-        {NULL, 0, NULL, 0}
+        {"help",      no_argument,        NULL, 'h'},
+        {"daemon",    no_argument,        NULL, 'd'},
+        {"pidfile",   required_argument,  NULL, 'P'},
+        {"log",       required_argument,  NULL, 'l'},
+        {"error",     required_argument,  NULL, 'e'},
+        {"port",      required_argument,  NULL, 'p'},
+        {"name",      required_argument,  NULL, 'a'},
+        {"password",  required_argument,  NULL, 'k'},
+        {"output",    required_argument,  NULL, 'o'},
+        {"on-start",  required_argument,  NULL, 'B'},
+        {"on-stop",   required_argument,  NULL, 'E'},
+        {"wait-cmd",  no_argument,        NULL, 'w'},
+        {"meta-dir",  required_argument,  NULL, 'M'},
+        {"mdns",      required_argument,  NULL, 'm'},
+        {NULL,        0,                  NULL,   0}
     };
 
     int opt;
     while ((opt = getopt_long(argc, argv,
-                              "+hdvP:l:e:p:a:o:b:B:E:wm:",
+                              "+hdvP:l:e:p:a:k:o:b:B:E:M:wm:",
                               long_options, NULL)) > 0) {
         switch (opt) {
             default:
-            case 'h':
                 usage(argv[0]);
                 exit(1);
+            case 'h':
+                usage(argv[0]);
+                exit(0);
             case 'd':
                 config.daemonise = 1;
                 break;
@@ -156,6 +167,9 @@ int parse_options(int argc, char **argv) {
             case 'o':
                 config.output_name = optarg;
                 break;
+            case 'k':
+                config.password = optarg;
+                break;
             case 'b':
                 config.buffer_start_fill = atoi(optarg);
                 break;
@@ -167,6 +181,9 @@ int parse_options(int argc, char **argv) {
                 break;
             case 'w':
                 config.cmd_blocking = 1;
+                break;
+            case 'M':
+                config.meta_dir = optarg;
                 break;
             case 'P':
                 config.pidfile = optarg;
@@ -255,6 +272,8 @@ void log_setup() {
 }
 
 int main(int argc, char **argv) {
+    printf("Starting Shairport %s\n", version);
+
     signal_setup();
     memset(&config, 0, sizeof(config));
 
@@ -300,6 +319,8 @@ int main(int argc, char **argv) {
     MD5_Final(ap_md5, &ctx);
     memcpy(config.hw_addr, ap_md5, sizeof(config.hw_addr));
 
+    if (config.meta_dir)
+        metadata_open();
 
     rtsp_listen_loop();
 
