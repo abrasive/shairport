@@ -609,16 +609,20 @@ static int stuff_buffer_soxr(short *inptr, short *outptr, int stuff) {
 
     const int gpm = 7;
     
-    // keep the last (dpm) samples, to mitigate the Gibbs phenomenon
-    //for (i=0;i<gpm;i++)
-    //	op[frame_size+stuff-1-i]=ip[frame_size+stuff-1-i];
-
     // keep the first (dpm) samples, to mitigate the Gibbs phenomenon
     for (i=0;i<gpm;i++) {
       *op++ = *ip++;
       *op++ = *ip++;
     }
-  
+
+    // keep the last (dpm) samples, to mitigate the Gibbs phenomenon
+    op=outptr+(frame_size+stuff-gpm)*sizeof(short);
+    ip=inptr+(frame_size-gpm)*sizeof(short);
+    for (i=0;i<gpm;i++) {
+      *op++ = *ip++;
+      *op++ = *ip++;
+    }
+
     // finally, adjust the volume, if necessary
     if (volume!=1.0) {
       // pthread_mutex_lock(&vol_mutex);
