@@ -607,7 +607,7 @@ static int stuff_buffer_soxr(short *inptr, short *outptr, int stuff) {
     if (odone > frame_size + 1)
       die("odone = %d!\n", odone);
 
-    const int gpm = 7;
+    const int gpm = 5;
     
     // keep the first (dpm) samples, to mitigate the Gibbs phenomenon
     for (i=0;i<gpm;i++) {
