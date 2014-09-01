@@ -8,7 +8,7 @@ Version 2.1.1:
 	* Allow -B and -E commands to have arguments, e.g. -B '/usr/bin/logger "Starting to play"' is now legitimate.
 
 * Annoying things you should know about if you're updating from 2.1:
-	* Build now depends on libpopt-dev -- see "Building and Installing" below.
+	* Build now depends on the library libpopt -- see "Building and Installing" below.
 
 Version 2.1:
 -----
