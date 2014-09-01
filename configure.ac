@@ -15,6 +15,7 @@ AC_PROG_INSTALL
 AC_CHECK_LIB([daemon],[daemon_log], , AC_MSG_ERROR(libdaemon needed for Shairport Sync!))
 AC_CHECK_LIB([pthread],[pthread_create])
 AC_CHECK_LIB([m],[exp])
+AC_CHECK_LIB([popt],[poptGetContext])
 
 # Look for polarssl flag
 AC_ARG_WITH(polarssl, [  --with-polarssl = choose polarssl for encryption services (choose this or openssl)], [
