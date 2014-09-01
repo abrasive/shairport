@@ -1,12 +1,21 @@
 Shairport Sync
 =============
 
+Version 2.1.1:
+-----
+
+* Enhancements
+	* Allow -B and -E commands to have arguments, e.g. -B '/usr/bin/logger "Starting to play"' is now legitimate.
+
+* Annoying things you should know about if you're updating from 2.1:
+	* Build now depends on libpopt-dev -- see "Building and Installing" below.
+
 Version 2.1:
 -----
 
 * New features:
 
-	* Support for libsoxr. Libsoxr is the SoX Resampler library -- see http://sourceforge.net/projects/soxr/. Briefly, Shairport Sync keeps in step with the audio source by deleting or inserting frames of audio into the stream as needed. This "interpolation" is normally inaudible, but it can be heard in some circumstances. Libsoxr allows this interpolation to be done much more smoothly and subtly. You can optionally include libsoxr support when building Shairport Sync. The big problem with libsoxr is that it is very compute intensive -- specifically floating point compute intensive -- and many embedded devices aren't powerful enough. Another issue is libsoxr is not yet in all linux distributions, so you might have to build it yourself. Available via the -S option.
+	* Support for libsoxr, the SoX Resampler library -- see http://sourceforge.net/projects/soxr/. Briefly, Shairport Sync keeps in step with the audio source by deleting or inserting frames of audio into the stream as needed. This "interpolation" is normally inaudible, but it can be heard in some circumstances. Libsoxr allows this interpolation to be done much more smoothly and subtly. You can optionally include libsoxr support when building Shairport Sync. The big problem with libsoxr is that it is very compute intensive -- specifically floating point compute intensive -- and many embedded devices aren't powerful enough. Another issue is libsoxr is not yet in all linux distributions, so you might have to build it yourself. Available via the -S option.
 	* Support for running (and optionally waiting for the completion of) programs before and after playing.  See the -B, -E and -w options.
 	* A new option to vary or turn off the resync threshold. See the -r option.
 	* Version and build options. See the -V option.
@@ -88,6 +97,7 @@ The following libraries are required:
 * libdaemon
 * autoconf
 * libtool
+* libpopt
 
 Optional:
 * libsoxr
@@ -96,7 +106,7 @@ Many linux distributions have Avahi and OpenSSL already in place, so normally it
 
 Debian, Ubuntu and Raspian users can get the basics with:
 
-- `apt-get install autoconf libtool libdaemon-dev libasound2-dev`
+- `apt-get install autoconf libtool libdaemon-dev libasound2-dev libpopt-dev`
 - `apt-get install avahi-daemon libavahi-client-dev` if you want to use Avahi (recommended).
 - `apt-get install libssl-dev` if you want to use OpenSSL and libcrypto, or use PolarSSL otherwise.
 - `apt-get install libpolarssl-dev` if you want to use PolarSSL, or use OpenSSL/libcrypto otherwise.
