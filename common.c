@@ -32,6 +32,7 @@
 #include <errno.h>
 #include <time.h>
 #include <unistd.h>
+#include <popt.h>
 
 #include <assert.h>
 #include "common.h"
@@ -317,21 +318,27 @@ void command_start(void) {
 		/*Spawn a child to run the program.*/
 		pid_t pid=fork();
 		if (pid==0) { /* child process */
-			char *argv[]={config.cmd_start,NULL};
-			debug(1,"Executing start command %s",config.cmd_start);
-			execv(config.cmd_start,argv);
-			warn("Execution of -B command failed to start");
-			debug(1,"Error executing start command %s",config.cmd_start);
-			exit(127); /* only if execv fails */
+		  int argC;
+		  char **argV;
+		  // debug(1,"on-start command found.");
+		  if (poptParseArgvString(config.cmd_start,&argC,(const char ***)&argV)!=0) // note that argV should be free()'d after use, but we expect this fork to exit eventually.
+		    debug(1,"Can't decipher on-start command arguments");
+      else {		  
+			  // debug(1,"Executing on-start command %s with %d arguments.",argV[0],argC);
+			  execv(argV[0],argV);
+			  warn("Execution of on-start command failed to start");
+			  debug(1,"Error executing on-start command %s",config.cmd_start);
+			  exit(127); /* only if execv fails */
+			}
 		} else {
 			if (config.cmd_blocking) { /* pid!=0 means parent process and if blocking is true, wait for process to finish */
 				pid_t rc = waitpid(pid,0,0); /* wait for child to exit */
 				if (rc!=pid) {
-					warn("Execution of -B command returned an error.");
-					debug(1,"Start command %s finished with error %d",config.cmd_start,errno);
+					warn("Execution of on-start command returned an error.");
+					debug(1,"on-start command %s finished with error %d",config.cmd_start,errno);
 				}
 			}
-			debug(1,"Continue after \"start\" command",config.cmd_start,errno);
+			// debug(1,"Continue after on-start command");
 		}
 	}
 }
@@ -341,21 +348,27 @@ void command_stop(void) {
 		/*Spawn a child to run the program.*/
 		pid_t pid=fork();
 		if (pid==0) { /* child process */
-			char *argv[]={config.cmd_stop,NULL};
-			debug(1,"Executing stop command %s",config.cmd_stop);
-			execv(config.cmd_stop,argv);
-			warn("Execution of -E command failed to start");
-			debug(1,"Error executing stop command %s",config.cmd_stop);
-			exit(127); /* only if execv fails */
+		  int argC;
+		  char **argV;
+		  // debug(1,"on-stop command found.");
+		  if (poptParseArgvString(config.cmd_stop,&argC,(const char ***)&argV)!=0) // note that argV should be free()'d after use, but we expect this fork to exit eventually.
+		    debug(1,"Can't decipher on-stop command arguments");
+      else {
+			  // debug(1,"Executing on-stop command %s",config.cmd_stop);
+			  execv(argV[0],argV);
+			  warn("Execution of on-stop command failed to start");
+			  debug(1,"Error executing on-stop command %s",config.cmd_stop);
+			  exit(127); /* only if execv fails */
+			}
 		} else {
 			if (config.cmd_blocking) { /* pid!=0 means parent process and if blocking is true, wait for process to finish */
 				pid_t rc = waitpid(pid,0,0); /* wait for child to exit */
 				if (rc!=pid) {
-					warn("Execution of -E command returned an error.");
+					warn("Execution of on-stop command returned an error.");
 					debug(1,"Stop command %s finished with error %d",config.cmd_stop,errno);
 				}
 			}
-			debug(1,"Continue after \"stop\" command",config.cmd_stop,errno);
+			// debug(1,"Continue after on-stop command");
 		}
 	}
 }
