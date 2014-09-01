@@ -156,7 +156,7 @@ void usage(char *progname) {
     printf("    -k, --kill              kill the existing shairport daemon.\n");
     printf("    -B, --on-start=PROGRAM  run PROGRAM when playback is about to begin.\n");
     printf("    -E, --on-stop=PROGRAM   run PROGRAM when playback has ended.\n");
-    printf("                            For -B and -E options, specify the full path to the program, which must take no arguments.\n");
+    printf("                            For -B and -E options, specify the full path to the program, e.g. /usr/bin/logger.\n");
     printf("                            Executable scripts work, but must have #!/bin/sh (or whatever) in the headline.\n");
     printf("    -w, --wait-cmd          wait until the -B or -E programs finish before continuing\n");
     printf("    -o, --output=BACKEND    select audio output method\n");
