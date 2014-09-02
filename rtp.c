@@ -51,9 +51,10 @@ typedef struct {
     long long delay;
 } ntp_offset_t;
 static ntp_offset_t ntp_cache[MAXCACHESIZE];
-static long long ntp_offset;
-static int ntp_cache_size;
-static float drift_est;
+static long long ntp_offset, ntp_offset_error;
+static int ntp_cache_size, drift_est_size;
+static float drift_est, drift_est_lp;
+static long long last_update_time;
 
 // only one RTP session can be active at a time.
 static int running = 0;
@@ -93,51 +94,21 @@ static void get_current_time(struct timespec *tsp) {
 
 static void reset_ntp_cache() {
     ntp_offset = 0;
+    ntp_offset_error = 0;
     ntp_cache_size = 0;
+    drift_est_size = 0;
     drift_est = 0.0;
+    last_update_time = 0;
+    drift_est_lp = 0.0;
 }
 
 long long get_ntp_offset() {
     return ntp_offset;
 }
 
-
-static void line_fit(float xvalue[], float yvalue[], int number, float *a, float *b) {
-    int i;
-    float sumx=0, sumy=0, sumxy=0, sumx2=0;
-    float productxy[MAXCACHESIZE], square[MAXCACHESIZE];
-    float denominator;
-
-    for(i=0;i<number;i++) {
-        sumx = sumx + xvalue[i];
-    }
-    for(i=0;i<number;i++) {
-        sumy = sumy + yvalue[i];
-    }
-    for(i=0;i<number;i++) {
-        productxy[i] = xvalue[i] * yvalue[i];
-        sumxy = sumxy + productxy[i];
-    }
-    for(i=0;i<number;i++) {
-        square[i] = xvalue[i] * xvalue[i];
-        sumx2 = sumx2 + square[i];
-    }
-
-    debug(3, "x         y\n");
-    for(i=0;i<number;i++) {
-        debug(3, "%0.1f         %0.1f\n", xvalue[i], yvalue[i]);
-    }
-    denominator = (number * sumx2) - (sumx * sumx);
-    *a = ((sumy * sumx2) - (sumx * sumxy)) / denominator;
-    *b = ((number * sumxy) - (sumx * sumy)) / denominator;
-    debug(2, "y = %.4fx + %.4f\n", *b, *a);
-}
-
 static void update_ntp_cache(long long offset, long long arrival_time, long long delay) {
     int i, d, mindelayindex;
-    long long delaylimit, totaloffset, totaldelay;
-    float xvalue[MAXCACHESIZE], yvalue[MAXCACHESIZE];
-    float a, b;
+    long long delaylimit, totaloffset;
 
     // make room for the new sample
     // move everything one up
@@ -172,52 +143,55 @@ static void update_ntp_cache(long long offset, long long arrival_time, long long
     delaylimit = (ntp_cache[mindelayindex].delay / 3) * 4 + 3000LL;
     debug(2, "mindelay: %lld, delaylimit: %lld\n", mindelay, delaylimit);
 
-    // estimate drift using line fit
-    d = 0;
-    a = b = 0.0;
-    for (i = 0; i < ntp_cache_size; i++) {
-        if (ntp_cache[i].delay < delaylimit) {
-            yvalue[d] = (float)(ntp_cache[i].offset - ntp_cache[mindelayindex].offset);
-            xvalue[d] = (float)(ntp_cache[i].arrival_time - arrival_time);
-            d++;
-        }
-        debug(3, "ntp[%d]: %lld, delay: %lld, d: %d\n", i, ntp_cache[i].offset, ntp_cache[i].delay, d);
-    }
-    if (d > 4) {
-        line_fit(xvalue, yvalue, d, &a, &b);
+    // dump raw time
+    i = 0;
+    while (ntp_cache[i].delay >= delaylimit)
+        i++;
+    debug(2, "ntp: raw: %lld, local: %lld\n", ntp_cache[i].offset, arrival_time);
 
-        float yerror=0.0;
-        for(i = 0; i < d; i++) {
-            yerror = fmax(yerror, fabs(yvalue[i] - (b * xvalue[i] + a)));
+    // predict offset
+    // if the time since the last timestamp is short, we are still starting up: just average
+    double time_elapsed;
+    long long last_offset = ntp_offset;
+    time_elapsed = (double)(arrival_time - last_update_time);
+    if ((time_elapsed < 1000000.0) || (ntp_cache_size <= 3)) {
+        totaloffset = 0;
+        d = 0;
+        for (i = 0; i < ntp_cache_size; i++) {
+            if (ntp_cache[i].delay < delaylimit) {
+                totaloffset += ntp_cache[i].offset - ntp_cache[mindelayindex].offset;
+                d++;
+            }
+            debug(2, "ntp[%d]: %lld, d: %d, total: %lld\n", i, ntp_cache[i].offset, d, totaloffset);
         }
-        debug(2, "max yerror: %0.1f\n", yerror);
-        if (yerror < 1000.0)
-            drift_est = drift_est * 0.8 + b * 0.2;
-        else
-            debug(2, "Not updating drift estimate: yerror too big: %0.1f\n", yerror);
-    }
-    debug(2, "drift_est: %f, b: %f\n", drift_est, b);
-
-    // 'good' delay avg
-    // take complete cache
-    totaloffset = 0;
-    totaldelay = 0;
-    d = 0;
-    for (i = 0; i < ntp_cache_size; i++) {
-        if (ntp_cache[i].delay < delaylimit) {
-            totaloffset += ntp_cache[i].offset - ntp_cache[mindelayindex].offset;
-            totaldelay += arrival_time - ntp_cache[i].arrival_time;
-            d++;
+        ntp_offset = (totaloffset / d) + ntp_cache[mindelayindex].offset;
+    } else {
+        // update the drift estimate
+        if (delay < delaylimit) {
+            double alpha;
+            i = ntp_cache_size;
+            // find oldest good time stamp
+            while (ntp_cache[i].delay >= delaylimit)
+                i--;
+            if (drift_est_size < 16)
+                drift_est_size++;
+            // progressively stiffen the lpf
+            alpha = 1.0 / drift_est_size;
+            drift_est_lp = ((double)(offset - last_offset) / time_elapsed) * alpha + drift_est_lp * (1 - alpha);
         }
-        debug(3, "ntp[%d]: %lld, delay: %lld, d: %d, total: %lld\n", i, ntp_cache[i].offset, ntp_cache[i].delay, d, totaloffset);
-    }
 
-    totaldelay /= d;
-    ntp_offset = (totaloffset / d) + ntp_cache[mindelayindex].offset;
-    debug(3, "ntp: offset: %lld, d: %d, delay %lld\n", ntp_offset, d, totaldelay);
-    totaldelay = (long long)(drift_est * totaldelay);
-    ntp_offset += totaldelay;
-    debug(2,"ntp: mean: %lld, bump: %lld\n", ntp_offset, totaldelay);
+        // estimate the next timestamp
+        ntp_offset += (long long)(time_elapsed * drift_est_lp);
+
+        // now calculate error integral and compensate for long-term drift
+        if (delay < delaylimit) {
+            ntp_offset_error += offset - ntp_offset;
+        }
+        ntp_offset += ntp_offset_error / 128;
+        debug(2, "est bump: %lld, %lld\n", (long long)(time_elapsed * drift_est_lp), ntp_offset - last_offset);
+    }
+    last_update_time = arrival_time;
+    debug(2,"ntp: pre: %lld, error: %lld, drift_est_lp: %f, %lld\n", ntp_offset, ntp_offset_error, drift_est_lp, ((double)(offset - last_offset) / time_elapsed));
 }
 
 static long long tspk_to_us(struct timespec tspk) {
