@@ -164,6 +164,7 @@ void usage(char *progname) {
     printf("                            if no mdns provider is specified,\n");
     printf("                            shairport tries them all until one works.\n");
     printf("    -r, --resync=THRESHOLD  resync if error exceeds this number of frames. Set to 0 to stop resyncing.\n");
+    printf("    -t, --timeout=SECONDS   go back to idle mode from play mode after a break in communications of this many seconds (default 120). Set to 0 never to exit play mode.\n");
 
     printf("\n");
     mdns_ls_backends();
@@ -193,19 +194,23 @@ int parse_options(int argc, char **argv) {
         {"AirPlayLatency", required_argument,  NULL, 'A'},
         {"iTunesLatency", required_argument,  NULL, 'i'},
         {"resync",    required_argument,  NULL, 'r'},
+        {"timeout",    required_argument,  NULL, 't'},
         {NULL, 0, NULL, 0}
     };
 
     int opt;
     while ((opt = getopt_long(argc, argv,
-                              "+hdvVkp:a:o:b:B:E:wm:L:S:A:i:r:",
+                              "+hdvVkp:a:o:b:B:E:wm:L:S:A:i:r:t:",
                               long_options, NULL)) > 0) {
         switch (opt) {       
         // Note -- Version, Kill and Help done separately
             default:
+            case 't':
+            	config.timeout = atoi(optarg);
+            	break;
             case 'r':
-            		config.resyncthreshold = atoi(optarg);
-            		break;
+            	config.resyncthreshold = atoi(optarg);
+            	break;
             case 'd':
                 config.daemonise = 1;
                 break;
@@ -359,7 +364,8 @@ int main(int argc, char **argv) {
     config.userSuppliedLatency = 0; // zero means none supplied
     config.iTunesLatency = 99400; // this seems to work pretty well for iTunes -- two left-ear headphones, one from the iMac jack, one from an NSLU2 running a cheap "3D Sound" USB Soundcard
     config.AirPlayLatency = 88200; // this seems to work pretty well for AirPlay -- Syncs sound and vision on AppleTV, but also used for iPhone/iPod/iPad sources
-    config.resyncthreshold = 441*5; // this number of frames is 50 ms.
+    config.resyncthreshold = 441*5; // this number of frames is 50 ms
+    config.timeout = 120; // this number of seconds to wait for [more] audio before switching to idle.
     config.buffer_start_fill = 220;
     config.port = 5000;
     config.packet_stuffing = ST_basic; // simple interpolation or deletion
@@ -374,8 +380,7 @@ int main(int argc, char **argv) {
     // mDNS supports maximum of 63-character names (we append 13).
     if (strlen(config.apname) > 50)
         die("Supplied name too long (max 50 characters)");
-        
-    
+   
     /* here, daemonise with libdaemon */
     
     if (config.daemonise) {

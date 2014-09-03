@@ -347,9 +347,10 @@ static abuf_t *buffer_get_frame(void) {
     // get the time
 		local_time_now = get_absolute_time_in_ns();    
 
-		// if 120 seconds have elapsed since the last audio packet was received, then we should stop
-		if ((time_of_last_audio_packet!=0) && (shutdown_requested==0)) {
-			if (local_time_now-time_of_last_audio_packet>=(uint64_t)120<<32) {
+		// if config.timeout (default 120) seconds have elapsed since the last audio packet was received, then we should stop.
+    // config.timeout of zero means don't check..., but iTunes may be confused by a long gap followed by a resumption...
+		if ((time_of_last_audio_packet!=0) && (shutdown_requested==0) && (config.timeout!=0)) {
+			if (local_time_now-time_of_last_audio_packet>=config.timeout<<32) {
 				debug(1,"As Yeats almost said, \"Too long a silence / can make a stone of the heart\"");
 				rtsp_request_shutdown_stream();
 				shutdown_requested=1;
