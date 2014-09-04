@@ -63,7 +63,6 @@
 
 // Mike Brady's part...
 static pthread_mutex_t play_lock = PTHREAD_MUTEX_INITIALIZER;
-static int is_playing = 0;
 
 
 // only one thread is allowed to use the player at once.
@@ -536,73 +535,73 @@ static void handle_set_parameter(rtsp_conn_info *conn,
 
 static void handle_announce(rtsp_conn_info *conn,
                             rtsp_message *req, rtsp_message *resp) {
-    if (pthread_mutex_trylock(&play_lock) == 0) {
-      char *paesiv = NULL;
-      char *prsaaeskey = NULL;
-      char *pfmtp = NULL;
-      char *cp = req->content;
-      int cp_left = req->contentlength;
-      char *next;
-      while (cp_left && cp) {
-          next = nextline(cp, cp_left);
-          cp_left -= next-cp;
+  // allow a session to be interrupted if the timeout is set to zero
+  if ((config.timeout==0) || (pthread_mutex_trylock(&play_lock) == 0)) {
+    char *paesiv = NULL;
+    char *prsaaeskey = NULL;
+    char *pfmtp = NULL;
+    char *cp = req->content;
+    int cp_left = req->contentlength;
+    char *next;
+    while (cp_left && cp) {
+      next = nextline(cp, cp_left);
+      cp_left -= next-cp;
 
-          if (!strncmp(cp, "a=fmtp:", 7))
-              pfmtp = cp+7;
+      if (!strncmp(cp, "a=fmtp:", 7))
+          pfmtp = cp+7;
 
-          if (!strncmp(cp, "a=aesiv:", 8))
-              paesiv = cp+8;
+      if (!strncmp(cp, "a=aesiv:", 8))
+          paesiv = cp+8;
 
-          if (!strncmp(cp, "a=rsaaeskey:", 12))
-              prsaaeskey = cp+12;
+      if (!strncmp(cp, "a=rsaaeskey:", 12))
+          prsaaeskey = cp+12;
 
-          cp = next;
-      }
+      cp = next;
+    }
 
-      if (!paesiv || !prsaaeskey || !pfmtp) {
-          warn("required params missing from announce");
-          return;
-      }
+    if (!paesiv || !prsaaeskey || !pfmtp) {
+      warn("required params missing from announce");
+      return;
+    }
 
-      int len, keylen;
-      uint8_t *aesiv = base64_dec(paesiv, &len);
-      if (len != 16) {
-          warn("client announced aeskey of %d bytes, wanted 16", len);
-          free(aesiv);
-          return;
-      }
-      memcpy(conn->stream.aesiv, aesiv, 16);
+    int len, keylen;
+    uint8_t *aesiv = base64_dec(paesiv, &len);
+    if (len != 16) {
+      warn("client announced aeskey of %d bytes, wanted 16", len);
       free(aesiv);
+      return;
+    }
+    memcpy(conn->stream.aesiv, aesiv, 16);
+    free(aesiv);
 
-      uint8_t *rsaaeskey = base64_dec(prsaaeskey, &len);
-      uint8_t *aeskey = rsa_apply(rsaaeskey, len, &keylen, RSA_MODE_KEY);
-      free(rsaaeskey);
-      if (keylen != 16) {
-          warn("client announced rsaaeskey of %d bytes, wanted 16", keylen);
-          free(aeskey);
-          return;
-      }
-      memcpy(conn->stream.aeskey, aeskey, 16);
+    uint8_t *rsaaeskey = base64_dec(prsaaeskey, &len);
+    uint8_t *aeskey = rsa_apply(rsaaeskey, len, &keylen, RSA_MODE_KEY);
+    free(rsaaeskey);
+    if (keylen != 16) {
+      warn("client announced rsaaeskey of %d bytes, wanted 16", keylen);
       free(aeskey);
+      return;
+    }
+    memcpy(conn->stream.aeskey, aeskey, 16);
+    free(aeskey);
 
-      int i;
-      for (i=0; i<sizeof(conn->stream.fmtp)/sizeof(conn->stream.fmtp[0]); i++)
-          conn->stream.fmtp[i] = atoi(strsep(&pfmtp, " \t"));
-      
-      char *hdr = msg_get_header(req, "X-Apple-Client-Name");
+    int i;
+    for (i=0; i<sizeof(conn->stream.fmtp)/sizeof(conn->stream.fmtp[0]); i++)
+      conn->stream.fmtp[i] = atoi(strsep(&pfmtp, " \t"));
+    
+    char *hdr = msg_get_header(req, "X-Apple-Client-Name");
+    if (hdr)
+      debug(1,"Play connection from \"%s\".",hdr);
+    else {
+      hdr = msg_get_header(req, "User-Agent");
       if (hdr)
         debug(1,"Play connection from \"%s\".",hdr);
-      else {
-        hdr = msg_get_header(req, "User-Agent");
-        if (hdr)
-          debug(1,"Play connection from \"%s\".",hdr);
-      }
-
-      resp->respcode = 200;
-    } else {
-      resp->respcode = 453;
-      debug(1,"Already playing.");
     }
+    resp->respcode = 200;
+  } else {
+    resp->respcode = 453;
+    debug(1,"Already playing.");
+  }
 }
 
 
