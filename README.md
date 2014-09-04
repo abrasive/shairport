@@ -6,7 +6,7 @@ Version 2.1.1:
 
 * Enhancements
 	* Add new -t or --timeout option. If an audio source disappears without warning, the play session automatically terminates after a timeout period (default 120 seconds) and the device becomes available for new play requests again.
-This option allows you to set the timeout period in seconds. Setting the timeout period to 0 disables the feature, so that a play session will never timeout, even if the source disappears for a long period. This would mean that Shairport Sync would always appear busy, and refuse to accept new play requests, so use with care.
+This option allows you to set the timeout period in seconds. In addition, setting the timeout period to 0 means that play requests -- say from other devices on the network -- can interrupt and terminate the current session. In other words, the "busy" feature of the device -- being not available to another player while playing from an existing source -- is turned off. 
 	* Allow -B and -E commands to have arguments, e.g. -B '/usr/bin/logger "Starting to play"' is now legitimate.
 
 * Annoying things you should know about if you're updating from 2.1:
