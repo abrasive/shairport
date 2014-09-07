@@ -421,12 +421,12 @@ double vol2attn(double vol, long max_db, long min_db) {
   return vol_setting;
 }
 
-uint64_t get_absolute_time_in_ns() {
-	uint64_t time_now_ns;
+uint64_t get_absolute_time_in_fp() {
+	uint64_t time_now_fp;
 #ifdef COMPILE_FOR_LINUX
 	struct timespec tn;
   clock_gettime(CLOCK_MONOTONIC,&tn);
-  time_now_ns=((uint64_t)tn.tv_sec<<32)+((uint64_t)tn.tv_nsec<<32)/1000000000;
+  time_now_fp=((uint64_t)tn.tv_sec<<32)+((uint64_t)tn.tv_nsec<<32)/1000000000;
 #endif
 #ifdef COMPILE_FOR_OSX
 	uint64_t        time_now_mach;
@@ -438,7 +438,7 @@ uint64_t get_absolute_time_in_ns() {
 	// If this is the first time we've run, get the timebase.
 	// We can use denom == 0 to indicate that sTimebaseInfo is 
 	// uninitialised because it makes no sense to have a zero 
-	// denominator is a fraction.
+	// denominator in a fraction.
 
 	if ( sTimebaseInfo.denom == 0 ) {
 		debug(1,"Mac initialise timebase info.");
@@ -448,12 +448,13 @@ uint64_t get_absolute_time_in_ns() {
 	// Do the maths. We hope that the multiplication doesn't 
 	// overflow; the price you pay for working in fixed point.
 
-	// need to turn this into NTP 64-bit fixed point format
-	// and change the very misleading title of this function to
-	// get_absolute_fp_time or something
-	time_now_ns = time_now_mach * sTimebaseInfo.numer / sTimebaseInfo.denom;
+    // this gives us nanoseconds
+	uint64_t time_now_ns = time_now_mach * sTimebaseInfo.numer / sTimebaseInfo.denom;
+    
+    // take the units and shift them to the upper half of the fp, and take the nanoseconds, shift them to the upper half and then divide the result to 1000000000
+    time_now_fp = ((time_now_ns/1000000000)<<32) + (((time_now_ns%1000000000)<<32)/1000000000);
 
 #endif
-  return time_now_ns;
+  return time_now_fp;
 }
 
