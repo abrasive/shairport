@@ -170,7 +170,7 @@ static inline uint32_t ORDINATE(seq_t x) {
 }
 
 // wrapped number between two seq_t.
-inline int32_t seq_diff(seq_t a, seq_t b) {
+int32_t seq_diff(seq_t a, seq_t b) {
     int32_t diff = ORDINATE(b) - ORDINATE(a);
     return diff;
 }
@@ -301,7 +301,7 @@ void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
   
   pthread_mutex_lock(&ab_mutex);
   
-  time_of_last_audio_packet = get_absolute_time_in_ns();
+  time_of_last_audio_packet = get_absolute_time_in_fp();
   
   int rc = pthread_cond_signal(&flowcontrol);
   if (rc)
@@ -345,7 +345,7 @@ static abuf_t *buffer_get_frame(void) {
   int32_t dac_delay = 0;
   do {
     // get the time
-		local_time_now = get_absolute_time_in_ns();    
+		local_time_now = get_absolute_time_in_fp();    
 
 		// if config.timeout (default 120) seconds have elapsed since the last audio packet was received, then we should stop.
     // config.timeout of zero means don't check..., but iTunes may be confused by a long gap followed by a resumption...
@@ -480,8 +480,8 @@ static abuf_t *buffer_get_frame(void) {
       //  debug(1,"pthread_cond_timedwait returned error code %d.",rc);
 #endif
 #ifdef COMPILE_FOR_OSX
-      uint64_t sec = time_to_wait_for_wakeup_ns>>32;;
-      uint64_t nsec = ((time_to_wait_for_wakeup_ns&0xffffffff)*1000000000)>>32;
+      uint64_t sec = time_to_wait_for_wakeup_fp>>32;;
+      uint64_t nsec = ((time_to_wait_for_wakeup_fp&0xffffffff)*1000000000)>>32;
       struct timespec time_to_wait;
       time_to_wait.tv_sec = sec;
       time_to_wait.tv_nsec = nsec;
@@ -709,7 +709,7 @@ static void *player_thread_func(void *arg) {
           rt = reference_timestamp;
           nt = inframe->timestamp;
           
-          uint64_t local_time_now = get_absolute_time_in_ns();
+          uint64_t local_time_now = get_absolute_time_in_fp();
           //struct timespec tn;
           //clock_gettime(CLOCK_MONOTONIC,&tn);
           //uint64_t local_time_now=((uint64_t)tn.tv_sec<<32)+((uint64_t)tn.tv_nsec<<32)/1000000000;
@@ -872,7 +872,6 @@ static void *player_thread_func(void *arg) {
             double moving_average_correction = (1.0*tsum_of_corrections)/number_of_statistics;
             double moving_average_insertions_plus_deletions = (1.0*tsum_of_insertions_and_deletions)/number_of_statistics;
             double moving_average_drift = (1.0*tsum_of_drifts)/number_of_statistics;
-                        uint64_t clock_jitter = ((local_to_remote_time_jitters/local_to_remote_time_jitters_count)*1000000)>>32;
             // if ((play_number/print_interval)%20==0)
               debug(1,"Sync error: %.1f (frames); net correction: %.1f (ppm); corrections: %.1f (ppm); missing packets %llu; late packets %llu; too late packets %llu; resend requests %llu; min DAC queue size %lli.", moving_average_sync_error, moving_average_correction*1000000/352, moving_average_insertions_plus_deletions*1000000/352,missing_packets,late_packets,too_late_packets,resend_requests,minimum_dac_queue_size);
             minimum_dac_queue_size=1000000; // hack reset
