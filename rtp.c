@@ -32,8 +32,10 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <netdb.h>
 #include <stdio.h>
+#include <errno.h>
 
 #include "common.h"
 #include "player.h"
@@ -153,7 +155,7 @@ static void *rtp_control_receiver(void *arg) {
         if (please_shutdown)
             break;
         nread = recv(control_socket, packet, sizeof(packet), 0);
-        local_time_now=get_absolute_time_in_ns();
+        local_time_now=get_absolute_time_in_fp();
 //        clock_gettime(CLOCK_MONOTONIC,&tn);
 //        local_time_now=((uint64_t)tn.tv_sec<<32)+((uint64_t)tn.tv_nsec<<32)/1000000000;
         
@@ -245,8 +247,16 @@ static void *rtp_timing_sender(void *arg) {
     req.origin = req.receive = req.transmit=0;
 
 //    clock_gettime(CLOCK_MONOTONIC,&dtt);
-    departure_time=get_absolute_time_in_ns();
-    sendto(timing_socket, &req, sizeof(req), 0, (struct sockaddr*)&rtp_client_timing_socket, sizeof(rtp_client_timing_socket));
+    departure_time=get_absolute_time_in_fp();
+      socklen_t msgsize = sizeof(struct sockaddr_in);
+#ifdef AF_INET6
+      if (rtp_client_timing_socket.SAFAMILY==AF_INET6) {
+          msgsize = sizeof(struct sockaddr_in6);
+      }
+#endif
+      if (sendto(timing_socket, &req, sizeof(req), 0, (struct sockaddr*)&rtp_client_timing_socket, msgsize)==-1) {
+        perror("Error sendto-ing to timing socket");
+      }
     request_number++;
     if (request_number<=4)
       usleep(500000);
@@ -272,7 +282,7 @@ static void *rtp_timing_receiver(void *arg) {
       if (please_shutdown)
           break;
       nread = recv(timing_socket, packet, sizeof(packet), 0);
-      arrival_time=get_absolute_time_in_ns();
+      arrival_time=get_absolute_time_in_fp();
 //      clock_gettime(CLOCK_MONOTONIC,&att);
       
       if (nread < 0)
@@ -319,7 +329,7 @@ static void *rtp_timing_receiver(void *arg) {
         unsigned int cc;       
         for (cc=time_ping_history-1;cc>0;cc--) {
           time_pings[cc]=time_pings[cc-1];
-	  time_pings[cc].dispersion = (time_pings[cc].dispersion*133)/100; // make the dispersions 'age' by this rational factor
+          time_pings[cc].dispersion = (time_pings[cc].dispersion*133)/100; // make the dispersions 'age' by this rational factor
         }
         time_pings[0].local_to_remote_difference = local_time_by_remote_clock-arrival_time;
         time_pings[0].dispersion = return_time;
@@ -335,24 +345,22 @@ static void *rtp_timing_receiver(void *arg) {
             l2rtd=time_pings[cc].local_to_remote_difference;
             tld=time_pings[cc].dispersion;
           }
-  int64_t ji;
-	if (time_ping_count>1) {
-		if (l2rtd>local_to_remote_time_difference) {
-			local_to_remote_time_jitters=local_to_remote_time_jitters+l2rtd-local_to_remote_time_difference;
-			ji = l2rtd-local_to_remote_time_difference;
-		} else {
-			local_to_remote_time_jitters=local_to_remote_time_jitters+local_to_remote_time_difference-l2rtd;
-			ji = - (local_to_remote_time_difference-l2rtd);
-		}
-		local_to_remote_time_jitters_count+=1;
-	}
-	
-//        int64_t rtus = (tld*1000000)>>32; int64_t ji = ((local_to_remote_time_jitters/local_to_remote_time_jitters_count)*1000000)>>32; debug(1,"Choosing time difference with dispersion of %lld us with jitter of %lld",rtus,ji);
-//        int64_t rtus = (tld*1000000)>>32; ji = (ji*1000000)>>32; debug(1,"Choosing time difference with dispersion of %lld us with jitter of %lld us",rtus,ji);
+        int64_t ji;
 
-	local_to_remote_time_difference=l2rtd;
-            
+        if (time_ping_count>1) {
+          if (l2rtd>local_to_remote_time_difference) {
+            local_to_remote_time_jitters=local_to_remote_time_jitters+l2rtd-local_to_remote_time_difference;
+            ji = l2rtd-local_to_remote_time_difference;
+          } else {
+            local_to_remote_time_jitters=local_to_remote_time_jitters+local_to_remote_time_difference-l2rtd;
+            ji = - (local_to_remote_time_difference-l2rtd);
+          }
+          local_to_remote_time_jitters_count+=1;
+        }
 
+        int64_t rtus = (tld*1000000)>>32; ji = (ji*1000000)>>32; debug(1,"Choosing time difference with dispersion of %lld us with delta of %lld us",rtus,ji);
+
+        local_to_remote_time_difference=l2rtd;
         } else {
       	debug(1, "Timing port -- Unknown RTP packet of type 0x%02X length %d.", packet[1], nread);
       }
@@ -418,37 +426,67 @@ void rtp_setup(SOCKADDR *remote, int cport, int tport, int *lsport, int *lcport,
         die("rtp_setup called with active stream!");
 
     debug(2, "rtp_setup: cport=%d tport=%d.", cport, tport);
-
-    // we do our own timing and ignore the timing port.
-    // an audio perfectionist may wish to learn the protocol.
     
+    // print out what we know about the client
+    void *addr;
+    char *ipver;
+    int port;
+    char ipstr[INET6_ADDRSTRLEN];
+    char portstr[20];
+#ifdef AF_INET6
+    if (remote->SAFAMILY == AF_INET6) {
+        struct sockaddr_in6 *sa6 = (struct sockaddr_in6*)remote;
+        addr = &(sa6->sin6_addr);
+        port = ntohs(sa6->sin6_port);
+        ipver = "IPv6";
+    }
+#endif
+    if (remote->SAFAMILY == AF_INET) {
+        struct sockaddr_in *sa4 = (struct sockaddr_in*)remote;
+        addr = &(sa4->sin_addr);
+        port = ntohs(sa4->sin_port);
+        ipver = "IPv4";
+    }
+    inet_ntop(remote->SAFAMILY,addr,ipstr,sizeof(ipstr));
+    debug(1,"Connection from %s: %s:%d",ipver,ipstr,port);
+    
+    
+
     // set up a the record of the remote's control socket
+    struct addrinfo hints;
+    struct addrinfo *servinfo;
 
-    memcpy(&rtp_client_control_socket, remote, sizeof(rtp_client_control_socket));
+    memset(&rtp_client_control_socket,0,sizeof(rtp_client_control_socket));
+    memset(&hints,0, sizeof hints);
+    hints.ai_family = remote->SAFAMILY;
+    hints.ai_socktype = SOCK_DGRAM;
+    snprintf(portstr, 20, "%d", cport);
+    if (getaddrinfo(ipstr,portstr,&hints,&servinfo)!=0)
+        die("Can't get address of client's control port");
+
 #ifdef AF_INET6
-    if (rtp_client_control_socket.SAFAMILY == AF_INET6) {
-        struct sockaddr_in6 *sa6 = (struct sockaddr_in6*)&rtp_client_control_socket;
-        sa6->sin6_port = htons(cport);
-    } else
+    if (servinfo->ai_family == AF_INET6)
+        memcpy(&rtp_client_control_socket,servinfo->ai_addr,sizeof(struct sockaddr_in6));
+    else
 #endif
-    {
-        struct sockaddr_in *sa = (struct sockaddr_in*)&rtp_client_control_socket;
-        sa->sin_port = htons(cport);
-    }
-
+        memcpy(&rtp_client_control_socket,servinfo->ai_addr,sizeof(struct sockaddr_in));
+    freeaddrinfo(servinfo);
+    
     // set up a the record of the remote's timing socket
-
-    memcpy(&rtp_client_timing_socket, remote, sizeof(rtp_client_timing_socket));
+    memset(&rtp_client_timing_socket,0,sizeof(rtp_client_timing_socket));
+    memset(&hints,0, sizeof hints);
+    hints.ai_family = remote->SAFAMILY;
+    hints.ai_socktype = SOCK_DGRAM;
+    snprintf(portstr, 20, "%d", tport);
+    if (getaddrinfo(ipstr,portstr,&hints,&servinfo)!=0)
+        die("Can't get address of client's timing port");
 #ifdef AF_INET6
-    if (rtp_client_timing_socket.SAFAMILY == AF_INET6) {
-        struct sockaddr_in6 *sa6 = (struct sockaddr_in6*)&rtp_client_timing_socket;
-        sa6->sin6_port = htons(tport);
-    } else
+    if (servinfo->ai_family == AF_INET6)
+        memcpy(&rtp_client_timing_socket,servinfo->ai_addr,sizeof(struct sockaddr_in6));
+    else
 #endif
-    {
-        struct sockaddr_in *sa = (struct sockaddr_in*)&rtp_client_timing_socket;
-        sa->sin_port = htons(tport);
-    }
+        memcpy(&rtp_client_timing_socket,servinfo->ai_addr,sizeof(struct sockaddr_in));
+    freeaddrinfo(servinfo);
     
     // now, we open three sockets -- one for the audio stream, one for the timing and one for the control
     
@@ -513,8 +551,15 @@ void rtp_request_resend(seq_t first, seq_t last) {
       *(unsigned short *)(req+2) = htons(1);  // our seqnum
       *(unsigned short *)(req+4) = htons(first);  // missed seqnum
       *(unsigned short *)(req+6) = htons(last-first+1);  // count
-
-      sendto(audio_socket, req, sizeof(req), 0, (struct sockaddr*)&rtp_client_control_socket, sizeof(rtp_client_control_socket));
+        socklen_t msgsize = sizeof(struct sockaddr_in);
+#ifdef AF_INET6
+        if (rtp_client_timing_socket.SAFAMILY==AF_INET6) {
+            msgsize = sizeof(struct sockaddr_in6);
+        }
+#endif
+        if (sendto(audio_socket, req, sizeof(req), 0, (struct sockaddr*)&rtp_client_control_socket,msgsize)==-1) {
+          perror("Error sendto-ing to audio socket");
+        }
     } else {
       if (!request_sent) {
         debug(2,"rtp_request_resend called without active stream!");
