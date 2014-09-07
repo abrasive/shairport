@@ -751,23 +751,23 @@ static int rtsp_auth(char **nonce, rtsp_message *req, rtsp_message *resp) {
 #ifdef HAVE_LIBPOLARSSL
     md5_context tctx;
     md5_starts(&tctx);
-    md5_update(&tctx, username, strlen(username));
+    md5_update(&tctx, (const unsigned char *)username, strlen(username));
     md5_update(&tctx, (unsigned char *) ":", 1);
-    md5_update(&tctx, realm, strlen(realm));
+    md5_update(&tctx, (const unsigned char *)realm, strlen(realm));
     md5_update(&tctx, (unsigned char *) ":", 1);
-    md5_update(&tctx, config.password, strlen(config.password));
+    md5_update(&tctx, (const unsigned char *)config.password, strlen(config.password));
     md5_finish(&tctx,digest_urp);
     md5_starts(&tctx);
-    md5_update(&tctx, req->method, strlen(req->method));
+    md5_update(&tctx, (const unsigned char *)req->method, strlen(req->method));
     md5_update(&tctx, (unsigned char *) ":", 1);
-    md5_update(&tctx, uri, strlen(uri));
+    md5_update(&tctx, (const unsigned char *)uri, strlen(uri));
     md5_finish(&tctx,digest_mu);
 #endif
     
     int i;
     unsigned char buf[33];
     for (i=0; i<16; i++)
-        sprintf(buf + 2*i, "%02X", digest_urp[i]);
+        sprintf((char *)buf + 2*i, "%02X", digest_urp[i]);
         
 #ifdef HAVE_LIBSSL
     MD5_Init(&ctx);
@@ -786,18 +786,18 @@ static int rtsp_auth(char **nonce, rtsp_message *req, rtsp_message *resp) {
     md5_starts(&tctx);
     md5_update(&tctx, buf, 32);
     md5_update(&tctx, (unsigned char *) ":", 1);
-    md5_update(&tctx, *nonce, strlen(*nonce));
+    md5_update(&tctx, (const unsigned char *)*nonce, strlen(*nonce));
     md5_update(&tctx, (unsigned char *) ":", 1);
     for (i=0; i<16; i++)
-        sprintf(buf + 2*i, "%02X", digest_mu[i]);
+        sprintf((char *)buf + 2*i,"%02X", digest_mu[i]);
     md5_update(&tctx, buf, 32);
     md5_finish(&tctx,digest_total);
 #endif
 
     for (i=0; i<16; i++)
-        sprintf(buf + 2*i, "%02X", digest_total[i]);
+        sprintf((char *)buf + 2*i,"%02X", digest_total[i]);
 
-    if (!strcmp(response, buf))
+    if (!strcmp(response, (const char *)buf))
         return 0;
     warn("auth failed");
 
