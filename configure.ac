@@ -8,15 +8,15 @@ AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([shairport.c])
 AC_CONFIG_HEADERS([config.h])
 
-#The following would print linux or darwin
-#echo "Target OS: ${target_os%%[[[:digit:]]]*}"
+#The following should print linux or darwin
+#echo "Target OS: ${target_os%-*}"
 
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_INSTALL
 
 # Checks for libraries.
-if test "x${target_os%-gnu}" = xlinux; then
+if test "x${target_os%-*}" = xlinux; then
  AC_CHECK_LIB([rt],[clock_gettime], , AC_MSG_ERROR(librt needed))
 fi
 
