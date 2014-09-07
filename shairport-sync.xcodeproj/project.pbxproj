@@ -1,0 +1,209 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXFileReference section */
+		2785806419BB488D00C0B34D /* alac.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = alac.c; sourceTree = "<group>"; };
+		2785806519BB488D00C0B34D /* alac.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = alac.h; sourceTree = "<group>"; };
+		2785806619BB488D00C0B34D /* audio.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = audio.c; sourceTree = "<group>"; };
+		2785806719BB488D00C0B34D /* audio.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = audio.h; sourceTree = "<group>"; };
+		2785806819BB488D00C0B34D /* audio_alsa.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = audio_alsa.c; sourceTree = "<group>"; };
+		2785806919BB488D00C0B34D /* audio_ao.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = audio_ao.c; sourceTree = "<group>"; };
+		2785806A19BB488D00C0B34D /* audio_dummy.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = audio_dummy.c; sourceTree = "<group>"; };
+		2785806B19BB488D00C0B34D /* audio_pipe.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = audio_pipe.c; sourceTree = "<group>"; };
+		2785806C19BB488D00C0B34D /* audio_pulse.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = audio_pulse.c; sourceTree = "<group>"; };
+		2785806D19BB488D00C0B34D /* audio_sndio.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = audio_sndio.c; sourceTree = "<group>"; };
+		2785806E19BB488D00C0B34D /* AUTHORS */ = {isa = PBXFileReference; lastKnownFileType = text; path = AUTHORS; sourceTree = "<group>"; };
+		2785807119BB488D00C0B34D /* common.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = common.c; sourceTree = "<group>"; };
+		2785807219BB488D00C0B34D /* common.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = common.h; sourceTree = "<group>"; };
+		2785807C19BB488D00C0B34D /* configure.ac */ = {isa = PBXFileReference; lastKnownFileType = text; path = configure.ac; sourceTree = "<group>"; };
+		2785807D19BB488D00C0B34D /* COPYING */ = {isa = PBXFileReference; lastKnownFileType = text; path = COPYING; sourceTree = "<group>"; };
+		2785807F19BB488D00C0B34D /* documents */ = {isa = PBXFileReference; lastKnownFileType = folder; path = documents; sourceTree = "<group>"; };
+		2785808019BB488D00C0B34D /* INSTALL */ = {isa = PBXFileReference; lastKnownFileType = text; path = INSTALL; sourceTree = "<group>"; };
+		2785808219BB488D00C0B34D /* LICENSES */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSES; sourceTree = "<group>"; };
+		2785808419BB488D00C0B34D /* Makefile.am */ = {isa = PBXFileReference; lastKnownFileType = text; path = Makefile.am; sourceTree = "<group>"; };
+		2785808619BB488D00C0B34D /* mdns.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = mdns.c; sourceTree = "<group>"; };
+		2785808719BB488D00C0B34D /* mdns.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mdns.h; sourceTree = "<group>"; };
+		2785808819BB488D00C0B34D /* mdns_avahi.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = mdns_avahi.c; sourceTree = "<group>"; };
+		2785808919BB488D00C0B34D /* mdns_dns_sd.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = mdns_dns_sd.c; sourceTree = "<group>"; };
+		2785808A19BB488D00C0B34D /* mdns_external.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = mdns_external.c; sourceTree = "<group>"; };
+		2785808B19BB488D00C0B34D /* mdns_tinysvcmdns.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = mdns_tinysvcmdns.c; sourceTree = "<group>"; };
+		2785808D19BB488D00C0B34D /* NEWS */ = {isa = PBXFileReference; lastKnownFileType = text; path = NEWS; sourceTree = "<group>"; };
+		2785808E19BB488D00C0B34D /* player.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = player.c; sourceTree = "<group>"; };
+		2785808F19BB488D00C0B34D /* player.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = player.h; sourceTree = "<group>"; };
+		2785809019BB488D00C0B34D /* README */ = {isa = PBXFileReference; lastKnownFileType = text; path = README; sourceTree = "<group>"; };
+		2785809119BB488D00C0B34D /* README.md */ = {isa = PBXFileReference; lastKnownFileType = text; path = README.md; sourceTree = "<group>"; };
+		2785809219BB488D00C0B34D /* rtp.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = rtp.c; sourceTree = "<group>"; };
+		2785809319BB488D00C0B34D /* rtp.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = rtp.h; sourceTree = "<group>"; };
+		2785809419BB488D00C0B34D /* rtsp.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = rtsp.c; sourceTree = "<group>"; };
+		2785809519BB488D00C0B34D /* rtsp.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = rtsp.h; sourceTree = "<group>"; };
+		2785809619BB488D00C0B34D /* scripts */ = {isa = PBXFileReference; lastKnownFileType = folder; path = scripts; sourceTree = "<group>"; };
+		2785809719BB488D00C0B34D /* shairport-sync.xcworkspace */ = {isa = PBXFileReference; lastKnownFileType = wrapper.workspace; path = "shairport-sync.xcworkspace"; sourceTree = "<group>"; };
+		2785809819BB488D00C0B34D /* shairport.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = shairport.c; sourceTree = "<group>"; };
+		2785809A19BB488D00C0B34D /* tinysvcmdns.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = tinysvcmdns.c; sourceTree = "<group>"; };
+		2785809B19BB488D00C0B34D /* tinysvcmdns.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = tinysvcmdns.h; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		2785805919BB488D00C0B34D = {
+			isa = PBXGroup;
+			children = (
+				2785806419BB488D00C0B34D /* alac.c */,
+				2785806519BB488D00C0B34D /* alac.h */,
+				2785806619BB488D00C0B34D /* audio.c */,
+				2785806719BB488D00C0B34D /* audio.h */,
+				2785806819BB488D00C0B34D /* audio_alsa.c */,
+				2785806919BB488D00C0B34D /* audio_ao.c */,
+				2785806A19BB488D00C0B34D /* audio_dummy.c */,
+				2785806B19BB488D00C0B34D /* audio_pipe.c */,
+				2785806C19BB488D00C0B34D /* audio_pulse.c */,
+				2785806D19BB488D00C0B34D /* audio_sndio.c */,
+				2785806E19BB488D00C0B34D /* AUTHORS */,
+				2785807119BB488D00C0B34D /* common.c */,
+				2785807219BB488D00C0B34D /* common.h */,
+				2785807C19BB488D00C0B34D /* configure.ac */,
+				2785807D19BB488D00C0B34D /* COPYING */,
+				2785807F19BB488D00C0B34D /* documents */,
+				2785808019BB488D00C0B34D /* INSTALL */,
+				2785808219BB488D00C0B34D /* LICENSES */,
+				2785808419BB488D00C0B34D /* Makefile.am */,
+				2785808619BB488D00C0B34D /* mdns.c */,
+				2785808719BB488D00C0B34D /* mdns.h */,
+				2785808819BB488D00C0B34D /* mdns_avahi.c */,
+				2785808919BB488D00C0B34D /* mdns_dns_sd.c */,
+				2785808A19BB488D00C0B34D /* mdns_external.c */,
+				2785808B19BB488D00C0B34D /* mdns_tinysvcmdns.c */,
+				2785808D19BB488D00C0B34D /* NEWS */,
+				2785808E19BB488D00C0B34D /* player.c */,
+				2785808F19BB488D00C0B34D /* player.h */,
+				2785809019BB488D00C0B34D /* README */,
+				2785809119BB488D00C0B34D /* README.md */,
+				2785809219BB488D00C0B34D /* rtp.c */,
+				2785809319BB488D00C0B34D /* rtp.h */,
+				2785809419BB488D00C0B34D /* rtsp.c */,
+				2785809519BB488D00C0B34D /* rtsp.h */,
+				2785809619BB488D00C0B34D /* scripts */,
+				2785809719BB488D00C0B34D /* shairport-sync.xcworkspace */,
+				2785809819BB488D00C0B34D /* shairport.c */,
+				2785809A19BB488D00C0B34D /* tinysvcmdns.c */,
+				2785809B19BB488D00C0B34D /* tinysvcmdns.h */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXLegacyTarget section */
+		2785805E19BB488D00C0B34D /* shairport-sync */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "$(ACTION)";
+			buildConfigurationList = 2785809C19BB488D00C0B34D /* Build configuration list for PBXLegacyTarget "shairport-sync" */;
+			buildPhases = (
+			);
+			buildToolPath = /usr/bin/make;
+			buildWorkingDirectory = "/Users/mike/Documents/git/shairport-sync";
+			dependencies = (
+			);
+			name = "shairport-sync";
+			passBuildSettingsInEnvironment = 1;
+			productName = "shairport-sync";
+		};
+/* End PBXLegacyTarget section */
+
+/* Begin PBXProject section */
+		2785805A19BB488D00C0B34D /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0510;
+			};
+			buildConfigurationList = 2785805D19BB488D00C0B34D /* Build configuration list for PBXProject "shairport-sync" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 2785805919BB488D00C0B34D;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				2785805E19BB488D00C0B34D /* shairport-sync */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin XCBuildConfiguration section */
+		2785805B19BB488D00C0B34D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		2785805C19BB488D00C0B34D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		2785809D19BB488D00C0B34D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				DEBUGGING_SYMBOLS = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "shairport-sync";
+			};
+			name = Debug;
+		};
+		2785809E19BB488D00C0B34D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "shairport-sync";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		2785805D19BB488D00C0B34D /* Build configuration list for PBXProject "shairport-sync" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2785805B19BB488D00C0B34D /* Debug */,
+				2785805C19BB488D00C0B34D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		2785809C19BB488D00C0B34D /* Build configuration list for PBXLegacyTarget "shairport-sync" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2785809D19BB488D00C0B34D /* Debug */,
+				2785809E19BB488D00C0B34D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 2785805A19BB488D00C0B34D /* Project object */;
+}
