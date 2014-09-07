@@ -397,9 +397,55 @@ static int stuff_buffer(double playback_rate, short *inptr, short *outptr) {
     return frame_size + stuff;
 }
 
-// constant first-order filter
-#define ALPHA 0.05
-#define LOSS 900000.0
+typedef struct {
+    double p_gain;
+    double i_gain;
+    double d_gain;
+    double y_a_lpf;
+    double d_a_lpf;
+    double y_1;
+    double d_1;
+    double i_state;
+    double i_max;
+    double pv_1;
+    biquad_t lpf_y;
+} pid_param;
+
+double reg_pid(pid_param *p, double pv, double setpoint) {
+// straightforward PID controller with output filtering and D term filtering
+    double ek, tp, ti, td, y, dd;
+
+    // calculate the error
+    ek = setpoint - pv;
+
+    // update integral state
+    p->i_state += ek;
+    if (p->i_state > p->i_max)
+        p->i_state = p->i_max;
+    if (p->i_state < -p->i_max)
+        p->i_state = -p->i_max;
+
+    // lpf derivative
+    dd = (p->pv_1 - pv) * p->d_a_lpf + p->d_1 * (1 - p->d_a_lpf);
+
+    // calculate the terms
+    tp = ek * p->p_gain;
+    ti = p->i_state * p->i_gain;
+    td = dd * p->d_gain;
+    y = tp + ti + td;
+    debug(1, "tp: %f, ti: %f, td %f\n", tp, ti, td);
+
+    // lpf the output
+    //y = y * p->y_a_lpf + p->y_1 * (1 - p->y_a_lpf);
+    y = biquad_filt(&(p->lpf_y), y);
+
+    // update history
+    //p->y_1 = y;
+    p->pv_1 = pv;
+    p->d_1 = dd;
+
+    return y;
+}
 
 #define SYNCS_PER_S 5
 
@@ -411,7 +457,7 @@ static void *player_thread_func(void *arg) {
     int sync_count;
     sync_cfg sync_tag;
     long long sync_time, last_ntp_tsp=0;
-    double sync_time_diff = 0.0;
+    pid_param pid_p;
     long sync_frames = 0;
     state = BUFFERING;
 
@@ -422,6 +468,14 @@ static void *player_thread_func(void *arg) {
 
     sync_count = 1 + (sampling_rate / (frame_size * SYNCS_PER_S));
     debug(2, "sync_count: %d\n", sync_count);
+
+    pid_p.p_gain = 30e-7;
+    pid_p.i_gain = pid_p.p_gain / 120.0;
+    pid_p.d_gain = 0.0; //pid_p.p_gain / 100.0;;
+    pid_p.i_max = 1e7;
+    pid_p.y_a_lpf = 0.25;
+    pid_p.d_a_lpf = 0.2;
+    biquad_lpf(&pid_p.lpf_y, 0.33, 1.0);
 
 #ifdef FANCY_RESAMPLING
     float *frame, *outframe;
@@ -516,8 +570,7 @@ static void *player_thread_func(void *arg) {
             if (buf_count % sync_count == 0) {
                 //check if we're still in sync.
                 sync_time = get_sync_time(last_ntp_tsp + (long long)buf_count * (long long)frame_size * 1000000LL / (long long)sampling_rate);
-                sync_time_diff = (ALPHA * (double)sync_time) + (1.0 - ALPHA) * sync_time_diff;
-                bf_playback_rate = 1.0 - (sync_time_diff / LOSS);
+                bf_playback_rate = 1.0 + reg_pid(&pid_p, sync_time, 0);
                 debug(2, "Playback rate %f, sync_time %lld\n", bf_playback_rate, sync_time);
             }
             play_samples = stuff_buffer(bf_playback_rate, inbuf, outbuf);
