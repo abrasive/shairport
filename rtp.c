@@ -357,8 +357,8 @@ static void *rtp_timing_receiver(void *arg) {
           }
           local_to_remote_time_jitters_count+=1;
         }
-
-        int64_t rtus = (tld*1000000)>>32; ji = (ji*1000000)>>32; debug(1,"Choosing time difference with dispersion of %lld us with delta of %lld us",rtus,ji);
+        // uncomment below to print jitter between client's clock and oour clock
+        // int64_t rtus = (tld*1000000)>>32; ji = (ji*1000000)>>32; debug(1,"Choosing time difference with dispersion of %lld us with delta of %lld us",rtus,ji);
 
         local_to_remote_time_difference=l2rtd;
         } else {
