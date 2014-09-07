@@ -218,12 +218,6 @@ static long us_to_frames(long long us) {
     return us * sampling_rate / 1000000;
 }
 
-static inline long long get_sync_time(long long ntp_tsp) {
-    long long sync_time_est;
-    sync_time_est = (ntp_tsp + config.delay) - (tstp_us() + get_ntp_offset() + config.output->get_delay());
-    return sync_time_est;
-}
-
 void player_put_packet(seq_t seqno, sync_cfg sync_tag, uint8_t *data, int len) {
     abuf_t *abuf = 0;
     int16_t buf_fill;

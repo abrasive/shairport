@@ -55,6 +55,7 @@ static long long ntp_offset, ntp_offset_error;
 static int ntp_cache_size, drift_est_size;
 static float drift_est, drift_est_lp;
 static long long last_update_time;
+static pthread_mutex_t time_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // only one RTP session can be active at a time.
 static int running = 0;
@@ -100,10 +101,6 @@ static void reset_ntp_cache() {
     drift_est = 0.0;
     last_update_time = 0;
     drift_est_lp = 0.0;
-}
-
-long long get_ntp_offset() {
-    return ntp_offset;
 }
 
 static void update_ntp_cache(long long offset, long long arrival_time, long long delay) {
@@ -154,6 +151,7 @@ static void update_ntp_cache(long long offset, long long arrival_time, long long
     double time_elapsed;
     long long last_offset = ntp_offset;
     time_elapsed = (double)(arrival_time - last_update_time);
+    pthread_mutex_lock(&time_mutex);
     if ((time_elapsed < 1000000.0) || (ntp_cache_size <= 3)) {
         totaloffset = 0;
         d = 0;
@@ -169,10 +167,6 @@ static void update_ntp_cache(long long offset, long long arrival_time, long long
         // update the drift estimate
         if (delay < delaylimit) {
             double alpha;
-            i = ntp_cache_size;
-            // find oldest good time stamp
-            while (ntp_cache[i].delay >= delaylimit)
-                i--;
             if (drift_est_size < 16)
                 drift_est_size++;
             // progressively stiffen the lpf
@@ -191,6 +185,7 @@ static void update_ntp_cache(long long offset, long long arrival_time, long long
         debug(2, "est bump: %lld, %lld\n", (long long)(time_elapsed * drift_est_lp), ntp_offset - last_offset);
     }
     last_update_time = arrival_time;
+    pthread_mutex_unlock(&time_mutex);
     debug(2,"ntp: pre: %lld, error: %lld, drift_est_lp: %f, %lld\n", ntp_offset, ntp_offset_error, drift_est_lp, ((double)(offset - last_offset) / time_elapsed));
 }
 
@@ -215,6 +210,19 @@ static long long ntp_tsp_to_us(uint32_t timestamp_hi, uint32_t timestamp_lo) {
     timetemp += ((long long)timestamp_lo * 1000000LL) >> 32;
 
     return timetemp;
+}
+
+long long get_sync_time(long long ntp_tsp) {
+    // time lock should be acquired in this function?
+    long long sync_time_est, local_time, remote_time, delay_to_out;
+    pthread_mutex_lock(&time_mutex);
+    local_time = tstp_us();
+    delay_to_out= config.output->get_delay();
+    remote_time =  ntp_offset + (double)(local_time - last_update_time) * drift_est_lp + local_time;
+    //sync_time_est = (ntp_tsp + config.delay) - (tstp_us() + get_ntp_offset() + config.output->get_delay());
+    pthread_mutex_unlock(&time_mutex);
+    sync_time_est = (ntp_tsp + config.delay) - (remote_time + delay_to_out);
+    return sync_time_est;
 }
 
 static void *rtp_receiver(void *arg) {
