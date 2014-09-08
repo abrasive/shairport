@@ -694,6 +694,7 @@ static void *player_thread_func(void *arg) {
         // if it's a supplied silent frame, let us know...
         if (inframe->timestamp==0) {
           // debug(1,"Player has a supplied silent frame.");
+          last_seqno_read = (SUCCESSOR(last_seqno_read)&0xffff); //manage the packet out of sequence minder
           config.output->play(inbuf, frame_size);
         } else {
           // We have a frame of data. We need to see if we want to add or remove a frame from it to keep in sync.
@@ -860,7 +861,7 @@ static void *player_thread_func(void *arg) {
           if (last_seqno_read==-1)
 							last_seqno_read=inframe->sequence_number;
 						else {
-							last_seqno_read = (last_seqno_read+1)&0xffff;           
+							last_seqno_read = (SUCCESSOR(last_seqno_read) & 0xffff);           
 							if (inframe->sequence_number!=last_seqno_read)
 								debug(1,"Player: packets out of sequence: expected: %d, got %d.",last_seqno_read,inframe->sequence_number);
 								last_seqno_read=inframe->sequence_number; // reset warning...
