@@ -7,24 +7,39 @@ AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([shairport.c])
 AC_CONFIG_HEADERS([config.h])
 
+# Derived from the Avahi configure.ac file
+#
+# Specifying the OS type, defaulting to linux.
+#
+AC_ARG_WITH(os_type, AS_HELP_STRING([--with-os-type=OSType],[Specify the distribution to target: One of linux darwin]))
+if test "z$with_os_type" = "z"; then
+  with_os_type="linux"
+fi
+with_os_type=`echo ${with_os_type} | tr '[[:upper:]]' '[[:lower:]]' `
+
+
+
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_INSTALL
 
 # Checks for libraries.
-AC_CHECK_LIB([rt],[clock_gettime], , AC_MSG_ERROR(librt needed))
+if test "x${with_os_type}" = xlinux; then
+ AC_CHECK_LIB([rt],[clock_gettime], , AC_MSG_ERROR(librt needed))
+fi
+
 AC_CHECK_LIB([daemon],[daemon_log], , AC_MSG_ERROR(libdaemon needed))
 AC_CHECK_LIB([pthread],[pthread_create], , AC_MSG_ERROR(pthread library needed))
 AC_CHECK_LIB([m],[exp], , AC_MSG_ERROR(maths library needed))
 AC_CHECK_LIB([popt],[poptGetContext], , AC_MSG_ERROR(libpopt needed))
 
 # Look for polarssl flag
-AC_ARG_WITH(polarssl, [  --with-polarssl = choose polarssl for encryption services (choose this or openssl)], [
+AC_ARG_WITH(polarssl, [  --with-polarssl = choose polarssl for encryption services (choose this or --with-openssl)], [
   AC_MSG_RESULT(>>Including polarssl)
   AC_CHECK_LIB([polarssl],[ssl_init], , AC_MSG_ERROR(PolarSSL selected but the library cannot be found!))], )
 
 # Look for openssl flag
-AC_ARG_WITH(openssl, [  --with-openssl = choose openssl for encryption services (choose this or polarssl)], [
+AC_ARG_WITH(openssl, [  --with-openssl = choose openssl for encryption services (choose this or --with-polarssl)], [
   AC_MSG_RESULT(>>Including openssl and libcrypto)
   AC_CHECK_LIB([crypto], [MD5_Init], , AC_MSG_ERROR(libcrypto selected, but the library cannot be found!))
   AC_CHECK_LIB([ssl],[SSL_library_init], , AC_MSG_ERROR(openssl selected but the library cannot be found!))], )

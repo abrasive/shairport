@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>IDESourceControlProjectFavoriteDictionaryKey</key>
+	<false/>
+	<key>IDESourceControlProjectIdentifier</key>
+	<string>FE3806DD-2182-4590-A83E-FEB5D071A2C5</string>
+	<key>IDESourceControlProjectName</key>
+	<string>shairport-sync</string>
+	<key>IDESourceControlProjectOriginsDictionary</key>
+	<dict>
+		<key>6DA2D7CF-469E-4320-AD70-9612E79D9450</key>
+		<string>ssh://github.com/mikebrady/shairport-sync.git</string>
+	</dict>
+	<key>IDESourceControlProjectPath</key>
+	<string>shairport-sync.xcworkspace</string>
+	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
+	<dict>
+		<key>6DA2D7CF-469E-4320-AD70-9612E79D9450</key>
+		<string>..</string>
+	</dict>
+	<key>IDESourceControlProjectURL</key>
+	<string>ssh://github.com/mikebrady/shairport-sync.git</string>
+	<key>IDESourceControlProjectVersion</key>
+	<integer>110</integer>
+	<key>IDESourceControlProjectWCCIdentifier</key>
+	<string>6DA2D7CF-469E-4320-AD70-9612E79D9450</string>
+	<key>IDESourceControlProjectWCConfigurations</key>
+	<array>
+		<dict>
+			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
+			<string>public.vcs.git</string>
+			<key>IDESourceControlWCCIdentifierKey</key>
+			<string>6DA2D7CF-469E-4320-AD70-9612E79D9450</string>
+			<key>IDESourceControlWCCName</key>
+			<string>shairport-sync</string>
+		</dict>
+	</array>
+</dict>
+</plist>

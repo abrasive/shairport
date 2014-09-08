@@ -11,7 +11,7 @@ typedef struct {
 typedef uint16_t seq_t;
 
 // wrapped number between two seq_t.
-inline int32_t seq_diff(seq_t a, seq_t b);
+int32_t seq_diff(seq_t a, seq_t b);
 
 int player_play(stream_cfg *cfg);
 void player_stop(void);

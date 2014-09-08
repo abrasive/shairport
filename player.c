@@ -162,6 +162,13 @@ static inline seq_t SUCCESSOR(seq_t x) {
 	return p;
 }
 
+static inline seq_t PREDECESSOR(seq_t x) {
+	uint32_t p = (x & 0xffff)+0x10000;
+	p-=1;
+	p = p & 0xffff;
+	return p;
+}
+
 static inline uint32_t ORDINATE(seq_t x) {
 	uint32_t p = x & 0xffff;
 	uint32_t q = ab_read & 0x0ffff;
@@ -170,7 +177,7 @@ static inline uint32_t ORDINATE(seq_t x) {
 }
 
 // wrapped number between two seq_t.
-inline int32_t seq_diff(seq_t a, seq_t b) {
+int32_t seq_diff(seq_t a, seq_t b) {
     int32_t diff = ORDINATE(b) - ORDINATE(a);
     return diff;
 }
@@ -180,6 +187,13 @@ inline int32_t seq_diff(seq_t a, seq_t b) {
 static inline int seq_order(seq_t a, seq_t b) {
     int32_t d = ORDINATE(b) - ORDINATE(a);
     return d > 0;
+}
+
+static inline seq_t seq_sum(seq_t a, seq_t b) {
+	uint32_t p = a & 0xffff;
+	uint32_t q = b & 0x0ffff;
+	uint32_t r = (a+b) & 0xffff;
+	return r;
 }
 
 static void alac_decode(short *dest, uint8_t *buf, int len) {
@@ -276,7 +290,7 @@ void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
     abuf = audio_buffer + BUFIDX(seqno);
     ab_write = SUCCESSOR(seqno);
   } else if (seq_order(ab_write, seqno)) {    // newer than expected
-    rtp_request_resend(ab_write+1, seqno-1);
+    rtp_request_resend(SUCCESSOR(ab_write), PREDECESSOR(seqno));
     resend_requests++;
     abuf = audio_buffer + BUFIDX(seqno);
     ab_write = SUCCESSOR(seqno);
@@ -301,7 +315,7 @@ void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
   
   pthread_mutex_lock(&ab_mutex);
   
-  time_of_last_audio_packet = get_absolute_time_in_ns();
+  time_of_last_audio_packet = get_absolute_time_in_fp();
   
   int rc = pthread_cond_signal(&flowcontrol);
   if (rc)
@@ -335,7 +349,6 @@ static abuf_t *buffer_get_frame(void) {
   int16_t buf_fill;
   uint64_t local_time_now;
   // struct timespec tn;
-  seq_t read, next;
   abuf_t *abuf = 0;
   int i;
   abuf_t *curframe;
@@ -345,7 +358,7 @@ static abuf_t *buffer_get_frame(void) {
   int32_t dac_delay = 0;
   do {
     // get the time
-		local_time_now = get_absolute_time_in_ns();    
+		local_time_now = get_absolute_time_in_fp();    
 
 		// if config.timeout (default 120) seconds have elapsed since the last audio packet was received, then we should stop.
     // config.timeout of zero means don't check..., but iTunes may be confused by a long gap followed by a resumption...
@@ -384,7 +397,7 @@ static abuf_t *buffer_get_frame(void) {
 				if ((flush_rtp_timestamp) && (flush_rtp_timestamp>=curframe->timestamp)) {
 					// debug(1,"Dropping flushed packet %d",curframe->sequence_number);
 					curframe->ready=0;
-					ab_read++;
+					ab_read==SUCCESSOR(ab_read);
 				} else if (ab_buffering) { // if we are getting packets but not yet forwarding them to the player
 					if (first_packet_timestamp==0) { // if this is the very first packet
 					 // debug(1,"First frame seen, time %u, with %d frames...",curframe->timestamp,seq_diff(ab_read, ab_write));
@@ -480,8 +493,8 @@ static abuf_t *buffer_get_frame(void) {
       //  debug(1,"pthread_cond_timedwait returned error code %d.",rc);
 #endif
 #ifdef COMPILE_FOR_OSX
-      uint64_t sec = time_to_wait_for_wakeup_ns>>32;;
-      uint64_t nsec = ((time_to_wait_for_wakeup_ns&0xffffffff)*1000000000)>>32;
+      uint64_t sec = time_to_wait_for_wakeup_fp>>32;;
+      uint64_t nsec = ((time_to_wait_for_wakeup_fp&0xffffffff)*1000000000)>>32;
       struct timespec time_to_wait;
       time_to_wait.tv_sec = sec;
       time_to_wait.tv_nsec = nsec;
@@ -495,15 +508,15 @@ static abuf_t *buffer_get_frame(void) {
     return 0;
   }
 
-  read = ab_read;
-  ab_read++;
+  seq_t read = ab_read;
+  ab_read=SUCCESSOR(ab_read);
 
   // check if t+16, t+32, t+64, t+128, ... (buffer_start_fill / 2)
   // packets have arrived... last-chance resend
   
   if (!ab_buffering) {
     for (i = 16; i < (seq_diff(ab_read,ab_write) / 2); i = (i * 2)) {
-      next = ab_read + i;
+      seq_t next = seq_sum(ab_read,i);
       abuf = audio_buffer + BUFIDX(next);
       if (!abuf->ready) {
         rtp_request_resend(next, next);
@@ -691,6 +704,7 @@ static void *player_thread_func(void *arg) {
     if (inframe) {
       inbuf = inframe->data;
       if (inbuf) {
+        play_number++;
         // if it's a supplied silent frame, let us know...
         if (inframe->timestamp==0) {
           // debug(1,"Player has a supplied silent frame.");
@@ -710,7 +724,7 @@ static void *player_thread_func(void *arg) {
           rt = reference_timestamp;
           nt = inframe->timestamp;
           
-          uint64_t local_time_now = get_absolute_time_in_ns();
+          uint64_t local_time_now = get_absolute_time_in_fp();
           //struct timespec tn;
           //clock_gettime(CLOCK_MONOTONIC,&tn);
           //uint64_t local_time_now=((uint64_t)tn.tv_sec<<32)+((uint64_t)tn.tv_nsec<<32)/1000000000;
@@ -865,19 +879,17 @@ static void *player_thread_func(void *arg) {
 							if (inframe->sequence_number!=last_seqno_read)
 								debug(1,"Player: packets out of sequence: expected: %d, got %d.",last_seqno_read,inframe->sequence_number);
 								last_seqno_read=inframe->sequence_number; // reset warning...
-            }
-              
-          if (play_number%print_interval==0) {
-            // we can now calculate running averages for sync error (frames), corrections (ppm), insertions plus deletions (ppm), drift (ppm)
-            double moving_average_sync_error = (1.0*tsum_of_sync_errors)/number_of_statistics;
-            double moving_average_correction = (1.0*tsum_of_corrections)/number_of_statistics;
-            double moving_average_insertions_plus_deletions = (1.0*tsum_of_insertions_and_deletions)/number_of_statistics;
-            double moving_average_drift = (1.0*tsum_of_drifts)/number_of_statistics;
-                        uint64_t clock_jitter = ((local_to_remote_time_jitters/local_to_remote_time_jitters_count)*1000000)>>32;
-            // if ((play_number/print_interval)%20==0)
-              debug(1,"Sync error: %.1f (frames); net correction: %.1f (ppm); corrections: %.1f (ppm); missing packets %llu; late packets %llu; too late packets %llu; resend requests %llu; min DAC queue size %lli.", moving_average_sync_error, moving_average_correction*1000000/352, moving_average_insertions_plus_deletions*1000000/352,missing_packets,late_packets,too_late_packets,resend_requests,minimum_dac_queue_size);
-            minimum_dac_queue_size=1000000; // hack reset
           }
+        }
+        if (play_number%print_interval==0) {
+          // we can now calculate running averages for sync error (frames), corrections (ppm), insertions plus deletions (ppm), drift (ppm)
+          double moving_average_sync_error = (1.0*tsum_of_sync_errors)/number_of_statistics;
+          double moving_average_correction = (1.0*tsum_of_corrections)/number_of_statistics;
+          double moving_average_insertions_plus_deletions = (1.0*tsum_of_insertions_and_deletions)/number_of_statistics;
+          double moving_average_drift = (1.0*tsum_of_drifts)/number_of_statistics;
+          // if ((play_number/print_interval)%20==0)
+            debug(1,"Sync error: %.1f (frames); net correction: %.1f (ppm); corrections: %.1f (ppm); missing packets %llu; late packets %llu; too late packets %llu; resend requests %llu; min DAC queue size %lli.", moving_average_sync_error, moving_average_correction*1000000/352, moving_average_insertions_plus_deletions*1000000/352,missing_packets,late_packets,too_late_packets,resend_requests,minimum_dac_queue_size);
+          minimum_dac_queue_size=1000000; // hack reset
         }
       }
     }
