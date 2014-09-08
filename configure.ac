@@ -3,20 +3,28 @@
 
 AC_PREREQ([2.50])
 AC_INIT([shairport-sync], [2.1], [mikebrady@eircom.net])
-AC_CANONICAL_TARGET([])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([shairport.c])
 AC_CONFIG_HEADERS([config.h])
 
-#The following should print linux or darwin
-#echo "Target OS: ${target_os%-*}"
+# Derived from the Avahi configure.ac file
+#
+# Specifying the OS type, defaulting to linux.
+#
+AC_ARG_WITH(os_type, AS_HELP_STRING([--with-os-type=OSType],[Specify the distribution to target: One of linux darwin]))
+if test "z$with_os_type" = "z"; then
+  with_os_type="linux"
+fi
+with_os_type=`echo ${with_os_type} | tr '[[:upper:]]' '[[:lower:]]' `
+
+
 
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_INSTALL
 
 # Checks for libraries.
-if test "x${target_os%-*}" = xlinux; then
+if test "x${with_os_type}" = xlinux; then
  AC_CHECK_LIB([rt],[clock_gettime], , AC_MSG_ERROR(librt needed))
 fi
 
