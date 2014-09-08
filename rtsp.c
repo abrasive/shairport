@@ -910,8 +910,8 @@ void rtsp_listen_loop(void) {
         int fd = socket(p->ai_family, p->ai_socktype, IPPROTO_TCP);
         int yes = 1;
 
-//        if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1)
-//            perror("setsockopt");
+        if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1)
+            perror("setsockopt");
 
 #ifdef IPV6_V6ONLY
         // some systems don't support v4 access on v6 sockets, but some do.
