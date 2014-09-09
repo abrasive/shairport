@@ -605,7 +605,8 @@ static void handle_announce(rtsp_conn_info *conn,
     for (i=0; i<sizeof(conn->stream.fmtp)/sizeof(conn->stream.fmtp[0]); i++)
         conn->stream.fmtp[i] = atoi(strsep(&pfmtp, " \t"));
 
-    for (int c = 0; c < req->nheaders; c++) {
+    int c;
+    for (c = 0; c < req->nheaders; c++) {
         if (!strcmp(req->name[c], "DACP-ID")) {
             dacp_set(&player_dacp.dacp_id, req->value[c]);
         } else if (!strcmp(req->name[c], "Active-Remote")) {
