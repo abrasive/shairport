@@ -169,6 +169,8 @@ static inline seq_t PREDECESSOR(seq_t x) {
 	return p;
 }
 
+// anything with ORDINATE in it must be proctected by the ab_mutex
+
 static inline uint32_t ORDINATE(seq_t x) {
 	uint32_t p = x & 0xffff;
 	uint32_t q = ab_read & 0x0ffff;
@@ -290,7 +292,7 @@ void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
     abuf = audio_buffer + BUFIDX(seqno);
     ab_write = SUCCESSOR(seqno);
   } else if (seq_order(ab_write, seqno)) {    // newer than expected
-    rtp_request_resend(SUCCESSOR(ab_write), PREDECESSOR(seqno));
+    rtp_request_resend(ab_write,seq_diff(PREDECESSOR(seqno),ab_write)+1);
     resend_requests++;
     abuf = audio_buffer + BUFIDX(seqno);
     ab_write = SUCCESSOR(seqno);
@@ -519,14 +521,14 @@ static abuf_t *buffer_get_frame(void) {
       seq_t next = seq_sum(ab_read,i);
       abuf = audio_buffer + BUFIDX(next);
       if (!abuf->ready) {
-        rtp_request_resend(next, next);
+        rtp_request_resend(next, 1);
         resend_requests++;
       }
     }
   }
   
   if (!curframe->ready) {
-    // debug(1, "    %04X. Supplying a silent frame.", read);
+    // debug(1, "    %d. Supplying a silent frame.", read);
     missing_packets++;
     memset(curframe->data, 0, FRAME_BYTES(frame_size));
     curframe->timestamp=0;    

@@ -537,11 +537,10 @@ void rtp_shutdown(void) {
     running = 0;
 }
 
-void rtp_request_resend(seq_t first, seq_t last) {
+void rtp_request_resend(seq_t first, uint32_t count) {
     if (running) {
       if (!request_sent) {
-        debug(2, "requesting resend on %d packets (%04X:%04X).",
-           seq_diff(first,last) + 1, first, last);
+        debug(2, "requesting resend on %d packets starting at %u.",count,first);
         request_sent=1;
       }
 
@@ -550,7 +549,7 @@ void rtp_request_resend(seq_t first, seq_t last) {
       req[1] = 0x55|0x80;  // Apple 'resend'
       *(unsigned short *)(req+2) = htons(1);  // our seqnum
       *(unsigned short *)(req+4) = htons(first);  // missed seqnum
-      *(unsigned short *)(req+6) = htons(last-first+1);  // count
+      *(unsigned short *)(req+6) = htons(count);  // count
         socklen_t msgsize = sizeof(struct sockaddr_in);
 #ifdef AF_INET6
         if (rtp_client_timing_socket.SAFAMILY==AF_INET6) {
