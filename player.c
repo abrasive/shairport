@@ -283,7 +283,7 @@ void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
 
   pthread_mutex_lock(&ab_mutex);
   if (!ab_synced) {
-    debug(2, "syncing to first seqno %04X.", seqno);
+    debug(2, "syncing to first seqno %u.", seqno);
     ab_write = seqno;
     ab_read = seqno;
     ab_synced = 1;
@@ -293,6 +293,7 @@ void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
     ab_write = SUCCESSOR(seqno);
   } else if (seq_order(ab_write, seqno)) {    // newer than expected
     rtp_request_resend(ab_write,seq_diff(PREDECESSOR(seqno),ab_write)+1);
+	debug(1,"Newer packet than expected arrived, looking for %d packets starting at %u.",seq_diff(PREDECESSOR(seqno),ab_write)+1,ab_write);
     resend_requests++;
     abuf = audio_buffer + BUFIDX(seqno);
     ab_write = SUCCESSOR(seqno);
@@ -302,7 +303,7 @@ void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
   } else {                                    // too late.
     too_late_packets++;
     if (!late_packet_message_sent) {
-      debug(1, "too-late packet received: %04X; ab_read: %04X; ab_write: %04X.", seqno, ab_read, ab_write);
+      debug(1, "too-late packet received: %u; ab_read: %u; ab_write: %u.", seqno, ab_read, ab_write);
       late_packet_message_sent=1;
     }
   }
@@ -516,17 +517,19 @@ static abuf_t *buffer_get_frame(void) {
   // check if t+16, t+32, t+64, t+128, ... (buffer_start_fill / 2)
   // packets have arrived... last-chance resend
   
-  if (!ab_buffering) {
+  /*
+if (!ab_buffering) {
     for (i = 16; i < (seq_diff(ab_read,ab_write) / 2); i = (i * 2)) {
       seq_t next = seq_sum(ab_read,i);
       abuf = audio_buffer + BUFIDX(next);
       if (!abuf->ready) {
         rtp_request_resend(next, 1);
+	debug(1,"Looking for packet %u.",next);
         resend_requests++;
       }
     }
   }
-  
+ */ 
   if (!curframe->ready) {
     // debug(1, "    %d. Supplying a silent frame.", read);
     missing_packets++;
