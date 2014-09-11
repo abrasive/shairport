@@ -171,10 +171,18 @@ static inline seq_t PREDECESSOR(seq_t x) {
 
 // anything with ORDINATE in it must be proctected by the ab_mutex
 
-static inline uint32_t ORDINATE(seq_t x) {
-	uint32_t p = x & 0xffff;
-	uint32_t q = ab_read & 0x0ffff;
-	uint32_t t = (p+0x10000-q) & 0xffff;
+static inline int32_t ORDINATE(seq_t x) {
+	int32_t p = x & 0xffff;
+	int32_t q = ab_read & 0x0ffff;
+	int32_t t = (p+0x10000-q) & 0xffff;
+	// we definitely will get a positive number in t at this point, but it might be a
+	// positive alias of a negative number, i.e. x might actually be "before" ab_read
+	// So, if the result is greater than the size of the buffer, we will assume its an
+	// alias and subtract 65536 from it
+	if (t >= BUFFER_FRAMES) {
+//		debug(1,"OOB: %u, ab_r: %u, ab_w: %u",x,ab_read,ab_write);
+		t -= 65536;
+	}
 	return t;
 }
 
@@ -283,7 +291,7 @@ void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
 
   pthread_mutex_lock(&ab_mutex);
   if (!ab_synced) {
-    debug(2, "syncing to first seqno %u.", seqno);
+    debug(2, "syncing to seqno %u.", seqno);
     ab_write = seqno;
     ab_read = seqno;
     ab_synced = 1;
@@ -292,10 +300,20 @@ void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
     abuf = audio_buffer + BUFIDX(seqno);
     ab_write = SUCCESSOR(seqno);
   } else if (seq_order(ab_write, seqno)) {    // newer than expected
-    rtp_request_resend(ab_write,seq_diff(PREDECESSOR(seqno),ab_write)+1);
-	debug(1,"Newer packet than expected arrived, looking for %d packets starting at %u.",seq_diff(PREDECESSOR(seqno),ab_write)+1,ab_write);
-    resend_requests++;
+  	int32_t gap = seq_diff(ab_write,PREDECESSOR(seqno))+1;
+  	if (gap<=0)
+  		debug(1,"Unexpected gap size: %d.",gap);
+    int i;
+    for (i=0;i<gap;i++) {
+    	abuf = audio_buffer + BUFIDX(ab_write+i);
+    	abuf->ready = 0; // to be sure, to be sure
+    	abuf->timestamp = 0;
+    	abuf->sequence_number = 0;
+    }
+    // debug(1,"N %d s %u.",seq_diff(ab_write,PREDECESSOR(seqno))+1,ab_write);
     abuf = audio_buffer + BUFIDX(seqno);
+    rtp_request_resend(ab_write,gap);
+    resend_requests++;
     ab_write = SUCCESSOR(seqno);
   } else if (seq_order(ab_read, seqno)) {     // late but not yet played
     late_packets++;
@@ -303,7 +321,7 @@ void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
   } else {                                    // too late.
     too_late_packets++;
     if (!late_packet_message_sent) {
-      debug(1, "too-late packet received: %u; ab_read: %u; ab_write: %u.", seqno, ab_read, ab_write);
+      // debug(1, "too-late packet received: %u; ab_read: %u; ab_write: %u.", seqno, ab_read, ab_write);
       late_packet_message_sent=1;
     }
   }
@@ -524,7 +542,7 @@ if (!ab_buffering) {
       abuf = audio_buffer + BUFIDX(next);
       if (!abuf->ready) {
         rtp_request_resend(next, 1);
-	debug(1,"Looking for packet %u.",next);
+        debug(1,"Looking for packet %u.",next);
         resend_requests++;
       }
     }
