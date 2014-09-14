@@ -177,9 +177,9 @@ static inline int32_t ORDINATE(seq_t x) {
 	int32_t t = (p+0x10000-q) & 0xffff;
 	// we definitely will get a positive number in t at this point, but it might be a
 	// positive alias of a negative number, i.e. x might actually be "before" ab_read
-	// So, if the result is greater than the size of the buffer, we will assume its an
+	// So, if the result is greater than 32767, we will assume its an
 	// alias and subtract 65536 from it
-	if (t >= BUFFER_FRAMES) {
+	if (t >= 32767) {
 //		debug(1,"OOB: %u, ab_r: %u, ab_w: %u",x,ab_read,ab_write);
 		t -= 65536;
 	}
@@ -296,7 +296,7 @@ void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
     ab_read = seqno;
     ab_synced = 1;
   }
-  if (seq_diff(ab_write, seqno) == 0) {       // expected packet
+  if (ab_write == seqno) {       // expected packet
     abuf = audio_buffer + BUFIDX(seqno);
     ab_write = SUCCESSOR(seqno);
   } else if (seq_order(ab_write, seqno)) {    // newer than expected
@@ -305,7 +305,7 @@ void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
   		debug(1,"Unexpected gap size: %d.",gap);
     int i;
     for (i=0;i<gap;i++) {
-    	abuf = audio_buffer + BUFIDX(ab_write+i);
+    	abuf = audio_buffer + BUFIDX(seq_sum(ab_write,i));
     	abuf->ready = 0; // to be sure, to be sure
     	abuf->timestamp = 0;
     	abuf->sequence_number = 0;
@@ -321,11 +321,11 @@ void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
   } else {                                    // too late.
     too_late_packets++;
     if (!late_packet_message_sent) {
-      // debug(1, "too-late packet received: %u; ab_read: %u; ab_write: %u.", seqno, ab_read, ab_write);
+      debug(1, "too-late packet received: %u; ab_read: %u; ab_write: %u.", seqno, ab_read, ab_write);
       late_packet_message_sent=1;
     }
   }
-  pthread_mutex_unlock(&ab_mutex);
+  // pthread_mutex_unlock(&ab_mutex);
 
   if (abuf) {
     alac_decode(abuf->data, data, len);
@@ -334,7 +334,7 @@ void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
     abuf->sequence_number = seqno;
   }
   
-  pthread_mutex_lock(&ab_mutex);
+  // pthread_mutex_lock(&ab_mutex);
   
   time_of_last_audio_packet = get_absolute_time_in_fp();
   
@@ -529,25 +529,40 @@ static abuf_t *buffer_get_frame(void) {
     return 0;
   }
 
-  seq_t read = ab_read;
-  ab_read=SUCCESSOR(ab_read);
+/*
+  // check 72 packets (about 0.75 seconds) later if the packet has come in
 
-  // check if t+16, t+32, t+64, t+128, ... (buffer_start_fill / 2)
-  // packets have arrived... last-chance resend
-  
-  /*
-if (!ab_buffering) {
-    for (i = 16; i < (seq_diff(ab_read,ab_write) / 2); i = (i * 2)) {
-      seq_t next = seq_sum(ab_read,i);
-      abuf = audio_buffer + BUFIDX(next);
+  if (!ab_buffering) {
+    int checkpoint = ORDINATE(ab_write)-72;
+    if (checkpoint>0) { // so long as we have at least a quarter second to go...
+      seq_t check_seqno = seq_sum(ab_read,checkpoint);
+      abuf = audio_buffer + BUFIDX(check_seqno);
+
       if (!abuf->ready) {
-        rtp_request_resend(next, 1);
-        debug(1,"Looking for packet %u.",next);
+        //rtp_request_resend(check_seqno, 1);
+        debug(1,"Resend %u.",check_seqno);
         resend_requests++;
       }
     }
   }
- */ 
+*/
+
+  seq_t read = ab_read;
+
+  // check if t+32, t+64, t+128, ... (buffer_start_fill / 2)
+  // packets have arrived... last-chance resend
+  
+if (!ab_buffering) {
+    for (i = 8; i < (seq_diff(ab_read,ab_write) / 2); i = (i * 2)) {
+      seq_t next = seq_sum(ab_read,i);
+      abuf = audio_buffer + BUFIDX(next);
+      if (!abuf->ready) {
+        rtp_request_resend(next, 1);
+        debug(1,"Resend %u.",next);
+        resend_requests++;
+      }
+    }
+  }
   if (!curframe->ready) {
     // debug(1, "    %d. Supplying a silent frame.", read);
     missing_packets++;
@@ -555,6 +570,7 @@ if (!ab_buffering) {
     curframe->timestamp=0;    
   }
   curframe->ready = 0;
+  ab_read=SUCCESSOR(ab_read);
   pthread_mutex_unlock(&ab_mutex);
   return curframe;
 }
