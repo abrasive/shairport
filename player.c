@@ -843,8 +843,6 @@ static void *player_thread_func(void *arg) {
           } else {
             sync_error_out_of_bounds = 0;
           }
-
-          play_number++;
               
           // debug(1,"Sync error %lld frames. Amount to stuff %d." ,sync_error,amount_to_stuff);
           
