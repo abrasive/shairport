@@ -142,14 +142,6 @@ static void ab_resync(void) {
   ab_buffering = 1;
 }
 
-static inline int ab_buffer_empty(void) {
-// this is just for clarity. 
-  if (ab_synced==1)
-    return 0;
-  else
-    return 1;
-}
-
 // the sequence number is a 16-bit unsigned number which wraps pretty often
 // to work out if one seqno is 'after' another therefore depends whether wrap has occurred
 // this function works out the actual ordinate of the seqno, i.e. the distance up from 
@@ -293,6 +285,8 @@ void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
     abuf = audio_buffer + BUFIDX(seqno);
     ab_write = SUCCESSOR(seqno);
   } else if (seq_order(ab_write, seqno)) {    // newer than expected
+  	if (ORDINATE(seqno)>(BUFFER_FRAMES*7)/8)
+  	 debug(1,"An interval of %u frames has opened, with ab_read: %u, ab_write: %u and seqno: %u.",seq_diff(ab_read,seqno),ab_read,ab_write,seqno);
     int32_t gap = seq_diff(ab_write,PREDECESSOR(seqno))+1;
     if (gap<=0)
       debug(1,"Unexpected gap size: %d.",gap);
@@ -313,10 +307,12 @@ void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
     abuf = audio_buffer + BUFIDX(seqno);
   } else {                                    // too late.
     too_late_packets++;
+    /*
     if (!late_packet_message_sent) {
       debug(1, "too-late packet received: %u; ab_read: %u; ab_write: %u.", seqno, ab_read, ab_write);
       late_packet_message_sent=1;
     }
+    */
   }
   // pthread_mutex_unlock(&ab_mutex);
 
@@ -395,7 +391,7 @@ static abuf_t *buffer_get_frame(void) {
     }
     pthread_mutex_unlock(&flush_mutex);
     
-    if (!ab_buffer_empty()) {
+    if (ab_synced) {
     
       dac_delay = 0;
       curframe = audio_buffer + BUFIDX(ab_read);
@@ -408,11 +404,17 @@ static abuf_t *buffer_get_frame(void) {
       }
 
       if (curframe->ready) {
+/*
+				// This is broken -- it causes infinite loops. It's in the wrong place, and anyway isn't used much.
         if ((flush_rtp_timestamp) && (flush_rtp_timestamp>=curframe->timestamp)) {
-          // debug(1,"Dropping flushed packet %d",curframe->sequence_number);
+          debug(1,"Dropping flushed packet seqno %u, timestamp %u",curframe->sequence_number,curframe->timestamp);
           curframe->ready=0;
+          if (flush_rtp_timestamp==curframe->timestamp) // if we are finished...
+          	flush_rtp_timestamp=0;
           ab_read==SUCCESSOR(ab_read);
-        } else if (ab_buffering) { // if we are getting packets but not yet forwarding them to the player
+        } else
+*/        
+         if (ab_buffering) { // if we are getting packets but not yet forwarding them to the player
           if (first_packet_timestamp==0) { // if this is the very first packet
            // debug(1,"First frame seen, time %u, with %d frames...",curframe->timestamp,seq_diff(ab_read, ab_write));
            uint32_t reference_timestamp;
@@ -527,6 +529,7 @@ static abuf_t *buffer_get_frame(void) {
   // check if t+8, t+16, t+32, t+64, t+128, ... (buffer_start_fill / 2)
   // packets have arrived... last-chance resend
   
+  
   if (!ab_buffering) {
     for (i = 8; i < (seq_diff(ab_read,ab_write) / 2); i = (i * 2)) {
       seq_t next = seq_sum(ab_read,i);
@@ -538,6 +541,7 @@ static abuf_t *buffer_get_frame(void) {
       }
     }
   }
+  
   if (!curframe->ready) {
     // debug(1, "    %d. Supplying a silent frame.", read);
     missing_packets++;
@@ -689,6 +693,8 @@ static void *player_thread_func(void *arg) {
   int64_t tsum_of_sync_errors,tsum_of_corrections,tsum_of_insertions_and_deletions,tsum_of_drifts;
   int64_t previous_sync_error,previous_correction;
   int64_t minimum_dac_queue_size = 1000000;
+  int32_t minimum_buffer_occupancy = BUFFER_FRAMES;
+  int32_t maximum_buffer_occupancy = 0;
   
   int play_samples;
   int64_t current_delay;
@@ -763,6 +769,14 @@ static void *player_thread_func(void *arg) {
           }
           if (current_delay<minimum_dac_queue_size)
             minimum_dac_queue_size=current_delay;
+          
+          uint32_t bo = seq_diff(ab_read,ab_write);
+          
+          if (bo<minimum_buffer_occupancy)
+            minimum_buffer_occupancy=bo;
+
+          if (bo>maximum_buffer_occupancy)
+            maximum_buffer_occupancy=bo;
 
           // this is the actual delay, including the latency we actually want, which will fluctuate a good bit about a potentially rising or falling trend.
           int64_t delay = td_in_frames+rt-(nt-current_delay);
@@ -900,8 +914,10 @@ static void *player_thread_func(void *arg) {
           double moving_average_insertions_plus_deletions = (1.0*tsum_of_insertions_and_deletions)/number_of_statistics;
           double moving_average_drift = (1.0*tsum_of_drifts)/number_of_statistics;
           // if ((play_number/print_interval)%20==0)
-            debug(1,"Sync error: %.1f (frames); net correction: %.1f (ppm); corrections: %.1f (ppm); missing packets %llu; late packets %llu; too late packets %llu; resend requests %llu; min DAC queue size %lli.", moving_average_sync_error, moving_average_correction*1000000/352, moving_average_insertions_plus_deletions*1000000/352,missing_packets,late_packets,too_late_packets,resend_requests,minimum_dac_queue_size);
+            debug(1,"Sync error: %.1f (frames); net correction: %.1f (ppm); corrections: %.1f (ppm); missing packets %llu; late packets %llu; too late packets %llu; resend requests %llu; min DAC queue size %lli, min and max buffer occupancy %u and %u.", moving_average_sync_error, moving_average_correction*1000000/352, moving_average_insertions_plus_deletions*1000000/352,missing_packets,late_packets,too_late_packets,resend_requests,minimum_dac_queue_size,minimum_buffer_occupancy,maximum_buffer_occupancy);
           minimum_dac_queue_size=1000000; // hack reset
+          maximum_buffer_occupancy = 0; // can't be less than this
+          minimum_buffer_occupancy = BUFFER_FRAMES; // can't be more than this
         }
       }
     }
@@ -936,9 +952,11 @@ void player_volume(double f) {
 }
 
 void player_flush(uint32_t timestamp) {
+	// debug(1,"Flush requested up to %u. It seems as if 2147483647 is special.",timestamp);
   pthread_mutex_lock(&flush_mutex);
   flush_requested=1;
-  flush_rtp_timestamp=timestamp; // flush all packets up to (and including?) this
+  if (timestamp!=0x7fffffff)
+  	flush_rtp_timestamp=timestamp; // flush all packets up to (and including?) this
   pthread_mutex_unlock(&flush_mutex);
 }
 

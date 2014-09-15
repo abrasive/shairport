@@ -413,18 +413,21 @@ static void handle_flush(rtsp_conn_info *conn,
                          rtsp_message *req, rtsp_message *resp) {
     if (!rtsp_playing())
         return;
-    char * hdr = msg_get_header(req,"RTP-Info");
-    
-    // debug(1,"FLUSH message received: \"%s\".",hdr);
-    // get the rtp timestamp
     char *p;
     uint32_t rtptime=0;
-    p = strstr(hdr, "rtptime=");
-    if (p) {
-      p = strchr(p, '=') + 1;
-      if (p)
-        rtptime = atoi(p);
+    char * hdr = msg_get_header(req,"RTP-Info");
+    
+    if (hdr) {
+      // debug(1,"FLUSH message received: \"%s\".",hdr);
+      // get the rtp timestamp
+      p = strstr(hdr, "rtptime=");
+      if (p) {
+        p = strchr(p, '=') + 1;
+        if (p)
+          rtptime = atoi(p);
+      }
     }
+    // debug(1,"RTSP Flush Requested.");
     player_flush(rtptime);
     resp->respcode = 200;
 }
