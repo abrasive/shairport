@@ -401,7 +401,7 @@ double vol2attn(double vol, long max_db, long min_db) {
     double first_slope = -2500.0; // this is the slope of the attenuation at the high end -- 25dB for the full rotation.
     if (-range_db>first_slope)
       first_slope = range_db;
-    double lines[order][2] = {{0,first_slope},{-5,first_slope-(range_db+first_slope)/2},{-10,-range_db}};
+    double lines[order][2] = {{0,first_slope},{-5,first_slope-(range_db+first_slope)/2},{-17,-range_db}};
     int i;
     for (i=0;i<order;i++) {
       if (vol<=lines[i][0]) {
