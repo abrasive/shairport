@@ -56,6 +56,10 @@ typedef struct time_ping_record {
 static int running = 0;
 static int please_shutdown;
 
+static char client_ip_string[INET6_ADDRSTRLEN]; // the ip string pointing to the client
+static short client_ip_family; // AF_INET / AF_INET6 
+static uint32_t client_active_remote; // used when you want to control the client...
+
 static SOCKADDR rtp_client_control_socket; // a socket pointing to the control port of the client
 static SOCKADDR rtp_client_timing_socket; // a socket pointing to the timing port of the client
 static int audio_socket; // our local [server] audio socket
@@ -421,18 +425,20 @@ static int bind_port(SOCKADDR *remote,int *sock, int desired_port ) {
 }
 
 
-void rtp_setup(SOCKADDR *remote, int cport, int tport, int *lsport, int *lcport, int *ltport) {
+void rtp_setup(SOCKADDR *remote, int cport, int tport, uint32_t active_remote, int *lsport, int *lcport, int *ltport) {
     if (running)
         die("rtp_setup called with active stream!");
 
     debug(2, "rtp_setup: cport=%d tport=%d.", cport, tport);
     
+    client_active_remote = active_remote;
+    
     // print out what we know about the client
     void *addr;
     char *ipver;
     int port;
-    char ipstr[INET6_ADDRSTRLEN];
     char portstr[20];
+    client_ip_family = remote->SAFAMILY; // keep information about the kind of ip of the client
 #ifdef AF_INET6
     if (remote->SAFAMILY == AF_INET6) {
         struct sockaddr_in6 *sa6 = (struct sockaddr_in6*)remote;
@@ -447,8 +453,8 @@ void rtp_setup(SOCKADDR *remote, int cport, int tport, int *lsport, int *lcport,
         port = ntohs(sa4->sin_port);
         ipver = "IPv4";
     }
-    inet_ntop(remote->SAFAMILY,addr,ipstr,sizeof(ipstr));
-    debug(1,"Connection from %s: %s:%d",ipver,ipstr,port);
+    inet_ntop(remote->SAFAMILY,addr,client_ip_string,sizeof(client_ip_string)); // keep the client's ip number
+    debug(1,"Connection from %s: %s:%d",ipver,client_ip_string,port);
     
     
 
@@ -461,7 +467,7 @@ void rtp_setup(SOCKADDR *remote, int cport, int tport, int *lsport, int *lcport,
     hints.ai_family = remote->SAFAMILY;
     hints.ai_socktype = SOCK_DGRAM;
     snprintf(portstr, 20, "%d", cport);
-    if (getaddrinfo(ipstr,portstr,&hints,&servinfo)!=0)
+    if (getaddrinfo(client_ip_string,portstr,&hints,&servinfo)!=0)
         die("Can't get address of client's control port");
 
 #ifdef AF_INET6
@@ -478,7 +484,7 @@ void rtp_setup(SOCKADDR *remote, int cport, int tport, int *lsport, int *lcport,
     hints.ai_family = remote->SAFAMILY;
     hints.ai_socktype = SOCK_DGRAM;
     snprintf(portstr, 20, "%d", tport);
-    if (getaddrinfo(ipstr,portstr,&hints,&servinfo)!=0)
+    if (getaddrinfo(client_ip_string,portstr,&hints,&servinfo)!=0)
         die("Can't get address of client's timing port");
 #ifdef AF_INET6
     if (servinfo->ai_family == AF_INET6)
@@ -565,4 +571,59 @@ void rtp_request_resend(seq_t first, uint32_t count) {
         request_sent=1;
       }
     }
+}
+
+void rtp_request_client_pause() {
+  if (running) {
+    debug(1,"Send a request to pause to  client at %s on port 3689 with active remote %u.",client_ip_string,client_active_remote);
+    
+    
+    struct addrinfo hints, *res;
+    int sockfd;
+    
+    char message[1000] , server_reply[2000];
+
+    // first, load up address structs with getaddrinfo():
+
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+
+    getaddrinfo(client_ip_string, "3689", &hints, &res);
+
+    // make a socket:
+
+    sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+
+    if (sockfd == -1) {
+      die("Could not create socket");
+    }
+    debug(1,"Socket created");
+  
+    // connect!
+
+    if (connect(sockfd, res->ai_addr, res->ai_addrlen) < 0) {
+      die("connect failed. Error");
+    }
+    // debug(1,"Connect successful");
+    
+    sprintf(message,"GET /ctrl-int/1/pause HTTP/1.1\r\nHost: %s\r\nActive-Remote: %u\r\n\r\n",client_ip_string,client_active_remote);
+    // debug(1,"Sending this message: \"%s\".",message);
+  
+    //Send some data
+    if( send(sockfd , message , strlen(message) , 0) < 0) {
+      debug(1,"Send failed");
+    }
+  
+    //Receive a reply from the server
+    if( recv(sockfd , server_reply , 2000 , 0) < 0) {
+      debug(1,"recv failed");
+    }
+  
+    // debug(1,"Server replied: \"%s\".",server_reply);
+  
+    close(sockfd);
+  } else {
+    debug(1,"Request to pause non-existent play stream -- ignored.");
+  }
 }

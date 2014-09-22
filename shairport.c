@@ -46,6 +46,7 @@
 
 #include "common.h"
 #include "rtsp.h"
+#include "rtp.h"
 #include "mdns.h"
 
 #include <libdaemon/dfork.h>
@@ -89,6 +90,10 @@ static void sig_child(int foo, siginfo_t *bar, void *baz) {
 
 static void sig_logrotate(int foo, siginfo_t *bar, void *baz) {
 //    log_setup();
+}
+
+static void sig_pause_client(int foo, siginfo_t *bar, void *baz) {
+  rtp_request_client_pause();
 }
 
 void print_version(void) {
@@ -276,6 +281,7 @@ void signal_setup(void) {
     sigdelset(&set, SIGHUP);
     sigdelset(&set, SIGSTOP);
     sigdelset(&set, SIGCHLD);
+    sigdelset(&set, SIGUSR2);
     pthread_sigmask(SIG_BLOCK, &set, NULL);
 
     // setting this to SIG_IGN would prevent signalling any threads.
@@ -292,6 +298,9 @@ void signal_setup(void) {
 
     sa.sa_sigaction = &sig_logrotate;
     sigaction(SIGHUP, &sa, NULL);
+
+    sa.sa_sigaction = &sig_pause_client;
+    sigaction(SIGUSR2, &sa, NULL);
 
     sa.sa_sigaction = &sig_child;
     sigaction(SIGCHLD, &sa, NULL);

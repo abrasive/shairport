@@ -436,6 +436,16 @@ static void handle_setup(rtsp_conn_info *conn,
                          rtsp_message *req, rtsp_message *resp) {
     int cport, tport;
     int lsport,lcport,ltport;
+    uint32_t active_remote=0;
+
+    char * ar = msg_get_header(req,"Active-Remote");
+    if (ar) {
+      debug(1,"Active-Remote string seen: \"%s\".",ar);
+      // get the active remote
+      char *p;
+      active_remote = strtoul(ar,&p,10);
+      debug(1,"Active Remote is %u.",active_remote);
+    }
     
     if (config.userSuppliedLatency==0) {
       char * ua = msg_get_header(req,"User-Agent");
@@ -473,7 +483,7 @@ static void handle_setup(rtsp_conn_info *conn,
     tport = atoi(p);
 
     rtsp_take_player();
-    rtp_setup(&conn->remote, cport, tport,&lsport,&lcport,&ltport);
+    rtp_setup(&conn->remote, cport, tport, active_remote, &lsport,&lcport,&ltport);
     if (!lsport)
         return;
     char *q;

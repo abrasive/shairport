@@ -135,8 +135,10 @@ static uint64_t missing_packets,late_packets,too_late_packets,resend_requests;
 
 static void ab_resync(void) {
   int i;
-  for (i=0; i<BUFFER_FRAMES; i++)
+  for (i=0; i<BUFFER_FRAMES; i++) {
     audio_buffer[i].ready = 0;
+    audio_buffer[i].sequence_number = 0;
+  }
   ab_synced = 0;
   last_seqno_read = -1;
   ab_buffering = 1;
@@ -162,7 +164,6 @@ static inline seq_t PREDECESSOR(seq_t x) {
 }
 
 // anything with ORDINATE in it must be proctected by the ab_mutex
-
 static inline int32_t ORDINATE(seq_t x) {
   int32_t p = x & 0xffff;
   int32_t q = ab_read & 0x0ffff;
@@ -197,6 +198,28 @@ static inline seq_t seq_sum(seq_t a, seq_t b) {
   uint32_t r = (a+b) & 0xffff;
   return r;
 }
+
+
+// now for 32-bit wrapping in timestamps
+
+// this returns true if the second arg is strictly after the first
+// on the assumption that the gap between them is never greater than (2^31)-1
+// Represent a and b in 64 bits
+static inline int seq32_order(uint32_t a, uint32_t b) {
+	if (a==b)
+		return 0; 
+	int64_t A = a & 0xffffffff;
+	int64_t B = b & 0xffffffff;
+	int64_t C = B-A;
+	// if bit 31 is set, it means either b is before (i.e. less than) a or
+	// b is (2^31)-1 ahead of b.
+	
+	// If we assume the gap between b and a should never reach 2 billion, then
+	// bit 31 == 0 means b is strictly after a
+  return (C & 0x80000000) == 0;
+}
+
+
 
 static void alac_decode(short *dest, uint8_t *buf, int len) {
   unsigned char packet[MAX_PACKET];
@@ -285,8 +308,8 @@ void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
     abuf = audio_buffer + BUFIDX(seqno);
     ab_write = SUCCESSOR(seqno);
   } else if (seq_order(ab_write, seqno)) {    // newer than expected
-  	if (ORDINATE(seqno)>(BUFFER_FRAMES*7)/8)
-  	 debug(1,"An interval of %u frames has opened, with ab_read: %u, ab_write: %u and seqno: %u.",seq_diff(ab_read,seqno),ab_read,ab_write,seqno);
+  	//if (ORDINATE(seqno)>(BUFFER_FRAMES*7)/8)
+  	// debug(1,"An interval of %u frames has opened, with ab_read: %u, ab_write: %u and seqno: %u.",seq_diff(ab_read,seqno),ab_read,ab_write,seqno);
     int32_t gap = seq_diff(ab_write,PREDECESSOR(seqno))+1;
     if (gap<=0)
       debug(1,"Unexpected gap size: %d.",gap);
@@ -390,9 +413,41 @@ static abuf_t *buffer_get_frame(void) {
       flush_requested=0;
     }
     pthread_mutex_unlock(&flush_mutex);
-    
+    uint32_t flush_limit = 0;
     if (ab_synced) {
-    
+    	do {
+    		curframe = audio_buffer + BUFIDX(ab_read);
+    		if (curframe->ready) {
+    		
+					if (curframe->sequence_number!=ab_read) {
+						// some kind of sync problem has occurred.
+						if (BUFIDX(curframe->sequence_number)==BUFIDX(ab_read)) {
+							// it looks like some kind of aliasing has happened
+							if (seq_order(ab_read,curframe->sequence_number)) {
+								ab_read=curframe->sequence_number;
+								debug(1,"Aliasing of buffer index -- reset.");
+							}
+						} else {
+							debug(1,"Inconsistent sequence numbers detected");
+						}
+					}
+    		    		
+					if ((flush_rtp_timestamp!=0x7fffffff) && ((curframe->timestamp==flush_rtp_timestamp) || seq32_order(curframe->timestamp,flush_rtp_timestamp))) {
+						debug(1,"Dropping flushed packet seqno %u, timestamp %u",curframe->sequence_number,curframe->timestamp);
+						curframe->ready=0;
+						flush_limit++;
+						ab_read==SUCCESSOR(ab_read);
+					}
+					if ((flush_rtp_timestamp!=0x7fffffff) && (!seq32_order(curframe->timestamp,flush_rtp_timestamp))) // if we have gone past the flush boundary time
+						flush_rtp_timestamp=0x7fffffff;
+				}
+    	} while ((flush_rtp_timestamp!=0x7fffffff) && (flush_limit<=8820) && (curframe->ready!=0));
+    	
+    	if (flush_limit==8820) {
+    		debug(1,"Flush hit the 8820 frame limit!");
+    		flush_limit=0;
+    	}
+    	    
       dac_delay = 0;
       curframe = audio_buffer + BUFIDX(ab_read);
       if (config.output->delay) {
@@ -717,7 +772,7 @@ static void *player_thread_func(void *arg) {
 
   late_packet_message_sent=0;
   missing_packets=late_packets=too_late_packets=resend_requests=0;
-  flush_rtp_timestamp=0;
+  flush_rtp_timestamp=0x7fffffff; // it seems this number has a special significance -- it seems to be used as a null operand, so we'll use it like that too
   int sync_error_out_of_bounds = 0; // number of times in a row that there's been a serious sync error
   while (!please_stop) {
     abuf_t *inframe = buffer_get_frame();
@@ -955,8 +1010,8 @@ void player_flush(uint32_t timestamp) {
 	// debug(1,"Flush requested up to %u. It seems as if 2147483647 is special.",timestamp);
   pthread_mutex_lock(&flush_mutex);
   flush_requested=1;
-  if (timestamp!=0x7fffffff)
-  	flush_rtp_timestamp=timestamp; // flush all packets up to (and including?) this
+  //if (timestamp!=0x7fffffff)
+  flush_rtp_timestamp=timestamp; // flush all packets up to (and including?) this
   pthread_mutex_unlock(&flush_mutex);
 }
 
