@@ -575,54 +575,61 @@ void rtp_request_resend(seq_t first, uint32_t count) {
 
 void rtp_request_client_pause() {
   if (running) {
-    debug(1,"Send a request to pause to  client at %s on port 3689 with active remote %u.",client_ip_string,client_active_remote);
-    
-    
-    struct addrinfo hints, *res;
-    int sockfd;
-    
-    char message[1000] , server_reply[2000];
+  	if (client_active_remote==0) {
+  		debug(1,"Can't request a client pause: no valid active remote.");
+  	} else {
+			// debug(1,"Send a client pause request to %s:3689 with active remote %u.",client_ip_string,client_active_remote);
+		
+		
+			struct addrinfo hints, *res;
+			int sockfd;
+		
+			char message[1000] , server_reply[2000];
 
-    // first, load up address structs with getaddrinfo():
+			// first, load up address structs with getaddrinfo():
 
-    memset(&hints, 0, sizeof hints);
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
+			memset(&hints, 0, sizeof hints);
+			hints.ai_family = AF_UNSPEC;
+			hints.ai_socktype = SOCK_STREAM;
 
-    getaddrinfo(client_ip_string, "3689", &hints, &res);
+			getaddrinfo(client_ip_string, "3689", &hints, &res);
 
-    // make a socket:
+			// make a socket:
 
-    sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+			sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 
-    if (sockfd == -1) {
-      die("Could not create socket");
+			if (sockfd == -1) {
+				die("Could not create socket");
+			}
+			// debug(1,"Socket created");
+	
+			// connect!
+
+			if (connect(sockfd, res->ai_addr, res->ai_addrlen) < 0) {
+				die("connect failed. Error");
+			}
+			// debug(1,"Connect successful");
+		
+			sprintf(message,"GET /ctrl-int/1/pause HTTP/1.1\r\nHost: %s:3689\r\nActive-Remote: %u\r\n\r\n",client_ip_string,client_active_remote);
+			// debug(1,"Sending this message: \"%s\".",message);
+	
+			//Send some data
+			if( send(sockfd , message , strlen(message) , 0) < 0) {
+				debug(1,"Send failed");
+			}
+	
+			//Receive a reply from the server
+			if( recv(sockfd , server_reply , 2000 , 0) < 0) {
+				debug(1,"recv failed");
+			}
+	
+			// debug(1,"Server replied: \"%s\".",server_reply);
+		
+			if (strstr(server_reply,"HTTP/1.1 204 No Content")!=server_reply)
+				debug(1,"Client pause request failed: \"%s\".",server_reply);
+	
+			close(sockfd);
     }
-    debug(1,"Socket created");
-  
-    // connect!
-
-    if (connect(sockfd, res->ai_addr, res->ai_addrlen) < 0) {
-      die("connect failed. Error");
-    }
-    // debug(1,"Connect successful");
-    
-    sprintf(message,"GET /ctrl-int/1/pause HTTP/1.1\r\nHost: %s\r\nActive-Remote: %u\r\n\r\n",client_ip_string,client_active_remote);
-    // debug(1,"Sending this message: \"%s\".",message);
-  
-    //Send some data
-    if( send(sockfd , message , strlen(message) , 0) < 0) {
-      debug(1,"Send failed");
-    }
-  
-    //Receive a reply from the server
-    if( recv(sockfd , server_reply , 2000 , 0) < 0) {
-      debug(1,"recv failed");
-    }
-  
-    // debug(1,"Server replied: \"%s\".",server_reply);
-  
-    close(sockfd);
   } else {
     debug(1,"Request to pause non-existent play stream -- ignored.");
   }
