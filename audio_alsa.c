@@ -61,6 +61,8 @@ audio_output audio_alsa = {
 
 static pthread_mutex_t alsa_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+static unsigned int desired_sample_rate;
+
 static snd_pcm_t *alsa_handle = NULL;
 static snd_pcm_hw_params_t *alsa_params = NULL;
 
@@ -128,7 +130,6 @@ static int init(int argc, char **argv) {
 
   if (alsa_mix_dev == NULL)
       alsa_mix_dev = alsa_out_dev;
-  
 
   int ret = 0;
 
@@ -180,12 +181,10 @@ static void deinit(void) {
   }
 }
 
-static void start(int sample_rate) {
-  if (sample_rate != 44100)
-    die("Unexpected sample rate!");
-  unsigned int mysamplerate=sample_rate;
+void open_alsa_device(void) { 
 
   int ret, dir = 0;
+  unsigned int my_sample_rate = desired_sample_rate;
   snd_pcm_uframes_t frames = 441*10;
   snd_pcm_uframes_t buffer_size = frames*4;
   ret = snd_pcm_open(&alsa_handle, alsa_out_dev, SND_PCM_STREAM_PLAYBACK, 0);
@@ -197,49 +196,71 @@ static void start(int sample_rate) {
   snd_pcm_hw_params_set_access(alsa_handle, alsa_params, SND_PCM_ACCESS_RW_INTERLEAVED);
   snd_pcm_hw_params_set_format(alsa_handle, alsa_params, SND_PCM_FORMAT_S16);
   snd_pcm_hw_params_set_channels(alsa_handle, alsa_params, 2);
-  snd_pcm_hw_params_set_rate_near(alsa_handle, alsa_params, (unsigned int *)&mysamplerate, &dir);
+  snd_pcm_hw_params_set_rate_near(alsa_handle, alsa_params, &my_sample_rate, &dir);
   // snd_pcm_hw_params_set_period_size_near(alsa_handle, alsa_params, &frames, &dir);
   // snd_pcm_hw_params_set_buffer_size_near(alsa_handle, alsa_params, &buffer_size);
   ret = snd_pcm_hw_params(alsa_handle, alsa_params);
-  if (ret < 0)
+  if (ret < 0) {
     die("unable to set hw parameters: %s.", snd_strerror(ret));
-  if (mysamplerate!=sample_rate) {
-    die("Can't set the D/A converter to %d -- set to %d instead./n",sample_rate,mysamplerate);
   }
+  if (my_sample_rate!=desired_sample_rate) {
+    die("Can't set the D/A converter to %d -- set to %d instead./n",desired_sample_rate,my_sample_rate);
+  }
+}
+
+void close_alsa_device(void) {
+  if (alsa_handle) {
+    snd_pcm_drain(alsa_handle);
+    snd_pcm_close(alsa_handle);
+    alsa_handle = NULL;
+  }
+}
+
+static void start(int sample_rate) {
+  if (sample_rate != 44100)
+    die("Unexpected sample rate %d -- only 44,100 supported!",sample_rate);
+  desired_sample_rate = sample_rate; // must be a variable
+  // open_alsa_device();
 }
 
 static uint32_t delay() {
-  pthread_mutex_lock(&alsa_mutex);
-  snd_pcm_sframes_t current_avail,current_delay = 0;
-  int derr,ignore;
-  if (snd_pcm_state(alsa_handle)==SND_PCM_STATE_RUNNING) {
-    derr = snd_pcm_avail_delay(alsa_handle,&current_avail,&current_delay);
-    // current_avail not used
-    if (derr != 0) {
-      ignore = snd_pcm_recover(alsa_handle, derr, 0);
-      debug(1,"Error %d in delay(): %s. Delay reported is %d frames.", derr, snd_strerror(derr),current_delay);
-      current_delay=-1;
-    } 
-  } else if (snd_pcm_state(alsa_handle)==SND_PCM_STATE_PREPARED) {
-    current_delay=0;
-  } else {
-    if (snd_pcm_state(alsa_handle)==SND_PCM_STATE_XRUN)
-      current_delay=0;
-    else {
-      current_delay=-1;
-      debug(1,"Error -- ALSA delay(): bad state: %d.",snd_pcm_state(alsa_handle));
-    }
-    if (derr = snd_pcm_prepare(alsa_handle)) {
-      ignore = snd_pcm_recover(alsa_handle, derr, 0);
-      debug(1,"Error preparing after delay error: %s.", snd_strerror(derr));
-      current_delay = -1;
-    }
+	if (alsa_handle==NULL) {
+		return 0;
+	} else {
+		pthread_mutex_lock(&alsa_mutex);
+		snd_pcm_sframes_t current_avail,current_delay = 0;
+		int derr,ignore;
+		if (snd_pcm_state(alsa_handle)==SND_PCM_STATE_RUNNING) {
+			derr = snd_pcm_avail_delay(alsa_handle,&current_avail,&current_delay);
+			// current_avail not used
+			if (derr != 0) {
+				ignore = snd_pcm_recover(alsa_handle, derr, 0);
+				debug(1,"Error %d in delay(): %s. Delay reported is %d frames.", derr, snd_strerror(derr),current_delay);
+				current_delay=-1;
+			} 
+		} else if (snd_pcm_state(alsa_handle)==SND_PCM_STATE_PREPARED) {
+			current_delay=0;
+		} else {
+			if (snd_pcm_state(alsa_handle)==SND_PCM_STATE_XRUN)
+				current_delay=0;
+			else {
+				current_delay=-1;
+				debug(1,"Error -- ALSA delay(): bad state: %d.",snd_pcm_state(alsa_handle));
+			}
+			if (derr = snd_pcm_prepare(alsa_handle)) {
+				ignore = snd_pcm_recover(alsa_handle, derr, 0);
+				debug(1,"Error preparing after delay error: %s.", snd_strerror(derr));
+				current_delay = -1;
+			}
+		}
+		pthread_mutex_unlock(&alsa_mutex);
+		return current_delay;
   }
-  pthread_mutex_unlock(&alsa_mutex);
-  return current_delay;
 }
 
 static void play(short buf[], int samples) {
+	if (alsa_handle==NULL)
+		open_alsa_device();
   pthread_mutex_lock(&alsa_mutex);
   snd_pcm_sframes_t current_delay = 0;
   int err,ignore;
@@ -277,15 +298,13 @@ static void flush(void) {
     */    
     if (!((snd_pcm_state(alsa_handle)==SND_PCM_STATE_PREPARED) || (snd_pcm_state(alsa_handle)==SND_PCM_STATE_RUNNING)))
       debug(1,"Flush returning unexpected state -- %d.",snd_pcm_state(alsa_handle));
+    close_alsa_device();
   }
 }
 
 static void stop(void) {
-  if (alsa_handle) {
-    snd_pcm_drain(alsa_handle);
-    snd_pcm_close(alsa_handle);
-    alsa_handle = NULL;
-  }
+	if (alsa_handle!=0)
+  	close_alsa_device();
 }
 
 static void volume(double vol) {
