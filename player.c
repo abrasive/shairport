@@ -294,62 +294,71 @@ static void free_buffer(void) {
 }
 
 void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
+	
   packet_count++;
-  abuf_t *abuf = 0;
-
+  
   pthread_mutex_lock(&ab_mutex);
-  if (!ab_synced) {
-    debug(2, "syncing to seqno %u.", seqno);
-    ab_write = seqno;
-    ab_read = seqno;
-    ab_synced = 1;
-  }
-  if (ab_write == seqno) {       // expected packet
-    abuf = audio_buffer + BUFIDX(seqno);
-    ab_write = SUCCESSOR(seqno);
-  } else if (seq_order(ab_write, seqno)) {    // newer than expected
-  	//if (ORDINATE(seqno)>(BUFFER_FRAMES*7)/8)
-  	// debug(1,"An interval of %u frames has opened, with ab_read: %u, ab_write: %u and seqno: %u.",seq_diff(ab_read,seqno),ab_read,ab_write,seqno);
-    int32_t gap = seq_diff(ab_write,PREDECESSOR(seqno))+1;
-    if (gap<=0)
-      debug(1,"Unexpected gap size: %d.",gap);
-    int i;
-    for (i=0;i<gap;i++) {
-      abuf = audio_buffer + BUFIDX(seq_sum(ab_write,i));
-      abuf->ready = 0; // to be sure, to be sure
-      abuf->timestamp = 0;
-      abuf->sequence_number = 0;
-    }
-    // debug(1,"N %d s %u.",seq_diff(ab_write,PREDECESSOR(seqno))+1,ab_write);
-    abuf = audio_buffer + BUFIDX(seqno);
-    rtp_request_resend(ab_write,gap);
-    resend_requests++;
-    ab_write = SUCCESSOR(seqno);
-  } else if (seq_order(ab_read, seqno)) {     // late but not yet played
-    late_packets++;
-    abuf = audio_buffer + BUFIDX(seqno);
-  } else {                                    // too late.
-    too_late_packets++;
-    /*
-    if (!late_packet_message_sent) {
-      debug(1, "too-late packet received: %u; ab_read: %u; ab_write: %u.", seqno, ab_read, ab_write);
-      late_packet_message_sent=1;
-    }
-    */
-  }
-  // pthread_mutex_unlock(&ab_mutex);
+  
+	if ((flush_rtp_timestamp!=0x7fffffff) && ((timestamp==flush_rtp_timestamp) || seq32_order(timestamp,flush_rtp_timestamp))) {
+		debug(1,"Dropping flushed packet in player_put_packet, seqno %u, timestamp %u, flushing to timestamp: %u.",seqno,timestamp,flush_rtp_timestamp);
+	} else {
+		if ((flush_rtp_timestamp!=0x7fffffff) && (!seq32_order(timestamp,flush_rtp_timestamp))) // if we have gone past the flush boundary time
+			flush_rtp_timestamp=0x7fffffff;
 
-  if (abuf) {
-    alac_decode(abuf->data, data, len);
-    abuf->ready = 1;
-    abuf->timestamp = timestamp;
-    abuf->sequence_number = seqno;
+		abuf_t *abuf = 0;
+
+		if (!ab_synced) {
+			debug(2, "syncing to seqno %u.", seqno);
+			ab_write = seqno;
+			ab_read = seqno;
+			ab_synced = 1;
+		}
+		if (ab_write == seqno) {       // expected packet
+			abuf = audio_buffer + BUFIDX(seqno);
+			ab_write = SUCCESSOR(seqno);
+		} else if (seq_order(ab_write, seqno)) {    // newer than expected
+			//if (ORDINATE(seqno)>(BUFFER_FRAMES*7)/8)
+			// debug(1,"An interval of %u frames has opened, with ab_read: %u, ab_write: %u and seqno: %u.",seq_diff(ab_read,seqno),ab_read,ab_write,seqno);
+			int32_t gap = seq_diff(ab_write,PREDECESSOR(seqno))+1;
+			if (gap<=0)
+				debug(1,"Unexpected gap size: %d.",gap);
+			int i;
+			for (i=0;i<gap;i++) {
+				abuf = audio_buffer + BUFIDX(seq_sum(ab_write,i));
+				abuf->ready = 0; // to be sure, to be sure
+				abuf->timestamp = 0;
+				abuf->sequence_number = 0;
+			}
+			// debug(1,"N %d s %u.",seq_diff(ab_write,PREDECESSOR(seqno))+1,ab_write);
+			abuf = audio_buffer + BUFIDX(seqno);
+			rtp_request_resend(ab_write,gap);
+			resend_requests++;
+			ab_write = SUCCESSOR(seqno);
+		} else if (seq_order(ab_read, seqno)) {     // late but not yet played
+			late_packets++;
+			abuf = audio_buffer + BUFIDX(seqno);
+		} else {                                    // too late.
+			too_late_packets++;
+			/*
+			if (!late_packet_message_sent) {
+				debug(1, "too-late packet received: %u; ab_read: %u; ab_write: %u.", seqno, ab_read, ab_write);
+				late_packet_message_sent=1;
+			}
+			*/
+		}
+		// pthread_mutex_unlock(&ab_mutex);
+
+		if (abuf) {
+			alac_decode(abuf->data, data, len);
+			abuf->ready = 1;
+			abuf->timestamp = timestamp;
+			abuf->sequence_number = seqno;
+		}
+	
+		// pthread_mutex_lock(&ab_mutex);
+	
+		time_of_last_audio_packet = get_absolute_time_in_fp();
   }
-  
-  // pthread_mutex_lock(&ab_mutex);
-  
-  time_of_last_audio_packet = get_absolute_time_in_fp();
-  
   int rc = pthread_cond_signal(&flowcontrol);
   if (rc)
     debug(1,"Error signalling flowcontrol.");
