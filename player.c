@@ -300,7 +300,7 @@ void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
   pthread_mutex_lock(&ab_mutex);
   
 	if ((flush_rtp_timestamp!=0x7fffffff) && ((timestamp==flush_rtp_timestamp) || seq32_order(timestamp,flush_rtp_timestamp))) {
-		debug(1,"Dropping flushed packet in player_put_packet, seqno %u, timestamp %u, flushing to timestamp: %u.",seqno,timestamp,flush_rtp_timestamp);
+		debug(2,"Dropping flushed packet in player_put_packet, seqno %u, timestamp %u, flushing to timestamp: %u.",seqno,timestamp,flush_rtp_timestamp);
 	} else {
 		if ((flush_rtp_timestamp!=0x7fffffff) && (!seq32_order(timestamp,flush_rtp_timestamp))) // if we have gone past the flush boundary time
 			flush_rtp_timestamp=0x7fffffff;
@@ -497,7 +497,7 @@ static abuf_t *buffer_get_frame(void) {
 
               first_packet_time_to_play = reference_timestamp_time+((delta+(int64_t)config.latency)<<32)/44100; // using the latency requested...
               if (local_time_now>=first_packet_time_to_play) {
-                debug(1,"First packet is late! It should have played before now. Flushing 0.1 seconds");
+                debug(2,"First packet is late! It should have played before now. Flushing 0.1 seconds");
                 player_flush(first_packet_timestamp+4410);
               }
             }
