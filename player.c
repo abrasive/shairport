@@ -450,7 +450,7 @@ static abuf_t *buffer_get_frame(void) {
 					if ((flush_rtp_timestamp!=0x7fffffff) && (!seq32_order(curframe->timestamp,flush_rtp_timestamp))) // if we have gone past the flush boundary time
 						flush_rtp_timestamp=0x7fffffff;
 				}
-    	} while ((flush_rtp_timestamp!=0x7fffffff) && (flush_limit<=8820) && (curframe->ready!=0));
+    	} while ((flush_rtp_timestamp!=0x7fffffff) && (flush_limit<=8820) && (curframe->ready==0));
     	
     	if (flush_limit==8820) {
     		debug(1,"Flush hit the 8820 frame limit!");
