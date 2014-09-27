@@ -916,6 +916,7 @@ static void *player_thread_func(void *arg) {
             // debug(1,"Sync error out of bounds: Error: %lld; previous error: %lld; DAC: %lld; timestamp: %llx, time now %llx",sync_error,previous_sync_error,current_delay,inframe->timestamp,local_time_now);    
              if (sync_error_out_of_bounds>3) {
               debug(1,"Lost sync with source for %d consecutive packets -- flushing and resyncing. Error: %lld.",sync_error_out_of_bounds,sync_error);
+              sync_error_out_of_bounds = 0;
               player_flush(nt);
              }
           } else {
