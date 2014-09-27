@@ -212,7 +212,7 @@ static inline int seq32_order(uint32_t a, uint32_t b) {
 	int64_t B = b & 0xffffffff;
 	int64_t C = B-A;
 	// if bit 31 is set, it means either b is before (i.e. less than) a or
-	// b is (2^31)-1 ahead of b.
+	// b is (2^31)-1 ahead of a.
 	
 	// If we assume the gap between b and a should never reach 2 billion, then
 	// bit 31 == 0 means b is strictly after a
@@ -848,6 +848,17 @@ static void *player_thread_func(void *arg) {
           // This is the timing error for the next audio frame in the DAC.
           int64_t sync_error = delay-config.latency;
           
+          // before we finally commit to this frame, check its sequencing and timing
+          // check sequencing
+          if (last_seqno_read==-1)
+            last_seqno_read=inframe->sequence_number;
+          else {
+            last_seqno_read = (SUCCESSOR(last_seqno_read) & 0xffff);           
+            if (inframe->sequence_number!=last_seqno_read)
+              debug(1,"Player: packets out of sequence: expected: %d, got: %d, sync error: %d frames.",last_seqno_read,inframe->sequence_number,sync_error);
+              last_seqno_read=inframe->sequence_number; // reset warning...
+          }
+          
           int amount_to_stuff = 0;
           // require a certain error before bothering to fix it...
           if (sync_error>88) {
@@ -962,15 +973,6 @@ static void *player_thread_func(void *arg) {
           newest_statistic=(newest_statistic+1)%trend_interval;
           number_of_statistics++;
           
-          // check sequencing
-          if (last_seqno_read==-1)
-              last_seqno_read=inframe->sequence_number;
-            else {
-              last_seqno_read = (SUCCESSOR(last_seqno_read) & 0xffff);           
-              if (inframe->sequence_number!=last_seqno_read)
-                debug(1,"Player: packets out of sequence: expected: %d, got %d.",last_seqno_read,inframe->sequence_number);
-                last_seqno_read=inframe->sequence_number; // reset warning...
-          }
         }
         if (play_number%print_interval==0) {
           // we can now calculate running averages for sync error (frames), corrections (ppm), insertions plus deletions (ppm), drift (ppm)
