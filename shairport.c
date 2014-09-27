@@ -24,6 +24,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include <sys/types.h>
 #include <signal.h>
 #include <errno.h>
 #include <unistd.h>
@@ -159,6 +160,7 @@ void usage(char *progname) {
     printf("                            \"soxr\" option only available if built with soxr support.\n");
     printf("    -d, --daemon            daemonise.\n");
     printf("    -k, --kill              kill the existing shairport daemon.\n");
+    printf("    -P, --pause             send a pause request to the audio source.\n");
     printf("    -B, --on-start=PROGRAM  run PROGRAM when playback is about to begin.\n");
     printf("    -E, --on-stop=PROGRAM   run PROGRAM when playback has ended.\n");
     printf("                            For -B and -E options, specify the full path to the program, e.g. /usr/bin/logger.\n");
@@ -186,6 +188,7 @@ int parse_options(int argc, char **argv) {
         {"version",	no_argument,     		NULL, 'V'},
         {"verbose",	no_argument,     		NULL, 'v'},
         {"daemon",  no_argument,        NULL, 'd'},
+        {"pause",    no_argument,       NULL, 'P'},
         {"kill",    no_argument,        NULL, 'k'},
         {"port",    required_argument,  NULL, 'p'},
         {"name",    required_argument,  NULL, 'a'},
@@ -205,10 +208,10 @@ int parse_options(int argc, char **argv) {
 
     int opt;
     while ((opt = getopt_long(argc, argv,
-                              "+hdvVkp:a:o:b:B:E:wm:L:S:A:i:r:t:",
+                              "+hdvVPkp:a:o:b:B:E:wm:L:S:A:i:r:t:",
                               long_options, NULL)) > 0) {
         switch (opt) {       
-        // Note -- Version, Kill and Help done separately
+        // Note -- Version, Kill, Pause and Help done separately
             default:
             case 't':
             	config.timeout = atoi(optarg);
@@ -347,6 +350,18 @@ int main(int argc, char **argv) {
     /* Set indentification string for the daemon for both syslog and PID file */
     daemon_pid_file_ident = daemon_log_ident = daemon_ident_from_argv0(argv[0]);
 
+    /* Check if we are called with -P or --pause parameter */
+    if (argc >= 2 && ((strcmp(argv[1], "-P")==0) || (strcmp(argv[1], "--pause")==0))) {
+      if ((pid = daemon_pid_file_is_running()) >= 0) {
+        if (kill(pid,SIGUSR2)!=0) {  // try to send the signal
+          daemon_log(LOG_WARNING, "Failed trying to send pause request to daemon pid: %d: %s",pid, strerror(errno));
+        }
+      } else {
+        daemon_log(LOG_WARNING, "Can't send a pause request -- Failed to find daemon: %s", strerror(errno));
+      }
+      exit(1);
+    }
+      
     /* Check if we are called with -k or --kill parameter */
     if (argc >= 2 && ((strcmp(argv[1], "-k")==0) || (strcmp(argv[1], "--kill")==0))) {
       int ret;
