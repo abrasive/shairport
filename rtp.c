@@ -626,8 +626,8 @@ void rtp_request_client_pause() {
 			// debug(1,"Server replied: \"%s\".",server_reply);
 		
 			if (strstr(server_reply,"HTTP/1.1 204 No Content")!=server_reply)
-				debug(1,"Client pause request failed: \"%s\".",server_reply);
-	
+				debug(1,"Client pause request failed.");
+				// debug(1,"Client pause request failed: \"%s\".",server_reply);
 			close(sockfd);
     }
   } else {
