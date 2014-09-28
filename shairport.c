@@ -212,7 +212,6 @@ int parse_options(int argc, char **argv) {
                               long_options, NULL)) > 0) {
         switch (opt) {       
         // Note -- Version, Kill, Pause and Help done separately
-            default:
             case 't':
             	config.timeout = atoi(optarg);
             	break;
@@ -265,9 +264,16 @@ int parse_options(int argc, char **argv) {
             case 'w':
  								config.cmd_blocking = 1;
 								break;
-           case 'm':
+            case 'm':
                 config.mdns_name = optarg;
                 break;
+            case '?':
+                /* getopt_long already printed an error message. */
+                exit(1);
+                break; // unnecessary
+            default:
+                die("Unexpected option character."); 
+                break; //unnecessary         
         }
     }
     return optind;
