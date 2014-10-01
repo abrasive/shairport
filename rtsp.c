@@ -922,6 +922,7 @@ void rtsp_listen_loop(void) {
     }
 
     for (p=info; p; p=p->ai_next) {
+        debug(1,"Try bind.");
         int fd = socket(p->ai_family, p->ai_socktype, IPPROTO_TCP);
         int yes = 1;
 
@@ -932,8 +933,10 @@ void rtsp_listen_loop(void) {
         // some systems don't support v4 access on v6 sockets, but some do.
         // since we need to account for two sockets we might as well
         // always.
-        if (p->ai_family == AF_INET6)
-            ret |= setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &yes, sizeof(yes));
+        if (p->ai_family == AF_INET6) {
+          debug(1,"IPv6 socket suggested.");
+          ret |= setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &yes, sizeof(yes));
+        }
 #endif
 
         if (!ret)
