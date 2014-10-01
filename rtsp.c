@@ -913,6 +913,8 @@ void rtsp_listen_loop(void) {
     hints.ai_flags = AI_PASSIVE;
 
     snprintf(portstr, 6, "%d", config.port);
+    
+    debug(1,"listen socket port request is \"%s\".",portstr);
 
     ret = getaddrinfo(NULL, portstr, &hints, &info);
     if (ret) {

@@ -35,6 +35,8 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <popt.h>
+
 #include "config.h"
 
 #ifdef HAVE_LIBPOLARSSL
@@ -133,6 +135,20 @@ void print_version(void) {
   printf("%s\n",version_string);
 }
 
+char * isValidIntegerOptArg(char * argptr) {
+  char c = *argptr;
+  if (*argptr == '-')
+    die("Missing or invalid numerical command line option argument.");
+  return argptr;
+}
+
+char * isValidOptArg(char * argptr) {
+  char c = *argptr;
+  if (*argptr == '-')
+    die("Missing or invalid command line option argument.");
+  return argptr;
+}
+
 void usage(char *progname) {
     printf("Usage: %s [options...]\n", progname);
     printf("  or:  %s [options...] -- [audio output-specific options]\n", progname);
@@ -180,103 +196,85 @@ void usage(char *progname) {
 }
 
 int parse_options(int argc, char **argv) {
-    // prevent unrecognised arguments from being shunted to the audio driver
-    setenv("POSIXLY_CORRECT", "", 1);
-    char version_string[200];
-    static struct option long_options[] = {
-        {"help",    no_argument,        NULL, 'h'},
-        {"version",	no_argument,     		NULL, 'V'},
-        {"verbose",	no_argument,     		NULL, 'v'},
-        {"daemon",  no_argument,        NULL, 'd'},
-        {"pause",    no_argument,       NULL, 'P'},
-        {"kill",    no_argument,        NULL, 'k'},
-        {"port",    required_argument,  NULL, 'p'},
-        {"name",    required_argument,  NULL, 'a'},
-        {"output",  required_argument,  NULL, 'o'},
-        {"on-start",required_argument,  NULL, 'B'},
-        {"on-stop", required_argument,  NULL, 'E'},
-        {"wait-cmd",no_argument,        NULL, 'w'},
-        {"mdns",    required_argument,  NULL, 'm'},
-        {"latency", required_argument,  NULL, 'L'},
-        {"stuffing", required_argument,	NULL,	'S'},
-        {"AirPlayLatency", required_argument,  NULL, 'A'},
-        {"iTunesLatency", required_argument,  NULL, 'i'},
-        {"resync",    required_argument,  NULL, 'r'},
-        {"timeout",    required_argument,  NULL, 't'},
-        {NULL, 0, NULL, 0}
-    };
+  char    c;            /* used for argument parsing */
+  int     i = 0;        /* used for tracking options */
+  char    *stuffing = NULL;  /* used for picking up the stuffing option */
+  poptContext optCon;   /* context for parsing command-line options */
+  struct poptOption optionsTable[] = {
+    { "version", 'V', POPT_ARG_NONE, NULL, 0, NULL},
+    { "verbose", 'v', POPT_ARG_NONE, NULL, 'v', NULL },
+    { "daemon", 'd', POPT_ARG_NONE, &config.daemonise, 0, NULL },
+    { "pause", 'P', POPT_ARG_NONE, NULL, 0, NULL },
+    { "kill", 'k', POPT_ARG_NONE, NULL, 0, NULL },
+    { "port", 'p', POPT_ARG_INT, &config.port, 0, NULL } ,
+    { "name", 'a', POPT_ARG_STRING, &config.apname, 0, NULL } ,
+    { "output", 'o', POPT_ARG_STRING, &config.output_name, 0, NULL } ,
+    { "on-start", 'B', POPT_ARG_STRING, &config.cmd_start, 0, NULL } ,
+    { "on-stop", 'E', POPT_ARG_STRING, &config.cmd_stop, 0, NULL } ,
+    { "wait-cmd", 'w', POPT_ARG_NONE, &config.cmd_blocking, 0, NULL } ,
+    { "mdns", 'm', POPT_ARG_STRING, &config.mdns_name, 0, NULL } ,
+    { "latency", 'L', POPT_ARG_INT, &config.userSuppliedLatency, 0, NULL } ,
+    { "AirPlayLatency", 'A', POPT_ARG_INT, &config.AirPlayLatency, 0, NULL } ,
+    { "iTunesLatency", 'i', POPT_ARG_INT, &config.iTunesLatency, 0, NULL } ,
+    { "stuffing", 'S', POPT_ARG_STRING, &stuffing, 'S', NULL } ,
+    { "resync", 'r', POPT_ARG_INT, &config.resyncthreshold, 0, NULL } ,
+    { "timeout", 't', POPT_ARG_INT, &config.timeout, 0, NULL } ,
+    POPT_AUTOHELP
+    { NULL, 0, 0, NULL, 0 }
+  };
+  
+  int optind=argc;
+  int j;
+  for (j=0;j<argc;j++)
+    if (strcmp(argv[j],"--")==0)
+      optind=j;
+  
+  // debug(1,"Number of arguments is %d, number to be processed is %d.\n",argc,optind);
 
-    int opt;
-    while ((opt = getopt_long(argc, argv,
-                              "+hdvVPkp:a:o:b:B:E:wm:L:S:A:i:r:t:",
-                              long_options, NULL)) > 0) {
-        switch (opt) {       
-        // Note -- Version, Kill, Pause and Help done separately
-            case 't':
-            	config.timeout = atoi(optarg);
-            	break;
-            case 'r':
-            	config.resyncthreshold = atoi(optarg);
-            	break;
-            case 'd':
-                config.daemonise = 1;
-                break;
-            case 'v':
-                debuglev++;
-                break;
-            case 'p':
-                config.port = atoi(optarg);
-                break;
-            case 'a':
-                config.apname = optarg;
-                break;
-            case 'o':
-                config.output_name = optarg;
-                break;
-            case 'L':
-                config.userSuppliedLatency = atoi(optarg);
-                break;
-            case 'A':
-                config.AirPlayLatency = atoi(optarg);
-                break;
-            case 'i':
-                config.iTunesLatency = atoi(optarg);
-                break;
-            case 'B':
-                config.cmd_start = optarg;
-                break;
-            case 'E':
-                config.cmd_stop = optarg;
-                break;
-            case 'S':
-            		if (strcmp(optarg,"basic")==0)           		
-                	config.packet_stuffing = ST_basic;
-                else if (strcmp(optarg,"soxr")==0)
+  optCon = poptGetContext(NULL, optind,(const char **)argv, optionsTable, 0);
+  poptSetOtherOptionHelp(optCon, "[OPTIONS]* ");
+
+  /* Now do options processing, get portname */
+  while ((c = poptGetNextOpt(optCon)) >= 0) {
+    switch (c) {
+      case 'v':
+        debuglev++;
+        break;
+      case 'S':
+        if (strcmp(stuffing,"basic")==0)           		
+          config.packet_stuffing = ST_basic;
+        else if (strcmp(stuffing,"soxr")==0)
 #ifdef HAVE_LIBSOXR
-                	config.packet_stuffing = ST_soxr;
+          config.packet_stuffing = ST_soxr;
 #else
-                	die("soxr option not available -- this version of shairport-sync was built without libsoxr support");
+          die("soxr option not available -- this version of shairport-sync was built without libsoxr support");
 #endif
-                else
-                	die("Illegal stuffing option -- must be \"basic\" or \"soxr\"");
-
-                break;
-            case 'w':
- 								config.cmd_blocking = 1;
-								break;
-            case 'm':
-                config.mdns_name = optarg;
-                break;
-            case '?':
-                /* getopt_long already printed an error message. */
-                exit(1);
-                break; // unnecessary
-            default:
-                die("Unexpected option character."); 
-                break; //unnecessary         
-        }
+        else
+          die("Illegal stuffing option \"%s\" -- must be \"basic\" or \"soxr\"",stuffing);
+        break;
     }
-    return optind;
+  }
+  if (c < -1) {
+    die("%s: %s",poptBadOption(optCon, POPT_BADOPTION_NOALIAS),poptStrerror(c));
+  }
+  /* Print out options */
+  
+  debug(2,"daemon status is %d.",config.daemonise);
+  debug(2,"rtsp listening port is %d.",config.port);
+  debug(2,"Shairport Sync player name is \"%s\".",config.apname);
+  debug(2,"Audio Output name is \"%s\".",config.output_name);
+  debug(2,"on-start action is \"%s\".",config.cmd_start);
+  debug(2,"on-stop action is \"%s\".",config.cmd_stop);
+  debug(2,"wait-cmd status is %d.",config.cmd_blocking);
+  debug(2,"mdns backend \"%s\".",config.mdns_name);
+  debug(2,"latency is %d.",config.userSuppliedLatency);
+  debug(2,"AirPlayLatency is %d.",config.AirPlayLatency);
+  debug(2,"iTunesLatency is %d.",config.iTunesLatency);
+  debug(2,"stuffing option is \"%s\".",stuffing);
+  debug(2,"resync time is %d.",config.resyncthreshold);
+  debug(2,"busy timeout time is %d.",config.timeout);
+  
+  return optind+1;
 }
 
 void signal_setup(void) {
