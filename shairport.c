@@ -196,7 +196,7 @@ void usage(char *progname) {
 }
 
 int parse_options(int argc, char **argv) {
-  char    c;            /* used for argument parsing */
+  signed char    c;            /* used for argument parsing */
   int     i = 0;        /* used for tracking options */
   char    *stuffing = NULL;  /* used for picking up the stuffing option */
   poptContext optCon;   /* context for parsing command-line options */
