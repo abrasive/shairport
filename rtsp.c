@@ -922,12 +922,16 @@ void rtsp_listen_loop(void) {
     }
 
     for (p=info; p; p=p->ai_next) {
-        debug(1,"Try bind.");
         int fd = socket(p->ai_family, p->ai_socktype, IPPROTO_TCP);
         int yes = 1;
 
-        if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1)
-            perror("setsockopt");
+	// Handle socket open failures if protcol unavailable (or IPV6 not handled)
+	if (fd == -1) {
+	   debug(1, "Failed to get socket: fam=%d, %s\n", p->ai_family, strerror(errno));
+	   continue;
+	}
+
+        ret = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
 
 #ifdef IPV6_V6ONLY
         // some systems don't support v4 access on v6 sockets, but some do.
@@ -945,10 +949,10 @@ void rtsp_listen_loop(void) {
         // one of the address families will fail on some systems that
         // report its availability. do not complain.
         if (ret) {
-            // debug(1, "Failed to bind to address %s.", format_address(p->ai_addr));
+            debug(1, "Failed to bind to address %s.", format_address(p->ai_addr));
             continue;
         }
-        // debug(1, "Bound to address %s.", format_address(p->ai_addr));
+        debug(1, "Bound to address %s.", format_address(p->ai_addr));
 
         listen(fd, 5);
         nsock++;
