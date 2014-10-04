@@ -489,17 +489,17 @@ static void handle_setup(rtsp_conn_info *conn,
     char *q;
     p = strstr(hdr,"control_port=");
     if (p) {
-    	q = strchr(p,';'); // get past the control port entry
-    	*p++=0;
-    	if (q++)
-    		strcat(hdr,q); // should unsplice the control port entry
+      q = strchr(p,';'); // get past the control port entry
+      *p++=0;
+      if (q++)
+        strcat(hdr,q); // should unsplice the control port entry
     }
     p = strstr(hdr,"timing_port=");
     if (p) {
-    	q = strchr(p,';'); // get past the timing port entry
-    	*p++=0;
-    	if (q++)
-    		strcat(hdr,q); // should unsplice the timing port entry
+      q = strchr(p,';'); // get past the timing port entry
+      *p++=0;
+      if (q++)
+        strcat(hdr,q); // should unsplice the timing port entry
     }
     
     player_play(&conn->stream);
@@ -914,7 +914,7 @@ void rtsp_listen_loop(void) {
 
     snprintf(portstr, 6, "%d", config.port);
     
-    debug(1,"listen socket port request is \"%s\".",portstr);
+    // debug(1,"listen socket port request is \"%s\".",portstr);
 
     ret = getaddrinfo(NULL, portstr, &hints, &info);
     if (ret) {
@@ -925,11 +925,11 @@ void rtsp_listen_loop(void) {
         int fd = socket(p->ai_family, p->ai_socktype, IPPROTO_TCP);
         int yes = 1;
 
-	// Handle socket open failures if protcol unavailable (or IPV6 not handled)
-	if (fd == -1) {
-	   debug(1, "Failed to get socket: fam=%d, %s\n", p->ai_family, strerror(errno));
-	   continue;
-	}
+        // Handle socket open failures if protocol unavailable (or IPV6 not handled)
+        if (fd == -1) {
+           // debug(1, "Failed to get socket: fam=%d, %s\n", p->ai_family, strerror(errno));
+           continue;
+        }
 
         ret = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
 
@@ -938,7 +938,6 @@ void rtsp_listen_loop(void) {
         // since we need to account for two sockets we might as well
         // always.
         if (p->ai_family == AF_INET6) {
-          debug(1,"IPv6 socket suggested.");
           ret |= setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &yes, sizeof(yes));
         }
 #endif
@@ -952,7 +951,6 @@ void rtsp_listen_loop(void) {
             debug(1, "Failed to bind to address %s.", format_address(p->ai_addr));
             continue;
         }
-        debug(1, "Bound to address %s.", format_address(p->ai_addr));
 
         listen(fd, 5);
         nsock++;
@@ -964,7 +962,6 @@ void rtsp_listen_loop(void) {
 
     if (!nsock)
         die("could not bind any listen sockets!");
-
 
     int maxfd = -1;
     fd_set fds;
