@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.50])
-AC_INIT([shairport-sync], [2.5.0.2], [mikebrady@eircom.net])
+AC_INIT([shairport-sync], [2.5.0.3], [mikebrady@eircom.net])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([shairport.c])
 AC_CONFIG_HEADERS([config.h])
@@ -34,7 +34,15 @@ fi
 AC_ARG_WITH([pkg_config],
 [  --with-pkg-config = use pkg-config to find libraries], ,[with_pkg_config=yes])
 
-AC_CHECK_LIB([daemon],[daemon_log], , AC_MSG_ERROR(libdaemon needed))
+AC_MSG_RESULT(>>Including libdaemon)
+if  test "x${with_pkg_config}" = xyes ; then
+  PKG_CHECK_MODULES(
+      [DAEMON], [libdaemon],
+      [LIBS="${DAEMON_LIBS} ${LIBS}"])
+else
+  AC_CHECK_LIB([daemon],[daemon_fork], , AC_MSG_ERROR(libdaemon needed))
+fi
+
 AC_CHECK_LIB([pthread],[pthread_create], , AC_MSG_ERROR(pthread library needed))
 AC_CHECK_LIB([m],[exp], , AC_MSG_ERROR(maths library needed))
 

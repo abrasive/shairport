@@ -380,13 +380,14 @@ int parse_options(int argc, char **argv) {
         config.resyncthreshold = value;
 
       /* Get the verbosity setting. */
-      if (config_lookup_int(config.cfg, "general.log_verbosity", &value))
+      if (config_lookup_int(config.cfg, "general.log_verbosity", &value)) {
         if ((value >= 0) && (value <= 3))
           debuglev = value;
         else
           die("Invalid log verbosity setting option choice \"%d\". It should be between 0 and 3, "
               "inclusive.",
               value);
+      }
 
       /* Get the ignore_volume_control setting. */
       if (config_lookup_string(config.cfg, "general.ignore_volume_control", &str)) {
@@ -629,7 +630,7 @@ int main(int argc, char **argv) {
   strcat(configuration_file_path, ".conf");
   config.configfile = configuration_file_path;
 
-  config.statistics_requested - 0; // don't print stats in the log
+  config.statistics_requested = 0; // don't print stats in the log
   config.latency = 88200;          // AirPlay. Is also reset in rtsp.c when play is about to start
   config.userSuppliedLatency = 0;  // zero means none supplied
   config.iTunesLatency = 99400;    // this seems to work pretty well for iTunes from Version 10 (?)
