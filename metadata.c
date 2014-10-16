@@ -41,6 +41,7 @@
 metadata player_meta;
 static int fd = -1;
 static int dirty = 0;
+static int fdp = -1;
 
 void metadata_set(char** field, const char* value) {
     if (*field) {
@@ -75,6 +76,31 @@ void metadata_open(void) {
 static void metadata_close(void) {
     close(fd);
     fd = -1;
+}
+
+void metadata_position_open(void) {
+  if (!config.meta_dir)
+    return;
+  
+  const char fn[] = "position";
+  size_t pl = strlen(config.meta_dir) + 1 + strlen(fn);
+  
+  char* path = malloc(pl+1);
+  snprintf(path, pl+1, "%s/%s", config.meta_dir, fn);
+  
+  if (mkfifo(path, 0644) && errno != EEXIST)
+    die("Could not create metadata FIFO %s", path);
+  
+  fdp = open(path, O_WRONLY | O_NONBLOCK);
+  if (fdp < 0)
+    debug(1, "Could not open metadata position FIFO %s. Will try again later.", path);
+  
+  free(path);
+}
+
+static void metadata_position_close(void) {
+  close(fdp);
+  fdp = -1;
 }
 
 static void print_one(const char *name, const char *value) {
@@ -112,6 +138,43 @@ void metadata_write(void) {
     ret = write(fd, "\n", 1);
     if (ret < 1)    // no reader
         metadata_close();
+}
+
+void metadata_position_write(void) {
+  int ret;
+  
+  if (player_meta.paused)
+    return;
+  
+  // readers may go away and come back
+  if (fdp < 0)
+    metadata_position_open();
+  if (fdp < 0)
+    return;
+  
+  char  number[10];
+  int   chars;
+  
+  //
+  // XXX: The sample rate is always 44100 Hertz, right?
+  //
+  unsigned int position = (player_meta.position-player_meta.start)/44100;
+  unsigned int length   = (player_meta.end-player_meta.start)/44100;
+  
+  if (length == 0 || position > length)
+    return;
+  
+  chars = sprintf(number, "%d", position);
+  write_unchecked(fdp, number, chars);
+  
+  write_unchecked(fdp, " ", 1);
+  
+  chars = sprintf(number, "%d", length);
+  write_unchecked(fdp, number, chars);
+  
+  ret = write(fdp, "\n", 1);
+  if (ret < 1)    // no reader
+    metadata_position_close();
 }
 
 void metadata_cover_image(const char *buf, int len, const char *ext) {

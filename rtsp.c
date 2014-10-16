@@ -410,7 +410,7 @@ static void handle_setup(rtsp_conn_info *conn,
     int sport = rtp_setup(&conn->remote, cport, tport);
     if (!sport)
         return;
-
+  
     player_play(&conn->stream);
 
     char resphdr[100];
@@ -445,6 +445,12 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn,
         } else if(!strncmp(cp, "progress: ", 10)) {
             char *progress = cp + 10;
             debug(1, "progress: %s\n", progress);
+
+            if (sscanf(progress, "%u/%u/%u", &(player_meta.start), &(player_meta.curr), &(player_meta.end)) == 3)
+            {
+              player_meta.position = 0;
+            }
+
         } else {
             debug(1, "unrecognised parameter: >>%s<< (%d)\n", cp, strlen(cp));
         }
