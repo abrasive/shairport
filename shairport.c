@@ -131,7 +131,6 @@ int parse_options(int argc, char **argv) {
         {"error",     required_argument,  NULL, 'e'},
         {"port",      required_argument,  NULL, 'p'},
         {"name",      required_argument,  NULL, 'a'},
-<<<<<<< HEAD
         {"password",  required_argument,  NULL, 'k'},
         {"output",    required_argument,  NULL, 'o'},
         {"on-start",  required_argument,  NULL, 'B'},
@@ -140,23 +139,11 @@ int parse_options(int argc, char **argv) {
         {"meta-dir",  required_argument,  NULL, 'M'},
         {"mdns",      required_argument,  NULL, 'm'},
         {NULL,        0,                  NULL,   0}
-=======
-        {"output",    required_argument,  NULL, 'o'},
-        {"on-start",  required_argument,  NULL, 'B'},
-        {"on-stop",   required_argument,  NULL, 'E'},
-        {"cover-dir", required_argument,  NULL, 'C'},
-        {"mdns",      required_argument,  NULL, 'm'},
-        {NULL,        0,                  NULL,   0} 
->>>>>>> Added command line option to set the cover art output directory.
     };
 
     int opt;
     while ((opt = getopt_long(argc, argv,
-<<<<<<< HEAD
                               "+hdvP:l:e:p:a:k:o:b:B:E:M:wm:",
-=======
-                              "+hdvP:l:e:p:a:o:b:B:E:C:m:",
->>>>>>> Added command line option to set the cover art output directory.
                               long_options, NULL)) > 0) {
         switch (opt) {
             default:
@@ -192,16 +179,11 @@ int parse_options(int argc, char **argv) {
             case 'E':
                 config.cmd_stop = optarg;
                 break;
-<<<<<<< HEAD
             case 'w':
                 config.cmd_blocking = 1;
                 break;
             case 'M':
                 config.meta_dir = optarg;
-=======
-            case 'C':
-                config.cover_dir = optarg;
->>>>>>> Added command line option to set the cover art output directory.
                 break;
             case 'P':
                 config.pidfile = optarg;
