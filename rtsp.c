@@ -446,7 +446,7 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn,
             char *progress = cp + 10;
             debug(1, "progress: %s\n", progress);
 
-            if (sscanf(progress, "%u/%u/%u", &(player_meta.start), &(player_meta.curr), &(player_meta.end)) == 3)
+            if (sscanf(progress, "%u/%u/%u", &(player_meta.start), &(player_meta.curr), &(player_meta.end)) != 3)
             {
               player_meta.position = 0;
             }
