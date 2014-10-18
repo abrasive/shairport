@@ -1,5 +1,11 @@
 Shairport Sync
 =============
+What is Shairport Sync?
+----------
+Shairport Sync emulates an AirPort Express for the purpose of streaming audio from iTunes, iPods, iPhones, iPads and AppleTVs.
+Audio played by a Shairport Sync-powered device stays in synchrony with the source and thus with other devices that are playing the same source synchronously. Thus, for example, synchronised multi-room audio is possible without difficulty. 
+
+Shairport Sync does not support AirPlay video and photo streaming.
 
 Version 2.1.5:
 -----
@@ -62,14 +68,13 @@ Version 2.0
 ----
 
 * New features:
- * Audio synchronisation that works. The audio being produced by a Shairport Sync-powered device will stay in sync with the source. This allows you to synchronise Shairport Sync devices reliably with other devices playing the same source. For example, synchronised multi-room audio is possible without difficulty.
+ * Audio synchronisation that works. The audio played by a Shairport Sync-powered device will stay in sync with the source. This allows you to synchronise Shairport Sync devices reliably with other devices playing the same source. For example, synchronised multi-room audio is possible without difficulty.
  * True mute and instant response to mute and volume control changes -- this requires hardware mixer support, available on most audio devices. Without hardware mixer support, response is also faster than before -- around 0.15 seconds.
  * Smoother volume control at the top and bottom of the range.
  * Another source can not interrupt an existing source playing via Shairport Sync. it will be given a 'busy' signal.
 
 Overview
 ------
-
 Shairport Sync allows you to synchronise the audio coming from all your devices. Specifically, Shairport Sync allows you to set the "latency" -- the time between when a sound is sent and when it is played. This allows you to synchronise Shairport Sync devices reliably with other devices playing the same source. For example, synchronised multi-room audio is possible without difficulty.
 
 Shairport Sync is a pretty substantial rewrite of Shairport 1.0 by James Laird and others -- please see https://github.com/abrasive/shairport/blob/master/README.md#contributors-to-version-1x for a list of the contributors to Shairport 1.x and Shairport 0.x. From a "heritage" point of view, Shairport Sync is a fork of Shairport 1.0 and the active branch is called Shairport Sync 2.1.
@@ -77,11 +82,6 @@ Shairport Sync is a pretty substantial rewrite of Shairport 1.0 by James Laird a
 Shairport Sync works only with Linux and ALSA. The sound card you use must be capable of working with 44,100 samples per second interleaved PCM stereo (you'll get a message in the logfile if there's a problem).
 
 For more about the motivation behind Shairport Sync, please see the wiki at https://github.com/mikebrady/shairport-sync/wiki.
-
-What is Shairport?
-----------
-Shairport emulates an AirPort Express for the purpose of streaming audio from iTunes and compatible iPods and iPhones. It implements a server for the Apple RAOP protocol.
-Shairport does not support AirPlay video and photo streaming.
 
 Shairport Sync does Audio Synchronisation
 ---------------------------
