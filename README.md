@@ -1,11 +1,6 @@
 Shairport Sync
 =============
 
-Version 2.1.4:
------
-* Enhancements
-	* Shairport Sync now responds to the `--localstatedir` configure option. It allows you to specify where the `run` folder containing the PID file will be located. It can be important for embedded systems, especially systems build with buildroot, where the main file system is read-only. This configure option allows you you choose a different location.
-
 Version 2.1.3:
 -----
 * Stability Improvements
