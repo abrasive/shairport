@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.50])
-AC_INIT([shairport-sync], [2.1.3], [mikebrady@eircom.net])
+AC_INIT([shairport-sync], [2.1.4], [mikebrady@eircom.net])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([shairport.c])
 AC_CONFIG_HEADERS([config.h])
@@ -27,6 +27,8 @@ AC_PROG_INSTALL
 if test "x${with_os_type}" = xlinux; then
  AC_CHECK_LIB([rt],[clock_gettime], , AC_MSG_ERROR(librt needed))
 fi
+
+AC_DEFINE_UNQUOTED([OURRUNSTATEDIR],["${localstatedir}/run"],[Needed for libdaemon])
 
 AC_CHECK_LIB([daemon],[daemon_log], , AC_MSG_ERROR(libdaemon needed))
 AC_CHECK_LIB([pthread],[pthread_create], , AC_MSG_ERROR(pthread library needed))

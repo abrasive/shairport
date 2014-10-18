@@ -321,6 +321,20 @@ void shairport_startup_complete(void) {
     }
 }
 
+const char *pid_file_proc(void) {
+#ifdef HAVE_ASPRINTF
+   static char *fn = NULL;
+   free(fn);
+   asprintf(&fn,  "%s/%s.pid", OURRUNSTATEDIR, daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
+#else
+   static char fn[8192];
+   snprintf(fn, sizeof(fn), "%s/%s.pid", OURRUNSTATEDIR, daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
+#endif
+
+   return fn;
+}
+
+
 int main(int argc, char **argv) {
 
     daemon_set_verbosity(LOG_DEBUG);
@@ -350,10 +364,14 @@ int main(int argc, char **argv) {
         daemon_log(LOG_ERR, "Failed to unblock all signals: %s", strerror(errno));
         return 1;
     }
+    
+    /* Point to a function to help locate where the PID file will go */
+    
+    daemon_pid_file_proc = pid_file_proc;
 
     /* Set indentification string for the daemon for both syslog and PID file */
     daemon_pid_file_ident = daemon_log_ident = daemon_ident_from_argv0(argv[0]);
-
+    
     /* Check if we are called with -P or --pause parameter */
     if (argc >= 2 && ((strcmp(argv[1], "-P")==0) || (strcmp(argv[1], "--pause")==0))) {
       if ((pid = daemon_pid_file_is_running()) >= 0) {
@@ -375,7 +393,7 @@ int main(int argc, char **argv) {
       if ((ret = daemon_pid_file_kill_wait(SIGTERM, 5)) < 0)
         daemon_log(LOG_WARNING, "Failed to kill daemon: %s", strerror(errno));
       else
-        daemon_pid_file_remove(); // 
+        daemon_pid_file_remove();
       return ret < 0 ? 1 : 0;
     }
 
