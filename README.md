@@ -1,6 +1,16 @@
 Shairport Sync
 =============
 
+Version 2.1.5:
+-----
+* Enhancements
+	* Adds a `--with-localstatedir` configuration option. When Shairport Sync is running as a daemon, it writes its Process ID (PID) to a file. The file must be stored in part of the file system that is writable. Most build systems choose an appropriate 'local state directory' for this automatically, but some -- notably `buildroot`  -- don't always get it right for an embedded system. This compilation option allows you to specify the local state directory. Supersedes 2.1.4, which tried to do the same thing.
+
+Version 2.1.4:
+-----
+* Faulty -- withdrawn. 2.1.5 does it properly.
+
+
 Version 2.1.3:
 -----
 * Stability Improvements
@@ -143,6 +153,7 @@ Choose the appropriate `--with-*` options:
 - `--with-avahi` or `--with-tinysvcmdns` for mdns support.
 - `--with-openssl`  or `--with-polarssl` for encryption and related utilities.
 - `--with-soxr` for libsoxr-based resampling.
+- `--with-localstatedir` for specifying where files, such as the PID file, should be stored. The 'local state directory', where files can be written by Shairport Sync at runtime, is normally chosen automatically. You can choose a different directory with this option. The directory must be writable and must contain a subdirectory called `run`. For example, if you used the option `--with-localstatedir=/var`, then Shairport Sync expects a directory with the path name `/var/run`. If you use this option, you may have to edit the init script to search for the PID file in your new location.
 
 Here is an example:
 
