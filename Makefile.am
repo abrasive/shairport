@@ -1,9 +1,10 @@
 bin_PROGRAMS = shairport-sync
 shairport_sync_SOURCES = shairport.c rtsp.c mdns.c mdns_external.c common.c rtp.c player.c alac.c audio.c audio_dummy.c audio_pipe.c
 
-install-exec-hook:
-	[ -f /etc/init.d/shairport-sync ] || cp scripts/shairport-sync /etc/init.d/
-	update-rc.d shairport-sync defaults 90 10
+if USE_CUSTOMLOCALSTATEDIR
+AM_CFLAGS= \
+	-DLOCALSTATEDIR=\"$(CUSTOM_LOCAL_STATE_DIR)\"
+endif
 
 if USE_AVAHI
 shairport_sync_SOURCES += mdns_avahi.c
@@ -32,3 +33,7 @@ endif
 if USE_DNS_SD
 shairport_sync_SOURCES += mdns_dns_sd.c
 endif
+
+install-exec-hook:
+	[ -f /etc/init.d/shairport-sync ] || cp scripts/shairport-sync /etc/init.d/
+	update-rc.d shairport-sync defaults 90 10

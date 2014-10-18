@@ -321,19 +321,23 @@ void shairport_startup_complete(void) {
     }
 }
 
+#ifdef USE_CUSTOM_LOCAL_STATE_DIR
+
 const char *pid_file_proc(void) {
 #ifdef HAVE_ASPRINTF
    static char *fn = NULL;
    free(fn);
-   asprintf(&fn,  "%s/%s.pid", OURRUNSTATEDIR, daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
+   debug(1,"Checking PID file location 1.");
+   asprintf(&fn,  "%s/run/%s.pid", LOCALSTATEDIR, daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
 #else
    static char fn[8192];
-   snprintf(fn, sizeof(fn), "%s/%s.pid", OURRUNSTATEDIR, daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
+   snprintf(fn, sizeof(fn), "%s/run/%s.pid", LOCALSTATEDIR, daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
+   debug(1,"Checking PID file location 2.");
 #endif
 
    return fn;
 }
-
+#endif
 
 int main(int argc, char **argv) {
 
@@ -365,9 +369,12 @@ int main(int argc, char **argv) {
         return 1;
     }
     
-    /* Point to a function to help locate where the PID file will go */
     
+#if USE_CUSTOM_LOCAL_STATE_DIR
+    debug(1,"Locating localstatedir at \"%s\"",LOCALSTATEDIR);
+    /* Point to a function to help locate where the PID file will go */
     daemon_pid_file_proc = pid_file_proc;
+#endif
 
     /* Set indentification string for the daemon for both syslog and PID file */
     daemon_pid_file_ident = daemon_log_ident = daemon_ident_from_argv0(argv[0]);

@@ -28,12 +28,17 @@ if test "x${with_os_type}" = xlinux; then
  AC_CHECK_LIB([rt],[clock_gettime], , AC_MSG_ERROR(librt needed))
 fi
 
-AC_DEFINE_UNQUOTED([OURRUNSTATEDIR],["${localstatedir}/run"],[Needed for libdaemon])
-
 AC_CHECK_LIB([daemon],[daemon_log], , AC_MSG_ERROR(libdaemon needed))
 AC_CHECK_LIB([pthread],[pthread_create], , AC_MSG_ERROR(pthread library needed))
 AC_CHECK_LIB([m],[exp], , AC_MSG_ERROR(maths library needed))
 AC_CHECK_LIB([popt],[poptGetContext], , AC_MSG_ERROR(libpopt needed))
+
+# Look for localstatedir flag
+AC_ARG_WITH(localstatedir, [  --with-localstatedir = choose where to place the run directory containing the PID file], [
+  HAS_CUSTOMLOCALSTATEDIR=1
+  AC_SUBST(CUSTOM_LOCAL_STATE_DIR,["${with_localstatedir}"])
+  AC_DEFINE([USE_CUSTOM_LOCAL_STATE_DIR],1,[Hook up special proc to libdaemon])], )
+AM_CONDITIONAL([USE_CUSTOMLOCALSTATEDIR], [test "x$HAS_CUSTOMLOCALSTATEDIR" = "x1"])
 
 # Look for polarssl flag
 AC_ARG_WITH(polarssl, [  --with-polarssl = choose polarssl for encryption services (choose this or --with-openssl)], [
