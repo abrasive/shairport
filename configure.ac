@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.50])
-AC_INIT([shairport-sync], [2.1.4], [mikebrady@eircom.net])
+AC_INIT([shairport-sync], [2.1.5], [mikebrady@eircom.net])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([shairport.c])
 AC_CONFIG_HEADERS([config.h])
@@ -16,8 +16,6 @@ if test "z$with_os_type" = "z"; then
   with_os_type="linux"
 fi
 with_os_type=`echo ${with_os_type} | tr '[[:upper:]]' '[[:lower:]]' `
-
-
 
 # Checks for programs.
 AC_PROG_CC
