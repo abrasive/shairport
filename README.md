@@ -1,9 +1,24 @@
 Shairport Sync
 =============
 
+Version 2.1.4:
+-----
+* Enhancements
+	* Shairport Sync now responds to the `--localstatedir` configure option. It allows you to specify where the `run` folder containing the PID file will be located. It can be important for embedded systems, especially systems build with buildroot, where the main file system is read-only. This configure option allows you you choose a different location.
+
+Version 2.1.3:
+-----
+* Stability Improvements
+	* Fixed a bug which prevented Shairport Sync starting on an IPv4-only system.
+
+Version 2.1.2:
+-----
+* Stability Improvements
+	* Improved buffering and flushing control, especially important on poor networks.
+
+
 Version 2.1.1:
 -----
-
 * Enhancements
 	* Add new -t or --timeout option. Normally, when playing audio from a source, the Shairport Sync device is unavailable to other devices requesting to play through it -- it returns a "busy" signal to those devices. If the audio source disappears without warning, the play session automatically terminates after a timeout period (default 120 seconds) and the device goes from being "busy" to being available for new play requests again. This option allows you to set that timeout period in seconds.
 In addition, setting the timeout period to 0 means that play requests -- say from other devices on the network -- can interrupt and terminate the current session at any time. In other words, the "busy" feature of the device -- refusing connections from other players while playing from an existing source -- is turned off. 
