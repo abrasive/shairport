@@ -181,7 +181,7 @@ static void deinit(void) {
   }
 }
 
-void open_alsa_device(void) { 
+int open_alsa_device(void) { 
 
   int ret, dir = 0;
   unsigned int my_sample_rate = desired_sample_rate;
@@ -189,7 +189,8 @@ void open_alsa_device(void) {
   snd_pcm_uframes_t buffer_size = frames*4;
   ret = snd_pcm_open(&alsa_handle, alsa_out_dev, SND_PCM_STREAM_PLAYBACK, 0);
   if (ret < 0)
-    die("Alsa initialization failed: unable to open pcm device: %s.", snd_strerror(ret));
+    return(ret);
+    // die("Alsa initialization failed: unable to open pcm device: %s.", snd_strerror(ret));
 
   snd_pcm_hw_params_alloca(&alsa_params);
   snd_pcm_hw_params_any(alsa_handle, alsa_params);
@@ -206,6 +207,7 @@ void open_alsa_device(void) {
   if (my_sample_rate!=desired_sample_rate) {
     die("Can't set the D/A converter to %d -- set to %d instead./n",desired_sample_rate,my_sample_rate);
   }
+  return(0);
 }
 
 void close_alsa_device(void) {
@@ -220,7 +222,6 @@ static void start(int sample_rate) {
   if (sample_rate != 44100)
     die("Unexpected sample rate %d -- only 44,100 supported!",sample_rate);
   desired_sample_rate = sample_rate; // must be a variable
-  // open_alsa_device();
 }
 
 static uint32_t delay() {
@@ -259,25 +260,28 @@ static uint32_t delay() {
 }
 
 static void play(short buf[], int samples) {
+  int ret = 0;
 	if (alsa_handle==NULL)
-		open_alsa_device();
-  pthread_mutex_lock(&alsa_mutex);
-  snd_pcm_sframes_t current_delay = 0;
-  int err,ignore;
-  if ((snd_pcm_state(alsa_handle)==SND_PCM_STATE_PREPARED) || (snd_pcm_state(alsa_handle)==SND_PCM_STATE_RUNNING)) {
-    err = snd_pcm_writei(alsa_handle, (char*)buf, samples);
-    if (err < 0) {
-      ignore = snd_pcm_recover(alsa_handle, err, 0);
-      debug(1,"Error %d writing %d samples in play() %s.",err,samples, snd_strerror(err));
+		ret = open_alsa_device();
+  if (ret==0) {
+    pthread_mutex_lock(&alsa_mutex);
+    snd_pcm_sframes_t current_delay = 0;
+    int err,ignore;
+    if ((snd_pcm_state(alsa_handle)==SND_PCM_STATE_PREPARED) || (snd_pcm_state(alsa_handle)==SND_PCM_STATE_RUNNING)) {
+      err = snd_pcm_writei(alsa_handle, (char*)buf, samples);
+      if (err < 0) {
+        ignore = snd_pcm_recover(alsa_handle, err, 0);
+        debug(1,"Error %d writing %d samples in play() %s.",err,samples, snd_strerror(err));
+      }
+    } else {
+      debug(1,"Error -- ALSA device in incorrect state (%d) for play.",snd_pcm_state(alsa_handle));
+      if (err = snd_pcm_prepare(alsa_handle)) {
+        ignore = snd_pcm_recover(alsa_handle, err, 0);
+        debug(1,"Error preparing after play error: %s.", snd_strerror(err));
+      }
     }
-  } else {
-    debug(1,"Error -- ALSA device in incorrect state (%d) for play.",snd_pcm_state(alsa_handle));
-    if (err = snd_pcm_prepare(alsa_handle)) {
-      ignore = snd_pcm_recover(alsa_handle, err, 0);
-      debug(1,"Error preparing after play error: %s.", snd_strerror(err));
-    }
+    pthread_mutex_unlock(&alsa_mutex);
   }
-  pthread_mutex_unlock(&alsa_mutex);
 }
 
 static void flush(void) {

@@ -63,6 +63,12 @@ typedef struct {
     char *errfile;
 } shairport_cfg;
 
+//true if Shairport Sync is supposed to be sending output to the output device, false otherwise
+
+int get_requested_connection_state_to_output();
+
+void set_requested_connection_state_to_output(int v);
+
 int debuglev;
 void die(char *format, ...);
 void warn(char *format, ...);

@@ -69,10 +69,22 @@
 #include "common.h"
 #include <libdaemon/dlog.h>
 
+//true if Shairport Sync is supposed to be sending output to the output device, false otherwise
+
+static volatile int requested_connection_state_to_output = 1;
 
 shairport_cfg config;
 
 int debuglev = 0;
+
+int get_requested_connection_state_to_output() {
+  return requested_connection_state_to_output;
+}
+
+void set_requested_connection_state_to_output(int v) {
+  requested_connection_state_to_output = v;
+}
+
 
 void die(char *format, ...) {
     char s[1024];

@@ -95,6 +95,13 @@ static void sig_logrotate(int foo, siginfo_t *bar, void *baz) {
 //    log_setup();
 }
 
+static void sig_toggle_audio_output(int foo, siginfo_t *bar, void *baz) {
+  if (get_requested_connection_state_to_output())
+    set_requested_connection_state_to_output(0);
+  else
+    set_requested_connection_state_to_output(1);
+}
+
 static void sig_pause_client(int foo, siginfo_t *bar, void *baz) {
   rtp_request_client_pause();
 }
@@ -306,7 +313,7 @@ void signal_setup(void) {
     sa.sa_sigaction = &sig_logrotate;
     sigaction(SIGHUP, &sa, NULL);
 
-    sa.sa_sigaction = &sig_pause_client;
+    sa.sa_sigaction = &sig_toggle_audio_output;
     sigaction(SIGUSR2, &sa, NULL);
 
     sa.sa_sigaction = &sig_child;
@@ -426,6 +433,7 @@ int main(int argc, char **argv) {
     gethostname(hostname, 100);
     config.apname = malloc(20 + 100);
     snprintf(config.apname, 20 + 100, "Shairport Sync on %s", hostname);
+    set_requested_connection_state_to_output(1); // we expect to be able to connect to the output device
 
     // parse arguments into config
     int audio_arg = parse_options(argc, argv);
