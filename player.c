@@ -298,10 +298,9 @@ static void free_buffer(void) {
 void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
 	
   packet_count++;
-	time_of_last_audio_packet = get_absolute_time_in_fp();
   
   pthread_mutex_lock(&ab_mutex);
-  
+	time_of_last_audio_packet = get_absolute_time_in_fp();
   if (connection_state_to_output) { // if we are supposed to be processing these packets
   
 	  if ((flush_rtp_timestamp!=0x7fffffff) && ((timestamp==flush_rtp_timestamp) || seq32_order(timestamp,flush_rtp_timestamp))) {
