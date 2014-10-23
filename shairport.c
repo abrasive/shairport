@@ -91,19 +91,14 @@ static void sig_child(int foo, siginfo_t *bar, void *baz) {
 	}
 }
 
-static void sig_logrotate(int foo, siginfo_t *bar, void *baz) {
-//    log_setup();
-}
-
-static void sig_toggle_audio_output(int foo, siginfo_t *bar, void *baz) {
-  if (get_requested_connection_state_to_output())
+static void sig_disconnect_audio_output(int foo, siginfo_t *bar, void *baz) {
+	debug(1,"disconnect audio output requested.");
     set_requested_connection_state_to_output(0);
-  else
-    set_requested_connection_state_to_output(1);
 }
 
-static void sig_pause_client(int foo, siginfo_t *bar, void *baz) {
-  rtp_request_client_pause();
+static void sig_connect_audio_output(int foo, siginfo_t *bar, void *baz) {
+	debug(1,"connect audio output requested.");
+    set_requested_connection_state_to_output(1);
 }
 
 void print_version(void) {
@@ -142,20 +137,6 @@ void print_version(void) {
   printf("%s\n",version_string);
 }
 
-char * isValidIntegerOptArg(char * argptr) {
-  char c = *argptr;
-  if (*argptr == '-')
-    die("Missing or invalid numerical command line option argument.");
-  return argptr;
-}
-
-char * isValidOptArg(char * argptr) {
-  char c = *argptr;
-  if (*argptr == '-')
-    die("Missing or invalid command line option argument.");
-  return argptr;
-}
-
 void usage(char *progname) {
     printf("Usage: %s [options...]\n", progname);
     printf("  or:  %s [options...] -- [audio output-specific options]\n", progname);
@@ -183,7 +164,8 @@ void usage(char *progname) {
     printf("                            \"soxr\" option only available if built with soxr support.\n");
     printf("    -d, --daemon            daemonise.\n");
     printf("    -k, --kill              kill the existing shairport daemon.\n");
-    printf("    -P, --pause             send a pause request to the audio source.\n");
+    printf("    -D, --disconnectFromOutput  disconnect immediately from the output device.\n");
+    printf("    -R, --reconnectToOutput  reconnect to the output device.\n");
     printf("    -B, --on-start=PROGRAM  run PROGRAM when playback is about to begin.\n");
     printf("    -E, --on-stop=PROGRAM   run PROGRAM when playback has ended.\n");
     printf("                            For -B and -E options, specify the full path to the program, e.g. /usr/bin/logger.\n");
@@ -211,7 +193,8 @@ int parse_options(int argc, char **argv) {
     { "version", 'V', POPT_ARG_NONE, NULL, 0, NULL},
     { "verbose", 'v', POPT_ARG_NONE, NULL, 'v', NULL },
     { "daemon", 'd', POPT_ARG_NONE, &config.daemonise, 0, NULL },
-    { "pause", 'P', POPT_ARG_NONE, NULL, 0, NULL },
+    { "disconnectFromOutput", 'D', POPT_ARG_NONE, NULL, 0, NULL },
+    { "reconnectToOutput", 'R', POPT_ARG_NONE, NULL, 0, NULL },
     { "kill", 'k', POPT_ARG_NONE, NULL, 0, NULL },
     { "port", 'p', POPT_ARG_INT, &config.port, 0, NULL } ,
     { "name", 'a', POPT_ARG_STRING, &config.apname, 0, NULL } ,
@@ -236,8 +219,6 @@ int parse_options(int argc, char **argv) {
     if (strcmp(argv[j],"--")==0)
       optind=j;
   
-  // debug(1,"Number of arguments is %d, number to be processed is %d.\n",argc,optind);
-
   optCon = poptGetContext(NULL, optind,(const char **)argv, optionsTable, 0);
   poptSetOtherOptionHelp(optCon, "[OPTIONS]* ");
 
@@ -310,11 +291,11 @@ void signal_setup(void) {
     sigaction(SIGINT, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
 
-    sa.sa_sigaction = &sig_logrotate;
-    sigaction(SIGHUP, &sa, NULL);
-
-    sa.sa_sigaction = &sig_toggle_audio_output;
+    sa.sa_sigaction = &sig_disconnect_audio_output;
     sigaction(SIGUSR2, &sa, NULL);
+
+    sa.sa_sigaction = &sig_connect_audio_output;
+    sigaction(SIGHUP, &sa, NULL);
 
     sa.sa_sigaction = &sig_child;
     sigaction(SIGCHLD, &sa, NULL);
@@ -328,18 +309,16 @@ void shairport_startup_complete(void) {
     }
 }
 
-#ifdef USE_CUSTOM_LOCAL_STATE_DIR
+#ifdef USE_CUSTOM_PID_DIR
 
 const char *pid_file_proc(void) {
 #ifdef HAVE_ASPRINTF
    static char *fn = NULL;
    free(fn);
-   debug(1,"Checking PID file location 1.");
-   asprintf(&fn,  "%s/run/%s.pid", LOCALSTATEDIR, daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
+   asprintf(&fn,  "%s/%s.pid", PIDDIR, daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
 #else
    static char fn[8192];
-   snprintf(fn, sizeof(fn), "%s/run/%s.pid", LOCALSTATEDIR, daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
-   debug(1,"Checking PID file location 2.");
+   snprintf(fn, sizeof(fn), "%s/%s.pid", PIDDIR, daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
 #endif
 
    return fn;
@@ -349,6 +328,24 @@ const char *pid_file_proc(void) {
 int main(int argc, char **argv) {
 
     daemon_set_verbosity(LOG_DEBUG);
+
+    memset(&config, 0, sizeof(config));
+
+    // set defaults
+    config.latency = 99400; // iTunes
+    config.userSuppliedLatency = 0; // zero means none supplied
+    config.iTunesLatency = 99400; // this seems to work pretty well for iTunes -- two left-ear headphones, one from the iMac jack, one from an NSLU2 running a cheap "3D Sound" USB Soundcard
+    config.AirPlayLatency = 88200; // this seems to work pretty well for AirPlay -- Syncs sound and vision on AppleTV, but also used for iPhone/iPod/iPad sources
+    config.resyncthreshold = 441*5; // this number of frames is 50 ms
+    config.timeout = 120; // this number of seconds to wait for [more] audio before switching to idle.
+    config.buffer_start_fill = 220;
+    config.port = 5000;
+    config.packet_stuffing = ST_basic; // simple interpolation or deletion
+    char hostname[100];
+    gethostname(hostname, 100);
+    config.apname = malloc(20 + 100);
+    snprintf(config.apname, 20 + 100, "Shairport Sync on %s", hostname);
+    set_requested_connection_state_to_output(1); // we expect to be able to connect to the output device
     
     /* Check if we are called with -V or --version parameter */
     if (argc >= 2 && ((strcmp(argv[1], "-V")==0) || (strcmp(argv[1], "--version")==0))) {
@@ -386,14 +383,26 @@ int main(int argc, char **argv) {
     /* Set indentification string for the daemon for both syslog and PID file */
     daemon_pid_file_ident = daemon_log_ident = daemon_ident_from_argv0(argv[0]);
     
-    /* Check if we are called with -P or --pause parameter */
-    if (argc >= 2 && ((strcmp(argv[1], "-P")==0) || (strcmp(argv[1], "--pause")==0))) {
+    /* Check if we are called with -D or --disconnectFromOutput parameter */
+    if (argc >= 2 && ((strcmp(argv[1], "-D")==0) || (strcmp(argv[1], "--disconnectFromOutput")==0))) {
       if ((pid = daemon_pid_file_is_running()) >= 0) {
         if (kill(pid,SIGUSR2)!=0) {  // try to send the signal
-          daemon_log(LOG_WARNING, "Failed trying to send pause request to daemon pid: %d: %s",pid, strerror(errno));
+          daemon_log(LOG_WARNING, "Failed trying to send disconnectFromOutput command to daemon pid: %d: %s",pid, strerror(errno));
         }
       } else {
-        daemon_log(LOG_WARNING, "Can't send a pause request -- Failed to find daemon: %s", strerror(errno));
+        daemon_log(LOG_WARNING, "Can't send a disconnectFromOutput request -- Failed to find daemon: %s", strerror(errno));
+      }
+      exit(1);
+    }
+      
+    /* Check if we are called with -R or --reconnectToOutput parameter */
+    if (argc >= 2 && ((strcmp(argv[1], "-R")==0) || (strcmp(argv[1], "--reconnectToOutput")==0))) {
+      if ((pid = daemon_pid_file_is_running()) >= 0) {
+        if (kill(pid,SIGHUP)!=0) {  // try to send the signal
+          daemon_log(LOG_WARNING, "Failed trying to send reconnectToOutput command to daemon pid: %d: %s",pid, strerror(errno));
+        }
+      } else {
+        daemon_log(LOG_WARNING, "Can't send a reconnectToOutput request -- Failed to find daemon: %s", strerror(errno));
       }
       exit(1);
     }
@@ -416,24 +425,6 @@ int main(int argc, char **argv) {
         daemon_log(LOG_ERR, "Daemon already running on PID file %u", pid);
         return 1;
     }
-
-    memset(&config, 0, sizeof(config));
-
-    // set defaults
-    config.latency = 99400; // iTunes
-    config.userSuppliedLatency = 0; // zero means none supplied
-    config.iTunesLatency = 99400; // this seems to work pretty well for iTunes -- two left-ear headphones, one from the iMac jack, one from an NSLU2 running a cheap "3D Sound" USB Soundcard
-    config.AirPlayLatency = 88200; // this seems to work pretty well for AirPlay -- Syncs sound and vision on AppleTV, but also used for iPhone/iPod/iPad sources
-    config.resyncthreshold = 441*5; // this number of frames is 50 ms
-    config.timeout = 120; // this number of seconds to wait for [more] audio before switching to idle.
-    config.buffer_start_fill = 220;
-    config.port = 5000;
-    config.packet_stuffing = ST_basic; // simple interpolation or deletion
-    char hostname[100];
-    gethostname(hostname, 100);
-    config.apname = malloc(20 + 100);
-    snprintf(config.apname, 20 + 100, "Shairport Sync on %s", hostname);
-    set_requested_connection_state_to_output(1); // we expect to be able to connect to the output device
 
     // parse arguments into config
     int audio_arg = parse_options(argc, argv);

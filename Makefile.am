@@ -1,9 +1,9 @@
 bin_PROGRAMS = shairport-sync
 shairport_sync_SOURCES = shairport.c rtsp.c mdns.c mdns_external.c common.c rtp.c player.c alac.c audio.c audio_dummy.c audio_pipe.c
 
-if USE_CUSTOMLOCALSTATEDIR
+if USE_CUSTOMPIDDIR
 AM_CFLAGS= \
-	-DLOCALSTATEDIR=\"$(CUSTOM_LOCAL_STATE_DIR)\"
+	-DPIDDIR=\"$(CUSTOM_PID_DIR)\"
 endif
 
 if USE_AVAHI

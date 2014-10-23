@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.50])
-AC_INIT([shairport-sync], [2.1.5], [mikebrady@eircom.net])
+AC_INIT([shairport-sync], [2.1.6], [mikebrady@eircom.net])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([shairport.c])
 AC_CONFIG_HEADERS([config.h])
@@ -31,12 +31,18 @@ AC_CHECK_LIB([pthread],[pthread_create], , AC_MSG_ERROR(pthread library needed))
 AC_CHECK_LIB([m],[exp], , AC_MSG_ERROR(maths library needed))
 AC_CHECK_LIB([popt],[poptGetContext], , AC_MSG_ERROR(libpopt needed))
 
-# Look for localstatedir flag
-AC_ARG_WITH(localstatedir, [  --with-localstatedir = choose where to place the run directory containing the PID file], [
-  HAS_CUSTOMLOCALSTATEDIR=1
-  AC_SUBST(CUSTOM_LOCAL_STATE_DIR,["${with_localstatedir}"])
-  AC_DEFINE([USE_CUSTOM_LOCAL_STATE_DIR],1,[Hook up special proc to libdaemon])], )
-AM_CONDITIONAL([USE_CUSTOMLOCALSTATEDIR], [test "x$HAS_CUSTOMLOCALSTATEDIR" = "x1"])
+# Look for piddir flag
+AC_ARG_WITH(piddir, [ --with-piddir=<pathname> Specify a pathname to a directory in which to write the PID file.], [
+	AC_MSG_CHECKING(--with-piddir argument)
+	if test "x${with_piddir}" = x -o "x${with_piddir}" = xyes ; then
+		AC_MSG_RESULT(not found)
+		AC_MSG_ERROR(when you use the --with-piddir directive you must specify the pathname of the directory into which the PID file will be written)
+	fi
+	AC_MSG_RESULT(${with_piddir})
+  HAS_CUSTOMPIDDIR=1
+  AC_SUBST(CUSTOM_PID_DIR,["${with_piddir}"])
+  AC_DEFINE([USE_CUSTOM_PID_DIR],1,[Hook up special proc to libdaemon to point to this directory])], )
+AM_CONDITIONAL([USE_CUSTOMPIDDIR], [test "x$HAS_CUSTOMPIDDIR" = "x1"])
 
 # Look for polarssl flag
 AC_ARG_WITH(polarssl, [  --with-polarssl = choose polarssl for encryption services (choose this or --with-openssl)], [
@@ -76,10 +82,9 @@ AM_CONDITIONAL([USE_TINYSVCMDNS], [test "x$HAS_TINYSVCMDNS" = "x1"])
 # Look for ALSA flag
 AC_ARG_WITH(alsa, [  --with-alsa = choose native ALSA API support (GNU/Linux only)],
   [AC_MSG_RESULT(>>Including an ALSA back end)
-  HAS_ALSA=1
+  AM_CONDITIONAL([USE_ALSA], [test 0])
   AC_DEFINE([CONFIG_ALSA], 1, [Needed by the compiler.])
   AC_CHECK_LIB([asound], [snd_pcm_open], , AC_MSG_ERROR(ALSA support requires the asound library!))], )
-AM_CONDITIONAL([USE_ALSA], [test "x$HAS_ALSA" = "x1"])
 
 # Look for SNDIO flag
 AC_ARG_WITH(sndio, [  --with-sndio = choose native SNDIO API support (FreeBSD) -- probably broken], [

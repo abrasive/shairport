@@ -766,7 +766,6 @@ typedef struct stats { // statistics for running averages
 
 static void *player_thread_func(void *arg) {
   connection_state_to_output = get_requested_connection_state_to_output();
-  debug(1,"States: %d, %d.",connection_state_to_output,get_requested_connection_state_to_output());
 //this is about half a minute
 #define trend_interval 3758
   stats_t statistics[trend_interval];
