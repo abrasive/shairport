@@ -460,7 +460,7 @@ static abuf_t *buffer_get_frame(void) {
 						debug(1,"Dropping flushed packet seqno %u, timestamp %u",curframe->sequence_number,curframe->timestamp);
 						curframe->ready=0;
 						flush_limit++;
-						ab_read==SUCCESSOR(ab_read);
+						ab_read=SUCCESSOR(ab_read);
 					}
 					if ((flush_rtp_timestamp!=0x7fffffff) && (!seq32_order(curframe->timestamp,flush_rtp_timestamp))) // if we have gone past the flush boundary time
 						flush_rtp_timestamp=0x7fffffff;

@@ -10,29 +10,29 @@
 	<string>shairport-sync</string>
 	<key>IDESourceControlProjectOriginsDictionary</key>
 	<dict>
-		<key>6DA2D7CF-469E-4320-AD70-9612E79D9450</key>
+		<key>DE7E3213834F1D8A89C0AEFB5901CF451E3668FA</key>
 		<string>ssh://github.com/mikebrady/shairport-sync.git</string>
 	</dict>
 	<key>IDESourceControlProjectPath</key>
 	<string>shairport-sync.xcworkspace</string>
 	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
 	<dict>
-		<key>6DA2D7CF-469E-4320-AD70-9612E79D9450</key>
+		<key>DE7E3213834F1D8A89C0AEFB5901CF451E3668FA</key>
 		<string>..</string>
 	</dict>
 	<key>IDESourceControlProjectURL</key>
 	<string>ssh://github.com/mikebrady/shairport-sync.git</string>
 	<key>IDESourceControlProjectVersion</key>
-	<integer>110</integer>
+	<integer>111</integer>
 	<key>IDESourceControlProjectWCCIdentifier</key>
-	<string>6DA2D7CF-469E-4320-AD70-9612E79D9450</string>
+	<string>DE7E3213834F1D8A89C0AEFB5901CF451E3668FA</string>
 	<key>IDESourceControlProjectWCConfigurations</key>
 	<array>
 		<dict>
 			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
 			<string>public.vcs.git</string>
 			<key>IDESourceControlWCCIdentifierKey</key>
-			<string>6DA2D7CF-469E-4320-AD70-9612E79D9450</string>
+			<string>DE7E3213834F1D8A89C0AEFB5901CF451E3668FA</string>
 			<key>IDESourceControlWCCName</key>
 			<string>shairport-sync</string>
 		</dict>

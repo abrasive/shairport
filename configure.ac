@@ -82,9 +82,11 @@ AM_CONDITIONAL([USE_TINYSVCMDNS], [test "x$HAS_TINYSVCMDNS" = "x1"])
 # Look for ALSA flag
 AC_ARG_WITH(alsa, [  --with-alsa = choose native ALSA API support (GNU/Linux only)],
   [AC_MSG_RESULT(>>Including an ALSA back end)
+  HAS_ALSA=1
   AM_CONDITIONAL([USE_ALSA], [test 0])
   AC_DEFINE([CONFIG_ALSA], 1, [Needed by the compiler.])
   AC_CHECK_LIB([asound], [snd_pcm_open], , AC_MSG_ERROR(ALSA support requires the asound library!))], )
+AM_CONDITIONAL([USE_ALSA], [test "x$HAS_ALSA" = "x1"])
 
 # Look for SNDIO flag
 AC_ARG_WITH(sndio, [  --with-sndio = choose native SNDIO API support (FreeBSD) -- probably broken], [
