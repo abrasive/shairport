@@ -7,6 +7,20 @@ Audio played by a Shairport Sync-powered device stays in synchrony with the sour
 
 Shairport Sync does not support AirPlay video and photo streaming.
 
+Version 2.1.6:
+-----
+* Enhancements
+	* (This feature is intended to be useful to integrators.) Shairport Sync now the ability to immediately disconnect and reconnect to the sound output device while continuing to stream audio data from its client.
+Send a `SIGUSR2` to the shairport-sync process to disconnect or send it a `SIGHUP` to reconnect. If shairport-sync has been started as a daemon using `shairport-sync -d`, then executing `shairport-sync -D` or `--disconnectFromOutput` will request the daemon to disconnect, and executing `shairport-sync -R` or `--reconnectToOutput` will request it to reconnect.
+With this feature, you can allow Shairport Sync always to advertise and provide the streaming service, but still be able to disconnect it locally to enable other audio services to access the output device.
+	
+* Annoying things you should know about if you're updating from a previous version:
+	* Options `--with-openssl`, `--with-polarssl` have been replaced with a new option `--with-ssl=<option>` where `<option>` is either `openssl` or `polarssl`.
+	* Option `--with-localstatedir` has been replaced with `--with-piddir`. This compilation option allows you to specify the directory in which the PID file will be written. The directory must exist and be writable. Supercedes the `--with-localstatedir` and describes the intended functionality a little more accurately.
+
+* Bugfixes
+	* A small (?) bug in the flush logic has been corrected. Not causing any known problem.
+
 Version 2.1.5:
 -----
 * Enhancements
@@ -151,13 +165,13 @@ Choose the appropriate `--with-*` options:
 
 - `--with-alsa` for the ALSA audio back end. This is required.
 - `--with-avahi` or `--with-tinysvcmdns` for mdns support.
-- `--with-openssl`  or `--with-polarssl` for encryption and related utilities.
+- `--with-ssl=openssl`  or `--with-ssl=polarssl` for encryption and related utilities using either OpenSSL or PolarSSL.
 - `--with-soxr` for libsoxr-based resampling.
-- `--with-localstatedir` for specifying where files, such as the PID file, should be stored. The 'local state directory', where files can be written by Shairport Sync at runtime, is normally chosen automatically. You can choose a different directory with this option. The directory must be writable and must contain a subdirectory called `run`. For example, if you used the option `--with-localstatedir=/var`, then Shairport Sync expects a directory with the path name `/var/run`. If you use this option, you may have to edit the init script to search for the PID file in your new location.
+- `--with-piddir` for specifying where the PID file should be stored. This directory is normally chosen automatically. The directory must be writable. If you use this option, you may have to edit the init script to search for the PID file in your new location.
 
 Here is an example:
 
-`$ ./configure --with-alsa --with-avahi --with-openssl --with-soxr`
+`$ ./configure --with-alsa --with-avahi --with-ssl=openssl --with-soxr`
 
 `$ make` 
 
@@ -165,7 +179,7 @@ Run `$sudo make install` to install `shairport-sync` along with an init script w
 
 Configuring Shairport Sync
 --------
-Shairport Sync installs a default configuration at /etc/init.d/shairport-sync (it won't replace an existing one) which should work in almost any system with a sound card. If there is a problem, it will be noted in the logfile, normally `/etc/log/syslog`. However, to get the most out of your software and hardware, you need to adjust some of the settings.
+Shairport Sync installs a default configuration at `/etc/init.d/shairport-sync` (it won't replace an existing one) which should work in almost any system with a sound card. If there is a problem, it will be noted in the logfile, normally `/etc/log/syslog`. However, to get the most out of your software and hardware, you need to adjust some of the settings.
 
 To understand what follows, note that settings and parameters are passed to Shairport Sync through command line arguments. The purpose of the init script at `/etc/init.d/shairport-sync` is to launch or terminate Shairport Sync while passing the correct arguments to it. You are perfectly free to remove the init script and launch and terminate Shairport Sync yourself directly; indeed it is useful when you are troubleshooting the program. If you do launch it directly, make sure it isn't running already!
 
