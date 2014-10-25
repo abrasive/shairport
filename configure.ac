@@ -44,16 +44,22 @@ AC_ARG_WITH(piddir, [ --with-piddir=<pathname> Specify a pathname to a directory
   AC_DEFINE([USE_CUSTOM_PID_DIR],1,[Hook up special proc to libdaemon to point to this directory])], )
 AM_CONDITIONAL([USE_CUSTOMPIDDIR], [test "x$HAS_CUSTOMPIDDIR" = "x1"])
 
-# Look for polarssl flag
-AC_ARG_WITH(polarssl, [  --with-polarssl = choose polarssl for encryption services (choose this or --with-openssl)], [
-  AC_MSG_RESULT(>>Including polarssl)
-  AC_CHECK_LIB([polarssl],[ssl_init], , AC_MSG_ERROR(PolarSSL selected but the library cannot be found!))], )
-
-# Look for openssl flag
-AC_ARG_WITH(openssl, [  --with-openssl = choose openssl for encryption services (choose this or --with-polarssl)], [
-  AC_MSG_RESULT(>>Including openssl and libcrypto)
-  AC_CHECK_LIB([crypto], [MD5_Init], , AC_MSG_ERROR(libcrypto selected, but the library cannot be found!))
-  AC_CHECK_LIB([ssl],[SSL_library_init], , AC_MSG_ERROR(openssl selected but the library cannot be found!))], )
+# Check --with-ssl=argument
+AC_ARG_WITH(ssl, [ choose --with-ssl=openssl or --with-ssl=polarssl for encryption services], [
+  AC_MSG_CHECKING(encryption libraries chosen)
+  if test "x${with_ssl}" = x -o "x${with_ssl}" = xyes ; then
+    AC_MSG_RESULT(not found)
+    AC_MSG_ERROR(choose either "openssl" or "polarssl" encryption)
+  fi
+  if test "x${with_ssl}" = xopenssl ; then
+    AC_CHECK_LIB([crypto], [MD5_Init], , AC_MSG_ERROR(libcrypto selected, but the library cannot be found!))
+    AC_CHECK_LIB([ssl],[SSL_library_init], , AC_MSG_ERROR(openssl selected but the library cannot be found!))
+  elif test "x${with_ssl}" = xpolarssl ; then
+    AC_CHECK_LIB([polarssl],[ssl_init], , AC_MSG_ERROR(PolarSSL selected but the library cannot be found!))
+  else
+    AC_MSG_ERROR(unknown option "${with_ssl}"." Please choose with "openssl" or "polarssl")
+  fi
+], )
 
 # Look for soxr flag
 AC_ARG_WITH(soxr, [  --with-soxr = choose libsoxr for high-quality interpolation], [
