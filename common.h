@@ -63,4 +63,14 @@ extern shairport_cfg config;
 void shairport_shutdown(int retval);
 void shairport_startup_complete(void);
 
+typedef struct {
+    double hist[2];
+    double a[2];
+    double b[3];
+} biquad_t;
+
+void biquad_init(biquad_t *bq, double a[], double b[]);
+void biquad_lpf(biquad_t *bq, double freq, double Q);
+double biquad_filt(biquad_t *bq, double in);
+
 #endif // _COMMON_H
