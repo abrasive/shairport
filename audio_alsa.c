@@ -45,6 +45,7 @@ static uint32_t delay(void);
 static void volume(double vol);
 static int has_mute=0;
 static int has_db_vol=0;
+static double set_volume;
 
 audio_output audio_alsa = {
     .name = "alsa",
@@ -261,8 +262,11 @@ static uint32_t delay() {
 
 static void play(short buf[], int samples) {
   int ret = 0;
-	if (alsa_handle==NULL)
+	if (alsa_handle==NULL) {
 		ret = open_alsa_device();
+		if ((ret==0) && (audio_alsa.volume))
+		  volume(set_volume);
+	}
   if (ret==0) {
     pthread_mutex_lock(&alsa_mutex);
     snd_pcm_sframes_t current_delay = 0;
@@ -312,10 +316,11 @@ static void stop(void) {
 }
 
 static void volume(double vol) {
+  set_volume=vol;
   double vol_setting = vol2attn(vol,alsa_mix_maxdb,alsa_mix_mindb);
-  // debug(1,"Setting volume db to %f, for volume input of %f.",vol_setting,vol);
+  // debug(1,"Setting volume db to %f, for volume input of %f.",vol_setting/100,vol);
   if (snd_mixer_selem_set_playback_dB_all(alsa_mix_elem, vol_setting, -1) != 0)
     die ("Failed to set playback dB volume"); 
-  if (has_mute)
+  if (has_mute) 
     snd_mixer_selem_set_playback_switch_all(alsa_mix_elem, (vol!=-144.0));
 }
