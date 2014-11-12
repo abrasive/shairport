@@ -3,108 +3,19 @@ Shairport Sync
 What is Shairport Sync?
 ----------
 Shairport Sync emulates an AirPort Express for the purpose of streaming audio from iTunes, iPods, iPhones, iPads and AppleTVs.
-Audio played by a Shairport Sync-powered device stays in synchrony with the source and thus with other devices that are playing the same source synchronously. Thus, for example, synchronised multi-room audio is possible without difficulty. 
+Audio played by a Shairport Sync-powered device stays synchronised with the source and thus with other devices playing the same source synchronously. Thus, for example, synchronised multi-room audio is possible without difficulty. (Hence the name Shairport Sync, BTW.)
 
 Shairport Sync does not support AirPlay video and photo streaming.
 
-Version 2.1.8:
------
-* Enhancements
-	* (This feature is intended to be useful to integrators.) Shairport Sync now the ability to immediately disconnect and reconnect to the sound output device while continuing to stream audio data from its client.
-Send a `SIGUSR2` to the shairport-sync process to disconnect or send it a `SIGHUP` to reconnect. If shairport-sync has been started as a daemon using `shairport-sync -d`, then executing `shairport-sync -D` or `--disconnectFromOutput` will request the daemon to disconnect, and executing `shairport-sync -R` or `--reconnectToOutput` will request it to reconnect.
-With this feature, you can allow Shairport Sync always to advertise and provide the streaming service, but still be able to disconnect it locally to enable other audio services to access the output device.
-	
-* Annoying things you should know about if you're updating from a previous version:
-	* Options `--with-openssl`, `--with-polarssl` have been replaced with a new option `--with-ssl=<option>` where `<option>` is either `openssl` or `polarssl`.
-	* Option `--with-localstatedir` has been replaced with `--with-piddir`. This compilation option allows you to specify the directory in which the PID file will be written. The directory must exist and be writable. Supercedes the `--with-localstatedir` and describes the intended functionality a little more accurately.
+The way Shairport Sync works is that it uses timing information present in the audio data stream to stay in lock-step with the source. It monitors and controls the "latency" -- the time between when a sound is sent by the source and when it is played by the audio output device. There are two default latency settings, chosen automatically. One latency matches the latency iTunes uses when playing audio and the other matches the latency used by iOS devices and by iTunes and Quicktime Player when playing video.
 
-* Bugfixes
-	* A small (?) bug in the flush logic has been corrected. Not causing any known problem.
-
-Version 2.1.5:
------
-* Enhancements
-	* Adds a `--with-localstatedir` configuration option. When Shairport Sync is running as a daemon, it writes its Process ID (PID) to a file. The file must be stored in part of the file system that is writable. Most build systems choose an appropriate 'local state directory' for this automatically, but some -- notably `buildroot`  -- don't always get it right for an embedded system. This compilation option allows you to specify the local state directory. Supersedes 2.1.4, which tried to do the same thing.
-
-Version 2.1.4:
------
-* Faulty -- withdrawn. 2.1.5 does it properly.
-
-
-Version 2.1.3:
------
-* Stability Improvements
-	* Fixed a bug which prevented Shairport Sync starting on an IPv4-only system.
-
-Version 2.1.2:
------
-* Stability Improvements
-	* Improved buffering and flushing control, especially important on poor networks.
-
-
-Version 2.1.1:
------
-* Enhancements
-	* Add new -t or --timeout option. Normally, when playing audio from a source, the Shairport Sync device is unavailable to other devices requesting to play through it -- it returns a "busy" signal to those devices. If the audio source disappears without warning, the play session automatically terminates after a timeout period (default 120 seconds) and the device goes from being "busy" to being available for new play requests again. This option allows you to set that timeout period in seconds.
-In addition, setting the timeout period to 0 means that play requests -- say from other devices on the network -- can interrupt and terminate the current session at any time. In other words, the "busy" feature of the device -- refusing connections from other players while playing from an existing source -- is turned off. 
-	* Allow -B and -E commands to have arguments, e.g. -B '/usr/bin/logger "Starting to play"' is now legitimate.
-
-* Annoying things you should know about if you're updating from 2.1:
-	* Build now depends on the library libpopt -- see "Building and Installing" below.
-
-* Stability Improvements
-	* Fixed a bug which would silence output after a few hours.
-	* Tightened up management of packet buffers.
-	* Improved estimate of lead-in silence to achieve initial synchronisation.
-
-Version 2.1:
------
-
-* New features:
-
-	* Support for libsoxr, the SoX Resampler library -- see http://sourceforge.net/projects/soxr/. Briefly, Shairport Sync keeps in step with the audio source by deleting or inserting frames of audio into the stream as needed. This "interpolation" is normally inaudible, but it can be heard in some circumstances. Libsoxr allows this interpolation to be done much more smoothly and subtly. You can optionally include libsoxr support when building Shairport Sync. The big problem with libsoxr is that it is very compute intensive -- specifically floating point compute intensive -- and many embedded devices aren't powerful enough. Another issue is libsoxr is not yet in all linux distributions, so you might have to build it yourself. Available via the -S option.
-	* Support for running (and optionally waiting for the completion of) programs before and after playing.  See the -B, -E and -w options.
-	* A new option to vary or turn off the resync threshold. See the -r option.
-	* Version and build options. See the -V option.
-	* Renamed program and init script. This is not exactly a big deal, but the name of the application itself and the default init script file have been renamed from "shairport" to "shairport-sync" to avoid confusion with other versions of shairport.
-	* PolarSSL can be used in place of OpenSSL and friends.
-	
-* Other stuff
-	* Tinysvcmdns works as an alternative to, say, Avahi, but is now [really] dropped if you don't select it. Saves about 100k.
-	* Lots of bug fixes.
-
-* Annoying things you should know about if you're updating from 2.0:
-	* Compile options have changed -- see the Building and Installing section below.
-	* The name of the program itself has changed from shairport to shairport-sync. You should remove the old version -- you can use `$which shairport` to locate it.
-	* The name of the init script file has changed from shairport to shairport-sync. You should remove the old one.
-
-Version 2.0
-----
-
-* New features:
- * Audio synchronisation that works. The audio played by a Shairport Sync-powered device will stay in sync with the source. This allows you to synchronise Shairport Sync devices reliably with other devices playing the same source. For example, synchronised multi-room audio is possible without difficulty.
- * True mute and instant response to mute and volume control changes -- this requires hardware mixer support, available on most audio devices. Without hardware mixer support, response is also faster than before -- around 0.15 seconds.
- * Smoother volume control at the top and bottom of the range.
- * Another source can not interrupt an existing source playing via Shairport Sync. it will be given a 'busy' signal.
-
-Overview
-------
-Shairport Sync allows you to synchronise the audio coming from all your devices. Specifically, Shairport Sync allows you to set the "latency" -- the time between when a sound is sent and when it is played. This allows you to synchronise Shairport Sync devices reliably with other devices playing the same source. For example, synchronised multi-room audio is possible without difficulty.
+To maintain synchronisation, if an output device is running slow relative to the source, Shairport Sync will delete frames of audio to allow the device to keep up; if the device is running fast, Shairport Sync will insert frames to keep time. The number of frames inserted or deleted is so small as to be almost inaudible. Frames are inserted or deleted as necessary at pseudorandom intervals. Alternatively, with libsoxr support, Shairport Sync can resample the audio feed to ensure the output device can keep up. Resampling is even less obtrusive than insertion and deletion but requires a good deal of processing power -- most embedded devices probably can't support it.
 
 Shairport Sync is a pretty substantial rewrite of Shairport 1.0 by James Laird and others -- please see https://github.com/abrasive/shairport/blob/master/README.md#contributors-to-version-1x for a list of the contributors to Shairport 1.x and Shairport 0.x. From a "heritage" point of view, Shairport Sync is a fork of Shairport 1.0 and the active branch is called Shairport Sync 2.1.
 
 Shairport Sync works only with Linux and ALSA. The sound card you use must be capable of working with 44,100 samples per second interleaved PCM stereo (you'll get a message in the logfile if there's a problem).
 
 For more about the motivation behind Shairport Sync, please see the wiki at https://github.com/mikebrady/shairport-sync/wiki.
-
-Shairport Sync does Audio Synchronisation
----------------------------
-Shairport Sync allows you to set a delay (a "latency") from when music is sent by iTunes or your iOS device to when it is played in the Shairport Sync audio device. The latency can be set to match the latency of other output devices playing the music (or video in the case of the AppleTV or Quicktime), achieving audio synchronisation. Shairport Sync uses extra timing information to stay synchronised with the source's time signals, eliminating "drift", where audio streams slowly drift out of synchronisation.
-Shairplay Sync automatically chooses a suitable latency for iTunes and for AirPlay devices such as the AppleTV.
-
-To stay synchronised, if an output device is running slow, Shairport Sync will delete frames of audio to allow it to keep up; if the device is running fast, Shairport Sync will insert frames to keep time. The number of frames inserted or deleted is so small as to be almost  inaudible. Frames are inserted or deleted as necessary at pseudorandom intervals.
-
-Alternatively, with libsoxr support, Shairport Sync can resample the audio feed to ensure the output device can keep up. Resampling is even less obtrusive than insertion and deletion but requires a good deal of processing power -- most embedded devices probably can't support it.
 
 What else?
 --------------
@@ -115,7 +26,7 @@ What else?
 
 Status
 ------
-Shairport Sync works on standard Ubuntu laptops, on the Raspberry Pi with Raspian and OpenWrt, and it runs on a Linksys NSLU2 using OpenWrt. It works with built-in audio and with a variety of USB-connected audio amplifiers and DACs, including a cheapo USB "3D Sound" dongle, a first generation iMic and a Topping TP30 amplifier with a USB DAC input.
+Shairport Sync works on standard Ubuntu laptops, on the Raspberry Pi with Raspian and with OpenWrt, and it runs on a Linksys NSLU2 using OpenWrt. It works with built-in audio and with a variety of USB-connected audio amplifiers and DACs, including a cheapo USB "3D Sound" dongle, a first generation iMic and a Topping TP30 amplifier with a USB DAC input.
 
 Shairport Sync runs well on the Raspberry Pi. It can drive the built-in sound card, and though you wouldn't mistake the output for HiFi, it's really not too shabby. USB-connected sound cards work well on the latest version of Raspian; however older versions of Raspian appear to suffer from a problem -- see http://www.raspberrypi.org/forums/viewtopic.php?t=23544, so it is wise to update. Shairport Sync works very well with the IQAudIO Pi-DAC -- see http://iqaudio.com/wp-content/uploads/2014/06/IQaudIO_Doc.pdf for details.
 
@@ -124,6 +35,8 @@ Shairport Sync runs on Ubuntu and Debian inside VMWare Fusion 6 on a Mac, but sy
 Shairport Sync works only with the ALSA back end. You can try compiling the other back ends in as you wish, but it definitely will not work properly with them. Maybe someday...
 
 One other difference from other versions of Shairport is that the Shairport Sync build process uses GNU autotools and libtool to examine and configure the build environment -- very important for cross compilation. All previous versions looked in the current system to determine which packages were available, instead of looking at what packages were available in the target system.
+
+For information about changes and updates, please refer to the RELEASENOTES.md file in the distribution.
 
 Building And Installing
 ---------------------
@@ -145,7 +58,7 @@ Optional:
 
 Many linux distributions have Avahi and OpenSSL already in place, so normally it probably makes sense to choose those options rather than tinysvcmdns or PolarSSL. Libsoxr is available in recent linux distributions, but it requires lots of processor power -- chances are an embedded processor won't be able to keep up.
 
-Debian, Ubuntu and Raspian users can get the basics with:
+Assuming the usual build essentials and git, Debian, Ubuntu and Raspian users can get the basics with:
 
 - `apt-get install autoconf libtool libdaemon-dev libasound2-dev libpopt-dev`
 - `apt-get install avahi-daemon libavahi-client-dev` if you want to use Avahi (recommended).
@@ -169,7 +82,7 @@ Choose the appropriate `--with-*` options:
 - `--with-soxr` for libsoxr-based resampling.
 - `--with-piddir` for specifying where the PID file should be stored. This directory is normally chosen automatically. The directory must be writable. If you use this option, you may have to edit the init script to search for the PID file in your new location.
 
-Here is an example:
+Here is an example, suitable for most installations:
 
 `$ ./configure --with-alsa --with-avahi --with-ssl=openssl --with-soxr`
 
