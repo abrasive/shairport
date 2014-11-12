@@ -211,14 +211,6 @@ int open_alsa_device(void) {
   return(0);
 }
 
-void close_alsa_device(void) {
-  if (alsa_handle) {
-    snd_pcm_drain(alsa_handle);
-    snd_pcm_close(alsa_handle);
-    alsa_handle = NULL;
-  }
-}
-
 static void start(int sample_rate) {
   if (sample_rate != 44100)
     die("Unexpected sample rate %d -- only 44,100 supported!",sample_rate);
@@ -306,13 +298,20 @@ static void flush(void) {
     */    
     if (!((snd_pcm_state(alsa_handle)==SND_PCM_STATE_PREPARED) || (snd_pcm_state(alsa_handle)==SND_PCM_STATE_RUNNING)))
       debug(1,"Flush returning unexpected state -- %d.",snd_pcm_state(alsa_handle));
-    close_alsa_device();
+    
+    // flush also closes the device
+    snd_pcm_close(alsa_handle);
+    alsa_handle = NULL;
   }
 }
 
 static void stop(void) {
 	if (alsa_handle!=0)
-  	close_alsa_device();
+	  // when we want to stop, we want the alsa device
+	  // to be closed immediately -- we may even be killing the thread, so we don't wish to wait
+	  // so we should flush first
+	  flush(); // flush will also close the device
+	  // close_alsa_device();
 }
 
 static void volume(double vol) {
