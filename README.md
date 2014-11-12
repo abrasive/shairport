@@ -7,9 +7,9 @@ Audio played by a Shairport Sync-powered device stays synchronised with the sour
 
 Shairport Sync does not support AirPlay video and photo streaming.
 
-The way Shairport Sync works is that it uses timing information present in the audio data stream to stay in lock-step with the source. It monitors and controls the "latency" -- the time between when a sound is sent by the source and when it is played by the audio output device. There are two default latency settings, chosen automatically. One latency matches the latency iTunes uses when playing audio and the other matches the latency used by iOS devices and by iTunes and Quicktime Player when playing video.
+The way Shairport Sync works is that it uses timing information present in the audio data stream to stay in lock-step with the source. Using this precise timing information, it monitors and controls the "latency" -- the time between when a sound is sent by the source and when it is played by the audio output device. To maintain the exact latency required, if an output device is running slow relative to the source, Shairport Sync will delete frames of audio to allow the device to keep up; if the device is running fast, Shairport Sync will insert frames to keep time. The number of frames inserted or deleted is so small as to be almost inaudible. Frames are inserted or deleted as necessary at pseudorandom intervals. Alternatively, with `libsoxr` support, Shairport Sync can resample the audio feed to ensure the output device can keep up. This is even less obtrusive than insertion and deletion but requires a good deal of processing power -- most embedded devices probably can't support it.
 
-To maintain synchronisation, if an output device is running slow relative to the source, Shairport Sync will delete frames of audio to allow the device to keep up; if the device is running fast, Shairport Sync will insert frames to keep time. The number of frames inserted or deleted is so small as to be almost inaudible. Frames are inserted or deleted as necessary at pseudorandom intervals. Alternatively, with libsoxr support, Shairport Sync can resample the audio feed to ensure the output device can keep up. Resampling is even less obtrusive than insertion and deletion but requires a good deal of processing power -- most embedded devices probably can't support it.
+There are two default latency settings, chosen automatically. One latency matches the latency iTunes uses when playing audio and the other matches the latency used by iOS devices and by iTunes and Quicktime Player when playing video.
 
 Shairport Sync is a pretty substantial rewrite of Shairport 1.0 by James Laird and others -- please see https://github.com/abrasive/shairport/blob/master/README.md#contributors-to-version-1x for a list of the contributors to Shairport 1.x and Shairport 0.x. From a "heritage" point of view, Shairport Sync is a fork of Shairport 1.0 and the active branch is called Shairport Sync 2.1.
 
@@ -22,7 +22,7 @@ What else?
 * Shairport Sync offers finer control at very top and very bottom of the volume range. See http://tangentsoft.net/audio/atten.html for a good discussion of audio "attenuators", upon which volume control in Shairport Sync is modelled. See also the diagram of the volume transfer function in the documents folder.
 * Shairport Sync will mute properly if the hardware supports it.
 * If Shairport Sync has to use software volume and mute controls, the response time is shorter than before -- now it responds in 0.15 seconds.
-* Shairport Sync sends back a "busy" signal if it's already playing audio from another source, so other sources can't "barge in" on an existing Shairport Sync session. (If a source disappears without warning, the session automatically terminates after two minutes and the device becomes available again.)
+* Shairport Sync sends back a "busy" signal if it's already playing audio from another source, so other sources can't disrupt an existing Shairport Sync session. (If a source disappears without warning, the session automatically terminates after two minutes and the device becomes available again.)
 
 Status
 ------
@@ -30,7 +30,7 @@ Shairport Sync works on standard Ubuntu laptops, on the Raspberry Pi with Raspia
 
 Shairport Sync runs well on the Raspberry Pi. It can drive the built-in sound card, and though you wouldn't mistake the output for HiFi, it's really not too shabby. USB-connected sound cards work well on the latest version of Raspian; however older versions of Raspian appear to suffer from a problem -- see http://www.raspberrypi.org/forums/viewtopic.php?t=23544, so it is wise to update. Shairport Sync works very well with the IQAudIO Pi-DAC -- see http://iqaudio.com/wp-content/uploads/2014/06/IQaudIO_Doc.pdf for details.
 
-Shairport Sync runs on Ubuntu and Debian inside VMWare Fusion 6 on a Mac, but synchronisation does not work -- possibly because the soundcard is being emulated.
+Shairport Sync runs on Ubuntu and Debian inside VMWare Fusion 7 on a Mac, but synchronisation does not work -- possibly because the soundcard is being emulated.
 
 Shairport Sync works only with the ALSA back end. You can try compiling the other back ends in as you wish, but it definitely will not work properly with them. Maybe someday...
 
