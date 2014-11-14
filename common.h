@@ -44,7 +44,7 @@ typedef struct {
     uint8_t hw_addr[6];
     int port;
     int resyncthreshold; // if it get's out of whack my more than this, resync. Zero means never resync.
-    uint64_t timeout; // while in play mode, exit if no packets of audio come in for more than this number of seconds . Zero means never exit.
+    int timeout; // while in play mode, exit if no packets of audio come in for more than this number of seconds . Zero means never exit.
     char *output_name;
     audio_output *output;
     char *mdns_name;
