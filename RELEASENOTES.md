@@ -1,3 +1,8 @@
+Version 2.1.10
+-----
+* Bugfix
+  * A bug that caused the `-t` timeout value to be incorrectly assigned has been fixed. (Cause: `config.timeout` defined as `int64_t` instead on `int`.)
+
 Version 2.1.9
 -----
 * Bugfixes
