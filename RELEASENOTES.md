@@ -1,3 +1,8 @@
+Version 2.1.11
+-----
+* Enhancement
+  * A man page is now installed -- do `man shairport-sync`.
+
 Version 2.1.10
 -----
 * Bugfix
