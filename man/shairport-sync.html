@@ -1,0 +1,335 @@
+<body text="#000000" link="#0000ff" bgcolor="#ffffff"><center><table width="80%">
+<tr><td><h1>shairport-sync</h1>
+<h2>Synchronised Audio Player for iTunes / AirPlay</h2>
+
+
+	<h2>Synopsis</h2>
+<b>
+	
+      shairport-sync  <b>[-dvw]</b>
+      <b>[-A </b><em>name</em><b>]</b>
+      <b>[-a </b><em>latency</em><b>]</b>
+      <b>[-B </b><em>command</em><b>]</b>
+      <b>[-E </b><em>command</em><b>]</b>
+      <b>[-i </b><em>latency</em><b>]</b>
+      <b>[-m </b><em>backend</em><b>]</b>
+      <b>[-o </b><em>backend</em><b>]</b>
+      <b>[-r </b><em>threshold</em><b>]</b>
+      <b>[-S </b><em>mode</em><b>]</b>
+      <b>[-t </b><em>timeout</em><b>]</b>
+      <b>[-- </b><em>audio_backend_options</em><b>]</b>
+      <br>
+
+      shairport-sync <b>-D</b><br>
+
+      shairport-sync <b>-h</b><br>
+
+      shairport-sync <b>-k</b><br>
+
+      shairport-sync <b>-h</b><br>
+
+      shairport-sync <b>-R</b><br>
+
+      shairport-sync <b>-V</b><br>
+
+	</b>
+
+
+  <h2>Description</h2>
+
+    <p>shairport-sync  plays  audio  streamed  from  iTunes or from an AirPlay
+    device to an audio device connected via an audio back end. (At present,
+    only an ALSA audio back end has been implemented.)</p>
+
+    <p> A feature of shairport-sync is that the audio is played synchronously.
+    This means that if many devices are playing the same stream at the same
+    time, all the outputs will stay in step with one another.
+    This allows multiple devices play the same source without getting out of phase with one another,
+    enabling, for example, simultaneous multi-room operation.
+    </p>
+
+	
+
+
+	<h2>Options</h2>
+
+
+    <p>Many  of  the options take sensible default values, so you can normally
+    ignore most of them. See the EXAMPLES section for typical usages.</p>
+
+    <p>The command line for shairport-sync can take two kinds of options:
+    regular  program  options  and audio backend options.  Program options are
+    always listed first, followed by any audio backend options separated by
+    a -- symbol.</p>
+    
+  <h2>Program Options</h2>
+
+  <p>These options are used by shairport-sync itself.</p>
+  
+
+  
+	  
+		<p><b>-A | --AirPlayLatency=</b><em>latency</em></p>
+		<p>
+		Use this latency, in frames, for audio streamed from an AirPlay
+    device. The default is 88,200 frames, where there are 44,100
+    frames to the second.
+    </p>
+	  
+
+	  
+		<p><b>-a </b><em>service name</em><b> | --name=</b><em>service name</em></p>
+		<p>
+		Use this service name to identify this player in iTunes, etc.
+    The default name is &quot;Shairport Sync on &lt;hostname&gt;&quot;.
+    </p>
+	  
+
+	  
+		<p><b>-B </b><em>program</em><b> | --on-start=</b><em>program</em></p>
+		<p>
+		Execute <em>program</em> when playback is about to begin. Specify the 
+		full path to the program, e.g. <em>/usr/bin/logger</em>.
+		Executable scripts can be used, but they must have <em>#!/bin/sh</em> (or
+		whatever is appropriate) in the headline.</p>
+		
+		<p>If you want shairport-sync to wait until the command has
+		completed before starting to play, select the <b>-w</b> option as well.
+		</p>
+	  
+
+	  
+		<p><b>-D | --disconnectFromOutput</b></p>
+		<p>
+		Disconnect the shairport-sync daemon from the output device and
+    exit. (Requires that the daemon has written its PID to an agreed
+    file -- see the <b>-d</b> option).
+		</p>
+	  
+
+	  
+		<p><b>-d | --daemon</b></p>
+		<p>
+		Instruct shairport-sync to demonise itself. It will write its
+    Process ID (PID) to a file, usually at
+    /var/run/shairport-sync.pid, which is used by the
+    <b>-k</b>, <b>-D</b> and <b>-R</b> options to locate
+    the daemon at a later time.
+		</p>
+	  
+
+	  
+		<p><b>-E </b><em>program</em><b> | --on-stop=</b><em>program</em></p>
+		<p>
+		Execute <em>program</em> when playback has ended. Specify the 
+		full path to the program, e.g. <em>/usr/bin/logger</em>.
+		Executable scripts can be used, but they must have <em>#!/bin/sh</em> (or
+		whatever is appropriate) in the headline.</p>		
+		<p>If you want shairport-sync to wait until the command has
+		completed before continuing, select the <b>-w</b> option as well.
+		</p>
+	  
+
+	  
+		<p><b>-h | --help</b></p>
+		<p>
+		Print brief help message and exit.
+		</p>
+	  
+
+    
+		<p><b>-i | --iTunesLatency=</b><em>latency</em></p>
+		<p>
+		Use this latency, in frames, for audio streamed from an iTunes
+    source. The default is 99,400 frames, where there are 44,100
+    frames to the second.
+    </p>
+	  
+
+	  
+		<p><b>-k | --kill</b></p>
+		<p>
+		Kill the shairport-sync daemon and exit. (Requires that the daemon has
+		written its PID to an agreed file -- see the <b>-d</b> option).
+		</p>
+	  
+
+	  
+		<p><b>-m </b><em>mdnsbackend</em><b> | --mdns=</b><em>mdnsbackend</em></p>
+		<p>
+		Force the use of the specified mDNS backend to advertise the
+    player on the network. The default is to try them all until one
+    works.
+		</p>
+	  
+
+	  
+		<p><b>-o </b><em>outputbackend</em><b> | --output=</b><em>outputbackend</em></p>
+		<p>
+		Force the use of the specified output backend to play the audio.
+    The default is to try the first one. (This is not used at
+    present.)
+		</p>
+	  
+
+	  
+		<p><b>-p </b><em>port</em><b> | --port=</b><em>port</em></p>
+		<p>
+		Listen for play requests on <em>port</em>. The default is to use port
+    5000.
+		</p>
+	  
+
+	  
+		<p><b>-R | --reconnectoToOutput</b></p>
+		<p>
+		Reconnect the shairport-sync daemon to the output device and
+    exit. It may take a few seconds to synchronise. (Requires  that
+    the daemon has written its PID to an agreed file -- see the <b>-d</b>
+    option).
+		</p>
+	  
+
+	  
+		<p><b>-r </b><em>threshold</em><b> | --resync=</b><em>threshold</em></p>
+		<p>
+		Resynchronise if timings differ by more than <em>threshold</em> frames.
+    If the output timing differs from the source timing by more than
+    the threshold, output will be muted and a full resynchronisation
+    will occur. The default threshold is 2,205 frames, i.e. 50
+    milliseconds. Specify <b>0</b> to disable resynchronisation.
+		</p>
+	  
+
+	  
+		<p><b>-S </b><em>mode</em><b> | --stuffing=</b><em>mode</em></p>
+		<p>
+		Stuff the audio stream using the <em>mode</em>.  &quot;Stuffing&quot; refers to the
+    process of adding or removing frames of audio  to  or  from  the
+    stream sent to the output device to keep it exactly in synchrony
+    with the player.
+    The default mode, <b>basic</b>, is normally almost  completely  inaudible.
+    The  alternative mode, <b>soxr</b>, is even less obtrusive but
+    requires much more processing power. For this mode, support for
+    libsoxr, the SoX Resampler Library, must be selected when
+    shairport-sync is compiled.
+		</p>
+	  
+
+	  
+		<p><b>-t </b><em>timeout</em><b> | --timeout=</b><em>timeout</em></p>
+		<p>
+		Exit play mode if the stream disappears for  more  than  <em>timeout</em>
+    seconds.</p>
+    <p>When shairport-sync plays an audio stream, it startes a play
+    session and will return a busy signal to any other sources that
+    attempt to use it. If the audio stream disappears for longer
+    than <em>timeout</em> seconds, the play session will be terminated.
+    If you  specify a timeout time of <b>0</b>,
+    shairport-sync will never signal that
+    it is busy and will not prevent other sources from &quot;barging in&quot;
+    on an existing play session. The default value is 120 seconds.
+		</p>
+	  
+
+	  
+		<p><b>-V | --version</b></p>
+		<p>
+		Print version information and exit.
+		</p>
+	  
+
+	  
+		<p><b>-v | --verbose</b></p>
+		<p>
+		Print debug information. Repeat up to three times to get more detail.
+		</p>
+	  
+
+	  
+		<p><b>-w | --wait-cmd</b></p>
+		<p>
+		Wait for commands specified using <b>-B</b> or <b>-E</b>  to  complete  before
+    continuing execution.
+		</p>
+	  
+
+  <h2>Audio Backend Options</h2>
+
+  <p>These  options are passed to the chosen audio backend. (At present, the
+  only backend implemented is for ALSA.) The audio  backend  options  are
+  preceded by a <b>--</b> symbol to introduce them and to separate them from any
+  program options. In this way, option letters can be reused  as  program
+  options and as audio backend options without ambiguity. For instance,
+  the option <b>-d</b> is interpreted as the daemonise option when read as a
+  program option, and  is interpreted as a device selection option when
+  read as an audio backend option.</p>
+  
+
+  
+  
+  <p><b>-c </b><em>controlname</em></p>
+  <p>
+  Use the hardware volume control called <em>controlname</em>. This is needed if
+  the output type is specified, using the <b>-t</b> option,
+  to be <b>hardware</b>. There is no default.
+  </p>
+  
+
+  
+  <p><b>-d </b><em>device</em></p>
+  <p>
+  Use the specified output <em>device</em>.
+  The default is the device named <b>default</b>.
+  </p>
+  
+
+  
+  <p><b>-t </b><em>devicetype</em></p>
+  <p>
+  The type of the output device is <em>devicetype</em> which must be
+  <b>hardware</b> or <b>software</b>. The default is <b>software</b>.
+  If you specify <b>hardware</b> you must also specify the name of the
+  volume control using the <b>-c</b> option.
+  </p>
+  
+	
+
+  <h2>Examples</h2>
+
+  <p>Here is a typical example:</p>
+      shairport-sync  <b>-d</b>
+      <b>-a &quot;Joe's Stereo&quot;</b>
+      <b>-S soxr</b>
+      <b>--</b>
+      <b>-d hw:1</b>
+      <b>-t hardware</b>
+      <b>-c PCM</b>      
+      <br>
+
+  <p>The program will run in daemon mode ( <b>-d</b> ), will be  visible  as
+  &quot;Joe's Stereo&quot; ( <b>-a &quot;Joe's Stereo&quot;</b> ) and will use the SoX Resampler Library-based stuffing ( <b>-S soxr</b> ).
+  The audio backend options following  the  <b>--</b>  separator  specify
+  that  the  audio will be output on the ALSA device called hw:1 (
+  <b>-d hw:1</b> ), and will take advantage of that device's  hardware  (
+  <b>-t hardware</b> ) mixer named &quot;PCM&quot; ( <b>-c &quot;PCM&quot;</b> ).
+  </p>
+  
+
+
+	<h2>Credits</h2>
+
+	<p>Mike Brady developed shairport-sync from the original shairport by James Laird.</p>
+	<p>shairport-sync can be found at  <a href = "https://github.com/mikebrady/shairport-sync.">https://github.com/mikebrady/shairport-sync.</a></p>
+  <p>shairport can be found at <a href = "https://github.com/abrasive/shairport.">https://github.com/abrasive/shairport.</a></p>
+	
+
+
+	<h2>Comments</h2>
+
+	  <p>This man page was written using <a href="http://masqmail.cx/xml2man/">xml2man</a> by Oliver Kurth.</p>
+	
+
+
+  </td></tr></table></center>
+</body>
