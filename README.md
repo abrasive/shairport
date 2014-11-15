@@ -90,13 +90,19 @@ Here is an example, suitable for most installations:
 
 Run `$sudo make install` to install `shairport-sync` along with an init script which will automatically launch it at startup. The settings in the init script are the most basic defaults, so you will want to edit it -- the file is `/etc/init.d/shairport-sync` -- to give the service a name, use a different card, use the hardware mixer and volume control, etc. -- there are some examples in the script file.
 
+Shairport Sync Man Page
+--------
+You can see a web version of the man page here: http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/2.1/man/shairport-sync.html
+
+
 Configuring Shairport Sync
 --------
 Shairport Sync installs a default configuration at `/etc/init.d/shairport-sync` (it won't replace an existing one) which should work in almost any system with a sound card. If there is a problem, it will be noted in the logfile, normally `/etc/log/syslog`. However, to get the most out of your software and hardware, you need to adjust some of the settings.
 
 To understand what follows, note that settings and parameters are passed to Shairport Sync through command line arguments. The purpose of the init script at `/etc/init.d/shairport-sync` is to launch or terminate Shairport Sync while passing the correct arguments to it. You are perfectly free to remove the init script and launch and terminate Shairport Sync yourself directly; indeed it is useful when you are troubleshooting the program. If you do launch it directly, make sure it isn't running already!
 
-Don't forget you can launch Shairport Sync with the `-h` option to get some help on the options available.
+As well as the man page, don't forget you can launch Shairport Sync with the `-h` option to get some help on the options available.
+
 
 These are the important options:
 
