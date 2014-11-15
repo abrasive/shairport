@@ -132,7 +132,6 @@ AC_CHECK_HEADERS([getopt_long.h])
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h mach/mach.h memory.h netdb.h netinet/in.h stdint.h stdlib.h string.h sys/ioctl.h sys/socket.h sys/time.h syslog.h unistd.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
-AC_CHECK_HEADER_STDBOOL
 AC_C_INLINE
 AC_TYPE_INT16_T
 AC_TYPE_INT32_T
