@@ -1,0 +1,116 @@
+.TH shairport-sync 7 User Manuals
+.SH NAME
+shairport-sync \- iTunes / AirPlay synchronised audio player
+.SH SYNOPSIS
+\fBshairport-sync [-dvw]\fB [-A \fB\fIname\fB]\fB [-a \fB\fIlatency\fB]\fB [-B \fB\fIcommand\fB]\fB [-E \fB\fIcommand\fB]\fB [-i \fB\fIlatency\fB]\fB [-m \fB\fIbackend\fB]\fB [-o \fB\fIbackend\fB]\fB [-r \fB\fIthreshold\fB]\fB [-S \fB\fImode\fB]\fB [-t \fB\fItimeout\fB]\fB [-- \fB\fIaudio_backend_options\fB]\fB
+
+shairport-sync -D\fB
+
+shairport-sync -h\fB
+
+shairport-sync -k\fB
+
+shairport-sync -h\fB
+
+shairport-sync -R\fB
+
+shairport-sync -V\fB
+\f1
+.SH DESCRIPTION
+shairport-sync plays audio streamed from iTunes or from an AirPlay device to an audio device connected via an audio back end. (At present, only an ALSA audio back end has been implemented.)
+
+A feature of shairport-sync is that the audio is played synchronously. This means that if many devices are playing the same stream at the same time, all the outputs will stay in step with one another. This allows multiple devices play the same source without getting out of phase with one another, enabling, for example, simultaneous multi-room operation. 
+.SH OPTIONS
+Many of the options take sensible default values, so you can normally ignore most of them. See the EXAMPLES section for typical usages.
+
+The command line for shairport-sync can take two kinds of options: regular program options and audio backend options. Program options are always listed first, followed by any audio backend options separated by a -- symbol.
+.SH PROGRAM OPTIONS
+These options are used by shairport-sync itself.
+.TP
+\fB-A | --AirPlayLatency=\f1\fIlatency\f1
+Use this latency, in frames, for audio streamed from an AirPlay device. The default is 88,200 frames, where there are 44,100 frames to the second. 
+.TP
+\fB-a \f1\fIservice name\f1\fB | --name=\f1\fIservice name\f1
+Use this service name to identify this player in iTunes, etc. The default name is "Shairport Sync on <hostname>". 
+.TP
+\fB-B \f1\fIprogram\f1\fB | --on-start=\f1\fIprogram\f1
+Execute \fIprogram\f1 when playback is about to begin. Specify the full path to the program, e.g. \fI/usr/bin/logger\f1. Executable scripts can be used, but they must have \fI#!/bin/sh\f1 (or whatever is appropriate) in the headline.
+
+If you want shairport-sync to wait until the command has completed before starting to play, select the \fB-w\f1 option as well. 
+.TP
+\fB-D | --disconnectFromOutput\f1
+Disconnect the shairport-sync daemon from the output device and exit. (Requires that the daemon has written its PID to an agreed file -- see the \fB-d\f1 option). 
+.TP
+\fB-d | --daemon\f1
+Instruct shairport-sync to demonise itself. It will write its Process ID (PID) to a file, usually at /var/run/shairport-sync.pid, which is used by the \fB-k\f1, \fB-D\f1 and \fB-R\f1 options to locate the daemon at a later time. 
+.TP
+\fB-E \f1\fIprogram\f1\fB | --on-stop=\f1\fIprogram\f1
+Execute \fIprogram\f1 when playback has ended. Specify the full path to the program, e.g. \fI/usr/bin/logger\f1. Executable scripts can be used, but they must have \fI#!/bin/sh\f1 (or whatever is appropriate) in the headline.
+
+If you want shairport-sync to wait until the command has completed before continuing, select the \fB-w\f1 option as well. 
+.TP
+\fB-h | --help\f1
+Print brief help message and exit. 
+.TP
+\fB-i | --iTunesLatency=\f1\fIlatency\f1
+Use this latency, in frames, for audio streamed from an iTunes source. The default is 99,400 frames, where there are 44,100 frames to the second. 
+.TP
+\fB-k | --kill\f1
+Kill the shairport-sync daemon and exit. (Requires that the daemon has written its PID to an agreed file -- see the \fB-d\f1 option). 
+.TP
+\fB-m \f1\fImdnsbackend\f1\fB | --mdns=\f1\fImdnsbackend\f1
+Force the use of the specified mDNS backend to advertise the player on the network. The default is to try them all until one works. 
+.TP
+\fB-o \f1\fIoutputbackend\f1\fB | --output=\f1\fIoutputbackend\f1
+Force the use of the specified output backend to play the audio. The default is to try the first one. (This is not used at present.) 
+.TP
+\fB-p \f1\fIport\f1\fB | --port=\f1\fIport\f1
+Listen for play requests on \fIport\f1. The default is to use port 5000. 
+.TP
+\fB-R | --reconnectoToOutput\f1
+Reconnect the shairport-sync daemon to the output device and exit. It may take a few seconds to synchronise. (Requires that the daemon has written its PID to an agreed file -- see the \fB-d\f1 option). 
+.TP
+\fB-r \f1\fIthreshold\f1\fB | --resync=\f1\fIthreshold\f1
+Resynchronise if timings differ by more than \fIthreshold\f1 frames. If the output timing differs from the source timing by more than the threshold, output will be muted and a full resynchronisation will occur. The default threshold is 2,205 frames, i.e. 50 milliseconds. Specify \fB0\f1 to disable resynchronisation. 
+.TP
+\fB-S \f1\fImode\f1\fB | --stuffing=\f1\fImode\f1
+Stuff the audio stream using the \fImode\f1. "Stuffing" refers to the process of adding or removing frames of audio to or from the stream sent to the output device to keep it exactly in synchrony with the player. The default mode, \fBbasic\f1, is normally almost completely inaudible. The alternative mode, \fBsoxr\f1, is even less obtrusive but requires much more processing power. For this mode, support for libsoxr, the SoX Resampler Library, must be selected when shairport-sync is compiled. 
+.TP
+\fB-t \f1\fItimeout\f1\fB | --timeout=\f1\fItimeout\f1
+Exit play mode if the stream disappears for more than \fItimeout\f1 seconds.
+
+When shairport-sync plays an audio stream, it startes a play session and will return a busy signal to any other sources that attempt to use it. If the audio stream disappears for longer than \fItimeout\f1 seconds, the play session will be terminated. If you specify a timeout time of \fB0\f1, shairport-sync will never signal that it is busy and will not prevent other sources from "barging in" on an existing play session. The default value is 120 seconds. 
+.TP
+\fB-V | --version\f1
+Print version information and exit. 
+.TP
+\fB-v | --verbose\f1
+Print debug information. Repeat up to three times to get more detail. 
+.TP
+\fB-w | --wait-cmd\f1
+Wait for commands specified using \fB-B\f1 or \fB-E\f1 to complete before continuing execution. 
+.SH AUDIO BACKEND OPTIONS
+These options are passed to the chosen audio backend. (At present, the only backend implemented is for ALSA.) The audio backend options are preceded by a \fB--\f1 symbol to introduce them and to separate them from any program options. In this way, option letters can be reused as program options and as audio backend options without ambiguity. For instance, the option \fB-d\f1 is interpreted as the daemonise option when read as a program option, and is interpreted as a device selection option when read as an audio backend option.
+.TP
+\fB-c \f1\fIcontrolname\f1
+Use the hardware volume control called \fIcontrolname\f1. This is needed if the output type is specified, using the \fB-t\f1 option, to be \fBhardware\f1. There is no default. 
+.TP
+\fB-d \f1\fIdevice\f1
+Use the specified output \fIdevice\f1. The default is the device named \fBdefault\f1. 
+.TP
+\fB-t \f1\fIdevicetype\f1
+The type of the output device is \fIdevicetype\f1 which must be \fBhardware\f1 or \fBsoftware\f1. The default is \fBsoftware\f1. If you specify \fBhardware\f1 you must also specify the name of the volume control using the \fB-c\f1 option. 
+.SH EXAMPLES
+Here is a typical example:
+
+shairport-sync \fB-d\f1 \fB-a "Joe's Stereo"\f1 \fB-S soxr\f1 \fB--\f1 \fB-d hw:1\f1 \fB-t hardware\f1 \fB-c PCM\f1
+
+The program will run in daemon mode ( \fB-d\f1 ), will be visible as "Joe's Stereo" ( \fB-a "Joe's Stereo"\f1 ) and will use the SoX Resampler Library-based stuffing ( \fB-S soxr\f1 ). The audio backend options following the \fB--\f1 separator specify that the audio will be output on the ALSA device called hw:1 ( \fB-d hw:1\f1 ), and will take advantage of that device's hardware ( \fB-t hardware\f1 ) mixer named "PCM" ( \fB-c "PCM"\f1 ). 
+.SH CREDITS
+Mike Brady developed shairport-sync from the original shairport by James Laird.
+
+shairport-sync can be found at \fBhttps://github.com/mikebrady/shairport-sync.\f1
+
+shairport can be found at \fBhttps://github.com/abrasive/shairport.\f1
+.SH COMMENTS
+This man page was written using \fBxml2man(1)\f1 by Oliver Kurth.
