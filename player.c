@@ -37,6 +37,7 @@
 #include <math.h>
 #include <sys/stat.h>
 #include <sys/signal.h>
+#include <sys/syslog.h>
 #include <assert.h>
 #include <fcntl.h>
 #include <stdlib.h>
@@ -998,7 +999,8 @@ static void *player_thread_func(void *arg) {
           double moving_average_insertions_plus_deletions = (1.0*tsum_of_insertions_and_deletions)/number_of_statistics;
           double moving_average_drift = (1.0*tsum_of_drifts)/number_of_statistics;
           // if ((play_number/print_interval)%20==0)
-            debug(1,"Sync error: %.1f (frames); net correction: %.1f (ppm); corrections: %.1f (ppm); missing packets %llu; late packets %llu; too late packets %llu; resend requests %llu; min DAC queue size %lli, min and max buffer occupancy %u and %u.", moving_average_sync_error, moving_average_correction*1000000/352, moving_average_insertions_plus_deletions*1000000/352,missing_packets,late_packets,too_late_packets,resend_requests,minimum_dac_queue_size,minimum_buffer_occupancy,maximum_buffer_occupancy);
+          if (config.statistics_requested)
+            inform("Sync error: %.1f (frames); net correction: %.1f (ppm); corrections: %.1f (ppm); missing packets %llu; late packets %llu; too late packets %llu; resend requests %llu; min DAC queue size %lli, min and max buffer occupancy %u and %u.", moving_average_sync_error, moving_average_correction*1000000/352, moving_average_insertions_plus_deletions*1000000/352,missing_packets,late_packets,too_late_packets,resend_requests,minimum_dac_queue_size,minimum_buffer_occupancy,maximum_buffer_occupancy);
           minimum_dac_queue_size=1000000; // hack reset
           maximum_buffer_occupancy = 0; // can't be less than this
           minimum_buffer_occupancy = BUFFER_FRAMES; // can't be more than this

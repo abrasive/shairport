@@ -74,9 +74,9 @@ void shairport_shutdown() {
 static void sig_ignore(int foo, siginfo_t *bar, void *baz) {
 }
 static void sig_shutdown(int foo, siginfo_t *bar, void *baz) {
-	daemon_log(LOG_NOTICE, "Shutdown requested...");
+	debug(1, "shutdown requested...");
 	shairport_shutdown();
-	daemon_log(LOG_NOTICE, "Exit...");
+	daemon_log(LOG_NOTICE, "exit...");
 	daemon_retval_send(255);
 	daemon_pid_file_remove();
 	exit(0);
@@ -177,7 +177,7 @@ void usage(char *progname) {
     printf("                            shairport tries them all until one works.\n");
     printf("    -r, --resync=THRESHOLD  resync if error exceeds this number of frames. Set to 0 to stop resyncing.\n");
     printf("    -t, --timeout=SECONDS   go back to idle mode from play mode after a break in communications of this many seconds (default 120). Set to 0 never to exit play mode.\n");
-
+    printf("    --statistics            print some interesting statistics -- output to the logfile if running as a daemon.\n");
     printf("\n");
     mdns_ls_backends();
     printf("\n");
@@ -190,6 +190,7 @@ int parse_options(int argc, char **argv) {
   char    *stuffing = NULL;  /* used for picking up the stuffing option */
   poptContext optCon;   /* context for parsing command-line options */
   struct poptOption optionsTable[] = {
+    { "statistics", 0, POPT_ARG_NONE, &config.statistics_requested, 0, NULL},
     { "version", 'V', POPT_ARG_NONE, NULL, 0, NULL},
     { "verbose", 'v', POPT_ARG_NONE, NULL, 'v', NULL },
     { "daemon", 'd', POPT_ARG_NONE, &config.daemonise, 0, NULL },
@@ -247,6 +248,7 @@ int parse_options(int argc, char **argv) {
   }
   /* Print out options */
   
+  debug(2,"statistics_requester status is %d.",config.statistics_requested);
   debug(2,"daemon status is %d.",config.daemonise);
   debug(2,"rtsp listening port is %d.",config.port);
   debug(2,"Shairport Sync player name is \"%s\".",config.apname);
@@ -332,6 +334,7 @@ int main(int argc, char **argv) {
     memset(&config, 0, sizeof(config));
 
     // set defaults
+    config.statistics_requested - 0; // don't print stats in the log
     config.latency = 99400; // iTunes
     config.userSuppliedLatency = 0; // zero means none supplied
     config.iTunesLatency = 99400; // this seems to work pretty well for iTunes -- two left-ear headphones, one from the iMac jack, one from an NSLU2 running a cheap "3D Sound" USB Soundcard
@@ -495,7 +498,7 @@ int main(int argc, char **argv) {
     }
     config.output->init(argc-audio_arg, argv+audio_arg);
 
-    daemon_log(LOG_NOTICE, "Successful startup.");
+    daemon_log(LOG_NOTICE, "startup");
 
     uint8_t ap_md5[16];
 

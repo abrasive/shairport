@@ -120,6 +120,16 @@ void debug(int level, char *format, ...) {
     daemon_log(LOG_DEBUG,"%s", s);
 }
 
+void inform(char *format, ...) {
+    char s[1024];
+    s[0]=0;
+    va_list args;
+    va_start(args, format);
+    vsprintf(s,format,args);
+    va_end(args);
+    daemon_log(LOG_INFO,"%s", s);
+}
+
 #ifdef HAVE_LIBPOLARSSL
 char *base64_enc(uint8_t *input, int length) {
   char *buf = NULL;

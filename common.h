@@ -55,6 +55,7 @@ typedef struct {
     uint32_t iTunesLatency; // supplied with --iTunesLatency option
     uint32_t AirPlayLatency; //supplied with --AirPlayLatency option
     int daemonise;
+    int statistics_requested;
     char *cmd_start, *cmd_stop;
     int cmd_blocking;
     enum stuffing_type packet_stuffing;
@@ -72,6 +73,7 @@ void set_requested_connection_state_to_output(int v);
 int debuglev;
 void die(char *format, ...);
 void warn(char *format, ...);
+void inform(char *format, ...);
 void debug(int level, char *format, ...);
 
 uint8_t *base64_dec(char *input, int *outlen);

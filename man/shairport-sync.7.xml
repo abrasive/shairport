@@ -43,6 +43,7 @@
       <opt>[-m </opt><arg>backend</arg><opt>]</opt>
       <opt>[-o </opt><arg>backend</arg><opt>]</opt>
       <opt>[-r </opt><arg>threshold</arg><opt>]</opt>
+      <opt>[--statistics</opt>
       <opt>[-S </opt><arg>mode</arg><opt>]</opt>
       <opt>[-t </opt><arg>timeout</arg><opt>]</opt>
       <opt>[-- </opt><arg>audio_backend_options</arg><opt>]</opt>
@@ -214,6 +215,13 @@
     the threshold, output will be muted and a full resynchronisation
     will occur. The default threshold is 2,205 frames, i.e. 50
     milliseconds. Specify <opt>0</opt> to disable resynchronisation.
+		</p></optdesc>
+	  </option>
+
+	  <option>
+		<p><opt>--statistics=</opt></p>
+		<optdesc><p>
+		Print some statistics in the standard output, or in the logfile if in daemon mode.
 		</p></optdesc>
 	  </option>
 
