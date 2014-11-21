@@ -90,7 +90,7 @@ Here is an example, suitable for most installations:
 
 Run `$sudo make install` to install `shairport-sync` along with an init script which will automatically launch it at startup. The settings in the init script are the most basic defaults, so you will want to edit it -- the file is `/etc/init.d/shairport-sync` -- to give the service a name, use a different card, use the hardware mixer and volume control, etc. -- there are some examples in the script file.
 
-Shairport Sync Man Page
+Man Page
 --------
 You can see a web version of the man page here: http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/2.1/man/shairport-sync.html
 
@@ -190,11 +190,11 @@ If synchronisation is lost -- say due to a busy source or a congested network --
 
 Some Statistics
 ---------------
-If you run Shairport Sync from the command line without daemonising it (omit the `-d`), and if you turn on one level of verbosity (include `-v`), e.g. as follows for the Raspberry Pi with "3D Sound" card:
+If you add the option `--statistics`, e.g. as follows for the Raspberry Pi with "3D Sound" card:
 
-`shairport-sync -a "Shairport Sync" -v -- -d hw:1 -t hardware -c Speaker`
+`shairport-sync -a "Shairport Sync" --statistics -- -d hw:1 -t hardware -c Speaker`
 
-it will print statistics like this occasionally:
+it will print statistics like this occasionally on the console (or in the logfile if running in daemon mode):
 
 `Sync error: -35.4 (frames); net correction: 24.2 (ppm); corrections: 24.2 (ppm); missing packets 0; late packets 5; too late packets 0; resend requests 6; min DAC queue size 4430.`
 
