@@ -43,7 +43,7 @@
       <opt>[-m </opt><arg>backend</arg><opt>]</opt>
       <opt>[-o </opt><arg>backend</arg><opt>]</opt>
       <opt>[-r </opt><arg>threshold</arg><opt>]</opt>
-      <opt>[--statistics</opt>
+      <opt>[--statistics]</opt>
       <opt>[-S </opt><arg>mode</arg><opt>]</opt>
       <opt>[-t </opt><arg>timeout</arg><opt>]</opt>
       <opt>[-- </opt><arg>audio_backend_options</arg><opt>]</opt>
