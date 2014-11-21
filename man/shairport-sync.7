@@ -2,7 +2,7 @@
 .SH NAME
 shairport-sync \- Synchronised Audio Player for iTunes / AirPlay
 .SH SYNOPSIS
-\fBshairport-sync [-dvw]\fB [-A \fB\fIname\fB]\fB [-a \fB\fIlatency\fB]\fB [-B \fB\fIcommand\fB]\fB [-E \fB\fIcommand\fB]\fB [-i \fB\fIlatency\fB]\fB [-m \fB\fIbackend\fB]\fB [-o \fB\fIbackend\fB]\fB [-r \fB\fIthreshold\fB]\fB [-S \fB\fImode\fB]\fB [-t \fB\fItimeout\fB]\fB [-- \fB\fIaudio_backend_options\fB]\fB
+\fBshairport-sync [-dvw]\fB [-a \fB\fIname\fB]\fB [-A \fB\fIlatency\fB]\fB [-B \fB\fIcommand\fB]\fB [-E \fB\fIcommand\fB]\fB [-i \fB\fIlatency\fB]\fB [-m \fB\fIbackend\fB]\fB [-o \fB\fIbackend\fB]\fB [-r \fB\fIthreshold\fB]\fB [-S \fB\fImode\fB]\fB [-t \fB\fItimeout\fB]\fB [-- \fB\fIaudio_backend_options\fB]\fB
 
 shairport-sync -D\fB
 
@@ -17,7 +17,7 @@ shairport-sync -R\fB
 shairport-sync -V\fB
 \f1
 .SH DESCRIPTION
-shairport-sync plays audio streamed from iTunes or from an AirPlay device to an audio device connected via an audio back end. (At present, only an ALSA audio back end has been implemented.)
+shairport-sync plays audio streamed from iTunes or from an AirPlay device to an audio device connected via an audio back end. At present, the only fully-implemented back end is for ALSA.
 
 A feature of shairport-sync is that the audio is played synchronously. This means that if many devices are playing the same stream at the same time, all the outputs will stay in step with one another. This allows multiple devices play the same source without getting out of phase with one another, enabling, for example, simultaneous multi-room operation. 
 .SH OPTIONS
@@ -28,10 +28,10 @@ The command line for shairport-sync can take two kinds of options: regular progr
 These options are used by shairport-sync itself.
 .TP
 \fB-A | --AirPlayLatency=\f1\fIlatency\f1
-Use this latency, in frames, for audio streamed from an AirPlay device. The default is 88,200 frames, where there are 44,100 frames to the second. 
+Use this \fIlatency\f1, in frames, for audio streamed from an AirPlay device. The default is 88,200 frames, where there are 44,100 frames to the second. 
 .TP
 \fB-a \f1\fIservice name\f1\fB | --name=\f1\fIservice name\f1
-Use this service name to identify this player in iTunes, etc. The default name is "Shairport Sync on <hostname>". 
+Use this \fIservice name\f1 to identify this player in iTunes, etc. The default name is "Shairport Sync on <hostname>". 
 .TP
 \fB-B \f1\fIprogram\f1\fB | --on-start=\f1\fIprogram\f1
 Execute \fIprogram\f1 when playback is about to begin. Specify the full path to the program, e.g. \fI/usr/bin/logger\f1. Executable scripts can be used, but they must have \fI#!/bin/sh\f1 (or whatever is appropriate) in the headline.
@@ -42,7 +42,7 @@ If you want shairport-sync to wait until the command has completed before starti
 Disconnect the shairport-sync daemon from the output device and exit. (Requires that the daemon has written its PID to an agreed file -- see the \fB-d\f1 option). 
 .TP
 \fB-d | --daemon\f1
-Instruct shairport-sync to demonise itself. It will write its Process ID (PID) to a file, usually at /var/run/shairport-sync.pid, which is used by the \fB-k\f1, \fB-D\f1 and \fB-R\f1 options to locate the daemon at a later time. 
+Instruct shairport-sync to demonise itself. It will write its Process ID (PID) to a file, usually at \fI/var/run/shairport-sync.pid\f1, which is used by the \fB-k\f1, \fB-D\f1 and \fB-R\f1 options to locate the daemon at a later time. 
 .TP
 \fB-E \f1\fIprogram\f1\fB | --on-stop=\f1\fIprogram\f1
 Execute \fIprogram\f1 when playback has ended. Specify the full path to the program, e.g. \fI/usr/bin/logger\f1. Executable scripts can be used, but they must have \fI#!/bin/sh\f1 (or whatever is appropriate) in the headline.
@@ -53,13 +53,13 @@ If you want shairport-sync to wait until the command has completed before contin
 Print brief help message and exit. 
 .TP
 \fB-i | --iTunesLatency=\f1\fIlatency\f1
-Use this latency, in frames, for audio streamed from an iTunes source. The default is 99,400 frames, where there are 44,100 frames to the second. 
+Use this \fIlatency\f1, in frames, for audio streamed from an iTunes source. The default is 99,400 frames, where there are 44,100 frames to the second. 
 .TP
 \fB-k | --kill\f1
 Kill the shairport-sync daemon and exit. (Requires that the daemon has written its PID to an agreed file -- see the \fB-d\f1 option). 
 .TP
 \fB-m \f1\fImdnsbackend\f1\fB | --mdns=\f1\fImdnsbackend\f1
-Force the use of the specified mDNS backend to advertise the player on the network. The default is to try them all until one works. 
+Force the use of the specified mDNS backend to advertise the player on the network. The default is to try all mDNS backends all until one works. 
 .TP
 \fB-o \f1\fIoutputbackend\f1\fB | --output=\f1\fIoutputbackend\f1
 Force the use of the specified output backend to play the audio. The default is to try the first one. (This is not used at present.) 

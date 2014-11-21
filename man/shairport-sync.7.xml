@@ -35,8 +35,8 @@
       <cmd>shairport-sync <opt>-D</opt> <arg>interface</arg></cmd>
   -->
       <cmd>shairport-sync  <opt>[-dvw]</opt>
-      <opt>[-A </opt><arg>name</arg><opt>]</opt>
-      <opt>[-a </opt><arg>latency</arg><opt>]</opt>
+      <opt>[-a </opt><arg>name</arg><opt>]</opt>
+      <opt>[-A </opt><arg>latency</arg><opt>]</opt>
       <opt>[-B </opt><arg>command</arg><opt>]</opt>
       <opt>[-E </opt><arg>command</arg><opt>]</opt>
       <opt>[-i </opt><arg>latency</arg><opt>]</opt>
@@ -57,8 +57,8 @@
 
   <description>
     <p>shairport-sync  plays  audio  streamed  from  iTunes or from an AirPlay
-    device to an audio device connected via an audio back end. (At present,
-    only an ALSA audio back end has been implemented.)</p>
+    device to an audio device connected via an audio back end. At present,
+    the only fully-implemented back end is for ALSA.</p>
 
     <p> A feature of shairport-sync is that the audio is played synchronously.
     This means that if many devices are playing the same stream at the same
@@ -75,7 +75,8 @@
     ignore most of them. See the EXAMPLES section for typical usages.</p>
 
     <p>The command line for shairport-sync can take two kinds of options:
-    regular  program  options  and audio backend options.  Program options are
+    regular  <b>program  options</b>  and <b>audio backend options</b>.
+    Program options are
     always listed first, followed by any audio backend options separated by
     a <b>--</b> symbol.</p>
     
@@ -86,7 +87,7 @@
 	  <option>
 		<p><opt>-A | --AirPlayLatency=</opt><arg>latency</arg></p>
 		<optdesc><p>
-		Use this latency, in frames, for audio streamed from an AirPlay
+		Use this <arg>latency</arg>, in frames, for audio streamed from an AirPlay
     device. The default is 88,200 frames, where there are 44,100
     frames to the second.
     </p></optdesc>
@@ -95,7 +96,7 @@
 	  <option>
 		<p><opt>-a </opt><arg>service name</arg><opt> | --name=</opt><arg>service name</arg></p>
 		<optdesc><p>
-		Use this service name to identify this player in iTunes, etc.
+		Use this <arg>service name</arg> to identify this player in iTunes, etc.
     The default name is "Shairport Sync on &lt;hostname&gt;".
     </p></optdesc>
 	  </option>
@@ -127,7 +128,7 @@
 		<optdesc><p>
 		Instruct shairport-sync to demonise itself. It will write its
     Process ID (PID) to a file, usually at
-    /var/run/shairport-sync.pid, which is used by the
+    <file>/var/run/shairport-sync.pid</file>, which is used by the
     <opt>-k</opt>, <opt>-D</opt> and <opt>-R</opt> options to locate
     the daemon at a later time.
 		</p></optdesc>
@@ -155,7 +156,7 @@
     <option>
 		<p><opt>-i | --iTunesLatency=</opt><arg>latency</arg></p>
 		<optdesc><p>
-		Use this latency, in frames, for audio streamed from an iTunes
+		Use this <arg>latency</arg>, in frames, for audio streamed from an iTunes
     source. The default is 99,400 frames, where there are 44,100
     frames to the second.
     </p></optdesc>
@@ -173,7 +174,7 @@
 		<p><opt>-m </opt><arg>mdnsbackend</arg><opt> | --mdns=</opt><arg>mdnsbackend</arg></p>
 		<optdesc><p>
 		Force the use of the specified mDNS backend to advertise the
-    player on the network. The default is to try them all until one
+    player on the network. The default is to try all mDNS backends all until one
     works.
 		</p></optdesc>
 	  </option>
