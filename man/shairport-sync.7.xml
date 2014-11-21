@@ -219,7 +219,7 @@
 	  </option>
 
 	  <option>
-		<p><opt>--statistics=</opt></p>
+		<p><opt>--statistics</opt></p>
 		<optdesc><p>
 		Print some statistics in the standard output, or in the logfile if in daemon mode.
 		</p></optdesc>
