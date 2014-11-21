@@ -27,11 +27,11 @@ The command line for shairport-sync can take two kinds of options: regular progr
 .SH PROGRAM OPTIONS
 These options are used by shairport-sync itself.
 .TP
-\fB-A | --AirPlayLatency=\f1\fIlatency\f1
-Use this \fIlatency\f1, in frames, for audio streamed from an AirPlay device. The default is 88,200 frames, where there are 44,100 frames to the second. 
-.TP
 \fB-a \f1\fIservice name\f1\fB | --name=\f1\fIservice name\f1
 Use this \fIservice name\f1 to identify this player in iTunes, etc. The default name is "Shairport Sync on <hostname>". 
+.TP
+\fB-A | --AirPlayLatency=\f1\fIlatency\f1
+Use this \fIlatency\f1, in frames, for audio streamed from an AirPlay device. The default is 88,200 frames, where there are 44,100 frames to the second. 
 .TP
 \fB-B \f1\fIprogram\f1\fB | --on-start=\f1\fIprogram\f1
 Execute \fIprogram\f1 when playback is about to begin. Specify the full path to the program, e.g. \fI/usr/bin/logger\f1. Executable scripts can be used, but they must have \fI#!/bin/sh\f1 (or whatever is appropriate) in the headline.

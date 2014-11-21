@@ -85,19 +85,19 @@
   </section>
   
 	  <option>
+		<p><opt>-a </opt><arg>service name</arg><opt> | --name=</opt><arg>service name</arg></p>
+		<optdesc><p>
+		Use this <arg>service name</arg> to identify this player in iTunes, etc.
+    The default name is "Shairport Sync on &lt;hostname&gt;".
+    </p></optdesc>
+	  </option>
+
+	  <option>
 		<p><opt>-A | --AirPlayLatency=</opt><arg>latency</arg></p>
 		<optdesc><p>
 		Use this <arg>latency</arg>, in frames, for audio streamed from an AirPlay
     device. The default is 88,200 frames, where there are 44,100
     frames to the second.
-    </p></optdesc>
-	  </option>
-
-	  <option>
-		<p><opt>-a </opt><arg>service name</arg><opt> | --name=</opt><arg>service name</arg></p>
-		<optdesc><p>
-		Use this <arg>service name</arg> to identify this player in iTunes, etc.
-    The default name is "Shairport Sync on &lt;hostname&gt;".
     </p></optdesc>
 	  </option>
 
