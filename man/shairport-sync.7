@@ -23,7 +23,7 @@ A feature of shairport-sync is that the audio is played synchronously. This mean
 .SH OPTIONS
 Many of the options take sensible default values, so you can normally ignore most of them. See the EXAMPLES section for typical usages.
 
-The command line for shairport-sync can take two kinds of options: regular program options and audio backend options. Program options are always listed first, followed by any audio backend options separated by a -- symbol.
+The command line for shairport-sync can take two kinds of options: regular \fBprogram options\f1 and \fBaudio backend options\f1. Program options are always listed first, followed by any audio backend options, preceded by a \fB--\f1 symbol.
 .SH PROGRAM OPTIONS
 These options are used by shairport-sync itself.
 .TP
@@ -59,7 +59,7 @@ Use this \fIlatency\f1, in frames, for audio streamed from an iTunes source. The
 Kill the shairport-sync daemon and exit. (Requires that the daemon has written its PID to an agreed file -- see the \fB-d\f1 option). 
 .TP
 \fB-m \f1\fImdnsbackend\f1\fB | --mdns=\f1\fImdnsbackend\f1
-Force the use of the specified mDNS backend to advertise the player on the network. The default is to try all mDNS backends all until one works. 
+Force the use of the specified mDNS backend to advertise the player on the network. The default is to try all mDNS backends until one works. 
 .TP
 \fB-o \f1\fIoutputbackend\f1\fB | --output=\f1\fIoutputbackend\f1
 Force the use of the specified output backend to play the audio. The default is to try the first one. (This is not used at present.) 
@@ -67,7 +67,7 @@ Force the use of the specified output backend to play the audio. The default is 
 \fB-p \f1\fIport\f1\fB | --port=\f1\fIport\f1
 Listen for play requests on \fIport\f1. The default is to use port 5000. 
 .TP
-\fB-R | --reconnectoToOutput\f1
+\fB-R | --reconnectToOutput\f1
 Reconnect the shairport-sync daemon to the output device and exit. It may take a few seconds to synchronise. (Requires that the daemon has written its PID to an agreed file -- see the \fB-d\f1 option). 
 .TP
 \fB-r \f1\fIthreshold\f1\fB | --resync=\f1\fIthreshold\f1
@@ -90,7 +90,7 @@ Print debug information. Repeat up to three times to get more detail.
 \fB-w | --wait-cmd\f1
 Wait for commands specified using \fB-B\f1 or \fB-E\f1 to complete before continuing execution. 
 .SH AUDIO BACKEND OPTIONS
-These options are passed to the chosen audio backend. (At present, the only backend implemented is for ALSA.) The audio backend options are preceded by a \fB--\f1 symbol to introduce them and to separate them from any program options. In this way, option letters can be reused as program options and as audio backend options without ambiguity. For instance, the option \fB-d\f1 is interpreted as the daemonise option when read as a program option, and is interpreted as a device selection option when read as an audio backend option.
+These options are passed to the chosen audio backend. (At present, the only backend implemented is for ALSA.) The audio backend options are preceded by a \fB--\f1 symbol to introduce them and to separate them from any program options. In this way, option letters can be used as program options and also as audio backend options without ambiguity.
 .TP
 \fB-c \f1\fIcontrolname\f1
 Use the hardware volume control called \fIcontrolname\f1. This is needed if the output type is specified, using the \fB-t\f1 option, to be \fBhardware\f1. There is no default. 

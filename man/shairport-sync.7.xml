@@ -75,10 +75,10 @@
     ignore most of them. See the EXAMPLES section for typical usages.</p>
 
     <p>The command line for shairport-sync can take two kinds of options:
-    regular  <b>program  options</b>  and <b>audio backend options</b>.
+    regular <opt>program options</opt> and <opt>audio backend options</opt>.
     Program options are
-    always listed first, followed by any audio backend options separated by
-    a <b>--</b> symbol.</p>
+    always listed first, followed by any audio backend options, preceded by
+    a <opt>--</opt> symbol.</p>
     
   <section name="Program Options">
   <p>These options are used by shairport-sync itself.</p>
@@ -174,7 +174,7 @@
 		<p><opt>-m </opt><arg>mdnsbackend</arg><opt> | --mdns=</opt><arg>mdnsbackend</arg></p>
 		<optdesc><p>
 		Force the use of the specified mDNS backend to advertise the
-    player on the network. The default is to try all mDNS backends all until one
+    player on the network. The default is to try all mDNS backends until one
     works.
 		</p></optdesc>
 	  </option>
@@ -197,7 +197,7 @@
 	  </option>
 
 	  <option>
-		<p><opt>-R | --reconnectoToOutput</opt></p>
+		<p><opt>-R | --reconnectToOutput</opt></p>
 		<optdesc><p>
 		Reconnect the shairport-sync daemon to the output device and
     exit. It may take a few seconds to synchronise. (Requires  that
@@ -274,11 +274,8 @@
   <p>These  options are passed to the chosen audio backend. (At present, the
   only backend implemented is for ALSA.) The audio  backend  options  are
   preceded by a <opt>--</opt> symbol to introduce them and to separate them from any
-  program options. In this way, option letters can be reused  as  program
-  options and as audio backend options without ambiguity. For instance,
-  the option <opt>-d</opt> is interpreted as the daemonise option when read as a
-  program option, and  is interpreted as a device selection option when
-  read as an audio backend option.</p>
+  program options. In this way, option letters can be used  as  program
+  options and also as audio backend options without ambiguity.</p>
   </section>
   
   <option>
