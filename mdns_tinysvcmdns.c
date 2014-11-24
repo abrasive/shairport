@@ -49,7 +49,9 @@ static int mdns_tinysvcmdns_register(char *apname, int port) {
     }
 
     char hostname[100];
-    gethostname(hostname, 100);
+    gethostname(hostname, 100-10); // leave a bit of space for the .local
+    strcat(hostname,".local");
+
 
     if (getifaddrs(&ifalist) < 0)
     {
