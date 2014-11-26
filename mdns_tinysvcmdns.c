@@ -48,9 +48,20 @@ static int mdns_tinysvcmdns_register(char *apname, int port) {
         return -1;
     }
 
-    char hostname[100];
-    gethostname(hostname, 100-10); // leave a bit of space for the .local
-    strcat(hostname,".local");
+    // Thanks to Paul Lietar for this
+    // room for name + .local + NULL
+    char hostname[100 + 6];
+    gethostname(hostname, 99);
+    // according to POSIX, this may be truncated without a final NULL !
+    hostname[99] = 0;
+
+    // will not work if the hostname doesn't end in .local
+    char *hostend = hostname + strlen(hostname);
+    if ((strlen(hostname) > 6) &&
+        strcmp(hostend - 6, ".local"))
+    {
+        strcat(hostname, ".local");
+    }
 
 
     if (getifaddrs(&ifalist) < 0)
