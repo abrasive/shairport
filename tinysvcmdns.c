@@ -63,9 +63,13 @@
 #include <netinet/in.h>
 #endif
 
+// See RFC 6762 Section 10 for an account of two TTLs -- 120 seconds for rrs with a host name as the record's name
+// or a host name in the record's rdata
+// 75 minutes for everything else.
+// https://tools.ietf.org/html/rfc6762
 
-#define DEFAULT_TTL             120
-
+#define DEFAULT_TTL_FOR_RECORD_WITH_HOSTNAME  120
+#define DEFAULT_TTL		4500
 
 struct name_comp {
         uint8_t *label; // label
@@ -404,6 +408,7 @@ struct rr_entry *rr_create_a(uint8_t *name, uint32_t addr) {
         DECL_MALLOC_ZERO_STRUCT(rr, rr_entry);
         FILL_RR_ENTRY(rr, name, RR_A);
         rr->data.A.addr = addr;
+        rr->ttl = DEFAULT_TTL_FOR_RECORD_WITH_HOSTNAME; // 120 seconds -- see RFC 6762 Section 10
         return rr;
 }
 
@@ -411,6 +416,7 @@ struct rr_entry *rr_create_aaaa(uint8_t *name, struct in6_addr *addr) {
         DECL_MALLOC_ZERO_STRUCT(rr, rr_entry);
         FILL_RR_ENTRY(rr, name, RR_AAAA);
         rr->data.AAAA.addr = addr;
+        rr->ttl = DEFAULT_TTL_FOR_RECORD_WITH_HOSTNAME; // 120 seconds -- see RFC 6762 Section 10
         return rr;
 }
 
@@ -1500,9 +1506,10 @@ void mdnsd_set_hostname(struct mdnsd *svr, const char *hostname, uint32_t ip) {
         // dont ask me what happens if the IP changes
         assert(svr->hostname == NULL);
 
-        a_e = rr_create_a(create_nlabel(hostname), ip);
+        a_e = rr_create_a(create_nlabel(hostname), ip); // 120 seconds automatically
 
         nsec_e = rr_create(create_nlabel(hostname), RR_NSEC);
+        nsec_e->ttl = DEFAULT_TTL_FOR_RECORD_WITH_HOSTNAME; // set to 120 seconds (default is 4500)
         rr_set_nsec(nsec_e, RR_A);
 
         pthread_mutex_lock(&svr->data_lock);
@@ -1521,9 +1528,10 @@ void mdnsd_set_hostname_v6(struct mdnsd *svr, const char *hostname, struct in6_a
         // dont ask me what happens if the IP changes
         assert(svr->hostname == NULL);
 
-        aaaa_e = rr_create_aaaa(create_nlabel(hostname), addr);
+        aaaa_e = rr_create_aaaa(create_nlabel(hostname), addr); // 120 seconds automatically
 
         nsec_e = rr_create(create_nlabel(hostname), RR_NSEC);
+        nsec_e->ttl = DEFAULT_TTL_FOR_RECORD_WITH_HOSTNAME; // set to 120 seconds (default is 4500)
         rr_set_nsec(nsec_e, RR_AAAA);
 
         pthread_mutex_lock(&svr->data_lock);
@@ -1557,7 +1565,7 @@ struct mdns_service *mdnsd_register_svc(struct mdnsd *svr, const char *instance_
 
         // create TXT record
         if (txt && *txt) {
-                txt_e = rr_create(dup_nlabel(nlabel), RR_TXT);
+                txt_e = rr_create(dup_nlabel(nlabel), RR_TXT); // automatically 4500 seconds
                 rr_list_append(&service->entries, txt_e);
 
                 // add TXTs
@@ -1571,15 +1579,15 @@ struct mdns_service *mdnsd_register_svc(struct mdnsd *svr, const char *instance_
                                 create_nlabel(hostname) :
                                 dup_nlabel(svr->hostname);
 
-        srv_e = rr_create_srv(dup_nlabel(nlabel), port, target);
+        srv_e = rr_create_srv(dup_nlabel(nlabel), port, target); // automatically 4500 seconds
         rr_list_append(&service->entries, srv_e);
 
         // create PTR record for type
-        ptr_e = rr_create_ptr(type_nlabel, srv_e);
+        ptr_e = rr_create_ptr(type_nlabel, srv_e); // automatically 4500 seconds
 
         // create services PTR record for type
         // this enables the type to show up as a "service"
-        bptr_e = rr_create_ptr(dup_nlabel(SERVICES_DNS_SD_NLABEL), ptr_e);
+        bptr_e = rr_create_ptr(dup_nlabel(SERVICES_DNS_SD_NLABEL), ptr_e); // automatically 4500 seconds
 
         // modify lists here
         pthread_mutex_lock(&svr->data_lock);

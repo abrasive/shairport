@@ -57,13 +57,10 @@ static int mdns_tinysvcmdns_register(char *apname, int port) {
 
     // will not work if the hostname doesn't end in .local
     char *hostend = hostname + strlen(hostname);
-    if ((strlen(hostname) > 6) &&
-        strcmp(hostend - 6, ".local"))
-    {
-        strcat(hostname, ".local");
+    if ((strlen(hostname) < strlen(".local")) || (strcmp(hostend - 6, ".local")!=0)) {
+      strcat(hostname, ".local");
     }
-
-
+    
     if (getifaddrs(&ifalist) < 0)
     {
         warn("tinysvcmdns: getifaddrs() failed");
@@ -80,7 +77,7 @@ static int mdns_tinysvcmdns_register(char *apname, int port) {
         {
             uint32_t main_ip = ((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr;
 
-            mdnsd_set_hostname(svr, hostname, main_ip);
+            mdnsd_set_hostname(svr, hostname, main_ip); // TTL should be 120 seconds
             break;
         }
         else if (!(ifa->ifa_flags & IFF_LOOPBACK) && ifa->ifa_addr &&
@@ -88,7 +85,7 @@ static int mdns_tinysvcmdns_register(char *apname, int port) {
         {
             struct in6_addr *addr = &((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr;
 
-            mdnsd_set_hostname_v6(svr, hostname, addr);
+            mdnsd_set_hostname_v6(svr, hostname, addr); // TTL should be 120 seconds
             break;
         }
     }
@@ -110,13 +107,13 @@ static int mdns_tinysvcmdns_register(char *apname, int port) {
         {
             case AF_INET: { // ipv4
                     uint32_t ip = ((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr;
-                    struct rr_entry *a_e = rr_create_a(create_nlabel(hostname), ip);
+                    struct rr_entry *a_e = rr_create_a(create_nlabel(hostname), ip); // TTL should be 120 seconds
                     mdnsd_add_rr(svr, a_e);
                 }
                 break;
             case AF_INET6: { // ipv6
                     struct in6_addr *addr = &((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr;
-                    struct rr_entry *aaaa_e = rr_create_aaaa(create_nlabel(hostname), addr);
+                    struct rr_entry *aaaa_e = rr_create_aaaa(create_nlabel(hostname), addr); // TTL should be 120 seconds
                     mdnsd_add_rr(svr, aaaa_e);
                 }
                 break;
@@ -131,7 +128,7 @@ static int mdns_tinysvcmdns_register(char *apname, int port) {
                                 "_raop._tcp.local",
                                 port,
                                 NULL,
-                                txt);
+                                txt);  // TTL should be 75 minutes, i.e. 4500 seconds
 
     mdns_service_destroy(svc);
 
