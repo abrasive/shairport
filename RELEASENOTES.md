@@ -1,3 +1,9 @@
+Version 2.1.12
+-----
+* Bugfixes for `tinysvcmdns`
+  * A bug that prevented the device's IP number(s) and port numbers being advertised when using `tinysvcmdns` has been fixed. (Cause: name needed to have  a `.local` suffix.)
+  * Bugs causing the shairport service to semi-randomly disappear and reappear seem to be fixed. (Possible cause: incorrect timing settings when using `tinysvcmdns`.)
+
 Version 2.1.11
 -----
 * Enhancement
