@@ -21,6 +21,8 @@ with_os_type=`echo ${with_os_type} | tr '[[:upper:]]' '[[:lower:]]' `
 AC_PROG_CC
 AC_PROG_INSTALL
 
+PKG_PROG_PKG_CONFIG([0.9.0])
+
 # Checks for libraries.
 if test "x${with_os_type}" = xlinux; then
  AC_CHECK_LIB([rt],[clock_gettime], , AC_MSG_ERROR(librt needed))
@@ -52,8 +54,14 @@ AC_ARG_WITH(ssl, [ choose --with-ssl=openssl or --with-ssl=polarssl for encrypti
     AC_MSG_ERROR(choose either "openssl" or "polarssl" encryption)
   fi
   if test "x${with_ssl}" = xopenssl ; then
-    AC_CHECK_LIB([crypto], [MD5_Init], , AC_MSG_ERROR(libcrypto selected, but the library cannot be found!))
-    AC_CHECK_LIB([ssl],[SSL_library_init], , AC_MSG_ERROR(openssl selected but the library cannot be found!))
+    PKG_CHECK_MODULES(
+        [CRYPTO], [libcrypto],
+        [LIBS="${CRYPTO_LIBS} ${LIBS}"
+         AC_DEFINE([HAVE_LIBCRYPTO],[1],[Define to 1 if you have libcrypto])])
+    PKG_CHECK_MODULES(
+        [SSL], [libssl],
+        [LIBS="${SSL_LIBS} ${LIBS}"
+         AC_DEFINE([HAVE_LIBSSL],[1],[Define to 1 if you have libssl])])
   elif test "x${with_ssl}" = xpolarssl ; then
     AC_CHECK_LIB([polarssl],[ssl_init], , AC_MSG_ERROR(PolarSSL selected but the library cannot be found!))
   else
