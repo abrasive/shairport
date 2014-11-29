@@ -99,7 +99,10 @@ AC_ARG_WITH(alsa, [  --with-alsa = choose native ALSA API support (GNU/Linux onl
   HAS_ALSA=1
   AM_CONDITIONAL([USE_ALSA], [test 0])
   AC_DEFINE([CONFIG_ALSA], 1, [Needed by the compiler.])
-  AC_CHECK_LIB([asound], [snd_pcm_open], , AC_MSG_ERROR(ALSA support requires the asound library!))], )
+  PKG_CHECK_MODULES(
+    [ALSA], [alsa],
+    [LIBS="${ALSA_LIBS} ${LIBS}"
+     AC_DEFINE([HAVE_LIBASOUND],[1],[Define to 1 if you have ALSA])])])
 AM_CONDITIONAL([USE_ALSA], [test "x$HAS_ALSA" = "x1"])
 
 # Look for SNDIO flag
