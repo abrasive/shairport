@@ -7,7 +7,7 @@ Version 2.1.12
 Version 2.1.11
 -----
 * Enhancement
-  * A man page is now installed -- do `man shairport-sync`.
+  * A man page is now installed -- do `man shairport-sync` or see it here: http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/2.1/man/shairport-sync.html.
 
 Version 2.1.10
 -----
