@@ -21,6 +21,8 @@ with_os_type=`echo ${with_os_type} | tr '[[:upper:]]' '[[:lower:]]' `
 AC_PROG_CC
 AC_PROG_INSTALL
 
+PKG_PROG_PKG_CONFIG([0.9.0])
+
 # Checks for libraries.
 if test "x${with_os_type}" = xlinux; then
  AC_CHECK_LIB([rt],[clock_gettime], , AC_MSG_ERROR(librt needed))
@@ -29,7 +31,10 @@ fi
 AC_CHECK_LIB([daemon],[daemon_log], , AC_MSG_ERROR(libdaemon needed))
 AC_CHECK_LIB([pthread],[pthread_create], , AC_MSG_ERROR(pthread library needed))
 AC_CHECK_LIB([m],[exp], , AC_MSG_ERROR(maths library needed))
-AC_CHECK_LIB([popt],[poptGetContext], , AC_MSG_ERROR(libpopt needed))
+PKG_CHECK_MODULES(
+    [POPT], [popt],
+    [LIBS="${POPT_LIBS} ${LIBS}"
+     AC_DEFINE([HAVE_LIBPOPT],[1],[Define to 1 if you have popt])])
 
 # Look for piddir flag
 AC_ARG_WITH(piddir, [ --with-piddir=<pathname> Specify a pathname to a directory in which to write the PID file.], [
@@ -52,8 +57,14 @@ AC_ARG_WITH(ssl, [ choose --with-ssl=openssl or --with-ssl=polarssl for encrypti
     AC_MSG_ERROR(choose either "openssl" or "polarssl" encryption)
   fi
   if test "x${with_ssl}" = xopenssl ; then
-    AC_CHECK_LIB([crypto], [MD5_Init], , AC_MSG_ERROR(libcrypto selected, but the library cannot be found!))
-    AC_CHECK_LIB([ssl],[SSL_library_init], , AC_MSG_ERROR(openssl selected but the library cannot be found!))
+    PKG_CHECK_MODULES(
+        [CRYPTO], [libcrypto],
+        [LIBS="${CRYPTO_LIBS} ${LIBS}"
+         AC_DEFINE([HAVE_LIBCRYPTO],[1],[Define to 1 if you have libcrypto])])
+    PKG_CHECK_MODULES(
+        [SSL], [libssl],
+        [LIBS="${SSL_LIBS} ${LIBS}"
+         AC_DEFINE([HAVE_LIBSSL],[1],[Define to 1 if you have libssl])])
   elif test "x${with_ssl}" = xpolarssl ; then
     AC_CHECK_LIB([polarssl],[ssl_init], , AC_MSG_ERROR(PolarSSL selected but the library cannot be found!))
   else
@@ -91,7 +102,10 @@ AC_ARG_WITH(alsa, [  --with-alsa = choose native ALSA API support (GNU/Linux onl
   HAS_ALSA=1
   AM_CONDITIONAL([USE_ALSA], [test 0])
   AC_DEFINE([CONFIG_ALSA], 1, [Needed by the compiler.])
-  AC_CHECK_LIB([asound], [snd_pcm_open], , AC_MSG_ERROR(ALSA support requires the asound library!))], )
+  PKG_CHECK_MODULES(
+    [ALSA], [alsa],
+    [LIBS="${ALSA_LIBS} ${LIBS}"
+     AC_DEFINE([HAVE_LIBASOUND],[1],[Define to 1 if you have ALSA])])])
 AM_CONDITIONAL([USE_ALSA], [test "x$HAS_ALSA" = "x1"])
 
 # Look for SNDIO flag
