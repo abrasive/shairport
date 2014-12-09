@@ -22,6 +22,7 @@ typedef struct {
     char *apname;
     uint8_t hw_addr[6];
     int port;
+    int data_port;
     char *output_name;
     audio_output *output;
     char *mdns_name;

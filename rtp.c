@@ -99,7 +99,9 @@ static int bind_port(SOCKADDR *remote) {
     hints.ai_socktype = SOCK_DGRAM;
     hints.ai_flags = AI_PASSIVE;
 
-    int ret = getaddrinfo(NULL, "0", &hints, &info);
+    char port_num[6];
+    sprintf(port_num, "%d", config.data_port);
+    int ret = getaddrinfo(NULL, port_num, &hints, &info);
 
     if (ret < 0)
         die("failed to get usable addrinfo?! %s", gai_strerror(ret));
@@ -112,6 +114,7 @@ static int bind_port(SOCKADDR *remote) {
     if (ret < 0)
         die("could not bind a UDP port!");
 
+    // Read back the port, in case we are using a random one
     int sport;
     SOCKADDR local;
     socklen_t local_len = sizeof(local);
