@@ -34,6 +34,7 @@
 #include <netdb.h>
 #include "common.h"
 #include "player.h"
+#include "metadata.h"
 
 // only one RTP session can be active at a time.
 static int running = 0;
@@ -57,8 +58,14 @@ static void *rtp_receiver(void *arg) {
 
         ssize_t plen = nread;
         uint8_t type = packet[1] & ~0x80;
-        if (type == 0x54) // sync
+        if (type == 0x54) {  // sync
+            player_meta.position = (packet[4] << 24) |
+                                   (packet[5] << 16) |
+                                   (packet[6] << 8)  |
+                                   (packet[7]);
+            metadata_position_write();
             continue;
+        }
         if (type == 0x60 || type == 0x56) {   // audio data / resend
             pktp = packet;
             if (type==0x56) {

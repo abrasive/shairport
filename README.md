@@ -93,6 +93,11 @@ An example::
     comment=
     
 
+Additionally, a fifo named `position` will also be created and will be updated
+roughly once a second with the position and the total duration of the
+currently playing track, space-separated.
+
+
 Thanks
 ------
 Big thanks to David Hammerton for releasing an ALAC decoder, which is reproduced here in full.
@@ -110,7 +115,7 @@ Contributors to version 1.x
 * [Peter Körner](http://mazdermind.de)
 * [Muffinman](http://github.com/therealmuffin)
 * [Skaman](http://github.com/skaman)
-* [Weston](http://github.com/wnielson)
+* [Weston Nielson](http://github.com/wnielson)
 * [allesblinkt](http://github.com/allesblinkt)
 
 Contributors to version 0.x

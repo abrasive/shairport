@@ -476,6 +476,7 @@ static void *player_thread_func(void *arg) {
 #endif
             play_samples = stuff_buffer(bf_playback_rate, inbuf, outbuf);
 
+        player_meta.paused = 0;
         config.output->play(outbuf, play_samples);
     }
 
@@ -496,6 +497,7 @@ void player_volume(double f) {
     }
 }
 void player_flush(void) {
+    player_meta.paused = 1;
     pthread_mutex_lock(&ab_mutex);
     ab_resync();
     pthread_mutex_unlock(&ab_mutex);
