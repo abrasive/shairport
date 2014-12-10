@@ -40,6 +40,7 @@ static void start(int sample_rate);
 static void play(short buf[], int samples);
 static void stop(void);
 static void volume(double vol);
+static long long get_delay(void);
 
 audio_output audio_alsa = {
     .name = "alsa",
@@ -49,7 +50,8 @@ audio_output audio_alsa = {
     .start = &start,
     .stop = &stop,
     .play = &play,
-    .volume = NULL
+    .volume = NULL,
+    .get_delay = &get_delay
 };
 
 static snd_pcm_t *alsa_handle = NULL;
@@ -64,6 +66,8 @@ static char *alsa_out_dev = "default";
 static char *alsa_mix_dev = NULL;
 static char *alsa_mix_ctrl = "Master";
 static int alsa_mix_index = 0;
+
+static int device_sample_rate;
 
 static void help(void) {
     printf("    -d output-device    set the output device [default*|...]\n"
@@ -153,9 +157,10 @@ static void deinit(void) {
 static void start(int sample_rate) {
     if (sample_rate != 44100)
         die("Unexpected sample rate!");
+    device_sample_rate = sample_rate;
 
     int ret, dir = 0;
-    snd_pcm_uframes_t frames = 64;
+    snd_pcm_uframes_t period_size,  buffer_size;
     ret = snd_pcm_open(&alsa_handle, alsa_out_dev, SND_PCM_STREAM_PLAYBACK, 0);
     if (ret < 0)
         die("Alsa initialization failed: unable to open pcm device: %s\n", snd_strerror(ret));
@@ -166,10 +171,52 @@ static void start(int sample_rate) {
     snd_pcm_hw_params_set_format(alsa_handle, alsa_params, SND_PCM_FORMAT_S16);
     snd_pcm_hw_params_set_channels(alsa_handle, alsa_params, 2);
     snd_pcm_hw_params_set_rate_near(alsa_handle, alsa_params, (unsigned int *)&sample_rate, &dir);
-    snd_pcm_hw_params_set_period_size_near(alsa_handle, alsa_params, &frames, &dir);
-    ret = snd_pcm_hw_params(alsa_handle, alsa_params);
-    if (ret < 0)
-        die("unable to set hw parameters: %s\n", snd_strerror(ret));
+
+    // setting period and buffer is a simplified version of what XBMC does
+    snd_pcm_hw_params_get_period_size_max(alsa_params, &period_size, NULL);
+    snd_pcm_hw_params_get_buffer_size_max(alsa_params, &buffer_size);
+    debug(1, "Hardware supports period_size_max: %d, buffer_size_max: %d\n", period_size, buffer_size);
+
+    // we want about 333 ms of buffer, and 50ms period
+    // buffer might still need some tweaking to get reliable operation on RPi + USB DAC...
+    // make sure we do not exceed what HW supports
+    period_size = (period_size < sample_rate / 20 ? period_size : sample_rate / 20);
+    buffer_size = (buffer_size < sample_rate / 3 ? buffer_size : sample_rate / 3);
+
+    // make sure buffer size is at least 4 times period size
+    period_size = (period_size < buffer_size / 4 ? period_size : buffer_size / 4);
+    debug(1, "Trying to set period_size: %d, buffer_size: %d\n", period_size, buffer_size);
+
+    // we keep the originals and try setting period and buffer using copies
+    snd_pcm_uframes_t period_temp, buffer_temp;
+    period_temp = period_size;
+    buffer_temp = buffer_size;
+    snd_pcm_hw_params_t *alsa_params_copy;
+    snd_pcm_hw_params_alloca(&alsa_params_copy);
+    snd_pcm_hw_params_copy(alsa_params_copy, alsa_params);
+
+    // some HW seems to be picky about the order period and buffer are set, so try both ways
+    // first try with buffer_size, period_size
+    if (snd_pcm_hw_params_set_buffer_size_near(alsa_handle, alsa_params_copy, &buffer_temp) != 0
+    		|| snd_pcm_hw_params_set_period_size_near(alsa_handle, alsa_params_copy, &period_temp, NULL) != 0
+    		|| snd_pcm_hw_params(alsa_handle, alsa_params_copy) != 0) {
+        period_temp = period_size;
+        buffer_temp = buffer_size;
+        snd_pcm_hw_params_copy(alsa_params_copy, alsa_params);
+        // retry with period_size, buffer_size
+        if (snd_pcm_hw_params_set_period_size_near(alsa_handle, alsa_params_copy, &period_temp, NULL) != 0
+        		|| snd_pcm_hw_params_set_buffer_size_near(alsa_handle, alsa_params_copy, &buffer_temp) != 0
+        		|| snd_pcm_hw_params(alsa_handle, alsa_params_copy) != 0) {
+        	// set what alsa would have
+        	warn("Setting period and buffer failed, going with the defaults\n");
+            ret = snd_pcm_hw_params(alsa_handle, alsa_params);
+            if (ret < 0)
+                die("unable to set hw parameters: %s\n", snd_strerror(ret));
+            // using alsa defaults, so see what they are
+            snd_pcm_get_params(alsa_handle, &buffer_size, &period_size);
+            debug(1, "Defaults are period_size: %d, buffer_size: %d\n", period_size, buffer_size);
+        }
+    }
 }
 
 static void play(short buf[], int samples) {
@@ -193,3 +240,19 @@ static void volume(double vol) {
     if(snd_mixer_selem_set_playback_volume_all(alsa_mix_elem, alsa_volume) != 0)
         die ("Failed to set playback volume");
 }
+
+static long long get_delay(void) {
+  snd_pcm_sframes_t frames = 0;
+  snd_pcm_delay(alsa_handle, &frames);
+
+  if (frames < 0)
+  {
+#if SND_LIB_VERSION >= 0x000901 /* snd_pcm_forward() exists since 0.9.0rc8 */
+    snd_pcm_forward(alsa_handle, -frames);
+#endif
+    frames = 0;
+  }
+
+  return (long long)frames * 1000000LL / (long long)device_sample_rate;
+}
+

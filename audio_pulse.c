@@ -116,6 +116,18 @@ static void stop(void) {
         fprintf(stderr, __FILE__": pa_simple_drain() failed: %s\n", pa_strerror(pa_error));
 }
 
+static long long get_delay() {
+  pa_usec_t latency;
+  latency = pa_simple_get_latency(pa_dev, &pa_error);
+  if (pa_error < 0 )
+  {
+    latency = (pa_usec_t) 0;
+    fprintf(stderr, __FILE__": get_delay() failed: %s\n", pa_strerror(pa_error));
+  }
+
+  return (long long)latency;
+}
+
 audio_output audio_pulse = {
     .name = "pulse",
     .help = &help,
@@ -124,5 +136,7 @@ audio_output audio_pulse = {
     .start = &start,
     .stop = &stop,
     .play = &play,
-    .volume = NULL
+    .volume = NULL,
+    .get_delay = &get_delay
 };
+

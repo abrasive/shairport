@@ -125,5 +125,6 @@ audio_output audio_ao = {
     .start = &start,
     .stop = &stop,
     .play = &play,
-    .volume = NULL
+    .volume = NULL,
+    .get_delay = NULL
 };

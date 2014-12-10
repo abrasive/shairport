@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <math.h>
 #include <memory.h>
 #include <unistd.h>
 #include <openssl/rsa.h>
@@ -201,4 +202,34 @@ void command_stop(void) {
 
     if (!config.cmd_blocking)
         exit(0);
+}
+
+void biquad_init(biquad_t *bq, double a[], double b[]) {
+    bq->hist[0] = bq->hist[1] = 0.0;
+    memcpy(bq->a, a, 2*sizeof(double));
+    memcpy(bq->b, b, 3*sizeof(double));
+}
+
+void biquad_lpf(biquad_t *bq, double freq, double Q) {
+    double w0 = 2.0 * M_PI * freq;
+    double alpha = sin(w0)/(2.0*Q);
+
+    double a_0 = 1.0 + alpha;
+    double b[3], a[2];
+    b[0] = (1.0-cos(w0))/(2.0*a_0);
+    b[1] = (1.0-cos(w0))/a_0;
+    b[2] = b[0];
+    a[0] = -2.0*cos(w0)/a_0;
+    a[1] = (1-alpha)/a_0;
+
+    biquad_init(bq, a, b);
+}
+
+double biquad_filt(biquad_t *bq, double in) {
+    double w = in - bq->a[0]*bq->hist[0] - bq->a[1]*bq->hist[1];
+    double out = bq->b[1]*bq->hist[0] + bq->b[2]*bq->hist[1] + bq->b[0]*w;
+    bq->hist[1] = bq->hist[0];
+    bq->hist[0] = w;
+
+    return out;
 }

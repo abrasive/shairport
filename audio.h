@@ -17,9 +17,14 @@ typedef struct {
 
     // may be NULL, in which case soft volume is applied
     void (*volume)(double vol);
+
+    //time in us it takes before a new sample is output
+    long long (*get_delay)(void);
 } audio_output;
 
 audio_output *audio_get_output(char *name);
 void audio_ls_outputs(void);
+long long audio_get_delay(void);
+void audio_estimate_delay(audio_output *output);
 
 #endif //_AUDIO_H

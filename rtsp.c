@@ -380,10 +380,39 @@ static void handle_teardown(rtsp_conn_info *conn,
 
 static void handle_flush(rtsp_conn_info *conn,
                          rtsp_message *req, rtsp_message *resp) {
+    // the "RTP-Info" header tells us what the seqno and rtptime of the next
+    // audio packet will be, should playback resume
+    int seq;
+    unsigned long rtp_tsp;
+    unsigned long rtptime;
+
     if (!rtsp_playing())
         return;
-    player_flush();
+
+    char *hdr = msg_get_header(req, "RTP-Info");
+    if (!hdr)
+        return;
+    char *p;
+    p = strstr(hdr, "seq=");
+    if (!p)
+        return;
+    p = strchr(p, '=') + 1;
+    seq = atoi(p);
+    p = strstr(hdr, "rtptime=");
+    if (!p)
+        return;
+    p = strchr(p, '=') + 1;
+    rtptime = strtoul(p, NULL, 0);
+    debug(1, "Received seq: %04X, rtptime: %lu\n", seq, rtptime);
+
+    rtp_tsp = player_flush(seq, rtptime);
+    char *resphdr = malloc(32);
+    sprintf(resphdr, "rtptime=%lu", rtp_tsp);
+    debug(1, "Reporting RTP-Info: %s\n", resphdr);
+    msg_add_header(resp, "RTP-Info", resphdr);
     resp->respcode = 200;
+
+    free(resphdr);
 }
 
 static void handle_setup(rtsp_conn_info *conn,
@@ -407,7 +436,7 @@ static void handle_setup(rtsp_conn_info *conn,
     tport = atoi(p);
 
     rtsp_take_player();
-    int sport = rtp_setup(&conn->remote, cport, tport);
+    int sport = rtp_setup(&conn->remote, &cport, &tport);
     if (!sport)
         return;
 
@@ -416,12 +445,49 @@ static void handle_setup(rtsp_conn_info *conn,
     char resphdr[100];
     snprintf(resphdr, sizeof(resphdr),
              "RTP/AVP/UDP;unicast;mode=record;server_port=%d;control_port=%d;timing_port=%d",
-             sport, sport, sport);
+             sport, cport, tport);
     msg_add_header(resp, "Transport", resphdr);
 
     msg_add_header(resp, "Session", "1");
 
     resp->respcode = 200;
+}
+
+static void handle_record(rtsp_conn_info *conn,
+                         rtsp_message *req, rtsp_message *resp) {
+    // most clients will add a "RTP-Info" header, so we know the first
+    // audio packet's seqno and rtptime.
+    // if there's no "RTP-Info" header, we go into a loose RTP mode
+    int seq = -1;
+    unsigned long rtptime = 0;
+    int rtp_mode = 0;
+    char *hdr = msg_get_header(req, "RTP-Info");
+    if (hdr) {
+        char *p;
+        p = strstr(hdr, "seq=");
+        if (!p)
+            return;
+        p = strchr(p, '=') + 1;
+        seq = atoi(p);
+        p = strstr(hdr, "rtptime=");
+        if (!p)
+            return;
+        p = strchr(p, '=') + 1;
+        rtptime = strtoul(p, NULL, 0);
+        rtp_mode = 1;
+    }
+    debug(1, "Received seq: %04X, rtptime: %lu\n", seq, rtptime);
+    rtp_record(rtp_mode);
+    player_flush(seq, rtptime);
+
+    // note: it is assumed we're supposed to return the delay in ms
+    char *resphdr = malloc(10);
+    sprintf(resphdr, "%d", config.delay/1000);
+    debug(1, "Reporting %sms delay\n", resphdr);
+    msg_add_header(resp, "Audio-Latency", resphdr);
+    resp->respcode = 200;
+
+    free(resphdr);
 }
 
 static void handle_ignore(rtsp_conn_info *conn,
@@ -620,7 +686,7 @@ static struct method_handler {
     {"SETUP",           handle_setup},
     {"GET_PARAMETER",   handle_ignore},
     {"SET_PARAMETER",   handle_set_parameter},
-    {"RECORD",          handle_ignore},
+    {"RECORD",          handle_record},
     {NULL,              NULL}
 };
 
@@ -820,8 +886,8 @@ respond:
     if (conn->fd > 0)
         close(conn->fd);
     if (rtsp_playing()) {
-        rtp_shutdown();
         player_stop();
+        rtp_shutdown();
         please_shutdown = 0;
         pthread_mutex_unlock(&playing_mutex);
     }

@@ -28,6 +28,9 @@
 #include <string.h>
 #include "audio.h"
 #include "config.h"
+#include "common.h"
+#include "player.h"
+#include "rtp.h"
 
 #ifdef CONFIG_SNDIO
 extern audio_output audio_sndio;
@@ -61,6 +64,7 @@ static audio_output *outputs[] = {
     NULL
 };
 
+long long audio_delay;
 
 audio_output *audio_get_output(char *name) {
     audio_output **out;
@@ -88,4 +92,36 @@ void audio_ls_outputs(void) {
         printf("Options for output %s:\n", (*out)->name);
         (*out)->help();
     }
+}
+
+//gets called for generic outputs
+long long audio_get_delay(void) {
+    return audio_delay;
+}
+
+void audio_estimate_delay(audio_output *output) {
+    signed short *silence;
+    int frame_size = 200;
+    long long base_time, cur_time, last_time, frame_time, frame_time_limit;
+
+    silence = malloc(4 * frame_size);
+    memset(silence, 0, 4 * frame_size);
+    frame_time = (frame_size * 1000000) / 44100;
+    frame_time_limit = frame_time * 2 / 3;
+
+    base_time = tstp_us();
+    last_time = base_time;
+    int loop = 0;
+    while (loop < 1000) {
+        output->play(silence, frame_size);
+        cur_time = tstp_us();
+        if ((cur_time - last_time) > frame_time_limit)
+            break;
+        last_time = cur_time;
+        loop++;
+    }
+    debug(3, "totaltime %lld, last loop time %lld, loop %d\n", last_time-base_time,cur_time - last_time, loop);
+    audio_delay = (loop * frame_time) - (last_time - base_time);
+    debug(2,"Generic output delay %lld\n", audio_delay);
+    free(silence);
 }
