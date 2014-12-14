@@ -31,6 +31,7 @@ typedef struct {
     char *cmd_start, *cmd_stop;
     int cmd_blocking;
     char *meta_dir;
+    char *dacp_dir;
     char *pidfile;
     char *logfile;
     char *errfile;
