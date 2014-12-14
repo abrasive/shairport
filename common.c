@@ -40,6 +40,8 @@
 shairport_cfg config;
 
 int debuglev = 0;
+char ** newArgv;
+int newArgc;
 
 void die(char *format, ...) {
     fprintf(stderr, "FATAL: ");

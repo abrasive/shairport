@@ -60,6 +60,9 @@ void command_stop(void);
 
 extern shairport_cfg config;
 
+extern int newArgc;
+extern char ** newArgv;
+
 void shairport_shutdown(int retval);
 void shairport_startup_complete(void);
 
