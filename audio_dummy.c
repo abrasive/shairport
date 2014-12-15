@@ -59,9 +59,9 @@ static void play(short buf[], int samples) {
 
     samples_played += samples;
 
-    long long finishtime = starttime + samples_played * 1e6 / Fs;
-
-    usleep(finishtime - nowtime);
+    long long sleeptime = starttime + samples_played * 1e6 / Fs - nowtime;
+    if (sleeptime > 0)
+        usleep(sleeptime );
 }
 
 static void stop(void) {
