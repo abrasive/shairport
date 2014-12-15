@@ -270,14 +270,25 @@
   preceded by a <b>--</b> symbol to introduce them and to separate them from any
   program options. In this way, option letters can be used  as  program
   options and also as audio backend options without ambiguity.</p>
+  <p>In the ALSA backend, audio is sent to an output device
+  which you can specify using the <b>-d</b> option.
+  The output level (the &quot;volume&quot;) is controlled using a level control associated with a mixer.
+  By default, the mixer is implemented in shairport-sync itself, i.e. the type of
+  the mixer is &quot;software&quot;.
+  To use a level control on a mixer on the sound card, you must (a)
+  specify that the mixer's type is &quot;hardware&quot; with the <b>-t</b> option;
+  (b) you must specify where the mixer is to be found using the <b>-m</b> option
+  and finally (c) you must specify the name of the level control you are using
+  with the <b>-c</b> option.</p>
   
 
   
   
   <p><b>-c </b><em>controlname</em></p>
   <p>
-  Use the hardware volume control called <em>controlname</em>. This is needed if
-  the output type is specified, using the <b>-t</b> option,
+  Use the level control called <em>controlname</em> on the hardware mixer for
+  controlling volume.
+  This is needed if the mixer type is specified, using the <b>-t</b> option,
   to be <b>hardware</b>. There is no default.
   </p>
   
@@ -285,26 +296,66 @@
   
   <p><b>-d </b><em>device</em></p>
   <p>
-  Use the specified output <em>device</em>.
+  Use the specified output <em>device</em>. You may specify a card, e.g. <b>hw:0</b>, in
+  which case the default output device on the card will be chosen.
+  Alternatively, you can specify a specific device on a card, e.g. <b>hw:0,0</b>.
   The default is the device named <b>default</b>.
   </p>
   
 
   
+  <p><b>-m </b><em>mixer</em></p>
+  <p>
+  Use the specified hardware <em>mixer</em> for volume control. Use this to specify where
+  the mixer is to be found. For example, if the mixer is associated with a card,
+  as is often the case, specify the card, e.g. <b>hw:0</b>.
+  If (unusually) the mixer is associated with a specific device on a card,
+  specify the device, e.g. <b>hw:0,1</b>.
+  The default is the device named in the <b>-d</b> option,
+  if given, or the device named <b>default</b>.
+  </p>
+  
+
+  
   <p><b>-t </b><em>devicetype</em></p>
+  
   <p>
   The type of the output device is <em>devicetype</em> which must be
   <b>hardware</b> or <b>software</b>. The default is <b>software</b>.
-  If you specify <b>hardware</b> you must also specify the name of the
-  volume control using the <b>-c</b> option.
+  If you specify <b>hardware</b> you must also specify the output device using the
+  <b>-d</b> option and the name of the volume control using the <b>-c</b> option.
+  You may also need to specify the mixer using the <b>-m</b> option.
   </p>
   
 	
 
   <h2>Examples</h2>
 
-  <p>Here is a typical example:</p>
+  <p>Here is a slightly contrived but typical example:</p>
       shairport-sync  <b>-d</b>
+      <b>-a &quot;Joe's Stereo&quot;</b>
+      <b>-S soxr</b>
+      <b>--</b>
+      <b>-d hw:1,0</b>
+      <b>-m hw:1</b>
+      <b>-t hardware</b>
+      <b>-c PCM</b>      
+      <br>
+
+  <p>The program will run in daemon mode ( <b>-d</b> ), will be  visible  as
+  &quot;Joe's Stereo&quot; ( <b>-a &quot;Joe's Stereo&quot;</b> ) and will use the SoX Resampler
+  Library-based stuffing ( <b>-S soxr</b> ).
+  The audio backend options following the <b>--</b> separator specify
+  that  the  audio will be output on output 0 of soundcard 1 (
+  <b>-d hw:1,0</b> ) and will take advantage of the same sound card's hardware
+  (<b>-t hardware</b>) mixer ( <b>-m hw:1</b> )
+  using the level control named &quot;PCM&quot; ( <b>-c &quot;PCM&quot;</b> ).
+  </p>
+  <p>The example above is slightly contrived in order to show the use of the <b>-m</b> option.
+  Typically, output 0 is the default output of a card,
+  so the output device could be written <b>-d hw:1</b> and
+  then the mixer option would be unnecessary, giving the following, simpler, command:</p>
+       shairport-sync  <b>-d</b>
       <b>-a &quot;Joe's Stereo&quot;</b>
       <b>-S soxr</b>
       <b>--</b>
@@ -313,13 +364,7 @@
       <b>-c PCM</b>      
       <br>
 
-  <p>The program will run in daemon mode ( <b>-d</b> ), will be  visible  as
-  &quot;Joe's Stereo&quot; ( <b>-a &quot;Joe's Stereo&quot;</b> ) and will use the SoX Resampler Library-based stuffing ( <b>-S soxr</b> ).
-  The audio backend options following  the  <b>--</b>  separator  specify
-  that  the  audio will be output on the ALSA device called hw:1 (
-  <b>-d hw:1</b> ), and will take advantage of that device's  hardware  (
-  <b>-t hardware</b> ) mixer named &quot;PCM&quot; ( <b>-c &quot;PCM&quot;</b> ).
-  </p>
+ 
   
 
 

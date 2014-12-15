@@ -94,21 +94,30 @@ Print debug information. Repeat up to three times to get more detail.
 Wait for commands specified using \fB-B\f1 or \fB-E\f1 to complete before continuing execution. 
 .SH AUDIO BACKEND OPTIONS
 These options are passed to the chosen audio backend. (At present, the only backend implemented is for ALSA.) The audio backend options are preceded by a \fB--\f1 symbol to introduce them and to separate them from any program options. In this way, option letters can be used as program options and also as audio backend options without ambiguity.
+
+In the ALSA backend, audio is sent to an output device which you can specify using the \fB-d\f1 option. The output level (the "volume") is controlled using a level control associated with a mixer. By default, the mixer is implemented in shairport-sync itself, i.e. the type of the mixer is "software". To use a level control on a mixer on the sound card, you must (a) specify that the mixer's type is "hardware" with the \fB-t\f1 option; (b) you must specify where the mixer is to be found using the \fB-m\f1 option and finally (c) you must specify the name of the level control you are using with the \fB-c\f1 option.
 .TP
 \fB-c \f1\fIcontrolname\f1
-Use the hardware volume control called \fIcontrolname\f1. This is needed if the output type is specified, using the \fB-t\f1 option, to be \fBhardware\f1. There is no default. 
+Use the level control called \fIcontrolname\f1 on the hardware mixer for controlling volume. This is needed if the mixer type is specified, using the \fB-t\f1 option, to be \fBhardware\f1. There is no default. 
 .TP
 \fB-d \f1\fIdevice\f1
-Use the specified output \fIdevice\f1. The default is the device named \fBdefault\f1. 
+Use the specified output \fIdevice\f1. You may specify a card, e.g. \fBhw:0\f1, in which case the default output device on the card will be chosen. Alternatively, you can specify a specific device on a card, e.g. \fBhw:0,0\f1. The default is the device named \fBdefault\f1. 
+.TP
+\fB-m \f1\fImixer\f1
+Use the specified hardware \fImixer\f1 for volume control. Use this to specify where the mixer is to be found. For example, if the mixer is associated with a card, as is often the case, specify the card, e.g. \fBhw:0\f1. If (unusually) the mixer is associated with a specific device on a card, specify the device, e.g. \fBhw:0,1\f1. The default is the device named in the \fB-d\f1 option, if given, or the device named \fBdefault\f1. 
 .TP
 \fB-t \f1\fIdevicetype\f1
-The type of the output device is \fIdevicetype\f1 which must be \fBhardware\f1 or \fBsoftware\f1. The default is \fBsoftware\f1. If you specify \fBhardware\f1 you must also specify the name of the volume control using the \fB-c\f1 option. 
+The type of the output device is \fIdevicetype\f1 which must be \fBhardware\f1 or \fBsoftware\f1. The default is \fBsoftware\f1. If you specify \fBhardware\f1 you must also specify the output device using the \fB-d\f1 option and the name of the volume control using the \fB-c\f1 option. You may also need to specify the mixer using the \fB-m\f1 option. 
 .SH EXAMPLES
-Here is a typical example:
+Here is a slightly contrived but typical example:
+
+shairport-sync \fB-d\f1 \fB-a "Joe's Stereo"\f1 \fB-S soxr\f1 \fB--\f1 \fB-d hw:1,0\f1 \fB-m hw:1\f1 \fB-t hardware\f1 \fB-c PCM\f1
+
+The program will run in daemon mode ( \fB-d\f1 ), will be visible as "Joe's Stereo" ( \fB-a "Joe's Stereo"\f1 ) and will use the SoX Resampler Library-based stuffing ( \fB-S soxr\f1 ). The audio backend options following the \fB--\f1 separator specify that the audio will be output on output 0 of soundcard 1 ( \fB-d hw:1,0\f1 ) and will take advantage of the same sound card's hardware (\fB-t hardware\f1) mixer ( \fB-m hw:1\f1 ) using the level control named "PCM" ( \fB-c "PCM"\f1 ). 
+
+The example above is slightly contrived in order to show the use of the \fB-m\f1 option. Typically, output 0 is the default output of a card, so the output device could be written \fB-d hw:1\f1 and then the mixer option would be unnecessary, giving the following, simpler, command:
 
 shairport-sync \fB-d\f1 \fB-a "Joe's Stereo"\f1 \fB-S soxr\f1 \fB--\f1 \fB-d hw:1\f1 \fB-t hardware\f1 \fB-c PCM\f1
-
-The program will run in daemon mode ( \fB-d\f1 ), will be visible as "Joe's Stereo" ( \fB-a "Joe's Stereo"\f1 ) and will use the SoX Resampler Library-based stuffing ( \fB-S soxr\f1 ). The audio backend options following the \fB--\f1 separator specify that the audio will be output on the ALSA device called hw:1 ( \fB-d hw:1\f1 ), and will take advantage of that device's hardware ( \fB-t hardware\f1 ) mixer named "PCM" ( \fB-c "PCM"\f1 ). 
 .SH CREDITS
 Mike Brady developed shairport-sync from the original shairport by James Laird.
 

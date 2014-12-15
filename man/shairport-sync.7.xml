@@ -284,13 +284,24 @@
   preceded by a <opt>--</opt> symbol to introduce them and to separate them from any
   program options. In this way, option letters can be used  as  program
   options and also as audio backend options without ambiguity.</p>
+  <p>In the ALSA backend, audio is sent to an output device
+  which you can specify using the <opt>-d</opt> option.
+  The output level (the "volume") is controlled using a level control associated with a mixer.
+  By default, the mixer is implemented in shairport-sync itself, i.e. the type of
+  the mixer is "software".
+  To use a level control on a mixer on the sound card, you must (a)
+  specify that the mixer's type is "hardware" with the <opt>-t</opt> option;
+  (b) you must specify where the mixer is to be found using the <opt>-m</opt> option
+  and finally (c) you must specify the name of the level control you are using
+  with the <opt>-c</opt> option.</p>
   </section>
   
   <option>
   <p><opt>-c </opt><arg>controlname</arg></p>
   <optdesc><p>
-  Use the hardware volume control called <arg>controlname</arg>. This is needed if
-  the output type is specified, using the <opt>-t</opt> option,
+  Use the level control called <arg>controlname</arg> on the hardware mixer for
+  controlling volume.
+  This is needed if the mixer type is specified, using the <opt>-t</opt> option,
   to be <opt>hardware</opt>. There is no default.
   </p></optdesc>
   </option>
@@ -298,25 +309,64 @@
   <option>
   <p><opt>-d </opt><arg>device</arg></p>
   <optdesc><p>
-  Use the specified output <arg>device</arg>.
+  Use the specified output <arg>device</arg>. You may specify a card, e.g. <opt>hw:0</opt>, in
+  which case the default output device on the card will be chosen.
+  Alternatively, you can specify a specific device on a card, e.g. <opt>hw:0,0</opt>.
   The default is the device named <opt>default</opt>.
   </p></optdesc>
   </option>
 
   <option>
-  <p><opt>-t </opt><arg>devicetype</arg></p>
+  <p><opt>-m </opt><arg>mixer</arg></p>
   <optdesc><p>
+  Use the specified hardware <arg>mixer</arg> for volume control. Use this to specify where
+  the mixer is to be found. For example, if the mixer is associated with a card,
+  as is often the case, specify the card, e.g. <opt>hw:0</opt>.
+  If (unusually) the mixer is associated with a specific device on a card,
+  specify the device, e.g. <opt>hw:0,1</opt>.
+  The default is the device named in the <opt>-d</opt> option,
+  if given, or the device named <opt>default</opt>.
+  </p></optdesc>
+  </option>
+
+  <option>
+  <p><opt>-t </opt><arg>devicetype</arg></p>
+  <optdesc>
+  <p>
   The type of the output device is <arg>devicetype</arg> which must be
   <opt>hardware</opt> or <opt>software</opt>. The default is <opt>software</opt>.
-  If you specify <opt>hardware</opt> you must also specify the name of the
-  volume control using the <opt>-c</opt> option.
+  If you specify <opt>hardware</opt> you must also specify the output device using the
+  <opt>-d</opt> option and the name of the volume control using the <opt>-c</opt> option.
+  You may also need to specify the mixer using the <opt>-m</opt> option.
   </p></optdesc>
   </option>
 	</options>
 
   <section name="Examples">
-  <p>Here is a typical example:</p>
+  <p>Here is a slightly contrived but typical example:</p>
       <cmd>shairport-sync  <opt>-d</opt>
+      <opt>-a "Joe's Stereo"</opt>
+      <opt>-S soxr</opt>
+      <opt>--</opt>
+      <opt>-d hw:1,0</opt>
+      <opt>-m hw:1</opt>
+      <opt>-t hardware</opt>
+      <opt>-c PCM</opt>      
+      </cmd>
+  <p>The program will run in daemon mode ( <opt>-d</opt> ), will be  visible  as
+  "Joe's Stereo" ( <opt>-a "Joe's Stereo"</opt> ) and will use the SoX Resampler
+  Library-based stuffing ( <opt>-S soxr</opt> ).
+  The audio backend options following the <opt>--</opt> separator specify
+  that  the  audio will be output on output 0 of soundcard 1 (
+  <opt>-d hw:1,0</opt> ) and will take advantage of the same sound card's hardware
+  (<opt>-t hardware</opt>) mixer ( <opt>-m hw:1</opt> )
+  using the level control named "PCM" ( <opt>-c "PCM"</opt> ).
+  </p>
+  <p>The example above is slightly contrived in order to show the use of the <opt>-m</opt> option.
+  Typically, output 0 is the default output of a card,
+  so the output device could be written <opt>-d hw:1</opt> and
+  then the mixer option would be unnecessary, giving the following, simpler, command:</p>
+       <cmd>shairport-sync  <opt>-d</opt>
       <opt>-a "Joe's Stereo"</opt>
       <opt>-S soxr</opt>
       <opt>--</opt>
@@ -324,13 +374,7 @@
       <opt>-t hardware</opt>
       <opt>-c PCM</opt>      
       </cmd>
-  <p>The program will run in daemon mode ( <opt>-d</opt> ), will be  visible  as
-  "Joe's Stereo" ( <opt>-a "Joe's Stereo"</opt> ) and will use the SoX Resampler Library-based stuffing ( <opt>-S soxr</opt> ).
-  The audio backend options following  the  <opt>--</opt>  separator  specify
-  that  the  audio will be output on the ALSA device called hw:1 (
-  <opt>-d hw:1</opt> ), and will take advantage of that device's  hardware  (
-  <opt>-t hardware</opt> ) mixer named "PCM" ( <opt>-c "PCM"</opt> ).
-  </p>
+ 
   </section>
 
 	<section name="Credits">
