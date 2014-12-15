@@ -122,10 +122,10 @@ The `-B`, `-E` and `-w` options allow you to specify a program to execute before
 Apart from arguments of Shairport Sync, there are also arguments for controlling the ALSA audio system. ALSA arguments follow a `--` on the command line -- see the examples below for layout of command line.
 These are important because you use them to specify the actual audio device you wish to use and you give Shairport Sync important information about the capabilities of the device. The important ALSA arguments are:
 
-* The `-d` option which allows you to specify the audio device to use. Typical values would be `default` (default), `hw:0`, `hw:1`, etc.
+* The `-d` option which allows you to specify the audio device to use. Typical values would be `default` (default), `hw:0`, `hw:1`, etc. Those examples are specifying which *soundcard* to use; the actual output device used is the card's default, typically output device 0. You could specify, for example, device 5 on card hw:0 with `-d hw:0,5`.
 
-The following two settings are very important for maximum performance. If your audio device has a hardware mixer and volume control, then Shairport Sync can use it to give faster response to volume and mute commands and it can offload some work from the processor.
-
+The following settings are very important for maximum performance. If your audio device has a hardware mixer and volume control, then Shairport Sync can use it to give faster response to volume and mute commands and it can offload some work from the processor.
+* The `-m` option allows you specify where the mixer is. By default, the mixer is to be found where you specify with the `-d` option, so you only need to use the `-m` option if the mixer is elsewhere. This can happen if you specify a *device* rather than a *card* with the `-d` option, because normally a mixer is associated with a *card* rather than a device. For example, if you specified that the output device was device 5 of card hw:0 and if the mixer was associated with the card, you would have to write `-d hw:0,5 -m hw:0`. 
 * The `-t` option allows you to specify the type of audio mixer -- `software` (default) or `hardware`.
 * The `-c` option allows you to specify the name of the volume control on the hardware mixer.
 
@@ -133,7 +133,7 @@ The init script at `/etc/init.d/shairport-sync` has a bare minimum set of option
 
 `-d`
 
-Basically all it does is put the program in daemon mode, selects the default output device and uses software volume control.
+Basically all it does is put the program in daemon mode, selects the default output device and uses a software volume control.
 
 *Examples*
 
