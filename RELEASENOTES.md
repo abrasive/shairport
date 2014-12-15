@@ -1,3 +1,15 @@
+Version 2.1.14
+-----
+* Documentation update: add information about the `-m` audio backend option
+The `-m` audio backend option allows you to specify the hardware mixer you are using. Not previously documented.
+Functionality of shairport-sync is unchanged.
+
+Version 2.1.13
+-----
+* Compilation change: Begin to use PKG_CHECK_MODULES in configure.ac
+PKG_CHECK_MODULES to statically link some of the libraries used by shairport-sync. It is intended to make it easier to build in the buildroot system. While sufficient for that purpose, note that PKG_CHECK_MODULES is not used for checking all the libraries yet.
+Functionality of shairport-sync is unchanged.
+
 Version 2.1.12
 -----
 * Enhancement: `--statistics`
