@@ -3,11 +3,13 @@ Shairport Sync
 What is Shairport Sync?
 ----------
 Shairport Sync emulates an AirPort Express for the purpose of streaming audio from iTunes, iPods, iPhones, iPads and AppleTVs.
-Audio played by a Shairport Sync-powered device stays synchronised with the source and thus with other devices playing the same source synchronously. Thus, for example, synchronised multi-room audio is possible without difficulty. (Hence the name Shairport Sync, BTW.)
+Audio played by a Shairport Sync-powered device stays synchronised with the source and hence with similar devices playing the same source. Thus, for example, synchronised multi-room audio is possible without difficulty. (Hence the name Shairport Sync, BTW.)
 
-Shairport Sync does not support AirPlay video and photo streaming.
+Shairport Sync does not support AirPlay video or photo streaming.
 
-The way Shairport Sync works is that it uses timing information present in the audio data stream to stay in lock-step with the source. Using this precise timing information, it monitors and controls the "latency" -- the time between when a sound is sent by the source and when it is played by the audio output device. To maintain the exact latency required, if an output device is running slow relative to the source, Shairport Sync will delete frames of audio to allow the device to keep up; if the device is running fast, Shairport Sync will insert frames to keep time. The number of frames inserted or deleted is so small as to be almost inaudible. Frames are inserted or deleted as necessary at pseudorandom intervals. Alternatively, with `libsoxr` support, Shairport Sync can resample the audio feed to ensure the output device can keep up. This is even less obtrusive than insertion and deletion but requires a good deal of processing power -- most embedded devices probably can't support it.
+Shairport Sync works by using timing information present in the audio data stream to keep in step with the source. It does this by monitoring and controlling the "latency" -- the time between when a sound is time-stamped at the source and when it is played by the audio output device. To measure latency precisely, it keeps its own clock synchronised with the clock used by the source, usually to within a fraction of a millisecond, using a variant of NTP synchronisation protocols.
+
+To maintain the exact latency required, if an output device is running slow relative to the source, Shairport Sync will delete frames of audio to allow the device to keep up; if the device is running fast, Shairport Sync will insert frames to keep time. The number of frames inserted or deleted is so small as to be almost inaudible. Frames are inserted or deleted as necessary at pseudorandom intervals. Alternatively, with `libsoxr` support, Shairport Sync can resample the audio feed to ensure the output device can keep up. This is even less obtrusive than insertion and deletion but requires a good deal of processing power -- most embedded devices probably can't support it.
 
 There are two default latency settings, chosen automatically. One latency matches the latency iTunes uses when playing audio and the other matches the latency used by iOS devices and by iTunes and Quicktime Player when playing video.
 
@@ -85,6 +87,8 @@ Choose the appropriate `--with-*` options:
 Here is an example, suitable for most installations:
 
 `$ ./configure --with-alsa --with-avahi --with-ssl=openssl --with-soxr`
+
+Omit the `--with-soxr` if the libsoxr library is not available.
 
 `$ make` 
 
