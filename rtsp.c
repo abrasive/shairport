@@ -453,32 +453,33 @@ static void handle_setup(rtsp_conn_info *conn,
     // for everything else, use the general latency setting, if given, or
     // else use the default latency setting
     
+    config.latency=88200;
+    
     if (config.userSuppliedLatency)
       config.latency=config.userSuppliedLatency;
     
     char * ua = msg_get_header(req,"User-Agent");
-//    if (ua==0) {
-//      debug(1,"No User-Agent string found in the SETUP message. Using latency of %d frames.",config.latency);
-//    } else {  
-    if (ua) {  
+    if (ua==0) {
+      debug(1,"No User-Agent string found in the SETUP message. Using latency of %d frames.",config.latency);
+    } else {  
       if (strstr(ua,"iTunes")==ua) {
         int iTunesVersion=0;
         // now check it's version 10 or later
         char *pp = strchr(ua,'/') + 1;
         if (pp)
           iTunesVersion=atoi(pp);
-        // else
-        //  debug(1,"iTunes Version Number not found.");
+        else
+          debug(2,"iTunes Version Number not found.");
         if (iTunesVersion>=10) {        
-          // debug(1,"User-Agent is iTunes 10 or better, (actual version is %d); selecting the iTunes latency of %d frames.",iTunesVersion,config.iTunesLatency);
+          debug(2,"User-Agent is iTunes 10 or better, (actual version is %d); selecting the iTunes latency of %d frames.",iTunesVersion,config.iTunesLatency);
           config.latency=config.iTunesLatency;
         }
       } else if (strstr(ua,"AirPlay")==ua) {
-        // debug(1,"User-Agent is AirPlay; selecting the AirPlay latency of %d frames.",config.AirPlayLatency);
+        debug(2,"User-Agent is AirPlay; selecting the AirPlay latency of %d frames.",config.AirPlayLatency);
         config.latency=config.AirPlayLatency;
-      } // else {
-        // debug(1,"Unrecognised User-Agent. Using latency of %d frames.",config.latency);
-      // }
+      } else {
+        debug(2,"Unrecognised User-Agent. Using latency of %d frames.",config.latency);
+      }
     }
     char *hdr = msg_get_header(req, "Transport");
     if (!hdr)

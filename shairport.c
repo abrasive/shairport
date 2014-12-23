@@ -334,7 +334,7 @@ int main(int argc, char **argv) {
 
     // set defaults
     config.statistics_requested - 0; // don't print stats in the log
-    config.latency = 88200; // AirPlay
+    config.latency = 88200; // AirPlay. Is also reset in rtsp.c when play is about to start
     config.userSuppliedLatency = 0; // zero means none supplied
     config.iTunesLatency = 99400; // this seems to work pretty well for iTunes from Version 10 (?) upwards-- two left-ear headphones, one from the iMac jack, one from an NSLU2 running a cheap "3D Sound" USB Soundcard
     config.AirPlayLatency = 88200; // this seems to work pretty well for AirPlay -- Syncs sound and vision on AppleTV, but also used for iPhone/iPod/iPad sources
