@@ -11,7 +11,7 @@ Shairport Sync works by using timing information present in the audio data strea
 
 To maintain the exact latency required, if an output device is running slow relative to the source, Shairport Sync will delete frames of audio to allow the device to keep up; if the device is running fast, Shairport Sync will insert frames to keep time. The number of frames inserted or deleted is so small as to be almost inaudible. Frames are inserted or deleted as necessary at pseudorandom intervals. Alternatively, with `libsoxr` support, Shairport Sync can resample the audio feed to ensure the output device can keep up. This is even less obtrusive than insertion and deletion but requires a good deal of processing power -- most embedded devices probably can't support it.
 
-There are two default latency settings, chosen automatically. One latency matches the latency iTunes uses when playing audio and the other matches the latency used by iOS devices and by iTunes and Quicktime Player when playing video.
+There are two default latency settings, chosen automatically. One latency matches the latency used by recent version of iTunes when playing audio and the other matches the latency used by older version of iTunes, by iOS devices and by iTunes and Quicktime Player when playing video.
 
 Shairport Sync is a pretty substantial rewrite of Shairport 1.0 by James Laird and others -- please see https://github.com/abrasive/shairport/blob/master/README.md#contributors-to-version-1x for a list of the contributors to Shairport 1.x and Shairport 0.x. From a "heritage" point of view, Shairport Sync is a fork of Shairport 1.0 and the active branch is called Shairport Sync 2.1.
 
@@ -179,12 +179,11 @@ On an NSLU2, to drive the "3D Sound" USB card:
 Latency
 -------
 Latency is the exact time from a sound signal's original timestamp until that signal actually "appears" on the output of the DAC, irrespective of any internal delays, processing times, etc. in the computer. From listening tests, it seems that there are two latencies in current use:
-* If the source is iTunes, a latency of 99,400 frames seems to bring Shairport Sync into exact synchronisation both with the speakers on the iTunes computer itself and with AirPort Express receivers.
-* If the source is an AirPlay device, the latency seems to be exactly 88,200 frames. AirPlay devices include AppleTV, iPod, iPad and iPhone and Quicktime Player on Mac.
+* If the source is iTunes 10 or later, a latency of 99,400 frames seems to bring Shairport Sync into exact synchronisation both with the speakers on the iTunes computer itself and with AirPort Express receivers.
+* If the source is an AirPlay device, the latency seems to be exactly 88,200 frames. AirPlay devices include AppleTV, iPod, iPad and iPhone and Quicktime Player on Mac. 
+* If the source cannot be identified as AirPlay or as iTunes 10 or later, then the default latency of 88,200 frames seems to work in general. Note that some third party programs masquerade as older versions of iTunes.
 
-Shairport Sync uses these as default latencies for iTunes and AirPlay sources.
-
-You can set your own iTunes latency with the `-i` or `--iTunesLatency` option (e.g. `-i 99400` or `--iTunesLatency=99400`). Similarly you can set an AirPlay latency with the `-A` or `--AirPlayLatency` option. If you set a latency with `-L` it overrides both the AirPlay and iTunes latency values. Basically, you shouldn't use it except for experimentation. It is deprecated and will be removed soon.
+Shairport Sync uses the latencies described above as defaults. You shouldn't need to change them, but occasionally problems arise when you are trying to synchronise with speaker systems -- typically surround-sound home theatre systems -- that have their own inherent delays. You can set the default latency with the `-L` or `--latency` option (e.g. `-L 99400` or `--latency=99400`). You can set your own iTunes 10 (or later) latency with the `-i` or `--iTunesLatency` option. Similarly you can set an AirPlay latency with the `-A` or `--AirPlayLatency` option.
 
 Resynchronisation
 -------------
@@ -206,7 +205,7 @@ it will print statistics like this occasionally on the console (or in the logfil
 
 "Net correction" is actually the net sum of corrections -- the number of frame insertions less the number of frame deletions -- given as a moving average in parts per million. After an initial settling period, it represents the divergence between the source clock and the sound device's clock. The example above indicates that the output DAC's clock is running 24.2 ppm faster than the source's clock.
 
-"Corrections" is the number of frame insertions plus the number of frame deletions (i.e. the total number of corrections), given as a moving average in parts per million. The closer this is to the absolute value of the drift, the fewer "unnecessary" corrections that are being made.
+"Corrections" is the number of frame insertions plus the number of frame deletions (i.e. the total number of corrections), given as a moving average in parts per million. The closer this is to the absolute value of the drift, the fewer "unnecessary" corrections that are being made. Third party programs tend to have much larger levels of corrections.
 
 For reference, a drift of one second per day is approximately 11.57 ppm. Left uncorrected, even a drift this small between two audio outputs will be audible after a short time. The above sample is from a second-generation iPod driving the Raspberry Pi which is connected over Ethernet.
 
