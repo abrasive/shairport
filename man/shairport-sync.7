@@ -2,7 +2,7 @@
 .SH NAME
 shairport-sync \- Synchronised Audio Player for iTunes / AirPlay
 .SH SYNOPSIS
-\fBshairport-sync [-dvw]\fB [-a \fB\fIname\fB]\fB [-A \fB\fIlatency\fB]\fB [-B \fB\fIcommand\fB]\fB [-E \fB\fIcommand\fB]\fB [-i \fB\fIlatency\fB]\fB [-m \fB\fIbackend\fB]\fB [-o \fB\fIbackend\fB]\fB [-r \fB\fIthreshold\fB]\fB [--statistics]\fB [-S \fB\fImode\fB]\fB [-t \fB\fItimeout\fB]\fB [-- \fB\fIaudio_backend_options\fB]\fB
+\fBshairport-sync [-dvw]\fB [-a \fB\fIname\fB]\fB [-A \fB\fIlatency\fB]\fB [-B \fB\fIcommand\fB]\fB [-E \fB\fIcommand\fB]\fB [-i \fB\fIlatency\fB]\fB [-L \fB\fIlatency\fB]\fB [-m \fB\fIbackend\fB]\fB [-o \fB\fIbackend\fB]\fB [-r \fB\fIthreshold\fB]\fB [--statistics]\fB [-S \fB\fImode\fB]\fB [-t \fB\fItimeout\fB]\fB [-- \fB\fIaudio_backend_options\fB]\fB
 
 shairport-sync -D\fB
 
@@ -53,10 +53,13 @@ If you want shairport-sync to wait until the command has completed before contin
 Print brief help message and exit. 
 .TP
 \fB-i | --iTunesLatency=\f1\fIlatency\f1
-Use this \fIlatency\f1, in frames, for audio streamed from an iTunes source. The default is 99,400 frames, where there are 44,100 frames to the second. 
+Use this \fIlatency\f1, in frames, for audio streamed from an iTunes source, where iTunes is Version 10 or later. The default is 99,400 frames, where there are 44,100 frames to the second. If the source is iTunes but is earler than Version 10, the \fIdefault latency\f1 is used (see the \fB-L\f1 option). Some third party programs masquerade as old version of iTunes. 
 .TP
 \fB-k | --kill\f1
 Kill the shairport-sync daemon and exit. (Requires that the daemon has written its PID to an agreed file -- see the \fB-d\f1 option). 
+.TP
+\fB-L | --latency=\f1\fIlatency\f1
+Use this to set the \fIdefault latency\f1, in frames, for audio coming from an unidentified source or from an iTunes Version 9 or earlier source. The standard value for the \fIdefault latency\f1 is 88,200 frames, where there are 44,100 frames to the second. 
 .TP
 \fB-m \f1\fImdnsbackend\f1\fB | --mdns=\f1\fImdnsbackend\f1
 Force the use of the specified mDNS backend to advertise the player on the network. The default is to try all mDNS backends until one works. 

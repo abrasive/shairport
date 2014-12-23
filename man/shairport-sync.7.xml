@@ -40,6 +40,7 @@
       <opt>[-B </opt><arg>command</arg><opt>]</opt>
       <opt>[-E </opt><arg>command</arg><opt>]</opt>
       <opt>[-i </opt><arg>latency</arg><opt>]</opt>
+      <opt>[-L </opt><arg>latency</arg><opt>]</opt>
       <opt>[-m </opt><arg>backend</arg><opt>]</opt>
       <opt>[-o </opt><arg>backend</arg><opt>]</opt>
       <opt>[-r </opt><arg>threshold</arg><opt>]</opt>
@@ -154,12 +155,12 @@
 		</p></optdesc>
 	  </option>
 
-    <option>
+	  <option>
 		<p><opt>-i | --iTunesLatency=</opt><arg>latency</arg></p>
 		<optdesc><p>
 		Use this <arg>latency</arg>, in frames, for audio streamed from an iTunes
-    source. The default is 99,400 frames, where there are 44,100
-    frames to the second.
+    source, where iTunes is Version 10 or later. The default is 99,400 frames, where there are 44,100
+    frames to the second. If the source is iTunes but is earler than Version 10, the <arg>default latency</arg> is used (see the <opt>-L</opt> option). Some third party programs masquerade as old version of iTunes.
     </p></optdesc>
 	  </option>
 
@@ -169,6 +170,14 @@
 		Kill the shairport-sync daemon and exit. (Requires that the daemon has
 		written its PID to an agreed file -- see the <opt>-d</opt> option).
 		</p></optdesc>
+	  </option>
+
+	  <option>
+		<p><opt>-L | --latency=</opt><arg>latency</arg></p>
+		<optdesc><p>
+		Use this to set the <arg>default latency</arg>, in frames, for audio coming from an unidentified source or from an iTunes Version 9 or earlier source. The standard value for the <arg>default latency</arg> is 88,200 frames, where there are 44,100
+    frames to the second.
+    </p></optdesc>
 	  </option>
 
 	  <option>
