@@ -4,6 +4,7 @@ Version 2.1.15
  * The default latency is now 88,200 frames, exactly 2 seconds. It was 99,400 frames. As before, the `-L` option allows you to set the default latency.
  * The `-L` option is no longer deprecated.
  * The `-L` option no longer overrides the `-A` or `-i` options.
+ * The default latency for iTunes is now 99,400 frames for iTunes 10 or later and 88,200 for earlier versions.
  * The `-i` or `--iTunesLatency` option only applies to iTunes 10 or later sources.
 
 Version 2.1.14
