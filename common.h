@@ -32,8 +32,8 @@
 
 
 enum stuffing_type {
-        ST_basic        = 0,
-        ST_soxr,
+  ST_basic        = 0,
+  ST_soxr,
 } type;
 
 
@@ -57,6 +57,7 @@ typedef struct {
     int daemonise;
     int statistics_requested;
     char *cmd_start, *cmd_stop;
+    int tolerance; // allow this much drift before attempting to correct it
     int cmd_blocking;
     enum stuffing_type packet_stuffing;
     char *pidfile;

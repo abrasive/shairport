@@ -43,10 +43,12 @@
       <opt>[-L </opt><arg>latency</arg><opt>]</opt>
       <opt>[-m </opt><arg>backend</arg><opt>]</opt>
       <opt>[-o </opt><arg>backend</arg><opt>]</opt>
+      <opt>[--password=</opt><arg>secret</arg><opt>]</opt>
       <opt>[-r </opt><arg>threshold</arg><opt>]</opt>
       <opt>[--statistics]</opt>
       <opt>[-S </opt><arg>mode</arg><opt>]</opt>
       <opt>[-t </opt><arg>timeout</arg><opt>]</opt>
+      <opt>[--tolerance=</opt><arg>frames</arg><opt>]</opt>
       <opt>[-- </opt><arg>audio_backend_options</arg><opt>]</opt>
       </cmd>
       <cmd>shairport-sync <opt>-D</opt></cmd>
@@ -207,6 +209,13 @@
 	  </option>
 
 	  <option>
+		<p><opt>--password=</opt><arg>secret</arg></p>
+		<optdesc><p>
+		Require the password <arg>secret</arg> to be able to connect and stream to the service.
+		</p></optdesc>
+	  </option>
+
+	  <option>
 		<p><opt>-R | --reconnectToOutput</opt></p>
 		<optdesc><p>
 		Reconnect the shairport-sync daemon to the output device and
@@ -262,6 +271,16 @@
     shairport-sync will never signal that
     it is busy and will not prevent other sources from "barging in"
     on an existing play session. The default value is 120 seconds.
+		</p></optdesc>
+	  </option>
+
+	  <option>
+		<p><opt>--tolerance=</opt><arg>frames</arg></p>
+		<optdesc><p>
+		Allow playback to be up to <arg>frames</arg> out of exact synchronization before attempting to correct it.
+		The default is 88 frames, i.e. 2 ms. The smaller the tolerance, the more likely it is that overcorrection will occur.
+		Overcorrection is when more corrections (insertions and deletions) are made than are strictly necessary to keep the stream in sync. Use the <opt>--statistics</opt> option to
+		monitor correction levels. Corrections should not greatly exceed net corrections.
 		</p></optdesc>
 	  </option>
 

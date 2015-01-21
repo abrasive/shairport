@@ -879,10 +879,10 @@ static void *player_thread_func(void *arg) {
           
           int amount_to_stuff = 0;
           // require a certain error before bothering to fix it...
-          if (sync_error>88) {
+          if (sync_error>config.tolerance) {
             amount_to_stuff = -1;
           }
-          if (sync_error<-88) {
+          if (sync_error<-config.tolerance) {
             amount_to_stuff = 1;
           }
           

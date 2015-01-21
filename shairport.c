@@ -177,6 +177,8 @@ void usage(char *progname) {
     printf("    -r, --resync=THRESHOLD  resync if error exceeds this number of frames. Set to 0 to stop resyncing.\n");
     printf("    -t, --timeout=SECONDS   go back to idle mode from play mode after a break in communications of this many seconds (default 120). Set to 0 never to exit play mode.\n");
     printf("    --statistics            print some interesting statistics -- output to the logfile if running as a daemon.\n");
+    printf("    --tolerance=TOLERANCE   allow a synchronization error of TOLERANCE frames (default 88) before trying to correct it.\n");
+    printf("    --password=PASSWORD     require PASSWORD to connect. Default is not to require a password.\n");
     printf("\n");
     mdns_ls_backends();
     printf("\n");
@@ -209,6 +211,8 @@ int parse_options(int argc, char **argv) {
     { "stuffing", 'S', POPT_ARG_STRING, &stuffing, 'S', NULL } ,
     { "resync", 'r', POPT_ARG_INT, &config.resyncthreshold, 0, NULL } ,
     { "timeout", 't', POPT_ARG_INT, &config.timeout, 0, NULL } ,
+    { "password", 0, POPT_ARG_STRING, &config.password, 0, NULL } ,
+    { "tolerance", 0, POPT_ARG_INT, &config.tolerance, 0, NULL } ,
     POPT_AUTOHELP
     { NULL, 0, 0, NULL, 0 }
   };
@@ -262,6 +266,8 @@ int parse_options(int argc, char **argv) {
   debug(2,"stuffing option is \"%s\".",stuffing);
   debug(2,"resync time is %d.",config.resyncthreshold);
   debug(2,"busy timeout time is %d.",config.timeout);
+  debug(2,"tolerance is %d frames.",config.tolerance);
+  debug(2,"password is \"%s\".",config.password);
   
   return optind+1;
 }
@@ -330,7 +336,7 @@ int main(int argc, char **argv) {
 
     daemon_set_verbosity(LOG_DEBUG);
 
-    memset(&config, 0, sizeof(config));
+    memset(&config, 0, sizeof(config)); // also clears all strings, BTW
 
     // set defaults
     config.statistics_requested - 0; // don't print stats in the log
@@ -340,6 +346,7 @@ int main(int argc, char **argv) {
     config.AirPlayLatency = 88200; // this seems to work pretty well for AirPlay -- Syncs sound and vision on AppleTV, but also used for iPhone/iPod/iPad sources
     config.resyncthreshold = 441*5; // this number of frames is 50 ms
     config.timeout = 120; // this number of seconds to wait for [more] audio before switching to idle.
+    config.tolerance = 88; // this number of frames of error before attempting to correct it.
     config.buffer_start_fill = 220;
     config.port = 5000;
     config.packet_stuffing = ST_basic; // simple interpolation or deletion
