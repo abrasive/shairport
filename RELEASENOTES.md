@@ -1,7 +1,7 @@
 Version 2.2
 -----
 * Enhancements:
- * New password Option: `--password=SECRET`
+ * New password option: `--password=SECRET`
  * New tolerance option: `--tolerance=FRAMES`. Use this option to specify the largest synchronisation error to allow before making corrections. The default is 88 frames, i.e. 2 milliseconds. The default tolerance is fine for streaming over wired ethernet; however, if some of the stream's path is via WiFi, or if the source is a third-party product, it may lead to much overcorrection -- i.e. the difference between "corrections" and "net corrections" in the --statistics option. Increasing the tolerence may reduce the amount of overcorrection.
 
 Version 2.1.15
