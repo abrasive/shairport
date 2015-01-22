@@ -212,7 +212,7 @@ it will print statistics like this occasionally on the console (or in the logfil
 
 `Sync error: -35.4 (frames); net correction: 24.2 (ppm); corrections: 24.2 (ppm); missing packets 0; late packets 5; too late packets 0; resend requests 6; min DAC queue size 4430.`
 
-"Sync error" is the average deviations from exact synchronisation. The example above indicates that the output is on average 35.4 frames ahead of exact sync. Sync is allowed to wander by the tolerance -- 88 frames (± 2 milliseconds) by default -- before a correction will be made.
+"Sync error" is the average deviation from exact synchronisation. The example above indicates that the output is on average 35.4 frames ahead of exact synchronisation. Sync is allowed to wander by the tolerance -- 88 frames (± 2 milliseconds) by default -- before a correction will be made.
 
 "Net correction" is actually the net sum of corrections -- the number of frame insertions less the number of frame deletions -- given as a moving average in parts per million. After an initial settling period, it represents the divergence between the source clock and the sound device's clock. The example above indicates that the output DAC's clock is running 24.2 ppm faster than the source's clock.
 
