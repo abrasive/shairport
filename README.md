@@ -46,7 +46,7 @@ Building And Installing
 ---------------------
 If you're interested in Shairport Sync for OpenWrt, there's an OpenWrt package at https://github.com/mikebrady/shairport-sync-for-openwrt. OpenWrt doesn't support the IQaudIO Pi-DAC.
 
-A number of installation packages for Arch Linux exist, for instance [EliaCereda/shairport-sync-PKGBUILD](https://github.com/EliaCereda/shairport-sync-PKGBUILD). An installation package is also available at [Arch Linux User Repository](https://aur.archlinux.org/packages/shairport-sync/).
+A number of Shairport Sync for Arch Linux installation packages exist, for instance [EliaCereda/shairport-sync-PKGBUILD](https://github.com/EliaCereda/shairport-sync-PKGBUILD). An installation package is also available at [Arch Linux User Repository](https://aur.archlinux.org/packages/shairport-sync/).
 
 Otherwise, follow these instructions.
 
@@ -199,8 +199,8 @@ If synchronisation is lost -- say due to a busy source or a congested network --
 
 Tolerance
 ---------
-playback is allowed to wander a small amount before  attempting to correct it. The default is 88 frames, i.e. 2 ms. The smaller the tolerance, the  more  likely it is that overcorrection  will  occur. Overcorrection is when more corrections (insertions and deletions) are made than are strictly necessary  to  keep the stream in sync. Use the --statistics option to monitor correction levels. Correctionsshould  not  greatly exceed net corrections.
-* youo can vary the tolderance with the `--tolerance` option.
+Playback synchronisation is allowed to wander a small amount before  attempting to correct it. The default is 88 frames, i.e. 2 ms. The smaller the tolerance, the  more  likely it is that overcorrection  will  occur. Overcorrection is when more corrections (insertions and deletions) are made than are strictly necessary  to  keep the stream in sync. Use the --statistics option to monitor correction levels. Corrections should  not  greatly exceed net corrections.
+* you can vary the tolerance with the `--tolerance` option.
 
 Some Statistics
 ---------------
