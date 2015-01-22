@@ -13,7 +13,7 @@ To maintain the exact latency required, if an output device is running slow rela
 
 There are two default latency settings, chosen automatically. One latency matches the latency used by recent versions of iTunes when playing audio and the other matches the latency used by older version of iTunes, by iOS devices and by iTunes and Quicktime Player when playing video.
 
-Shairport Sync is a pretty substantial rewrite of Shairport 1.0 by James Laird and others -- please see https://github.com/abrasive/shairport/blob/master/README.md#contributors-to-version-1x for a list of the contributors to Shairport 1.x and Shairport 0.x. From a "heritage" point of view, Shairport Sync is a fork of Shairport 1.0 and the active branch is called Shairport Sync 2.1.
+Shairport Sync is a pretty substantial rewrite of Shairport 1.0 by James Laird and others -- please see https://github.com/abrasive/shairport/blob/master/README.md#contributors-to-version-1x for a list of the contributors to Shairport 1.x and Shairport 0.x. From a "heritage" point of view, Shairport Sync is a fork of Shairport 1.0 and the active branch is Shairport Sync 2.2.
 
 Shairport Sync works only with Linux and ALSA. The sound card you use must be capable of working with 44,100 samples per second interleaved PCM stereo (you'll get a message in the logfile if there's a problem).
 
@@ -32,6 +32,8 @@ Shairport Sync works on standard Ubuntu laptops, on the Raspberry Pi with Raspia
 
 Shairport Sync runs well on the Raspberry Pi. It can drive the built-in sound card, and though you wouldn't mistake the output for HiFi, it's really not too shabby. USB-connected sound cards work well on the latest version of Raspian; however older versions of Raspian appear to suffer from a problem -- see http://www.raspberrypi.org/forums/viewtopic.php?t=23544, so it is wise to update. Shairport Sync works very well with the IQAudIO Pi-DAC -- see http://iqaudio.com/wp-content/uploads/2014/06/IQaudIO_Doc.pdf for details.
 
+At the time of writing, OpenWrt trunk does not support USB audio well on the Raspberry Pi.
+
 Shairport Sync runs on Ubuntu and Debian inside VMWare Fusion 7 on a Mac, but synchronisation does not work -- possibly because the soundcard is being emulated.
 
 Shairport Sync works only with the ALSA back end. You can try compiling the other back ends in as you wish, but it definitely will not work properly with them. Maybe someday...
@@ -43,6 +45,8 @@ For information about changes and updates, please refer to the RELEASENOTES.md f
 Building And Installing
 ---------------------
 If you're interested in Shairport Sync for OpenWrt, there's an OpenWrt package at https://github.com/mikebrady/shairport-sync-for-openwrt. OpenWrt doesn't support the IQaudIO Pi-DAC.
+
+A number of installation packages for Arch Linux exist, for instance [EliaCereda/shairport-sync-PKGBUILD](https://github.com/EliaCereda/shairport-sync-PKGBUILD). An installation package is also available at [Arch Linux User Repository](https://aur.archlinux.org/packages/shairport-sync/).
 
 Otherwise, follow these instructions.
 
@@ -110,9 +114,11 @@ As well as the man page, don't forget you can launch Shairport Sync with the `-h
 
 These are the important options:
 
-The `-a` option allows you to specify the name Shairport Sync will use on the network. If you don't specify a name, the name `Shairport Sync on ...your computer's hostname...` will be chosen.
+The `-a` option allows you to specify the service name Shairport Sync will use on the network. If you don't specify a service name, the name `Shairport Sync on ...your computer's hostname...` will be used.
 
 The `-S` option allows you to specify the kind of "stuffing" or interpolation to be used -- `basic` (default) for simple insertion/deletion  or `soxr` for smoother resampling-based interpolation.
+
+The `--password` option allows you to password-protect access to the service provided by Shairport Sync.
 
 These may be also of interest:
 
@@ -191,6 +197,11 @@ Shairport Sync actively maintains synchronisation with the source.
 If synchronisation is lost -- say due to a busy source or a congested network -- Shairport Sync will mute its output and resynchronise. The loss-of-sync threshold is a very conservative 50 ms -- i.e. the actual time and the expected time must differ by more than 50 ms to trigger a resynchronisation. Smaller disparities are corrected by insertions or deletions, as described above.
 * You can vary the resync threshold, or turn resync off completely, with the `-r` opton.
 
+Tolerance
+---------
+playback is allowed to wander a small amount before  attempting to correct it. The default is 88 frames, i.e. 2 ms. The smaller the tolerance, the  more  likely it is that overcorrection  will  occur. Overcorrection is when more corrections (insertions and deletions) are made than are strictly necessary  to  keep the stream in sync. Use the --statistics option to monitor correction levels. Correctionsshould  not  greatly exceed net corrections.
+* youo can vary the tolderance with the `--tolerance` option.
+
 Some Statistics
 ---------------
 If you add the option `--statistics`, e.g. as follows for the Raspberry Pi with "3D Sound" card:
@@ -201,7 +212,7 @@ it will print statistics like this occasionally on the console (or in the logfil
 
 `Sync error: -35.4 (frames); net correction: 24.2 (ppm); corrections: 24.2 (ppm); missing packets 0; late packets 5; too late packets 0; resend requests 6; min DAC queue size 4430.`
 
-"Sync error" is the average deviations from exact synchronisation. The example above indicates that the output is on average 35.4 frames ahead of exact sync. Sync is allowed to wander by ± 88 frames (± 2 milliseconds) before a correction will be made.
+"Sync error" is the average deviations from exact synchronisation. The example above indicates that the output is on average 35.4 frames ahead of exact sync. Sync is allowed to wander by the tolerance -- 88 frames (± 2 milliseconds) by default -- before a correction will be made.
 
 "Net correction" is actually the net sum of corrections -- the number of frame insertions less the number of frame deletions -- given as a moving average in parts per million. After an initial settling period, it represents the divergence between the source clock and the sound device's clock. The example above indicates that the output DAC's clock is running 24.2 ppm faster than the source's clock.
 
