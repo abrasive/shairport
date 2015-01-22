@@ -200,7 +200,7 @@ If synchronisation is lost -- say due to a busy source or a congested network --
 Tolerance
 ---------
 Playback synchronisation is allowed to wander a small amount before  attempting to correct it. The default is 88 frames, i.e. 2 ms. The smaller the tolerance, the  more  likely it is that overcorrection  will  occur. Overcorrection is when more corrections (insertions and deletions) are made than are strictly necessary  to  keep the stream in sync. Use the --statistics option to monitor correction levels. Corrections should  not  greatly exceed net corrections.
-* you can vary the tolerance with the `--tolerance` option.
+* You can vary the tolerance with the `--tolerance` option.
 
 Some Statistics
 ---------------
