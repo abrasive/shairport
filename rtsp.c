@@ -61,6 +61,13 @@
 #define INETx_ADDRSTRLEN INET_ADDRSTRLEN
 #endif
 
+enum rtsp_read_request_response {
+  rtsp_read_request_response_ok,
+  rtsp_read_request_response_shutdown_requested,
+  rtsp_read_request_response_bad_packet,
+  rtsp_read_request_response_error
+};
+
 // Mike Brady's part...
 static pthread_mutex_t play_lock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -279,7 +286,7 @@ fail:
     return 0;
 }
 
-static rtsp_message * rtsp_read_request(int fd) {
+static enum rtsp_read_request_response rtsp_read_request(int fd, rtsp_message** the_packet) {
     ssize_t buflen = 512;
     char *buf = malloc(buflen+1);
 
@@ -346,14 +353,16 @@ static rtsp_message * rtsp_read_request(int fd) {
 
     msg->contentlength = inbuf;
     msg->content = buf;
-    return msg;
+    *the_packet = msg;
+    return rtsp_read_request_response_ok;
 
 shutdown:
     free(buf);
     if (msg) {
         msg_free(msg);
     }
-    return NULL;
+    *the_packet = NULL;
+    return rtsp_read_request_response_error;
 }
 
 static void msg_write_response(int fd, rtsp_message *resp) {
@@ -851,7 +860,12 @@ static void *rtsp_conversation_thread_func(void *pconn) {
 
     rtsp_message *req, *resp;
     char *hdr, *auth_nonce = NULL;
-    while ((req = rtsp_read_request(conn->fd))) {
+    
+    enum rtsp_read_request_response reply;
+    
+    do {
+      reply=rtsp_read_request(conn->fd,&req);
+      if (reply==rtsp_read_request_response_ok) {
         resp = msg_init();
         resp->respcode = 400;
 
@@ -880,7 +894,11 @@ respond:
         msg_write_response(conn->fd, resp);
         msg_free(req);
         msg_free(resp);
-    }
+      } else {
+        if (reply!=rtsp_read_request_response_shutdown_requested)
+          debug(1,"rtsp_read_request error %d, packet ignored.",(int)reply);
+      }
+    } while (reply!=rtsp_read_request_response_shutdown_requested);
 
     debug(1, "closing RTSP connection.");
     if (conn->fd > 0)
