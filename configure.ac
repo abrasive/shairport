@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.50])
-AC_INIT([shairport-sync], [2.2], [mikebrady@eircom.net])
+AC_INIT([shairport-sync], [2.2.1], [mikebrady@eircom.net])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([shairport.c])
 AC_CONFIG_HEADERS([config.h])
@@ -129,7 +129,8 @@ AC_ARG_WITH(pulseaudio, [  --with-pulseaudio = choose native PulseAudio API supp
   AC_MSG_RESULT(>>Including a PulseAudio back end --- N.B. this is probably broken!)
   HAS_PULSE=1
   AC_DEFINE([CONFIG_PULSE], 1, [Needed by the compiler.])
-  AC_CHECK_LIB([pulse-simple], [pa_simple_new], , AC_MSG_ERROR(PulseAudio support requires the pulse-simple library!))], )
+  AC_CHECK_LIB([pulse-simple], [pa_simple_new], , AC_MSG_ERROR(PulseAudio support requires the pulse-simple library!))
+  AC_CHECK_LIB([pulse], [pa_stream_peek], , AC_MSG_ERROR(PulseAudio support requires the libpulse-dev library!))], )
 AM_CONDITIONAL([USE_PULSE], [test "x$HAS_PULSE" = "x1"])
 
 # Look for dns_sd flag
