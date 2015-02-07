@@ -287,6 +287,7 @@ fail:
 }
 
 static enum rtsp_read_request_response rtsp_read_request(int fd, rtsp_message** the_packet) {
+    enum rtsp_read_request_response reply=rtsp_read_request_response_ok;
     ssize_t buflen = 512;
     char *buf = malloc(buflen+1);
 
@@ -295,21 +296,24 @@ static enum rtsp_read_request_response rtsp_read_request(int fd, rtsp_message** 
     ssize_t nread;
     ssize_t inbuf = 0;
     int msg_size = -1;
-
+    
     while (msg_size < 0) {
         if (please_shutdown) {
             debug(1, "RTSP shutdown requested.");
+            reply = rtsp_read_request_response_shutdown_requested;
             goto shutdown;
         }
         nread = read(fd, buf+inbuf, buflen - inbuf);
         if (!nread) {
             debug(1, "RTSP connection closed.");
+            reply = rtsp_read_request_response_shutdown_requested;
             goto shutdown;
         }
         if (nread < 0) {
             if (errno==EINTR)
                 continue;
             perror("read failure");
+            reply = rtsp_read_request_response_error;
             goto shutdown;
         }
         inbuf += nread;
@@ -320,6 +324,7 @@ static enum rtsp_read_request_response rtsp_read_request(int fd, rtsp_message** 
 
             if (!msg) {
                 warn("no RTSP header received");
+                reply = rtsp_read_request_response_bad_packet;
                 goto shutdown;
             }
 
@@ -333,6 +338,7 @@ static enum rtsp_read_request_response rtsp_read_request(int fd, rtsp_message** 
         buf = realloc(buf, msg_size);
         if (!buf) {
             warn("too much content");
+            reply = rtsp_read_request_response_error;
             goto shutdown;
         }
         buflen = msg_size;
@@ -340,12 +346,15 @@ static enum rtsp_read_request_response rtsp_read_request(int fd, rtsp_message** 
 
     while (inbuf < msg_size) {
         nread = read(fd, buf+inbuf, msg_size-inbuf);
-        if (!nread)
+        if (!nread) {
+            reply = rtsp_read_request_response_error;
             goto shutdown;
+        }
         if (nread==EINTR)
             continue;
         if (nread < 0) {
             perror("read failure");
+            reply = rtsp_read_request_response_error;
             goto shutdown;
         }
         inbuf += nread;
@@ -354,7 +363,7 @@ static enum rtsp_read_request_response rtsp_read_request(int fd, rtsp_message** 
     msg->contentlength = inbuf;
     msg->content = buf;
     *the_packet = msg;
-    return rtsp_read_request_response_ok;
+    return reply;
 
 shutdown:
     free(buf);
@@ -362,7 +371,7 @@ shutdown:
         msg_free(msg);
     }
     *the_packet = NULL;
-    return rtsp_read_request_response_error;
+    return reply;
 }
 
 static void msg_write_response(int fd, rtsp_message *resp) {
