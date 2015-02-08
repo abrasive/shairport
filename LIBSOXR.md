@@ -1,5 +1,5 @@
-At the time of writing, the Raspbian image is `2015-01-31-raspbian` and it does not include `libsoxr`, nor is `libsoxr` available as a package via `apt-get`.
-It is, however, easy to compile, and works well with Shairport Sync on the Raspberry Pi. Here are very brief instructions to download, compile and install it so that it can be used with Shairport Sync.
+The Raspbian image at the time of writing is `2015-01-31-raspbian`. It does not include `libsoxr`, nor is `libsoxr` available as a package via `apt-get`.
+Libsoxr is, however, easy to compile, and works well with Shairport Sync on the Raspberry Pi. Here are very brief instructions to download, compile and install it so that it can be used with Shairport Sync.
 
 * Install `cmake`. This is used in the building of libsoxr:
 ```
@@ -26,4 +26,4 @@ LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
 export LD_LIBRARY_PATH
 sudo ldconfig -v
 ```
-That's it. Now you can select the `--with-libsoxr` option when you're building Shairport Sync
+That's it. Now you can select the `--with-libsoxr` option when you're building Shairport Sync.
