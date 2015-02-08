@@ -15,7 +15,7 @@ cd libsoxr
 ./go
 ```
 Be patient! This takes a long time on a Raspberry Pi -- it looks like it gets stuck at 47%, but it will finish if you let it.
-* Next `libsoxr` must be installed:
+* Having compiled `libsoxr`, it must now must be installed:
 ```
 cd Release
 sudo make install
