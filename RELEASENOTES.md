@@ -1,8 +1,9 @@
 Version 2.2.1
 -----
 * Bugfixes:
- * If certain kinds of malformed RTSP packets were received, Shairport Sync would abort rather than just ignore them. Now, it  generally ignores faulty RTSP packets.
+ * If certain kinds of malformed RTSP packets were received, Shairport Sync would stop streaming. Now, it generally ignores faulty RTSP packets.
  * The `with-pulseaudio` compile option wasn't including a required library. This is fixed. Note that the PulseAudio back end doesn't work properly and is just included in the application because it was there in the original shairport. Play with it for experimentation only.
+ * Fix typo in init.d script: "Headphones" -> "Headphone".
 * Extra documentation
  * A brief note on how to compile `libsoxr` from source is included for the Raspberry Pi.
 
