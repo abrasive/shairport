@@ -503,6 +503,9 @@ int main(int argc, char **argv) {
     }
 
     signal_setup();
+    
+    // make sure the program can create files that group and world can read
+    umask(S_IWGRP | S_IWOTH);
 
     config.output = audio_get_output(config.output_name);
     if (!config.output) {
