@@ -495,6 +495,9 @@ static void handle_setup(rtsp_conn_info *conn,
       } else if (strstr(ua,"AirPlay")==ua) {
         debug(2,"User-Agent is AirPlay; selecting the AirPlay latency of %d frames.",config.AirPlayLatency);
         config.latency=config.AirPlayLatency;
+      } else if (strstr(ua,"forked-daapd")==ua) {
+        debug(2,"User-Agent is forked-daapd; selecting the forked-daapd latency of %d frames.",config.ForkedDaapdLatency);
+        config.latency=config.ForkedDaapdLatency;
       } else {
         debug(2,"Unrecognised User-Agent. Using latency of %d frames.",config.latency);
       }

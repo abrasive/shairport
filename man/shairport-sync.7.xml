@@ -39,6 +39,7 @@
       <opt>[-A </opt><arg>latency</arg><opt>]</opt>
       <opt>[-B </opt><arg>command</arg><opt>]</opt>
       <opt>[-E </opt><arg>command</arg><opt>]</opt>
+      <opt>[--forkedDaapdLatency=</opt><arg>latency</arg><opt>]</opt>
       <opt>[-i </opt><arg>latency</arg><opt>]</opt>
       <opt>[-L </opt><arg>latency</arg><opt>]</opt>
       <opt>[-m </opt><arg>backend</arg><opt>]</opt>
@@ -148,6 +149,15 @@
 		<p>If you want shairport-sync to wait until the command has
 		completed before continuing, select the <opt>-w</opt> option as well.
 		</p></optdesc>
+	  </option>
+
+	  <option>
+		<p><opt>--forkedDaapdLatency=</opt><arg>latency</arg></p>
+		<optdesc><p>
+		Use this <arg>latency</arg>, in frames, for audio streamed from a forked-daapd based
+    source. The default is 99,400 frames, where there are 44,100
+    frames to the second.
+    </p></optdesc>
 	  </option>
 
 	  <option>

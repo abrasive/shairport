@@ -54,6 +54,7 @@ typedef struct {
     uint32_t userSuppliedLatency; // overrides all other latencies -- use with caution
     uint32_t iTunesLatency; // supplied with --iTunesLatency option
     uint32_t AirPlayLatency; //supplied with --AirPlayLatency option
+    uint32_t ForkedDaapdLatency; //supplied with --ForkedDaapdLatency option    
     int daemonise;
     int statistics_requested;
     char *cmd_start, *cmd_stop;

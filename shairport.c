@@ -153,10 +153,11 @@ void usage(char *progname) {
     printf("    -a, --name=NAME         set advertised name\n");
     printf("    -A, --AirPlayLatency=FRAMES set the latency for audio sent from an AirPlay device.\n");
     printf("                            The default value is %u frames.\n", config.AirPlayLatency);
-    printf("    -i, --iTunesLatency=FRAMES set the latency for audio sent from iTunes 10 or later. \n");
+    printf("    -i, --iTunesLatency=FRAMES set the latency for audio sent from iTunes 10 or later.\n");
     printf("                            The default value is %u frames.\n", config.iTunesLatency);
     printf("    -L, --latency=FRAMES    set the latency for audio sent from an unknown device\n");
     printf("                            or from an old version of iTunes. Default is %d frames.\n",config.latency);
+    printf("    --forkedDaapdLatency=FRAMES set the latency for audio sent from forked-daapd.\n");
     printf("    -S, --stuffing=MODE set how to adjust current latency to match desired latency \n");
     printf("                            \"basic\" (default) inserts or deletes audio frames from packet frames with low processor overhead.\n");
     printf("                            \"soxr\" uses libsoxr to minimally resample packet frames -- moderate processor overhead.\n");
@@ -208,6 +209,7 @@ int parse_options(int argc, char **argv) {
     { "latency", 'L', POPT_ARG_INT, &config.userSuppliedLatency, 0, NULL } ,
     { "AirPlayLatency", 'A', POPT_ARG_INT, &config.AirPlayLatency, 0, NULL } ,
     { "iTunesLatency", 'i', POPT_ARG_INT, &config.iTunesLatency, 0, NULL } ,
+    { "forkedDaapdLatency", 0, POPT_ARG_INT, &config.ForkedDaapdLatency, 0, NULL } ,
     { "stuffing", 'S', POPT_ARG_STRING, &stuffing, 'S', NULL } ,
     { "resync", 'r', POPT_ARG_INT, &config.resyncthreshold, 0, NULL } ,
     { "timeout", 't', POPT_ARG_INT, &config.timeout, 0, NULL } ,
@@ -263,6 +265,7 @@ int parse_options(int argc, char **argv) {
   debug(2,"latency is %d.",config.userSuppliedLatency);
   debug(2,"AirPlayLatency is %d.",config.AirPlayLatency);
   debug(2,"iTunesLatency is %d.",config.iTunesLatency);
+  debug(2,"forkedDaapdLatency is %d.",config.ForkedDaapdLatency);
   debug(2,"stuffing option is \"%s\".",stuffing);
   debug(2,"resync time is %d.",config.resyncthreshold);
   debug(2,"busy timeout time is %d.",config.timeout);
@@ -344,6 +347,7 @@ int main(int argc, char **argv) {
     config.userSuppliedLatency = 0; // zero means none supplied
     config.iTunesLatency = 99400; // this seems to work pretty well for iTunes from Version 10 (?) upwards-- two left-ear headphones, one from the iMac jack, one from an NSLU2 running a cheap "3D Sound" USB Soundcard
     config.AirPlayLatency = 88200; // this seems to work pretty well for AirPlay -- Syncs sound and vision on AppleTV, but also used for iPhone/iPod/iPad sources
+    config.ForkedDaapdLatency = 99400; // Seems to be right
     config.resyncthreshold = 441*5; // this number of frames is 50 ms
     config.timeout = 120; // this number of seconds to wait for [more] audio before switching to idle.
     config.tolerance = 88; // this number of frames of error before attempting to correct it.
