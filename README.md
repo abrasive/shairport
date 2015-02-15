@@ -187,9 +187,10 @@ Latency
 Latency is the exact time from a sound signal's original timestamp until that signal actually "appears" on the output of the DAC, irrespective of any internal delays, processing times, etc. in the computer. From listening tests, it seems that there are two latencies in current use:
 * If the source is iTunes 10 or later, a latency of 99,400 frames seems to bring Shairport Sync into exact synchronisation both with the speakers on the iTunes computer itself and with AirPort Express receivers.
 * If the source is an AirPlay device, the latency seems to be exactly 88,200 frames. AirPlay devices include AppleTV, iPod, iPad and iPhone and Quicktime Player on Mac. 
+* If the source is a `forked-daapd`-powered device, the latency seems to be exactly 99,400 frames.
 * If the source cannot be identified as AirPlay or as iTunes 10 or later, then the default latency of 88,200 frames seems to work in general. Note that some third party programs masquerade as older versions of iTunes.
 
-Shairport Sync uses the latencies described above as defaults. You shouldn't need to change them, but occasionally problems arise when you are trying to synchronise with speaker systems -- typically surround-sound home theatre systems -- that have their own inherent delays. You can set the default latency with the `-L` or `--latency` option (e.g. `-L 99400` or `--latency=99400`). You can set your own iTunes 10 (or later) latency with the `-i` or `--iTunesLatency` option. Similarly you can set an AirPlay latency with the `-A` or `--AirPlayLatency` option.
+Shairport Sync uses the latencies described above as defaults. You shouldn't need to change them, but occasionally problems arise when you are trying to synchronise with speaker systems -- typically surround-sound home theatre systems -- that have their own inherent delays. You can set the default latency with the `-L` or `--latency` option (e.g. `-L 99400` or `--latency=99400`). You can set your own iTunes 10 (or later) latency with the `-i` or `--iTunesLatency` option. Similarly you can set an AirPlay latency with the `-A` or `--AirPlayLatency` option and the forked-daapd latency with the `--forkedDaapdLatency` option.
 
 Resynchronisation
 -------------
