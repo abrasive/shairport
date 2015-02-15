@@ -1,3 +1,8 @@
+Version 2.2.2
+-----
+* Enhancement
+ * An extra latency setting for forked-daapd sources -- 99,400 frames, settable via a new option `--forkedDaapdLatency`.
+
 Version 2.2.1
 -----
 * Bugfixes:
