@@ -569,13 +569,13 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn,
 
         if (!strncmp(cp, "volume: ", 8)) {
             float volume = atof(cp + 8);
-            debug(1, "volume: %f\n", volume);
+            debug(2, "volume: %f\n", volume);
             player_volume(volume);
         } else if(!strncmp(cp, "progress: ", 10)) {
             char *progress = cp + 10;
-            debug(1, "progress: %s\n", progress);
+            debug(1, "progress: \"%s\"\n", progress);
         } else {
-            debug(1, "unrecognised parameter: >>%s<< (%d)\n", cp, strlen(cp));
+            debug(1, "unrecognised parameter: \"%s\" (%d)\n", cp, strlen(cp));
         }
         cp = next;
     }
@@ -606,19 +606,19 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn,
         debug(2, "Tag: %s   Content: %s\n", tag, val);
 
         if (!strncmp(tag, "asal ", 4)) {
-            debug(1, "META Album: %s\n", val);
+            debug(2, "META Album: \"%s\".\n", val);
             metadata_set(&player_meta.album, val);
         } else if (!strncmp(tag, "asar ", 4)) {
-            debug(1, "META Artist: %s\n", val);
+            debug(2, "META Artist: \"%s\".\n", val);
             metadata_set(&player_meta.artist, val);
         } else if (!strncmp(tag, "ascm ", 4)) {
-            debug(1, "META Comment: %s\n", val);
+            debug(2, "META Comment: \"%s\".\n", val);
             metadata_set(&player_meta.comment, val);
         } else if (!strncmp(tag, "asgn ", 4)) {
-            debug(1, "META Genre: %s\n", val);
+            debug(2, "META Genre: \"%s\".\n", val);
             metadata_set(&player_meta.genre, val);
         } else if (!strncmp(tag, "minm ", 4)) {
-            debug(1, "META Title: %s\n", val);
+            debug(2, "META Title: \"%s\".\n", val);
             metadata_set(&player_meta.title, val);
         }
 
@@ -640,36 +640,34 @@ static void handle_set_parameter_coverart(rtsp_conn_info *conn,
     } else if (!strncmp(ct, "image/png", 9)) {
         metadata_cover_image(cp, cl, "png");
     } else {
+        debug(1, "unrecognised image type received: \"%s\".\n",ct);
         metadata_cover_image(NULL, 0, NULL);
     }
 }
 
 static void handle_set_parameter(rtsp_conn_info *conn,
                                  rtsp_message *req, rtsp_message *resp) {
-    if (!req->contentlength)
-        debug(1, "received empty SET_PARAMETER request\n");
+     if (!req->contentlength)
+         debug(1, "received empty SET_PARAMETER request\n");
 
     char *ct = msg_get_header(req, "Content-Type");
 
     if (ct) {
-        debug(2, "SET_PARAMETER Content-Type: %s\n", ct);
+        debug(2, "SET_PARAMETER Content-Type:\"%s\".\n", ct);
 
         if (!strncmp(ct, "application/x-dmap-tagged", 25)) {
-            debug(1, "received metadata tags in SET_PARAMETER request\n");
+            debug(2, "received metadata tags in SET_PARAMETER request\n");
 
             handle_set_parameter_metadata(conn, req, resp);
-        } else if (!strncmp(ct, "image/jpeg", 10) ||
-                   !strncmp(ct, "image/png", 9)   ||
-                   !strncmp(ct, "image/none", 10)) {
-            debug(1, "received image in SET_PARAMETER request\n");
-
+        } else if (!strncmp(ct, "image", 5)) {
+            debug(2, "received image in SET_PARAMETER request\n");
             handle_set_parameter_coverart(conn, req, resp);
          } else if (!strncmp(ct, "text/parameters", 15)) {
-            debug(1, "received parameters in SET_PARAMETER request\n");
+            debug(2, "received parameters in SET_PARAMETER request\n");
 
             handle_set_parameter_parameter(conn, req, resp);
         } else {
-            debug(1, "received unknown Content-Type %s in SET_PARAMETER request\n", ct);
+            debug(1, "received unknown Content-Type \"%s\" in SET_PARAMETER request\n", ct);
         }
     } else {
         debug(1, "missing Content-Type header in SET_PARAMETER request\n");

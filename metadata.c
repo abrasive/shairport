@@ -30,10 +30,19 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <openssl/md5.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+
+#include "config.h"
+
+#ifdef HAVE_LIBSSL
+#include <openssl/md5.h>
+#endif
+
+#ifdef HAVE_LIBPOLARSSL
+#include <polarssl/md5.h>
+#endif
 
 #include "common.h"
 #include "metadata.h"
@@ -78,11 +87,12 @@ static void metadata_close(void) {
 }
 
 static void print_one(const char *name, const char *value) {
-    write(fd, name, strlen(name));
-    write(fd, "=", 1);
+  int ignore;
+    ignore = write(fd, name, strlen(name));
+    ignore = write(fd, "=", 1);
     if (value)
-        write(fd, value, strlen(value));
-    write(fd, "\n", 1);
+        ignore = write(fd, value, strlen(value));
+    ignore = write(fd, "\n", 1);
 }
 
 #define write_one(name) \
@@ -119,17 +129,29 @@ void metadata_cover_image(const char *buf, int len, const char *ext) {
         return;
 
     if (buf) {
-        debug(1, "Cover Art set\n");
+        debug(2, "Cover Art set\n");
     } else {
-        debug(1, "Cover Art cleared\n");
+        debug(2, "Cover Art cleared\n");
         return;
     }
 
     uint8_t img_md5[16];
+    
+    
+#ifdef HAVE_LIBSSL
     MD5_CTX ctx;
     MD5_Init(&ctx);
     MD5_Update(&ctx, buf, len);
     MD5_Final(img_md5, &ctx);
+#endif
+
+    
+#ifdef HAVE_LIBPOLARSSL
+    md5_context tctx;
+    md5_starts(&tctx);
+    md5_update(&tctx, buf, len);
+    md5_finish(&tctx, img_md5);
+#endif
 
     char img_md5_str[33];
     int i;
@@ -144,7 +166,7 @@ void metadata_cover_image(const char *buf, int len, const char *ext) {
     char *path = malloc(pl+1);
     snprintf(path, pl+1, "%s/%s%s.%s", dir, prefix, img_md5_str, ext);
 
-    int cover_fd = open(path, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
+    int cover_fd = open(path, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP| S_IROTH | S_IWOTH);
 
     if (cover_fd < 0) {
         warn("Could not open file %s for writing cover art", path);
@@ -158,7 +180,7 @@ void metadata_cover_image(const char *buf, int len, const char *ext) {
     }
     close(cover_fd);
 
-    debug(1, "Cover Art file is %s\n", path);
+    debug(2, "Cover Art file is \"%s\".\n", path);
     metadata_set(&player_meta.artwork, path+strlen(dir)+1);
 
     free(path);
