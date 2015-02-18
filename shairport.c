@@ -51,6 +51,7 @@
 #include "rtsp.h"
 #include "rtp.h"
 #include "mdns.h"
+#include "metadata.h"
 
 #include <libdaemon/dfork.h>
 #include <libdaemon/dsignal.h>
@@ -215,6 +216,7 @@ int parse_options(int argc, char **argv) {
     { "timeout", 't', POPT_ARG_INT, &config.timeout, 0, NULL } ,
     { "password", 0, POPT_ARG_STRING, &config.password, 0, NULL } ,
     { "tolerance", 0, POPT_ARG_INT, &config.tolerance, 0, NULL } ,
+    { "meta-dir", 'M', POPT_ARG_STRING, &config.meta_dir, 0, NULL } ,
     POPT_AUTOHELP
     { NULL, 0, 0, NULL, 0 }
   };
@@ -271,7 +273,8 @@ int parse_options(int argc, char **argv) {
   debug(2,"busy timeout time is %d.",config.timeout);
   debug(2,"tolerance is %d frames.",config.tolerance);
   debug(2,"password is \"%s\".",config.password);
-  
+  debug(2,"metadata directory is \"%s\".",config.meta_dir);
+
   return optind+1;
 }
 
