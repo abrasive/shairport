@@ -1008,6 +1008,8 @@ static void *player_thread_func(void *arg) {
       }
     }
   }
+  free(outbuf);
+  free(silence);
   return 0;
 }
 
