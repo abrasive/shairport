@@ -1,3 +1,10 @@
+Version 2.2.3 (Work in progress -- not a release yet.)
+-----
+* Bugfix
+ * Two memory leaks fixed.
+* Enhancement
+ * Adding metadata handling. Brought across the metadata handling from shaiport/abrasive. Though it shows the way -- thanks! -- IMHO it has a number of design and implementation problems and is very likely to change radically. Please don't rely on it having the same behaviour as it does now.
+
 Version 2.2.2
 -----
 * Enhancement
