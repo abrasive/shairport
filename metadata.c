@@ -65,7 +65,7 @@ void metadata_open(void) {
     if (!config.meta_dir)
         return;
 
-    const char fn[] = "now_playing";
+    const char fn[] = "shairport_sync_metadata_pipe";
     size_t pl = strlen(config.meta_dir) + 1 + strlen(fn);
 
     char* path = malloc(pl+1);
@@ -184,4 +184,56 @@ void metadata_cover_image(const char *buf, int len, const char *ext) {
     metadata_set(&player_meta.artwork, path+strlen(dir)+1);
 
     free(path);
+}
+
+
+// Metadata is not used by shairport-sync.
+// Instead we send all metadata to a fifo pipe, so that other apps can listen to the pipe and use the metadata.
+
+// We use two 4-character codes to identify each piece of data and we send the data itself in base64 form.
+
+// The first 4-character code, called the "type", is either:
+//    'core' for all the regular metadadata coming from iTunes, etc., or 
+//    'ssnc' (for 'shairport-sync') for all metadata coming from Shairport Sync itself, such as start/end delimiters, etc.
+
+// For 'core' metadata, the second 4-character code is the 4-character metadata code coming from iTunes etc.
+// For 'ssnc' metadata, the second 4-character code is used to distinguish the messages.
+
+// Cover art is not tagged in the same way as other metadata, it seems, so is sent as an 'ssnc' type metadata message with the code 'PICT'
+// The three kinds of 'ssnc' metadata at present are 'strt', 'stop' and 'PICT' for metadata package start, metadata package stop and cover art, respectively.
+
+// Metadata is sent in two disctinct parts:
+//    (1) a line with type, code and length information surrounded by XML-type tags and
+//    (2) the data itself, if any, in base64 form, surrounded by XML-style data tags.
+
+void metadata_process(uint32_t type,uint32_t code,char *data,uint32_t length) {
+  debug(2,"Process metadata with type %x, code %x and length %u.",type,code,length);
+  int ret;
+  // readers may go away and come back
+  if (fd < 0)
+    metadata_open();
+  if (fd < 0)
+    return;
+  char thestring[1024];
+  snprintf(thestring,1024,"<type>%x</type><code>%x</code><length>%u</length>\n",type,code,length);
+  ret = write(fd, thestring, strlen(thestring));
+  if (ret < 1)    // no reader
+    metadata_close();
+  if (length>0) {
+    snprintf(thestring,1024,"<data encoding=\"base64\">\n");
+    ret = write(fd, thestring, strlen(thestring));
+    if (ret < 1)    // no reader
+      metadata_close();
+      
+    char *b64 = base64_enc(data,length);
+    ret = write(fd,b64,strlen(b64));
+    free(b64);
+    
+    if (ret < 1)    // no reader
+      metadata_close();
+    snprintf(thestring,1024,"\n</data>\n");
+    ret = write(fd, thestring, strlen(thestring));
+    if (ret < 1)    // no reader
+      metadata_close();
+  }
 }

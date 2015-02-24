@@ -581,6 +581,22 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn,
     }
 }
 
+// Metadata is not used by shairport-sync.
+// Instead we send all metadata to a fifo pipe, so that other apps can listen to the pipe and use the metadata.
+
+// We use two 4-character codes to identify each piece of data and we send the data itself in base64 form.
+
+// The first 4-character code, called the "type", is either:
+//    'core' for all the regular metadadata coming from iTunes, etc., or 
+//    'ssnc' (for 'shairport-sync') for all metadata coming from Shairport Sync itself, such as start/end delimiters, etc.
+
+// For 'core' metadata, the second 4-character code is the 4-character metadata code coming from iTunes etc.
+// For 'ssnc' metadata, the second 4-character code is used to distinguish the messages.
+
+// Cover art is not tagged in the same way as other metadata, it seems, so is sent as an 'ssnc' type metadata message with the code 'PICT'
+// The three kinds of 'ssnc' metadata at present are 'strt', 'stop' and 'PICT' for metadata package start, metadata package stop and cover art, respectively.
+
+
 static void handle_set_parameter_metadata(rtsp_conn_info *conn,
                                           rtsp_message   *req,
                                           rtsp_message   *resp) {
@@ -588,61 +604,33 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn,
     int cl   = req->contentlength;
 
     unsigned int off = 8;
+    
+    // inform the listener that a set of metadata is starting
+    // this doesn't include the cover art though...
+    
+    metadata_process('ssnc','strt',NULL,0);
 
     while (off < cl) {
-        char tag[5];
-        strncpy(tag, cp+off, 4);
-        tag[4] = '\0';
-        off += 4;
-
-        uint32_t vl = ntohl(*(uint32_t *)(cp+off));
+        // pick up the metadata tag as an unsigned longint
+        uint32_t itag = ntohl(*(uint32_t *)(cp+off));
         off += sizeof(uint32_t);
 
-        char *val = malloc(vl+1);
-        strncpy(val, cp+off, vl);
-        val[vl] = '\0';
+        // pick up the length of the data
+        uint32_t vl = ntohl(*(uint32_t *)(cp+off));
+        off += sizeof(uint32_t);
+        
+        // pass the data over
+        if (vl==0)
+          metadata_process('core',itag,NULL,0);        
+        else
+          metadata_process('core',itag,(char *)(cp+off),vl);
+        
+        // move on to the next item
         off += vl;
-
-        debug(2, "Tag: %s   Content: %s\n", tag, val);
-
-        if (!strncmp(tag, "asal ", 4)) {
-            debug(2, "META Album: \"%s\".\n", val);
-            metadata_set(&player_meta.album, val);
-        } else if (!strncmp(tag, "asar ", 4)) {
-            debug(2, "META Artist: \"%s\".\n", val);
-            metadata_set(&player_meta.artist, val);
-        } else if (!strncmp(tag, "ascm ", 4)) {
-            debug(2, "META Comment: \"%s\".\n", val);
-            metadata_set(&player_meta.comment, val);
-        } else if (!strncmp(tag, "asgn ", 4)) {
-            debug(2, "META Genre: \"%s\".\n", val);
-            metadata_set(&player_meta.genre, val);
-        } else if (!strncmp(tag, "minm ", 4)) {
-            debug(2, "META Title: \"%s\".\n", val);
-            metadata_set(&player_meta.title, val);
-        }
-
-        free(val);
     }
-
-    metadata_write();
-}
-
-static void handle_set_parameter_coverart(rtsp_conn_info *conn,
-                                          rtsp_message *req, rtsp_message *resp) {
-    char *cp = req->content;
-    int cl = req->contentlength;
-
-    char *ct = msg_get_header(req, "Content-Type");
-
-    if (!strncmp(ct, "image/jpeg", 10)) {
-        metadata_cover_image(cp, cl, "jpg");
-    } else if (!strncmp(ct, "image/png", 9)) {
-        metadata_cover_image(cp, cl, "png");
-    } else {
-        debug(1, "unrecognised image type received: \"%s\".\n",ct);
-        metadata_cover_image(NULL, 0, NULL);
-    }
+    
+  // inform the listener that a set of metadata is ending  
+  metadata_process('ssnc','stop',NULL,0);
 }
 
 static void handle_set_parameter(rtsp_conn_info *conn,
@@ -657,14 +645,14 @@ static void handle_set_parameter(rtsp_conn_info *conn,
 
         if (!strncmp(ct, "application/x-dmap-tagged", 25)) {
             debug(2, "received metadata tags in SET_PARAMETER request\n");
-
             handle_set_parameter_metadata(conn, req, resp);
         } else if (!strncmp(ct, "image", 5)) {
             debug(2, "received image in SET_PARAMETER request\n");
-            handle_set_parameter_coverart(conn, req, resp);
+            // note: the image/type tag isn't reliable, so it's not being sent
+            // -- best look at the first few bytes of the image
+            metadata_process('ssnc','PICT',req->content,req->contentlength);
          } else if (!strncmp(ct, "text/parameters", 15)) {
             debug(2, "received parameters in SET_PARAMETER request\n");
-
             handle_set_parameter_parameter(conn, req, resp);
         } else {
             debug(1, "received unknown Content-Type \"%s\" in SET_PARAMETER request\n", ct);

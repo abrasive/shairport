@@ -17,6 +17,8 @@ void metadata_open(void);
 void metadata_write(void);
 void metadata_cover_image(const char *buf, int len, const char *ext);
 
+void metadata_process(uint32_t type,uint32_t code,char *data,uint32_t length);
+
 extern metadata player_meta;
 
 #endif // _METADATA_H

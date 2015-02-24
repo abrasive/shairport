@@ -5,8 +5,12 @@ shairport_sync_SOURCES = shairport.c metadata.c rtsp.c mdns.c mdns_external.c co
 
 if USE_CUSTOMPIDDIR
 AM_CFLAGS= \
-	-DPIDDIR=\"$(CUSTOM_PID_DIR)\"
+	-DPIDDIR=\"$(CUSTOM_PID_DIR)\" -Wno-multichar
+else
+AM_CFLAGS= -Wno-multichar
 endif
+
+AM_CFLAGS += -Wno-multichar
 
 if USE_AVAHI
 shairport_sync_SOURCES += mdns_avahi.c
