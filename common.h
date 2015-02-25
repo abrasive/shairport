@@ -94,7 +94,6 @@ double vol2attn(double vol, long max_db, long min_db);
 uint64_t get_absolute_time_in_fp(void);
 
 shairport_cfg config;
-char sender_name[1024];
 
 void command_start(void);
 void command_stop(void);

@@ -62,7 +62,6 @@ static void register_service(AvahiClient *c) {
         return;
 
     int ret;
-    if (config.meta_dir) {
     ret = avahi_entry_group_add_service(group,
                                         AVAHI_IF_UNSPEC,
                                         AVAHI_PROTO_UNSPEC,
@@ -72,22 +71,8 @@ static void register_service(AvahiClient *c) {
                                         NULL,
                                         NULL,
                                         port,
-                                        MDNS_RECORD_WITH_METADATA,
+                                        MDNS_RECORD,
                                         NULL);
-    } else {
-    ret = avahi_entry_group_add_service(group,
-                                        AVAHI_IF_UNSPEC,
-                                        AVAHI_PROTO_UNSPEC,
-                                        0,
-                                        name,
-                                        "_raop._tcp",
-                                        NULL,
-                                        NULL,
-                                        port,
-                                        MDNS_RECORD_WITHOUT_METADATA,
-                                        NULL);
-    }
-    
     if (ret < 0)
         die("avahi_entry_group_add_service failed");
 

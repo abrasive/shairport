@@ -47,63 +47,6 @@
 #include "common.h"
 #include "metadata.h"
 
-
-// including a simple base64 encoder to minimise malloc/free activity
-
-// From Stack Overflow, with thanks:
-// http://stackoverflow.com/questions/342409/how-do-i-base64-encode-decode-in-c
-// minor mods to make independent of C99.
-// more significant changes make it not malloc memory
-// needs to initialise the docoding table first
-
-static char encoding_table[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
-                                'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
-                                'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
-                                'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
-                                'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
-                                'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
-                                'w', 'x', 'y', 'z', '0', '1', '2', '3',
-                                '4', '5', '6', '7', '8', '9', '+', '/'};
-
-static int mod_table[] = {0, 2, 1};
-
-// pass in a pointer to the data, its length, a pointer to the output buffer and a pointer to an int containing its maximum length
-// the actual length will be returned.
-
-char *base64_encode(const unsigned char *data,
-                    size_t input_length,
-                    char *encoded_data,
-                    size_t *output_length) {
-
-    size_t calculated_output_length = 4 * ((input_length + 2) / 3);    
-    if (calculated_output_length> *output_length)
-      return(NULL);
-    *output_length = calculated_output_length;
-    
-    int i,j;
-    for (i = 0, j = 0; i < input_length;) {
-
-        uint32_t octet_a = i < input_length ? (unsigned char)data[i++] : 0;
-        uint32_t octet_b = i < input_length ? (unsigned char)data[i++] : 0;
-        uint32_t octet_c = i < input_length ? (unsigned char)data[i++] : 0;
-
-        uint32_t triple = (octet_a << 0x10) + (octet_b << 0x08) + octet_c;
-
-        encoded_data[j++] = encoding_table[(triple >> 3 * 6) & 0x3F];
-        encoded_data[j++] = encoding_table[(triple >> 2 * 6) & 0x3F];
-        encoded_data[j++] = encoding_table[(triple >> 1 * 6) & 0x3F];
-        encoded_data[j++] = encoding_table[(triple >> 0 * 6) & 0x3F];
-    }
-
-    for (i = 0; i < mod_table[input_length % 3]; i++)
-        encoded_data[*output_length - 1 - i] = '=';
-
-    return encoded_data;
-}
-
-// with thanks!
-//
-
 metadata player_meta;
 static int fd = -1;
 static int dirty = 0;
@@ -281,33 +224,14 @@ void metadata_process(uint32_t type,uint32_t code,char *data,uint32_t length) {
     ret = write(fd, thestring, strlen(thestring));
     if (ret < 1)    // no reader
       metadata_close();
-    // here, we write the data in base64 form using the crappy base64 encoder provided
-    // but, we break it into lines of 76 output characters, except for the last one.
-    // thus, we send groups of (76/4)*3 =  57 bytes to the eoncoder at a time
-    size_t remaining_count = length;
-    char *remaining_data = data;
-    size_t towrite_count;
-    char outbuf[76];
-    while ((remaining_count) && (ret>=0)) {
-     	size_t towrite_count = remaining_count;
-    	if (towrite_count>57) 
-    		towrite_count = 57;
-    	size_t outbuf_size = 76; // size of output buffer on entry, length of result on exit
-    	if (base64_encode(remaining_data, towrite_count, outbuf, &outbuf_size)==NULL)
-    		debug(1,"Error encoding...");
-   		//debug(1,"Remaining count: %d ret: %d, outbuf_size: %d.",remaining_count,ret,outbuf_size);    	
-     	ret = write(fd,outbuf,outbuf_size);
-     	if (ret<0)
-     		perror("Error writing metadata");
-    	remaining_data+=towrite_count;
-    	remaining_count-=towrite_count;
-    	//if (ret>=0)
-    	//	ret = write(fd,"\r\n",2);
-    }
-    debug(1,"ret: %d",ret);  
+      
+    char *b64 = base64_enc(data,length);
+    ret = write(fd,b64,strlen(b64));
+    free(b64);
+    
     if (ret < 1)    // no reader
       metadata_close();
-    snprintf(thestring,1024,"</data>\n");
+    snprintf(thestring,1024,"\n</data>\n");
     ret = write(fd, thestring, strlen(thestring));
     if (ret < 1)    // no reader
       metadata_close();

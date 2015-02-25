@@ -631,9 +631,6 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn,
     
   // inform the listener that a set of metadata is ending  
   metadata_process('ssnc','stop',NULL,0);
-  // send the user some shairport-originated metadata
-  // send the name of the player, e.g. "Joe's iPhone" or "iTunes"
-  metadata_process('ssnc','sndr',sender_name,strlen(sender_name));
 }
 
 static void handle_set_parameter(rtsp_conn_info *conn,
@@ -724,17 +721,13 @@ static void handle_announce(rtsp_conn_info *conn,
       conn->stream.fmtp[i] = atoi(strsep(&pfmtp, " \t"));
     
     char *hdr = msg_get_header(req, "X-Apple-Client-Name");
-    if (hdr) {
-    	strncpy(sender_name,hdr,1024);
+    if (hdr)
       debug(1,"Play connection from \"%s\".",hdr);
-    } else {
+    else {
       hdr = msg_get_header(req, "User-Agent");
-      if (hdr) {
+      if (hdr)
         debug(1,"Play connection from \"%s\".",hdr);
-    		strncpy(sender_name,hdr,1024);
-    	} else 
-    		sender_name[0]=0;
-    } 
+    }
     resp->respcode = 200;
   } else {
     resp->respcode = 453;
