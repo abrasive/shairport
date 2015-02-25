@@ -4,7 +4,8 @@
 
 <!--
   This man pager source file is part of shairport-sync.
-  Copyright (c) Mike Brady 2014
+  Copyright (c) Mike Brady 2014--2015
+
   All rights reserved.
  
   Permission is hereby granted, free of charge, to any person
@@ -273,7 +274,7 @@
 		<optdesc><p>
 		Exit play mode if the stream disappears for  more  than  <arg>timeout</arg>
     seconds.</p>
-    <p>When shairport-sync plays an audio stream, it startes a play
+    <p>When shairport-sync plays an audio stream, it starts a play
     session and will return a busy signal to any other sources that
     attempt to use it. If the audio stream disappears for longer
     than <arg>timeout</arg> seconds, the play session will be terminated.
