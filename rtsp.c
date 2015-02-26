@@ -872,8 +872,8 @@ void metadata_open(void) {
     snprintf(path, pl+1, "%s/%s", config.meta_dir, fn);
 
     fd = open(path, O_WRONLY | O_NONBLOCK);
-    if (fd < 0)
-        debug(1, "Could not open metadata FIFO %s. Will try again later.", path);
+    //if (fd < 0)
+    //    debug(1, "Could not open metadata FIFO %s. Will try again later.", path);
 
     free(path);
 }
