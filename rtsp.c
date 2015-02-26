@@ -100,8 +100,8 @@ typedef struct {
   uint32_t capacity; // maximum number of items
   uint32_t toq; // first item to take
   uint32_t eoq; // free space at end of queue
-  void * qbase; // base address of actual queue
-} pc_queue; // producer-consumer queue
+  void *items; // a pointer to where the items are actually stored
+ } pc_queue; // producer-consumer queue
 
 typedef struct {
   uint32_t  referenceCount; // we might start using this...
@@ -127,7 +127,18 @@ typedef struct {
   rtsp_message* carrier;  
 } metadata_package;
 
+void pc_queue_init(pc_queue* the_queue, char* items, size_t item_size, uint32_t number_of_items) {
+  the_queue->item_size = item_size;
+  the_queue->items = items;
+  the_queue->count = 0;
+  the_queue->capacity = number_of_items;
+  the_queue->toq = 0;
+  the_queue->eoq = 0;
+}
+
+/*
 pc_queue* pc_queue_create(size_t new_item_size, uint32_t number_of_items) {
+  debug(1,"Creating pc_queue");
   pc_queue* the_queue = malloc(sizeof(pc_queue)+number_of_items*new_item_size-sizeof(void*));
   if (the_queue) {
     int rc = pthread_mutex_init(&the_queue->pc_queue_lock,NULL);
@@ -165,6 +176,7 @@ int pc_queue_delete(pc_queue* the_queue) {
   }
   return 0;
 }
+*/
 
 int pc_queue_add_item(pc_queue* the_queue,const void* the_stuff) {
   int rc;
@@ -178,7 +190,8 @@ int pc_queue_add_item(pc_queue* the_queue,const void* the_stuff) {
         debug(1,"Error waiting for item to be removed");
     }
     uint32_t i = the_queue->eoq;
-    void * p = &the_queue->qbase + the_queue->item_size*the_queue->eoq;
+    void * p = the_queue->items + the_queue->item_size*i;
+//    void * p = &the_queue->qbase + the_queue->item_size*the_queue->eoq;
     memcpy(p,the_stuff,the_queue->item_size);
     
     // update the pointer
@@ -212,7 +225,8 @@ int pc_queue_get_item(pc_queue* the_queue,void* the_stuff) {
         debug(1,"Error waiting for item to be added");
     }
     uint32_t i = the_queue->toq;
-    void * p = &the_queue->qbase + the_queue->item_size*the_queue->toq;
+//    void * p = &the_queue->qbase + the_queue->item_size*the_queue->toq;
+    void * p = the_queue->items + the_queue->item_size*i;
     memcpy(the_stuff,p,the_queue->item_size);
     
     // update the pointer
@@ -708,7 +722,7 @@ static void handle_setup(rtsp_conn_info *conn,
     
     player_play(&conn->stream);
 
-    char *resphdr = malloc(200);
+    char *resphdr = alloca(200);
     *resphdr=0;
     sprintf(resphdr, "RTP/AVP/UDP;unicast;interleaved=0-1;mode=record;control_port=%d;timing_port=%d;server_port=%d", lcport, ltport, lsport);
 
@@ -825,7 +839,10 @@ char *base64_encode_so(const unsigned char *data,
 
 static int fd = -1;
 static int dirty = 0;
-static pc_queue *metadata_queue;
+pc_queue metadata_queue;
+#define metadata_queue_size 1000
+metadata_package metadata_queue_items[metadata_queue_size];
+
 static pthread_t metadata_thread;
 
 void metadata_create(void) {
@@ -919,7 +936,7 @@ void* metadata_thread_function(void *ignore) {
   metadata_create();
   metadata_package pack;
   while (1) {
-    pc_queue_get_item(metadata_queue, &pack);
+    pc_queue_get_item(&metadata_queue, &pack);
     metadata_process(pack.type,pack.code,pack.data,pack.length);
     if (pack.carrier)
       msg_free(pack.carrier); // release the message
@@ -929,10 +946,8 @@ void* metadata_thread_function(void *ignore) {
 
 void metadata_init(void) {
   // create a pc_queue for passing information to a threaded metadata handler
-  metadata_queue = pc_queue_create(sizeof(metadata_package),20);
-  if (metadata_queue==NULL)
-    debug(1,"Can't create a queue for metadata");
-  int ret = pthread_create(&metadata_thread, NULL, metadata_thread_function, metadata_queue);
+  pc_queue_init(&metadata_queue,(char *)&metadata_queue_items,sizeof(metadata_package),metadata_queue_size);
+  int ret = pthread_create(&metadata_thread, NULL, metadata_thread_function, NULL);
   if (ret)
     debug(1,"Failed to create metadata thread!");
 }
@@ -946,7 +961,7 @@ void send_metadata(uint32_t type,uint32_t code,char *data,uint32_t length, rtsp_
   if (carrier)
     msg_retain(carrier);
   pack.carrier = carrier;
-  pc_queue_add_item(metadata_queue,&pack);
+  pc_queue_add_item(&metadata_queue,&pack);
 }
 
 static void handle_set_parameter_metadata(rtsp_conn_info *conn,
@@ -996,29 +1011,29 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn,
 static void handle_set_parameter(rtsp_conn_info *conn,
                                  rtsp_message *req, rtsp_message *resp) {
      if (!req->contentlength)
-         debug(1, "received empty SET_PARAMETER request\n");
+         debug(1, "received empty SET_PARAMETER request.");
 
     char *ct = msg_get_header(req, "Content-Type");
 
     if (ct) {
-        debug(2, "SET_PARAMETER Content-Type:\"%s\".\n", ct);
+        debug(2, "SET_PARAMETER Content-Type:\"%s\".", ct);
 
         if (!strncmp(ct, "application/x-dmap-tagged", 25)) {
-            debug(2, "received metadata tags in SET_PARAMETER request\n");
+            debug(2, "received metadata tags in SET_PARAMETER request.");
             handle_set_parameter_metadata(conn, req, resp);
         } else if (!strncmp(ct, "image", 5)) {
-            debug(1, "received image in SET_PARAMETER request\n");
+            debug(1, "received image in SET_PARAMETER request.");
             // note: the image/type tag isn't reliable, so it's not being sent
             // -- best look at the first few bytes of the image
             send_metadata('ssnc','PICT',req->content,req->contentlength,req);
          } else if (!strncmp(ct, "text/parameters", 15)) {
-            debug(2, "received parameters in SET_PARAMETER request\n");
+            debug(2, "received parameters in SET_PARAMETER request.");
             handle_set_parameter_parameter(conn, req, resp);
         } else {
-            debug(1, "received unknown Content-Type \"%s\" in SET_PARAMETER request\n", ct);
+            debug(1, "received unknown Content-Type \"%s\" in SET_PARAMETER request.", ct);
         }
     } else {
-        debug(1, "missing Content-Type header in SET_PARAMETER request\n");
+        debug(1, "missing Content-Type header in SET_PARAMETER request.");
     }
 
     resp->respcode = 200;
