@@ -47,6 +47,65 @@
 #include "common.h"
 #include "metadata.h"
 
+
+// including a simple base64 encoder to minimise malloc/free activity
+
+// From Stack Overflow, with thanks:
+// http://stackoverflow.com/questions/342409/how-do-i-base64-encode-decode-in-c
+// minor mods to make independent of C99.
+// more significant changes make it not malloc memory
+// needs to initialise the docoding table first
+
+// add _so to end of name to avoid confusion with polarssl's implementation
+
+static char encoding_table[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
+                                'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+                                'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
+                                'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
+                                'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
+                                'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
+                                'w', 'x', 'y', 'z', '0', '1', '2', '3',
+                                '4', '5', '6', '7', '8', '9', '+', '/'};
+
+static int mod_table[] = {0, 2, 1};
+
+// pass in a pointer to the data, its length, a pointer to the output buffer and a pointer to an int containing its maximum length
+// the actual length will be returned.
+
+char *base64_encode_so(const unsigned char *data,
+                    size_t input_length,
+                    char *encoded_data,
+                    size_t *output_length) {
+
+    size_t calculated_output_length = 4 * ((input_length + 2) / 3);    
+    if (calculated_output_length> *output_length)
+      return(NULL);
+    *output_length = calculated_output_length;
+    
+    int i,j;
+    for (i = 0, j = 0; i < input_length;) {
+
+        uint32_t octet_a = i < input_length ? (unsigned char)data[i++] : 0;
+        uint32_t octet_b = i < input_length ? (unsigned char)data[i++] : 0;
+        uint32_t octet_c = i < input_length ? (unsigned char)data[i++] : 0;
+
+        uint32_t triple = (octet_a << 0x10) + (octet_b << 0x08) + octet_c;
+
+        encoded_data[j++] = encoding_table[(triple >> 3 * 6) & 0x3F];
+        encoded_data[j++] = encoding_table[(triple >> 2 * 6) & 0x3F];
+        encoded_data[j++] = encoding_table[(triple >> 1 * 6) & 0x3F];
+        encoded_data[j++] = encoding_table[(triple >> 0 * 6) & 0x3F];
+    }
+
+    for (i = 0; i < mod_table[input_length % 3]; i++)
+        encoded_data[*output_length - 1 - i] = '=';
+
+    return encoded_data;
+}
+
+// with thanks!
+//
+
 metadata player_meta;
 static int fd = -1;
 static int dirty = 0;
@@ -61,7 +120,7 @@ void metadata_set(char** field, const char* value) {
     dirty = 1;
 }
 
-void metadata_open(void) {
+void metadata_create(void) {
     if (!config.meta_dir)
         return;
 
@@ -74,6 +133,19 @@ void metadata_open(void) {
     if (mkfifo(path, 0644) && errno != EEXIST)
         die("Could not create metadata FIFO %s", path);
 
+    free(path);
+}
+
+void metadata_open(void) {
+    if (!config.meta_dir)
+        return;
+
+    const char fn[] = "shairport_sync_metadata_pipe";
+    size_t pl = strlen(config.meta_dir) + 1 + strlen(fn);
+
+    char* path = malloc(pl+1);
+    snprintf(path, pl+1, "%s/%s", config.meta_dir, fn);
+
     fd = open(path, O_WRONLY | O_NONBLOCK);
     if (fd < 0)
         debug(1, "Could not open metadata FIFO %s. Will try again later.", path);
@@ -84,6 +156,12 @@ void metadata_open(void) {
 static void metadata_close(void) {
     close(fd);
     fd = -1;
+}
+
+void metadata_init(void) {
+    if (!config.meta_dir)
+        return;
+    metadata_create();  
 }
 
 static void print_one(const char *name, const char *value) {
@@ -217,23 +295,40 @@ void metadata_process(uint32_t type,uint32_t code,char *data,uint32_t length) {
   char thestring[1024];
   snprintf(thestring,1024,"<type>%x</type><code>%x</code><length>%u</length>\n",type,code,length);
   ret = write(fd, thestring, strlen(thestring));
-  if (ret < 1)    // no reader
-    metadata_close();
+  if (ret < 1)    // possibly the pipe is running out of memory becasue the reader is too slow
+    debug(1,"Error writing to pipe");
   if (length>0) {
     snprintf(thestring,1024,"<data encoding=\"base64\">\n");
     ret = write(fd, thestring, strlen(thestring));
     if (ret < 1)    // no reader
-      metadata_close();
-      
-    char *b64 = base64_enc(data,length);
-    ret = write(fd,b64,strlen(b64));
-    free(b64);
-    
-    if (ret < 1)    // no reader
-      metadata_close();
-    snprintf(thestring,1024,"\n</data>\n");
+      debug(1,"Error writing to pipe");
+    // here, we write the data in base64 form using the crappy base64 encoder provided
+    // but, we break it into lines of 76 output characters, except for the last one.
+    // thus, we send groups of (76/4)*3 =  57 bytes to the encoder at a time
+    size_t remaining_count = length;
+    char *remaining_data = data;
+    size_t towrite_count;
+    char outbuf[76];
+    while ((remaining_count) && (ret>=0)) {
+     	size_t towrite_count = remaining_count;
+    	if (towrite_count>57) 
+    		towrite_count = 57;
+    	size_t outbuf_size = 76; // size of output buffer on entry, length of result on exit
+    	if (base64_encode_so(remaining_data, towrite_count, outbuf, &outbuf_size)==NULL)
+    		debug(1,"Error encoding base64 data.");
+   		//debug(1,"Remaining count: %d ret: %d, outbuf_size: %d.",remaining_count,ret,outbuf_size);    	
+     	ret = write(fd,outbuf,outbuf_size);
+     	if (ret<0)
+     		debug(1,"Error writing base64 data to pipe: \"%s\".",strerror(errno));
+    	remaining_data+=towrite_count;
+    	remaining_count-=towrite_count;
+      //ret = write(fd,"\r\n",2);
+      //if (ret<0)
+     	//	debug(1,"Error writing base64 cr/lf to pipe.");
+    }
+    snprintf(thestring,1024,"</data>\n");
     ret = write(fd, thestring, strlen(thestring));
     if (ret < 1)    // no reader
-      metadata_close();
+      debug(1,"Error writing to pipe");
   }
 }

@@ -532,6 +532,7 @@ int main(int argc, char **argv) {
      md5_finish(&tctx, ap_md5);
 #endif
     memcpy(config.hw_addr, ap_md5, sizeof(config.hw_addr));
+    metadata_init() ; // create the metadata pipe if necessary
 
     rtsp_listen_loop();
 

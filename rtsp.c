@@ -631,6 +631,9 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn,
     
   // inform the listener that a set of metadata is ending  
   metadata_process('ssnc','stop',NULL,0);
+  // send the user some shairport-originated metadata
+  // send the name of the player, e.g. "Joe's iPhone" or "iTunes"
+  metadata_process('ssnc','sndr',sender_name,strlen(sender_name));
 }
 
 static void handle_set_parameter(rtsp_conn_info *conn,
@@ -647,7 +650,7 @@ static void handle_set_parameter(rtsp_conn_info *conn,
             debug(2, "received metadata tags in SET_PARAMETER request\n");
             handle_set_parameter_metadata(conn, req, resp);
         } else if (!strncmp(ct, "image", 5)) {
-            debug(2, "received image in SET_PARAMETER request\n");
+            debug(1, "received image in SET_PARAMETER request\n");
             // note: the image/type tag isn't reliable, so it's not being sent
             // -- best look at the first few bytes of the image
             metadata_process('ssnc','PICT',req->content,req->contentlength);
@@ -721,13 +724,17 @@ static void handle_announce(rtsp_conn_info *conn,
       conn->stream.fmtp[i] = atoi(strsep(&pfmtp, " \t"));
     
     char *hdr = msg_get_header(req, "X-Apple-Client-Name");
-    if (hdr)
+    if (hdr) {
+    	strncpy(sender_name,hdr,1024);
       debug(1,"Play connection from \"%s\".",hdr);
-    else {
+    } else {
       hdr = msg_get_header(req, "User-Agent");
-      if (hdr)
+      if (hdr) {
         debug(1,"Play connection from \"%s\".",hdr);
-    }
+    		strncpy(sender_name,hdr,1024);
+    	} else 
+    		sender_name[0]=0;
+    } 
     resp->respcode = 200;
   } else {
     resp->respcode = 453;

@@ -122,13 +122,24 @@ static int mdns_tinysvcmdns_register(char *apname, int port) {
 
     freeifaddrs(ifa);
 
-    const char *txt[] = { MDNS_RECORD, NULL };
+    char *txtwithoutmetadata[] = { MDNS_RECORD_WITHOUT_METADATA, NULL };
+    char *txtwithmetadata[] = { MDNS_RECORD_WITH_METADATA, NULL };
+    
+    char **txt;
+    
+    if (config.meta_dir)
+    	txt = txtwithmetadata;
+    else
+    	txt = txtwithoutmetadata;
+
+    
+    
     struct mdns_service *svc = mdnsd_register_svc(svr,
                                 apname,
                                 "_raop._tcp.local",
                                 port,
                                 NULL,
-                                txt);  // TTL should be 75 minutes, i.e. 4500 seconds
+                                (const char **)txt);  // TTL should be 75 minutes, i.e. 4500 seconds
 
     mdns_service_destroy(svc);
 
