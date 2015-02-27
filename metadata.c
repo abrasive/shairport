@@ -322,8 +322,8 @@ void metadata_process(uint32_t type,uint32_t code,char *data,uint32_t length) {
      		debug(1,"Error writing base64 data to pipe: \"%s\".",strerror(errno));
     	remaining_data+=towrite_count;
     	remaining_count-=towrite_count;
-      //ret = write(fd,"\r\n",2);
-      //if (ret<0)
+      // ret = write(fd,"\r\n",2);
+      // if (ret<0)
      	//	debug(1,"Error writing base64 cr/lf to pipe.");
     }
     snprintf(thestring,1024,"</data>\n");

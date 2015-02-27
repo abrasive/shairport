@@ -173,23 +173,25 @@ static char *nextline(char *in, int inbuf) {
 }
 
 typedef struct {
-    int nheaders;
-    char *name[16];
-    char *value[16];
+  uint32_t  referenceCount; // we might start using this...
+  int nheaders;
+  char *name[16];
+  char *value[16];
 
-    int contentlength;
-    char *content;
+  int contentlength;
+  char *content;
 
-    // for requests
-    char method[16];
+  // for requests
+  char method[16];
 
-    // for responses
-    int respcode;
+  // for responses
+  int respcode;
 } rtsp_message;
 
 static rtsp_message * msg_init(void) {
     rtsp_message *msg = malloc(sizeof(rtsp_message));
     memset(msg, 0, sizeof(rtsp_message));
+    msg->referenceCount = 1;
     return msg;
 }
 
@@ -222,6 +224,7 @@ static void msg_print_debug_headers(rtsp_message *msg) {
 }
 
 static void msg_free(rtsp_message *msg) {
+  if (--(msg->referenceCount)<=0) {
     int i;
     for (i=0; i<msg->nheaders; i++) {
         free(msg->name[i]);
@@ -230,6 +233,9 @@ static void msg_free(rtsp_message *msg) {
     if (msg->content)
         free(msg->content);
     free(msg);
+  } else {
+    debug(1,"rtsp_message reference count non-zero!");
+  }
 }
 
 
@@ -367,10 +373,12 @@ static enum rtsp_read_request_response rtsp_read_request(int fd, rtsp_message** 
     return reply;
 
 shutdown:
-    free(buf);
     if (msg) {
-        msg_free(msg);
+      msg_free(msg); // which will free the content and everything else
     }
+    // in case the message wasn't formed or wasn't fully initialised
+    if ((msg) && (msg-> content == NULL) || (!msg))
+      free(buf);
     *the_packet = NULL;
     return reply;
 }
@@ -992,7 +1000,7 @@ static void *rtsp_conversation_thread_func(void *pconn) {
 
 respond:
         msg_write_response(conn->fd, resp);
-        msg_free(req);
+        msg_free(req); // we may change this to use reference counting!
         msg_free(resp);
       } else {
         if (reply!=rtsp_read_request_response_shutdown_requested)
