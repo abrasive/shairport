@@ -295,14 +295,14 @@ void metadata_process(uint32_t type,uint32_t code,char *data,uint32_t length) {
   char thestring[1024];
   snprintf(thestring,1024,"<type>%x</type><code>%x</code><length>%u</length>\n",type,code,length);
   ret = write(fd, thestring, strlen(thestring));
-  if (ret < 1)    // possibly the pipe is running out of memory becasue the reader is too slow
+  if (ret < 1)    // possibly the pipe is running out of memory because the reader is too slow
     debug(1,"Error writing to pipe");
   if (length>0) {
     snprintf(thestring,1024,"<data encoding=\"base64\">\n");
     ret = write(fd, thestring, strlen(thestring));
     if (ret < 1)    // no reader
       debug(1,"Error writing to pipe");
-    // here, we write the data in base64 form using the crappy base64 encoder provided
+    // here, we write the data in base64 form using our nice base64 encoder
     // but, we break it into lines of 76 output characters, except for the last one.
     // thus, we send groups of (76/4)*3 =  57 bytes to the encoder at a time
     size_t remaining_count = length;
