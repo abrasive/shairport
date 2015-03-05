@@ -54,7 +54,6 @@
 #include "player.h"
 #include "rtp.h"
 #include "mdns.h"
-#include "metadata.h"
 
 #ifdef AF_INET6
 #define INETx_ADDRSTRLEN INET6_ADDRSTRLEN
@@ -103,6 +102,30 @@ typedef struct {
   uint32_t eoq; // free space at end of queue
   void * qbase; // base address of actual queue
 } pc_queue; // producer-consumer queue
+
+typedef struct {
+  uint32_t  referenceCount; // we might start using this...
+  int nheaders;
+  char *name[16];
+  char *value[16];
+
+  int contentlength;
+  char *content;
+
+  // for requests
+  char method[16];
+
+  // for responses
+  int respcode;
+} rtsp_message;
+
+typedef struct {
+  uint32_t type;
+  uint32_t code;
+  char *data;
+  uint32_t length;
+  rtsp_message* carrier;  
+} metadata_package;
 
 pc_queue* pc_queue_create(size_t new_item_size, uint32_t number_of_items) {
   pc_queue* the_queue = malloc(sizeof(pc_queue)+number_of_items*new_item_size-sizeof(void*));
@@ -297,22 +320,6 @@ static char *nextline(char *in, int inbuf) {
     return out;
 }
 
-typedef struct {
-  uint32_t  referenceCount; // we might start using this...
-  int nheaders;
-  char *name[16];
-  char *value[16];
-
-  int contentlength;
-  char *content;
-
-  // for requests
-  char method[16];
-
-  // for responses
-  int respcode;
-} rtsp_message;
-
 static void msg_retain(rtsp_message * msg) {
   if (msg) {
   int rc = pthread_mutex_lock(&reference_counter_lock);
@@ -381,9 +388,9 @@ static void msg_free(rtsp_message *msg) {
       if (msg->content)
         free(msg->content);
       free(msg);
-    } else {
-      debug(1,"rtsp_message reference count non-zero: %d!",msg->referenceCount);
-    }
+    } // else {
+      // debug(1,"rtsp_message reference count non-zero: %d!",msg->referenceCount);
+     //}
   } else {
     debug(1,"null rtsp_message pointer passed to msg_free()");
   }  
@@ -740,6 +747,8 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn,
     }
 }
 
+
+
 // Metadata is not used by shairport-sync.
 // Instead we send all metadata to a fifo pipe, so that other apps can listen to the pipe and use the metadata.
 
@@ -756,6 +765,190 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn,
 // The three kinds of 'ssnc' metadata at present are 'strt', 'stop' and 'PICT' for metadata package start, metadata package stop and cover art, respectively.
 
 
+// including a simple base64 encoder to minimise malloc/free activity
+
+// From Stack Overflow, with thanks:
+// http://stackoverflow.com/questions/342409/how-do-i-base64-encode-decode-in-c
+// minor mods to make independent of C99.
+// more significant changes make it not malloc memory
+// needs to initialise the docoding table first
+
+// add _so to end of name to avoid confusion with polarssl's implementation
+
+static char encoding_table[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
+                                'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+                                'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
+                                'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
+                                'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
+                                'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
+                                'w', 'x', 'y', 'z', '0', '1', '2', '3',
+                                '4', '5', '6', '7', '8', '9', '+', '/'};
+
+static int mod_table[] = {0, 2, 1};
+
+// pass in a pointer to the data, its length, a pointer to the output buffer and a pointer to an int containing its maximum length
+// the actual length will be returned.
+
+char *base64_encode_so(const unsigned char *data,
+                    size_t input_length,
+                    char *encoded_data,
+                    size_t *output_length) {
+
+    size_t calculated_output_length = 4 * ((input_length + 2) / 3);    
+    if (calculated_output_length> *output_length)
+      return(NULL);
+    *output_length = calculated_output_length;
+    
+    int i,j;
+    for (i = 0, j = 0; i < input_length;) {
+
+        uint32_t octet_a = i < input_length ? (unsigned char)data[i++] : 0;
+        uint32_t octet_b = i < input_length ? (unsigned char)data[i++] : 0;
+        uint32_t octet_c = i < input_length ? (unsigned char)data[i++] : 0;
+
+        uint32_t triple = (octet_a << 0x10) + (octet_b << 0x08) + octet_c;
+
+        encoded_data[j++] = encoding_table[(triple >> 3 * 6) & 0x3F];
+        encoded_data[j++] = encoding_table[(triple >> 2 * 6) & 0x3F];
+        encoded_data[j++] = encoding_table[(triple >> 1 * 6) & 0x3F];
+        encoded_data[j++] = encoding_table[(triple >> 0 * 6) & 0x3F];
+    }
+
+    for (i = 0; i < mod_table[input_length % 3]; i++)
+        encoded_data[*output_length - 1 - i] = '=';
+
+    return encoded_data;
+}
+
+// with thanks!
+//
+
+static int fd = -1;
+static int dirty = 0;
+static pc_queue *metadata_queue;
+static pthread_t metadata_thread;
+
+void metadata_create(void) {
+    if (!config.meta_dir)
+        return;
+
+    const char fn[] = "shairport_sync_metadata_pipe";
+    size_t pl = strlen(config.meta_dir) + 1 + strlen(fn);
+
+    char* path = malloc(pl+1);
+    snprintf(path, pl+1, "%s/%s", config.meta_dir, fn);
+
+    if (mkfifo(path, 0644) && errno != EEXIST)
+        die("Could not create metadata FIFO %s", path);
+
+    free(path);      
+}
+
+void metadata_open(void) {
+    if (!config.meta_dir)
+        return;
+
+    const char fn[] = "shairport_sync_metadata_pipe";
+    size_t pl = strlen(config.meta_dir) + 1 + strlen(fn);
+
+    char* path = malloc(pl+1);
+    snprintf(path, pl+1, "%s/%s", config.meta_dir, fn);
+
+    fd = open(path, O_WRONLY);
+    if (fd < 0)
+        debug(1, "Could not open metadata FIFO %s. Will try again later.", path);
+
+    free(path);
+}
+
+static void metadata_close(void) {
+    close(fd);
+    fd = -1;
+}
+
+void metadata_process(uint32_t type,uint32_t code,char *data,uint32_t length) {
+  debug(2,"Process metadata with type %x, code %x and length %u.",type,code,length);
+  int ret;
+  // readers may go away and come back
+  if (fd < 0)
+    metadata_open();
+  if (fd < 0)
+    return;
+  char thestring[1024];
+  snprintf(thestring,1024,"<type>%x</type><code>%x</code><length>%u</length>\n",type,code,length);
+  ret = write(fd, thestring, strlen(thestring));
+  if (ret < 1)    // possibly the pipe is running out of memory because the reader is too slow
+    debug(1,"Error writing to pipe");
+  if (length>0) {
+    snprintf(thestring,1024,"<data encoding=\"base64\">\n");
+    ret = write(fd, thestring, strlen(thestring));
+    if (ret < 1)    // no reader
+      debug(1,"Error writing to pipe");
+    // here, we write the data in base64 form using our nice base64 encoder
+    // but, we break it into lines of 76 output characters, except for the last one.
+    // thus, we send groups of (76/4)*3 =  57 bytes to the encoder at a time
+    size_t remaining_count = length;
+    char *remaining_data = data;
+    size_t towrite_count;
+    char outbuf[76];
+    while ((remaining_count) && (ret>=0)) {
+     	size_t towrite_count = remaining_count;
+    	if (towrite_count>57) 
+    		towrite_count = 57;
+    	size_t outbuf_size = 76; // size of output buffer on entry, length of result on exit
+    	if (base64_encode_so(remaining_data, towrite_count, outbuf, &outbuf_size)==NULL)
+    		debug(1,"Error encoding base64 data.");
+   		//debug(1,"Remaining count: %d ret: %d, outbuf_size: %d.",remaining_count,ret,outbuf_size);    	
+     	ret = write(fd,outbuf,outbuf_size);
+     	if (ret<0)
+     		debug(1,"Error writing base64 data to pipe: \"%s\".",strerror(errno));
+    	remaining_data+=towrite_count;
+    	remaining_count-=towrite_count;
+      // ret = write(fd,"\r\n",2);
+      // if (ret<0)
+     	//	debug(1,"Error writing base64 cr/lf to pipe.");
+    }
+    snprintf(thestring,1024,"</data>\n");
+    ret = write(fd, thestring, strlen(thestring));
+    if (ret < 1)    // no reader
+      debug(1,"Error writing to pipe");
+  }
+}
+
+void* metadata_thread_function(void *ignore) {
+  metadata_create();
+  metadata_package pack;
+  while (1) {
+    pc_queue_get_item(metadata_queue, &pack);
+    metadata_process(pack.type,pack.code,pack.data,pack.length);
+    if (pack.carrier)
+      msg_free(pack.carrier); // release the message
+  }
+  pthread_exit(NULL);
+}
+
+void metadata_init(void) {
+  // create a pc_queue for passing information to a threaded metadata handler
+  metadata_queue = pc_queue_create(sizeof(metadata_package),20);
+  if (metadata_queue==NULL)
+    debug(1,"Can't create a queue for metadata");
+  int ret = pthread_create(&metadata_thread, NULL, metadata_thread_function, metadata_queue);
+  if (ret)
+    debug(1,"Failed to create metadata thread!");
+}
+
+void send_metadata(uint32_t type,uint32_t code,char *data,uint32_t length, rtsp_message* carrier) {
+  metadata_package pack;
+  pack.type = type;
+  pack.code = code;
+  pack.data = data;
+  pack.length = length;
+  if (carrier)
+    msg_retain(carrier);
+  pack.carrier = carrier;
+  pc_queue_add_item(metadata_queue,&pack);
+}
+
 static void handle_set_parameter_metadata(rtsp_conn_info *conn,
                                           rtsp_message   *req,
                                           rtsp_message   *resp) {
@@ -767,7 +960,12 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn,
     // inform the listener that a set of metadata is starting
     // this doesn't include the cover art though...
     
-    metadata_process('ssnc','strt',NULL,0);
+    // parameters: type, code, pointer to data or NULL, length of data, the rtsp_message or NULL
+    // the rtsp_message is sent for 'core' messages, because it contains the data and must not be
+    // freed until the data has been read. So, it is passed to send_metadata to be retained,
+    // sent to the thread where metadata is processed and released (and probably freed) 
+    
+    send_metadata('ssnc','strt',NULL,0,NULL);
 
     while (off < cl) {
         // pick up the metadata tag as an unsigned longint
@@ -780,19 +978,19 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn,
         
         // pass the data over
         if (vl==0)
-          metadata_process('core',itag,NULL,0);        
+          send_metadata('core',itag,NULL,0,NULL);        
         else
-          metadata_process('core',itag,(char *)(cp+off),vl);
+          send_metadata('core',itag,(char *)(cp+off),vl,req);
         
         // move on to the next item
         off += vl;
     }
     
   // inform the listener that a set of metadata is ending  
-  metadata_process('ssnc','stop',NULL,0);
+  send_metadata('ssnc','stop',NULL,0,NULL);
   // send the user some shairport-originated metadata
   // send the name of the player, e.g. "Joe's iPhone" or "iTunes"
-  metadata_process('ssnc','sndr',sender_name,strlen(sender_name));
+  send_metadata('ssnc','sndr',sender_name,strlen(sender_name),NULL);
 }
 
 static void handle_set_parameter(rtsp_conn_info *conn,
@@ -812,7 +1010,7 @@ static void handle_set_parameter(rtsp_conn_info *conn,
             debug(1, "received image in SET_PARAMETER request\n");
             // note: the image/type tag isn't reliable, so it's not being sent
             // -- best look at the first few bytes of the image
-            metadata_process('ssnc','PICT',req->content,req->contentlength);
+            send_metadata('ssnc','PICT',req->content,req->contentlength,req);
          } else if (!strncmp(ct, "text/parameters", 15)) {
             debug(2, "received parameters in SET_PARAMETER request\n");
             handle_set_parameter_parameter(conn, req, resp);
@@ -1151,7 +1349,7 @@ static void *rtsp_conversation_thread_func(void *pconn) {
 
 respond:
         msg_write_response(conn->fd, resp);
-        msg_free(req); // we may change this to use reference counting!
+        msg_free(req);
         msg_free(resp);
       } else {
         if (reply!=rtsp_read_request_response_shutdown_requested)

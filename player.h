@@ -2,7 +2,6 @@
 #define _PLAYER_H
 
 #include "audio.h"
-#include "metadata.h"
 
 typedef struct {
     uint8_t aesiv[16], aeskey[16];

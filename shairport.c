@@ -51,7 +51,6 @@
 #include "rtsp.h"
 #include "rtp.h"
 #include "mdns.h"
-#include "metadata.h"
 
 #include <libdaemon/dfork.h>
 #include <libdaemon/dsignal.h>

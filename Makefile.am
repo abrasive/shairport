@@ -1,7 +1,7 @@
 SUBDIRS = man
 
 bin_PROGRAMS = shairport-sync
-shairport_sync_SOURCES = shairport.c metadata.c rtsp.c mdns.c mdns_external.c common.c rtp.c player.c alac.c audio.c audio_dummy.c audio_pipe.c
+shairport_sync_SOURCES = shairport.c rtsp.c mdns.c mdns_external.c common.c rtp.c player.c alac.c audio.c audio_dummy.c audio_pipe.c
 
 AM_CFLAGS = -Wno-multichar
 
