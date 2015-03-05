@@ -373,7 +373,6 @@ static void msg_free(rtsp_message *msg) {
     if (rc)
       debug(1,"Error %d unlocking reference counter lock during msg_free()",rc);    
     if (msg->referenceCount==0) {
-      debug(1,"Freeing...");
       int i;
       for (i=0; i<msg->nheaders; i++) {
           free(msg->name[i]);
