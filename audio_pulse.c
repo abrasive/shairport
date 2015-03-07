@@ -30,11 +30,25 @@
 #include <memory.h>
 #include <pulse/simple.h>
 #include <pulse/error.h>
+#include <pulse/def.h>
 #include "common.h"
 #include "audio.h"
 
 static pa_simple *pa_dev = NULL;
+
+static struct {
+    char *server;
+    char *sink;
+    char *apname;
+} pulse_options = {
+    .server = NULL,
+    .sink = NULL,
+    .apname = NULL
+};
+
 static int pa_error;
+
+static void pulse_connect(void);
 
 static void help(void) {
     printf("    -a server           set the server name\n"
@@ -45,9 +59,7 @@ static void help(void) {
 }
 
 static int init(int argc, char **argv) {
-    char *pa_server = NULL;
-    char *pa_sink = NULL;
-    char *pa_appname = config.apname;
+    pulse_options.apname = config.apname;
 
     optind = 1; // optind=0 is equivalent to optind=1 plus special behaviour
     argv--;     // so we shift the arguments to satisfy getopt()
@@ -58,13 +70,13 @@ static int init(int argc, char **argv) {
     while ((opt = getopt(argc, argv, "a:s:n:")) > 0) {
         switch (opt) {
             case 'a':
-                pa_server = optarg;
+                pulse_options.server = optarg;
                 break;
             case 's':
-                pa_sink = optarg;
+                pulse_options.sink = optarg;
                 break;
             case 'n':
-                pa_appname = optarg;
+                pulse_options.apname = optarg;
                 break;
             default:
                 help();
@@ -75,24 +87,28 @@ static int init(int argc, char **argv) {
     if (optind < argc)
         die("Invalid audio argument: %s", argv[optind]);
 
+    pulse_connect();
+
+    return 0;
+}
+
+static void pulse_connect(void) {
     static const pa_sample_spec ss = {
             .format = PA_SAMPLE_S16LE,
             .rate = 44100,
             .channels = 2
     };
 
-    pa_dev = pa_simple_new(pa_server,
-            pa_appname,
+    pa_dev = pa_simple_new(pulse_options.server,
+            pulse_options.apname,
             PA_STREAM_PLAYBACK,
-            pa_sink,
+            pulse_options.sink,
             "Shairport Stream",
             &ss, NULL, NULL,
             &pa_error);
 
     if (!pa_dev)
         die("Could not connect to pulseaudio server: %s", pa_strerror(pa_error));
-
-    return 0;
 }
 
 static void deinit(void) {
@@ -107,8 +123,14 @@ static void start(int sample_rate) {
 }
 
 static void play(short buf[], int samples) {
-    if( pa_simple_write(pa_dev, (char *)buf, (size_t)samples * 4, &pa_error) < 0 )
+    if( pa_simple_write(pa_dev, (char *)buf, (size_t)samples * 4, &pa_error) < 0 ) {
         fprintf(stderr, __FILE__": pa_simple_write() failed: %s\n", pa_strerror(pa_error));
+        if (pa_error == PA_ERR_CONNECTIONTERMINATED) {
+            fprintf(stderr, __FILE__": reconnecting.");
+            deinit();
+            pulse_connect();
+        }
+    }
 }
 
 static void stop(void) {
