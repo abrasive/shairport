@@ -137,6 +137,13 @@ void pc_queue_init(pc_queue* the_queue, char* items, size_t item_size, uint32_t 
   the_queue->eoq = 0;
 }
 
+void send_metadata(uint32_t type,uint32_t code,char *data,uint32_t length, rtsp_message* carrier);
+
+void send_ssnc_metadata(uint32_t code,char *data,uint32_t length) {
+  send_metadata('ssnc',code,data,length,NULL);
+}
+
+
 /*
 pc_queue* pc_queue_create(size_t new_item_size, uint32_t number_of_items) {
   debug(1,"Creating pc_queue");
@@ -767,7 +774,7 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn,
 // Metadata is not used by shairport-sync.
 // Instead we send all metadata to a fifo pipe, so that other apps can listen to the pipe and use the metadata.
 
-// We use two 4-character codes to identify each piece of data and we send the data itself in base64 form.
+// We use two 4-character codes to identify each piece of data and we send the data itself, if any, in base64 form.
 
 // The first 4-character code, called the "type", is either:
 //    'core' for all the regular metadadata coming from iTunes, etc., or 
@@ -777,9 +784,17 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn,
 // For 'ssnc' metadata, the second 4-character code is used to distinguish the messages.
 
 // Cover art is not tagged in the same way as other metadata, it seems, so is sent as an 'ssnc' type metadata message with the code 'PICT'
-// The three kinds of 'ssnc' metadata at present are 'strt', 'stop' and 'PICT' for metadata package start, metadata package stop and cover art, respectively.
-
-
+// Here are the 'ssnc' codes defined so far:
+//    'PICT' -- the payload is a picture, either a JPEG or a PNG. Check the first few bytes to see which.
+//    'pbeg' -- play stream begin. No arguments
+//    'pend' -- play stream end. No arguments
+//    'pfls' -- play stream flush. No arguments
+//    'pvol' -- play volume. The volume, with 200 added, is encoded in the "length" unsigned longint, multiplied by 100.
+//     The true volume range is -30.0 to 0.0, with -144.0 representing "mute", encoded 17000 to 20000 and 5600 respectively
+//    'mdst' -- a sequence of metadata is about to start
+//    'mden' -- a sequence of metadata has ended
+//    'snam' -- the name of the originator -- e.g. "Joe's iPhone" or "iTunes". The UTF-8 string and its length are passed.
+//    
 // including a simple base64 encoder to minimise malloc/free activity
 
 // From Stack Overflow, with thanks:
@@ -850,7 +865,7 @@ void metadata_create(void) {
     if (!config.meta_dir)
         return;
 
-    const char fn[] = "shairport_sync_metadata_pipe";
+    const char fn[] = "shairport-sync-metadata";
     size_t pl = strlen(config.meta_dir) + 1 + strlen(fn);
 
     char* path = malloc(pl+1);
@@ -866,7 +881,7 @@ void metadata_open(void) {
     if (!config.meta_dir)
         return;
 
-    const char fn[] = "shairport_sync_metadata_pipe";
+    const char fn[] = "shairport-sync-metadata";
     size_t pl = strlen(config.meta_dir) + 1 + strlen(fn);
 
     char* path = malloc(pl+1);
@@ -957,7 +972,8 @@ void* metadata_thread_function(void *ignore) {
   metadata_package pack;
   while (1) {
     pc_queue_get_item(&metadata_queue, &pack);
-    metadata_process(pack.type,pack.code,pack.data,pack.length);
+    if (config.meta_dir)
+      metadata_process(pack.type,pack.code,pack.data,pack.length);
     if (pack.carrier)
       msg_free(pack.carrier); // release the message
   }
@@ -1000,7 +1016,7 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn,
     // freed until the data has been read. So, it is passed to send_metadata to be retained,
     // sent to the thread where metadata is processed and released (and probably freed) 
     
-    send_metadata('ssnc','strt',NULL,0,NULL);
+    send_metadata('ssnc','mdst',NULL,0,NULL);
 
     while (off < cl) {
         // pick up the metadata tag as an unsigned longint
@@ -1022,7 +1038,7 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn,
     }
     
   // inform the listener that a set of metadata is ending  
-  send_metadata('ssnc','stop',NULL,0,NULL);
+  send_metadata('ssnc','mden',NULL,0,NULL);
   // send the user some shairport-originated metadata
   // send the name of the player, e.g. "Joe's iPhone" or "iTunes"
   send_metadata('ssnc','sndr',sender_name,strlen(sender_name),NULL);
