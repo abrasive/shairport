@@ -39,6 +39,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <sys/poll.h>
 
 #include "config.h"
 
@@ -840,7 +841,7 @@ char *base64_encode_so(const unsigned char *data,
 static int fd = -1;
 static int dirty = 0;
 pc_queue metadata_queue;
-#define metadata_queue_size 1000
+#define metadata_queue_size 200
 metadata_package metadata_queue_items[metadata_queue_size];
 
 static pthread_t metadata_thread;
@@ -883,6 +884,25 @@ static void metadata_close(void) {
     fd = -1;
 }
 
+ssize_t non_blocking_write(int fd, const void *buf, size_t count) {
+  // we are assuming that the count is always smaller than the FIFO's buffer
+  ssize_t reply = write(fd,buf,count);
+  if (reply==-1) {
+    while ((reply==-1) && ((errno == EAGAIN) || (errno == EWOULDBLOCK))) {
+      struct pollfd ufds[1];
+      ufds[0].fd=fd;
+      ufds[0].events = POLLOUT;
+      int rv = poll(ufds,1,3500);
+      if (rv==-1)
+        debug(1,"error waiting for pipe to unblock...");
+      if (rv==0)
+        debug(1,"timeout waiting for pipe to unblock");
+      reply = write(fd,buf,count);
+    }
+  }
+  return reply;
+}
+
 void metadata_process(uint32_t type,uint32_t code,char *data,uint32_t length) {
   debug(2,"Process metadata with type %x, code %x and length %u.",type,code,length);
   int ret;
@@ -893,12 +913,12 @@ void metadata_process(uint32_t type,uint32_t code,char *data,uint32_t length) {
     return;
   char thestring[1024];
   snprintf(thestring,1024,"<type>%x</type><code>%x</code><length>%u</length>\n",type,code,length);
-  ret = write(fd, thestring, strlen(thestring));
+  ret = non_blocking_write(fd, thestring, strlen(thestring));
   //if (ret < 1)    // possibly the pipe is running out of memory because the reader is too slow
   //  debug(1,"Error writing to pipe");
   if (length>0) {
     snprintf(thestring,1024,"<data encoding=\"base64\">\n");
-    ret = write(fd, thestring, strlen(thestring));
+    ret = non_blocking_write(fd, thestring, strlen(thestring));
     //if (ret < 1)    // no reader
     //  debug(1,"Error writing to pipe");
     // here, we write the data in base64 form using our nice base64 encoder
@@ -916,7 +936,7 @@ void metadata_process(uint32_t type,uint32_t code,char *data,uint32_t length) {
     	if (base64_encode_so(remaining_data, towrite_count, outbuf, &outbuf_size)==NULL)
     		debug(1,"Error encoding base64 data.");
    		//debug(1,"Remaining count: %d ret: %d, outbuf_size: %d.",remaining_count,ret,outbuf_size);    	
-     	ret = write(fd,outbuf,outbuf_size);
+     	ret = non_blocking_write(fd,outbuf,outbuf_size);
      	if (ret<0)
      		debug(1,"Error writing base64 data to pipe: \"%s\".",strerror(errno));
     	remaining_data+=towrite_count;
@@ -926,7 +946,7 @@ void metadata_process(uint32_t type,uint32_t code,char *data,uint32_t length) {
      	//	debug(1,"Error writing base64 cr/lf to pipe.");
     }
     snprintf(thestring,1024,"</data>\n");
-    ret = write(fd, thestring, strlen(thestring));
+    ret = non_blocking_write(fd, thestring, strlen(thestring));
     //if (ret < 1)    // no reader
     //  debug(1,"Error writing to pipe");
   }
