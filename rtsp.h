@@ -5,4 +5,12 @@ void rtsp_listen_loop(void);
 void rtsp_shutdown_stream(void);
 void rtsp_request_shutdown_stream(void);
 
+// sends metadata out to the metadata pipe, if enabled.
+// It is sent with the type 'ssnc' the given code, data and length
+// The handler at the other end must kknow what to do with the data
+// e.g. it it's malloced, to free it, etc.
+// nothing is done automatically
+
+void send_ssnc_metadata(uint32_t code,char *data,uint32_t length);
+
 #endif // _RTSP_H
