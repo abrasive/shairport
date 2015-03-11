@@ -1041,6 +1041,7 @@ void player_volume(double f) {
   volume = linear_volume;
   fix_volume = 65536.0 * volume;
   pthread_mutex_unlock(&vol_mutex);
+  send_ssnc_metadata('pvol',NULL,(int) 200+volume*100); // using the length parameter to hold 200 + volume * 100.
 }
 
 void player_flush(uint32_t timestamp) {
@@ -1050,6 +1051,7 @@ void player_flush(uint32_t timestamp) {
   //if (timestamp!=0x7fffffff)
   flush_rtp_timestamp=timestamp; // flush all packets up to (and including?) this
   pthread_mutex_unlock(&flush_mutex);
+  send_ssnc_metadata('pfls',NULL,0);
 }
 
 int player_play(stream_cfg *stream) {
@@ -1072,7 +1074,9 @@ int player_play(stream_cfg *stream) {
   // must be after decoder init
   init_buffer();
   please_stop = 0;
-  command_start();  
+  command_start(); 
+  send_ssnc_metadata('pbeg',NULL,0);
+ 
   // set the flowcontrol condition variable to wait on a monotonic clock
 #ifdef COMPILE_FOR_LINUX
   pthread_condattr_t attr;
@@ -1095,6 +1099,7 @@ void player_stop(void) {
   please_stop = 1;
   pthread_cond_signal(&flowcontrol); // tell it to give up
   pthread_join(player_thread, NULL);
+  send_ssnc_metadata('pend',NULL,0);
   config.output->stop();
   command_stop();
   free_buffer();
