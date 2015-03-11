@@ -58,13 +58,10 @@ AC_ARG_WITH(ssl, [ choose --with-ssl=openssl or --with-ssl=polarssl for encrypti
   fi
   if test "x${with_ssl}" = xopenssl ; then
     PKG_CHECK_MODULES(
-        [CRYPTO], [libcrypto],
-        [LIBS="${CRYPTO_LIBS} ${LIBS}"
-         AC_DEFINE([HAVE_LIBCRYPTO],[1],[Define to 1 if you have libcrypto])])
-    PKG_CHECK_MODULES(
         [SSL], [libssl],
         [LIBS="${SSL_LIBS} ${LIBS}"
-         AC_DEFINE([HAVE_LIBSSL],[1],[Define to 1 if you have libssl])])
+        AC_DEFINE([HAVE_LIBCRYPTO],[1],[Define to 1 if you have libcrypto])
+        AC_DEFINE([HAVE_LIBSSL],[1],[Define to 1 if you have libssl])])
   elif test "x${with_ssl}" = xpolarssl ; then
     AC_CHECK_LIB([polarssl],[ssl_init], , AC_MSG_ERROR(PolarSSL selected but the library cannot be found!))
   else
