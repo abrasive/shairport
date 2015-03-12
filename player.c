@@ -1041,7 +1041,7 @@ void player_volume(double f) {
   volume = linear_volume;
   fix_volume = 65536.0 * volume;
   pthread_mutex_unlock(&vol_mutex);
-  send_ssnc_metadata('pvol',NULL,(int) 200+volume*100); // using the length parameter to hold 200 + volume * 100.
+  //send_ssnc_metadata('pvol',NULL,(int) 200+volume*100); // using the length parameter to hold 200 + volume * 100.
 }
 
 void player_flush(uint32_t timestamp) {

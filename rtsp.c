@@ -887,7 +887,7 @@ void metadata_open(void) {
     char* path = malloc(pl+1);
     snprintf(path, pl+1, "%s/%s", config.meta_dir, fn);
 
-    fd = open(path, O_WRONLY | O_NONBLOCK);
+    fd = open(path, O_WRONLY);
     //if (fd < 0)
     //    debug(1, "Could not open metadata FIFO %s. Will try again later.", path);
 
@@ -900,22 +900,27 @@ static void metadata_close(void) {
 }
 
 ssize_t non_blocking_write(int fd, const void *buf, size_t count) {
+//  debug(1,"writing %u to pipe...",count);
   // we are assuming that the count is always smaller than the FIFO's buffer
-  ssize_t reply = write(fd,buf,count);
-  if (reply==-1) {
-    while ((reply==-1) && ((errno == EAGAIN) || (errno == EWOULDBLOCK))) {
-      struct pollfd ufds[1];
-      ufds[0].fd=fd;
-      ufds[0].events = POLLOUT;
-      int rv = poll(ufds,1,3500);
-      if (rv==-1)
-        debug(1,"error waiting for pipe to unblock...");
-      if (rv==0)
-        debug(1,"timeout waiting for pipe to unblock");
-      reply = write(fd,buf,count);
-    }
-  }
+  struct pollfd ufds[1];
+  ssize_t reply;  
+  do {
+    ufds[0].fd=fd;
+    ufds[0].events = POLLOUT;
+    int rv = poll(ufds,1,1000);
+    if (rv==-1)
+      debug(1,"error waiting for pipe to unblock...");
+    if (rv==0)
+      debug(1,"timeout waiting for pipe to unblock");
+    if ((reply==-1) && ((errno == EAGAIN) || (errno == EWOULDBLOCK)))
+      debug(1,"writing to pipe will block...");
+//    else
+//      debug(1,"writing %u to pipe done...",reply);
+  } while ((reply==-1) && ((errno == EAGAIN) || (errno == EWOULDBLOCK)));
   return reply;
+
+
+//  return write(fd,buf,count);
 }
 
 void metadata_process(uint32_t type,uint32_t code,char *data,uint32_t length) {
@@ -928,14 +933,14 @@ void metadata_process(uint32_t type,uint32_t code,char *data,uint32_t length) {
     return;
   char thestring[1024];
   snprintf(thestring,1024,"<type>%x</type><code>%x</code><length>%u</length>\n",type,code,length);
-  ret = non_blocking_write(fd, thestring, strlen(thestring));
-  //if (ret < 1)    // possibly the pipe is running out of memory because the reader is too slow
-  //  debug(1,"Error writing to pipe");
+  ret = write(fd, thestring, strlen(thestring));
+  // if (ret < 1)    // possibly the pipe is running out of memory because the reader is too slow
+    // debug(1,"Error writing to pipe");
   if (length>0) {
     snprintf(thestring,1024,"<data encoding=\"base64\">\n");
-    ret = non_blocking_write(fd, thestring, strlen(thestring));
-    //if (ret < 1)    // no reader
-    //  debug(1,"Error writing to pipe");
+    ret = write(fd, thestring, strlen(thestring));
+    // if (ret < 1)    // no reader
+    //   debug(1,"Error writing to pipe");
     // here, we write the data in base64 form using our nice base64 encoder
     // but, we break it into lines of 76 output characters, except for the last one.
     // thus, we send groups of (76/4)*3 =  57 bytes to the encoder at a time
@@ -951,9 +956,9 @@ void metadata_process(uint32_t type,uint32_t code,char *data,uint32_t length) {
     	if (base64_encode_so(remaining_data, towrite_count, outbuf, &outbuf_size)==NULL)
     		debug(1,"Error encoding base64 data.");
    		//debug(1,"Remaining count: %d ret: %d, outbuf_size: %d.",remaining_count,ret,outbuf_size);    	
-     	ret = non_blocking_write(fd,outbuf,outbuf_size);
-     	if (ret<0)
-     		debug(1,"Error writing base64 data to pipe: \"%s\".",strerror(errno));
+     	ret = write(fd,outbuf,outbuf_size);
+     	// if (ret<0)
+     // 		debug(1,"Error writing base64 data to pipe: \"%s\".",strerror(errno));
     	remaining_data+=towrite_count;
     	remaining_count-=towrite_count;
       // ret = write(fd,"\r\n",2);
@@ -961,9 +966,9 @@ void metadata_process(uint32_t type,uint32_t code,char *data,uint32_t length) {
      	//	debug(1,"Error writing base64 cr/lf to pipe.");
     }
     snprintf(thestring,1024,"</data>\n");
-    ret = non_blocking_write(fd, thestring, strlen(thestring));
-    //if (ret < 1)    // no reader
-    //  debug(1,"Error writing to pipe");
+    ret = write(fd, thestring, strlen(thestring));
+    // if (ret < 1)    // no reader
+    //   debug(1,"Error writing to pipe");
   }
 }
 
