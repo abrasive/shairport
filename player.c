@@ -562,6 +562,9 @@ static abuf_t *buffer_get_frame(void) {
                 // debug(1,"Exact frame gap is %llu; play %d frames of silence. Dac_delay is %d, with %d packets.",exact_frame_gap,fs,dac_delay,seq_diff(ab_read, ab_write));
                 config.output->play(silence, fs);
                 free(silence);
+                if (ab_buffering==0) {
+                  send_ssnc_metadata('prsm',NULL,0); // "resume"
+                }
               }
             }
           }

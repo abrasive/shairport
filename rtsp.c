@@ -789,10 +789,11 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn,
 //    'pbeg' -- play stream begin. No arguments
 //    'pend' -- play stream end. No arguments
 //    'pfls' -- play stream flush. No arguments
+//    'prsm' -- play stream resume. No arguments
 //    'pvol' -- play volume. The volume is sent as a string.
 //    'mdst' -- a sequence of metadata is about to start
 //    'mden' -- a sequence of metadata has ended
-//    'snam' -- the name of the originator -- e.g. "Joe's iPhone" or "iTunes". The UTF-8 string and its length are passed is a malloc'ed block
+//    'snam' -- the name of the originator -- e.g. "Joe's iPhone" or "iTunes...".
 //    
 // including a simple base64 encoder to minimise malloc/free activity
 
