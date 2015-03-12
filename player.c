@@ -1041,7 +1041,12 @@ void player_volume(double f) {
   volume = linear_volume;
   fix_volume = 65536.0 * volume;
   pthread_mutex_unlock(&vol_mutex);
-  //send_ssnc_metadata('pvol',NULL,(int) 200+volume*100); // using the length parameter to hold 200 + volume * 100.
+  char *dv = malloc(64); // will be freed in the metadata thread
+  if (dv) {
+    memset(dv,0,64);
+    snprintf(dv,63,"%.2f",f);
+    send_ssnc_metadata('pvol',dv,strlen(dv));
+  }
 }
 
 void player_flush(uint32_t timestamp) {
@@ -1074,7 +1079,7 @@ int player_play(stream_cfg *stream) {
   // must be after decoder init
   init_buffer();
   please_stop = 0;
-  command_start(); 
+  command_start();
   send_ssnc_metadata('pbeg',NULL,0);
  
   // set the flowcontrol condition variable to wait on a monotonic clock

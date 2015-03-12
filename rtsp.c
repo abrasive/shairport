@@ -789,11 +789,10 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn,
 //    'pbeg' -- play stream begin. No arguments
 //    'pend' -- play stream end. No arguments
 //    'pfls' -- play stream flush. No arguments
-//    'pvol' -- play volume. The volume, with 200 added, is encoded in the "length" unsigned longint, multiplied by 100.
-//     The true volume range is -30.0 to 0.0, with -144.0 representing "mute", encoded 17000 to 20000 and 5600 respectively
+//    'pvol' -- play volume. The volume is sent as a string.
 //    'mdst' -- a sequence of metadata is about to start
 //    'mden' -- a sequence of metadata has ended
-//    'snam' -- the name of the originator -- e.g. "Joe's iPhone" or "iTunes". The UTF-8 string and its length are passed.
+//    'snam' -- the name of the originator -- e.g. "Joe's iPhone" or "iTunes". The UTF-8 string and its length are passed is a malloc'ed block
 //    
 // including a simple base64 encoder to minimise malloc/free activity
 
@@ -934,13 +933,13 @@ void metadata_process(uint32_t type,uint32_t code,char *data,uint32_t length) {
   char thestring[1024];
   snprintf(thestring,1024,"<type>%x</type><code>%x</code><length>%u</length>\n",type,code,length);
   ret = write(fd, thestring, strlen(thestring));
-  // if (ret < 1)    // possibly the pipe is running out of memory because the reader is too slow
-    // debug(1,"Error writing to pipe");
-  if (length>0) {
+  if (ret < 1)
+    return;
+  if ((data!=NULL) && (length>0)) {
     snprintf(thestring,1024,"<data encoding=\"base64\">\n");
     ret = write(fd, thestring, strlen(thestring));
-    // if (ret < 1)    // no reader
-    //   debug(1,"Error writing to pipe");
+    if (ret < 1)    // no reader
+      return;
     // here, we write the data in base64 form using our nice base64 encoder
     // but, we break it into lines of 76 output characters, except for the last one.
     // thus, we send groups of (76/4)*3 =  57 bytes to the encoder at a time
@@ -957,18 +956,18 @@ void metadata_process(uint32_t type,uint32_t code,char *data,uint32_t length) {
     		debug(1,"Error encoding base64 data.");
    		//debug(1,"Remaining count: %d ret: %d, outbuf_size: %d.",remaining_count,ret,outbuf_size);    	
      	ret = write(fd,outbuf,outbuf_size);
-     	// if (ret<0)
-     // 		debug(1,"Error writing base64 data to pipe: \"%s\".",strerror(errno));
+     	if (ret<0)
+     	  return;
     	remaining_data+=towrite_count;
     	remaining_count-=towrite_count;
       // ret = write(fd,"\r\n",2);
       // if (ret<0)
-     	//	debug(1,"Error writing base64 cr/lf to pipe.");
+     	//	return;
     }
     snprintf(thestring,1024,"</data>\n");
     ret = write(fd, thestring, strlen(thestring));
-    // if (ret < 1)    // no reader
-    //   debug(1,"Error writing to pipe");
+    if (ret < 1)    // no reader
+      return;
   }
 }
 
@@ -981,6 +980,8 @@ void* metadata_thread_function(void *ignore) {
       metadata_process(pack.type,pack.code,pack.data,pack.length);
     if (pack.carrier)
       msg_free(pack.carrier); // release the message
+    else if (pack.data)
+      free(pack.data);
   }
   pthread_exit(NULL);
 }
@@ -1016,10 +1017,15 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn,
     // inform the listener that a set of metadata is starting
     // this doesn't include the cover art though...
     
-    // parameters: type, code, pointer to data or NULL, length of data, the rtsp_message or NULL
+    // parameters: type, code, pointer to data or NULL, length of data or NULL, the rtsp_message or NULL
     // the rtsp_message is sent for 'core' messages, because it contains the data and must not be
     // freed until the data has been read. So, it is passed to send_metadata to be retained,
-    // sent to the thread where metadata is processed and released (and probably freed) 
+    // sent to the thread where metadata is processed and released (and probably freed).
+    
+    // The reading of the parameters is a bit complex
+    // If the rtsp_message field is non-null, then it represents an rtsp_message which should be freed in the thread handler when the parameter pointed to by the pointer and specified by the length is finished with
+    // If the rtsp_message is NULL, then if the pointer is non-null, it points to a malloc'ed block and should be freed when the thread is finished with it. The length of the data in the block is given in length
+    // If the rtsp_message is NULL and the pointer is also NULL, nothing further is done.
     
     send_metadata('ssnc','mdst',NULL,0,NULL);
 
@@ -1046,7 +1052,7 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn,
   send_metadata('ssnc','mden',NULL,0,NULL);
   // send the user some shairport-originated metadata
   // send the name of the player, e.g. "Joe's iPhone" or "iTunes"
-  send_metadata('ssnc','sndr',sender_name,strlen(sender_name),NULL);
+  send_metadata('ssnc','sndr',strdup(sender_name),strlen(sender_name),NULL);
 }
 
 static void handle_set_parameter(rtsp_conn_info *conn,
