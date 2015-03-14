@@ -11,6 +11,6 @@ void rtsp_request_shutdown_stream(void);
 // e.g. it it's malloced, to free it, etc.
 // nothing is done automatically
 
-void send_ssnc_metadata(uint32_t code,char *data,uint32_t length);
+int send_ssnc_metadata(uint32_t code,char *data,uint32_t length, int block);
 
 #endif // _RTSP_H

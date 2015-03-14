@@ -563,7 +563,7 @@ static abuf_t *buffer_get_frame(void) {
                 config.output->play(silence, fs);
                 free(silence);
                 if (ab_buffering==0) {
-                  send_ssnc_metadata('prsm',NULL,0); // "resume"
+                  send_ssnc_metadata('prsm',NULL,0,0); // "resume", but don't wait if the queue is locked
                 }
               }
             }
@@ -1048,7 +1048,7 @@ void player_volume(double f) {
   if (dv) {
     memset(dv,0,64);
     snprintf(dv,63,"%.2f",f);
-    send_ssnc_metadata('pvol',dv,strlen(dv));
+    send_ssnc_metadata('pvol',dv,strlen(dv),1);
   }
 }
 
@@ -1059,7 +1059,7 @@ void player_flush(uint32_t timestamp) {
   //if (timestamp!=0x7fffffff)
   flush_rtp_timestamp=timestamp; // flush all packets up to (and including?) this
   pthread_mutex_unlock(&flush_mutex);
-  send_ssnc_metadata('pfls',NULL,0);
+  send_ssnc_metadata('pfls',NULL,0,1);
 }
 
 int player_play(stream_cfg *stream) {
@@ -1083,7 +1083,7 @@ int player_play(stream_cfg *stream) {
   init_buffer();
   please_stop = 0;
   command_start();
-  send_ssnc_metadata('pbeg',NULL,0);
+  send_ssnc_metadata('pbeg',NULL,0,1);
  
   // set the flowcontrol condition variable to wait on a monotonic clock
 #ifdef COMPILE_FOR_LINUX
@@ -1107,7 +1107,7 @@ void player_stop(void) {
   please_stop = 1;
   pthread_cond_signal(&flowcontrol); // tell it to give up
   pthread_join(player_thread, NULL);
-  send_ssnc_metadata('pend',NULL,0);
+  send_ssnc_metadata('pend',NULL,0,1);
   config.output->stop();
   command_stop();
   free_buffer();

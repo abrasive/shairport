@@ -137,10 +137,10 @@ void pc_queue_init(pc_queue* the_queue, char* items, size_t item_size, uint32_t 
   the_queue->eoq = 0;
 }
 
-void send_metadata(uint32_t type,uint32_t code,char *data,uint32_t length, rtsp_message* carrier);
+int send_metadata(uint32_t type,uint32_t code,char *data,uint32_t length,rtsp_message* carrier,int block);
 
-void send_ssnc_metadata(uint32_t code,char *data,uint32_t length) {
-  send_metadata('ssnc',code,data,length,NULL);
+int send_ssnc_metadata(uint32_t code,char *data,uint32_t length,int block) {
+  return send_metadata('ssnc',code,data,length,NULL,block);
 }
 
 
@@ -186,10 +186,15 @@ int pc_queue_delete(pc_queue* the_queue) {
 }
 */
 
-int pc_queue_add_item(pc_queue* the_queue,const void* the_stuff) {
+int pc_queue_add_item(pc_queue* the_queue,const void* the_stuff, int block) {
   int rc;
   if (the_queue) {
-    rc = pthread_mutex_lock(&the_queue->pc_queue_lock);
+    if (block==0) {
+      rc = pthread_mutex_trylock(&the_queue->pc_queue_lock);
+      if (rc==EBUSY)
+        return EBUSY;
+    } else
+      rc = pthread_mutex_lock(&the_queue->pc_queue_lock);
     if (rc)
       debug(1,"Error locking for pc_queue_add_item");
     while(the_queue->count==the_queue->capacity) {
@@ -209,12 +214,14 @@ int pc_queue_add_item(pc_queue* the_queue,const void* the_stuff) {
       i=0;
     the_queue->eoq = i;
     the_queue->count++;
+    if (the_queue->count==the_queue->capacity)
+      debug(1,"pc_queue is full!");
+    rc = pthread_cond_signal(&the_queue->pc_queue_item_added_signal);
+    if (rc)
+      debug(1,"Error signalling after pc_queue_add_item");
     rc = pthread_mutex_unlock(&the_queue->pc_queue_lock);
     if (rc)
       debug(1,"Error unlocking for pc_queue_add_item");
-    rc = pthread_cond_signal(&the_queue->pc_queue_item_added_signal);
-     if (rc)
-      debug(1,"Error signalling after pc_queue_add_item");
   } else {
     debug(1,"Adding an item to a NULL queue");
   }
@@ -226,7 +233,7 @@ int pc_queue_get_item(pc_queue* the_queue,void* the_stuff) {
   if (the_queue) {
     rc = pthread_mutex_lock(&the_queue->pc_queue_lock);
     if (rc)
-      debug(1,"Error locking for pc_queue_add_item");
+      debug(1,"Error locking for pc_queue_get_item");
     while(the_queue->count==0) {
       rc = pthread_cond_wait(&the_queue->pc_queue_item_added_signal,&the_queue->pc_queue_lock);
       if (rc)
@@ -244,12 +251,12 @@ int pc_queue_get_item(pc_queue* the_queue,void* the_stuff) {
       i=0;
     the_queue->toq = i;
     the_queue->count--;
+    rc = pthread_cond_signal(&the_queue->pc_queue_item_removed_signal);
+    if (rc)
+      debug(1,"Error signalling after pc_queue_removed_item");
     rc = pthread_mutex_unlock(&the_queue->pc_queue_lock);
     if (rc)
       debug(1,"Error unlocking for pc_queue_get_item");
-    rc = pthread_cond_signal(&the_queue->pc_queue_item_removed_signal);
-     if (rc)
-      debug(1,"Error signalling after pc_queue_removed_item");
   } else {
     debug(1,"Removing an item from a NULL queue");
   }
@@ -856,7 +863,7 @@ char *base64_encode_so(const unsigned char *data,
 static int fd = -1;
 static int dirty = 0;
 pc_queue metadata_queue;
-#define metadata_queue_size 200
+#define metadata_queue_size 500
 metadata_package metadata_queue_items[metadata_queue_size];
 
 static pthread_t metadata_thread;
@@ -995,7 +1002,7 @@ void metadata_init(void) {
     debug(1,"Failed to create metadata thread!");
 }
 
-void send_metadata(uint32_t type,uint32_t code,char *data,uint32_t length, rtsp_message* carrier) {
+int send_metadata(uint32_t type,uint32_t code,char *data,uint32_t length, rtsp_message* carrier, int block) {
   metadata_package pack;
   pack.type = type;
   pack.code = code;
@@ -1004,7 +1011,12 @@ void send_metadata(uint32_t type,uint32_t code,char *data,uint32_t length, rtsp_
   if (carrier)
     msg_retain(carrier);
   pack.carrier = carrier;
-  pc_queue_add_item(&metadata_queue,&pack);
+  int rc = pc_queue_add_item(&metadata_queue,&pack,block);
+  if ((rc==EBUSY) && (carrier))
+    msg_free(carrier);
+  if (rc==EBUSY)
+    warn("Metadata queue is busy, dropping message of type 0x%08X, code 0x%08X.",type,code);
+  return rc;
 }
 
 static void handle_set_parameter_metadata(rtsp_conn_info *conn,
@@ -1028,7 +1040,7 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn,
     // If the rtsp_message is NULL, then if the pointer is non-null, it points to a malloc'ed block and should be freed when the thread is finished with it. The length of the data in the block is given in length
     // If the rtsp_message is NULL and the pointer is also NULL, nothing further is done.
     
-    send_metadata('ssnc','mdst',NULL,0,NULL);
+    send_metadata('ssnc','mdst',NULL,0,NULL,1);
 
     while (off < cl) {
         // pick up the metadata tag as an unsigned longint
@@ -1041,19 +1053,19 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn,
         
         // pass the data over
         if (vl==0)
-          send_metadata('core',itag,NULL,0,NULL);        
+          send_metadata('core',itag,NULL,0,NULL,1);        
         else
-          send_metadata('core',itag,(char *)(cp+off),vl,req);
+          send_metadata('core',itag,(char *)(cp+off),vl,req,1);
         
         // move on to the next item
         off += vl;
     }
     
   // inform the listener that a set of metadata is ending  
-  send_metadata('ssnc','mden',NULL,0,NULL);
+  send_metadata('ssnc','mden',NULL,0,NULL,1);
   // send the user some shairport-originated metadata
   // send the name of the player, e.g. "Joe's iPhone" or "iTunes"
-  send_metadata('ssnc','sndr',strdup(sender_name),strlen(sender_name),NULL);
+  send_metadata('ssnc','sndr',strdup(sender_name),strlen(sender_name),NULL,1);
 }
 
 static void handle_set_parameter(rtsp_conn_info *conn,
@@ -1070,10 +1082,10 @@ static void handle_set_parameter(rtsp_conn_info *conn,
             debug(2, "received metadata tags in SET_PARAMETER request.");
             handle_set_parameter_metadata(conn, req, resp);
         } else if (!strncmp(ct, "image", 5)) {
-            debug(1, "received image in SET_PARAMETER request.");
+            // debug(1, "received image in SET_PARAMETER request.");
             // note: the image/type tag isn't reliable, so it's not being sent
             // -- best look at the first few bytes of the image
-            send_metadata('ssnc','PICT',req->content,req->contentlength,req);
+            send_metadata('ssnc','PICT',req->content,req->contentlength,req,1);
          } else if (!strncmp(ct, "text/parameters", 15)) {
             debug(2, "received parameters in SET_PARAMETER request.");
             handle_set_parameter_parameter(conn, req, resp);
