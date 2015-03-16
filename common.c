@@ -411,9 +411,9 @@ double vol2attn(double vol, long max_db, long min_db) {
 // thus, if the line was characterised as {0,-30}, it would be an identity transfer.
 // Assuming, for example, a dynamic range of lv=-60 to hv=0
 // Typically we'll use three lines -- a three order transfer function
-// First: {0,25} giving a gentle slope
-// Second: {-12,-25-(lv+25)/2} giving a faster slope from y=0 at x=-12 to y=-42.5 at x=-30
-// Third: {-19,lv} giving a fast slope from y=0 at x=-19 to y=-60 at x=-30
+// First: {0,30} giving a gentle slope -- the 30 comes from half the dynamic range
+// Second: {-5,-30-(lv+30)/2} giving a faster slope from y=0 at x=-12 to y=-42.5 at x=-30
+// Third: {-17,lv} giving a fast slope from y=0 at x=-19 to y=-60 at x=-30
 
 #define order 3
 
@@ -422,7 +422,8 @@ double vol2attn(double vol, long max_db, long min_db) {
   if ((vol<=0.0) && (vol>=-30.0)) {
     long range_db = max_db-min_db; // this will be a positive nunmber
     // debug(1,"Volume min %ddB, max %ddB, range %ddB.",min_db,max_db,range_db);
-    double first_slope = -2500.0; // this is the slope of the attenuation at the high end -- 25dB for the full rotation.
+    //double first_slope = -3000.0; // this is the slope of the attenuation at the high end -- 30dB for the full rotation.
+    double first_slope = -range_db/2; // this is the slope of the attenuation at the high end -- 30dB for the full rotation.
     if (-range_db>first_slope)
       first_slope = range_db;
     double lines[order][2] = {{0,first_slope},{-5,first_slope-(range_db+first_slope)/2},{-17,-range_db}};
