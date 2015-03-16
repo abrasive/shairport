@@ -86,5 +86,6 @@ audio_output audio_pipe = {
     .flush = NULL,
     .delay = NULL,
     .play = &play,
-    .volume = NULL
+    .volume = NULL,
+    .parameters = NULL
 };

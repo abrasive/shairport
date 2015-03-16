@@ -399,6 +399,8 @@ void command_stop(void) {
 // See http://tangentsoft.net/audio/atten.html for data on good attenuators.
 // We want a smooth attenuation function, like, for example, the ALPS RK27 Potentiometer transfer functions referred to at the link above.
 
+// Note that the max_db and min_db are given as dB*100
+
 double vol2attn(double vol, long max_db, long min_db) { 
 
 // We use a little coordinate geometry to build a transfer function from the volume passed in to the device's dynamic range.

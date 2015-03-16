@@ -43,6 +43,7 @@ static void stop(void);
 static void flush(void);
 static uint32_t delay(void);
 static void volume(double vol);
+static void parameters(audio_parameters* info);
 static int has_mute=0;
 static int has_db_vol=0;
 static double set_volume;
@@ -57,7 +58,8 @@ audio_output audio_alsa = {
     .flush = &flush,
     .delay = &delay,
     .play = &play,
-    .volume = NULL
+    .volume = NULL, // to be set later on...
+    .parameters = NULL // to be set later on...
 };
 
 static pthread_mutex_t alsa_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -158,6 +160,7 @@ static int init(int argc, char **argv) {
        (snd_mixer_selem_ask_playback_vol_dB(alsa_mix_elem,alsa_mix_maxv,&alsa_mix_maxdb)==0)) {
       has_db_vol=1;
       audio_alsa.volume = &volume; // insert the volume function now we know it can do dB stuff
+      audio_alsa.parameters = &parameters; // likewise the parameters stuff
       if (alsa_mix_mindb==-9999999) {
         // trying to say that the lowest vol is mute, maybe? Raspberry Pi does this
         if (snd_mixer_selem_ask_playback_vol_dB(alsa_mix_elem,alsa_mix_minv+1,&alsa_mix_mindb)==0)
@@ -312,6 +315,15 @@ static void stop(void) {
 	  // so we should flush first
 	  flush(); // flush will also close the device
 	  // close_alsa_device();
+}
+
+static void parameters(audio_parameters* info) {
+  info->has_true_mute=has_mute;
+  info->is_muted = ((has_mute) && (set_volume == -144.0));
+  info->minimum_volume_dB=alsa_mix_mindb;
+  info->maximum_volume_dB=alsa_mix_maxdb;
+  info->airplay_volume=set_volume;
+  info->current_volume_dB=vol2attn(set_volume,alsa_mix_maxdb,alsa_mix_mindb);
 }
 
 static void volume(double vol) {

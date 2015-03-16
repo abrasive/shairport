@@ -797,7 +797,12 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn,
 //    'pend' -- play stream end. No arguments
 //    'pfls' -- play stream flush. No arguments
 //    'prsm' -- play stream resume. No arguments
-//    'pvol' -- play volume. The volume is sent as a string.
+//    'pvol' -- play volume. The volume is sent as a string -- "airplay_volume,volume,lowest_volume,highest_volume,has_true_mute,is_muted"
+//              volume, lowest_volume and highest_volume are given in dB
+//              is_muted is 1 if [true] mute is enabled, 0 otherwise. 
+//              The "airplay_volume" is what's sent to the player, and is from 0.00 down to -30.00, with -144.00 meaning mute.
+//              This is linear on the volume control slider of iTunes or iOS AirPLay
+//
 //    'mdst' -- a sequence of metadata is about to start
 //    'mden' -- a sequence of metadata has ended
 //    'snam' -- the name of the originator -- e.g. "Joe's iPhone" or "iTunes...".
@@ -894,7 +899,7 @@ void metadata_open(void) {
     char* path = malloc(pl+1);
     snprintf(path, pl+1, "%s/%s", config.meta_dir, fn);
 
-    fd = open(path, O_WRONLY);
+    fd = open(path, O_WRONLY | O_NONBLOCK);
     //if (fd < 0)
     //    debug(1, "Could not open metadata FIFO %s. Will try again later.", path);
 
@@ -907,18 +912,19 @@ static void metadata_close(void) {
 }
 
 ssize_t non_blocking_write(int fd, const void *buf, size_t count) {
-//  debug(1,"writing %u to pipe...",count);
+  // debug(1,"writing %u to pipe...",count);
   // we are assuming that the count is always smaller than the FIFO's buffer
   struct pollfd ufds[1];
   ssize_t reply;  
   do {
     ufds[0].fd=fd;
     ufds[0].events = POLLOUT;
-    int rv = poll(ufds,1,1000);
+    int rv = poll(ufds,1,5000);
     if (rv==-1)
       debug(1,"error waiting for pipe to unblock...");
     if (rv==0)
       debug(1,"timeout waiting for pipe to unblock");
+    reply=write(fd,buf,count);
     if ((reply==-1) && ((errno == EAGAIN) || (errno == EWOULDBLOCK)))
       debug(1,"writing to pipe will block...");
 //    else
@@ -940,12 +946,12 @@ void metadata_process(uint32_t type,uint32_t code,char *data,uint32_t length) {
     return;
   char thestring[1024];
   snprintf(thestring,1024,"<type>%x</type><code>%x</code><length>%u</length>\n",type,code,length);
-  ret = write(fd, thestring, strlen(thestring));
+  ret = non_blocking_write(fd, thestring, strlen(thestring));
   if (ret < 1)
     return;
   if ((data!=NULL) && (length>0)) {
     snprintf(thestring,1024,"<data encoding=\"base64\">\n");
-    ret = write(fd, thestring, strlen(thestring));
+    ret = non_blocking_write(fd, thestring, strlen(thestring));
     if (ret < 1)    // no reader
       return;
     // here, we write the data in base64 form using our nice base64 encoder
@@ -963,7 +969,7 @@ void metadata_process(uint32_t type,uint32_t code,char *data,uint32_t length) {
     	if (base64_encode_so(remaining_data, towrite_count, outbuf, &outbuf_size)==NULL)
     		debug(1,"Error encoding base64 data.");
    		//debug(1,"Remaining count: %d ret: %d, outbuf_size: %d.",remaining_count,ret,outbuf_size);    	
-     	ret = write(fd,outbuf,outbuf_size);
+     	ret = non_blocking_write(fd,outbuf,outbuf_size);
      	if (ret<0)
      	  return;
     	remaining_data+=towrite_count;
@@ -973,7 +979,7 @@ void metadata_process(uint32_t type,uint32_t code,char *data,uint32_t length) {
      	//	return;
     }
     snprintf(thestring,1024,"</data>\n");
-    ret = write(fd, thestring, strlen(thestring));
+    ret = non_blocking_write(fd, thestring, strlen(thestring));
     if (ret < 1)    // no reader
       return;
   }
@@ -1070,8 +1076,8 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn,
 
 static void handle_set_parameter(rtsp_conn_info *conn,
                                  rtsp_message *req, rtsp_message *resp) {
-     if (!req->contentlength)
-         debug(1, "received empty SET_PARAMETER request.");
+     //if (!req->contentlength)
+     //    debug(1, "received empty SET_PARAMETER request.");
 
     char *ct = msg_get_header(req, "Content-Type");
 

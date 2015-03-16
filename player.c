@@ -95,7 +95,7 @@ static int32_t last_seqno_read;
 
 
 // interthread variables
-static double volume = 1.0;
+static double software_mixer_volume = 1.0;
 static int fix_volume = 0x10000;
 static pthread_mutex_t vol_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -132,6 +132,8 @@ static pthread_mutex_t flush_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t flowcontrol;
 
 static int64_t first_packet_time_to_play; // nanoseconds
+
+static audio_parameters audio_information;
 
 // stats
 static uint64_t missing_packets,late_packets,too_late_packets,resend_requests; 
@@ -740,7 +742,7 @@ static int stuff_buffer_soxr(short *inptr, short *outptr, int stuff) {
     }
 
     // finally, adjust the volume, if necessary
-    if (volume!=1.0) {
+    if (software_mixer_volume!=1.0) {
       // pthread_mutex_lock(&vol_mutex);
       op=outptr;
       for (i=0; i<frame_size+stuff; i++) {
@@ -780,6 +782,7 @@ static void *player_thread_func(void *arg) {
   int64_t minimum_dac_queue_size = 1000000;
   int32_t minimum_buffer_occupancy = BUFFER_FRAMES;
   int32_t maximum_buffer_occupancy = 0;
+  audio_information.valid=0;
   
   int play_samples;
   int64_t current_delay;
@@ -1031,25 +1034,42 @@ void player_volume(double f) {
 // Here, we ask for an attenuation we will apply in software. The dB range of a value from 1 to 65536 is about 48.1 dB (log10 of 65536 is 4.8164).
 // Thus, we ask our vol2attn function for an appropriate dB between -48.1 and 0 dB and translate it back to a number.
  
-  double linear_volume = pow(10,vol2attn(f,0,-4810)/1000);
+  double scaled_volume = vol2attn(f,0,-4810);
+  double linear_volume = pow(10,scaled_volume/1000);
     
   if(f == -144.0)
     linear_volume = 0.0;
   
   if (config.output->volume) {
-      config.output->volume(f);
-      linear_volume=1.0; // no attenuation needed
-  } 
+      config.output->volume(f); // volume will be sent as metadata by the config.output device
+      linear_volume=1.0; // no attenuation needed -- this value is used as a flag to avoid calculations
+  }
+  
+  
+  if (config.output->parameters)
+    config.output->parameters(&audio_information);
+  else {
+    audio_information.airplay_volume = f;
+    audio_information.minimum_volume_dB = -4810;
+    audio_information.maximum_volume_dB = 0;
+    audio_information.current_volume_dB = scaled_volume;
+    audio_information.has_true_mute = 0;
+    audio_information.is_muted = 0;
+  }
+  audio_information.valid=1;
   pthread_mutex_lock(&vol_mutex);
-  volume = linear_volume;
-  fix_volume = 65536.0 * volume;
+  software_mixer_volume = linear_volume; 
+  fix_volume = 65536.0 * software_mixer_volume;  
   pthread_mutex_unlock(&vol_mutex);
+  
   char *dv = malloc(64); // will be freed in the metadata thread
   if (dv) {
     memset(dv,0,64);
-    snprintf(dv,63,"%.2f",f);
+    snprintf(dv,63,"%.2f,%.2f,%.2f,%.2f",audio_information.airplay_volume,audio_information.current_volume_dB/100.0,audio_information.minimum_volume_dB/100.0,audio_information.maximum_volume_dB/100.0);
     send_ssnc_metadata('pvol',dv,strlen(dv),1);
   }
+
+  
 }
 
 void player_flush(uint32_t timestamp) {

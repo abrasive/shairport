@@ -4,6 +4,16 @@
 #include <stdint.h>
 
 typedef struct {
+  double airplay_volume;
+  double current_volume_dB;
+  int minimum_volume_dB;
+  int maximum_volume_dB;
+  int has_true_mute;
+  int is_muted;
+  int valid;
+} audio_parameters;
+
+typedef struct {
     void (*help)(void);
     char *name;
 
@@ -28,6 +38,9 @@ typedef struct {
 
     // may be NULL, in which case soft volume is applied
     void (*volume)(double vol);
+    
+    // may be NULL, in which case soft volume parameters are used
+    void (*parameters)(audio_parameters* info);
 } audio_output;
 
 audio_output *audio_get_output(char *name);
