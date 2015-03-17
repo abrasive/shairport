@@ -768,7 +768,8 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn,
             player_volume(volume);
         } else if(!strncmp(cp, "progress: ", 10)) {
             char *progress = cp + 10;
-            debug(1, "progress: \"%s\"\n", progress);
+            debug(2, "progress: \"%s\"\n", progress); // rtpstampstart/rtpstampnow/rtpstampend 44100 per second
+            send_ssnc_metadata('prgr',strdup(progress),strlen(progress),1);
         } else {
             debug(1, "unrecognised parameter: \"%s\" (%d)\n", cp, strlen(cp));
         }
@@ -802,7 +803,8 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn,
 //              is_muted is 1 if [true] mute is enabled, 0 otherwise. 
 //              The "airplay_volume" is what's sent to the player, and is from 0.00 down to -30.00, with -144.00 meaning mute.
 //              This is linear on the volume control slider of iTunes or iOS AirPLay
-//
+//    'prgr' -- progress -- this is metadata from AirPlay consisting of RTP timestamps for the start of the current play sequence, the current play point and the end of the play sequence.
+//              I guess the timestamps wrap at 2^32.
 //    'mdst' -- a sequence of metadata is about to start
 //    'mden' -- a sequence of metadata has ended
 //    'snam' -- the name of the originator -- e.g. "Joe's iPhone" or "iTunes...".
