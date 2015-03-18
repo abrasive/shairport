@@ -93,8 +93,14 @@ double vol2attn(double vol, long max_db, long min_db);
 
 uint64_t get_absolute_time_in_fp(void);
 
+// this is for reading an unsigned 32 bit number, such as an RTP timestamp
+
+uint32_t uatoi(const char *nptr);
+
 shairport_cfg config;
 char sender_name[1024];
+char sender_ip[1024];
+char album_name[1024]; // we might need this for picture diagnostics
 
 void command_start(void);
 void command_stop(void);

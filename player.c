@@ -306,11 +306,11 @@ void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len) {
 	time_of_last_audio_packet = get_absolute_time_in_fp();
   if (connection_state_to_output) { // if we are supposed to be processing these packets
   
-	  if ((flush_rtp_timestamp!=0x7fffffff) && ((timestamp==flush_rtp_timestamp) || seq32_order(timestamp,flush_rtp_timestamp))) {
+	  if ((flush_rtp_timestamp!=0) && ((timestamp==flush_rtp_timestamp) || seq32_order(timestamp,flush_rtp_timestamp))) {
 		  debug(2,"Dropping flushed packet in player_put_packet, seqno %u, timestamp %u, flushing to timestamp: %u.",seqno,timestamp,flush_rtp_timestamp);
 	  } else {
-		  if ((flush_rtp_timestamp!=0x7fffffff) && (!seq32_order(timestamp,flush_rtp_timestamp))) // if we have gone past the flush boundary time
-			  flush_rtp_timestamp=0x7fffffff;
+		  if ((flush_rtp_timestamp!=0x0) && (!seq32_order(timestamp,flush_rtp_timestamp))) // if we have gone past the flush boundary time
+			  flush_rtp_timestamp=0x0;
 
 		  abuf_t *abuf = 0;
 
@@ -460,16 +460,16 @@ static abuf_t *buffer_get_frame(void) {
 						}
 					}
     		    		
-					if ((flush_rtp_timestamp!=0x7fffffff) && ((curframe->timestamp==flush_rtp_timestamp) || seq32_order(curframe->timestamp,flush_rtp_timestamp))) {
+					if ((flush_rtp_timestamp!=0) && ((curframe->timestamp==flush_rtp_timestamp) || seq32_order(curframe->timestamp,flush_rtp_timestamp))) {
 						debug(1,"Dropping flushed packet seqno %u, timestamp %u",curframe->sequence_number,curframe->timestamp);
 						curframe->ready=0;
 						flush_limit++;
 						ab_read=SUCCESSOR(ab_read);
 					}
-					if ((flush_rtp_timestamp!=0x7fffffff) && (!seq32_order(curframe->timestamp,flush_rtp_timestamp))) // if we have gone past the flush boundary time
-						flush_rtp_timestamp=0x7fffffff;
+					if ((flush_rtp_timestamp!=0) && (!seq32_order(curframe->timestamp,flush_rtp_timestamp))) // if we have gone past the flush boundary time
+						flush_rtp_timestamp=0;
 				}
-    	} while ((flush_rtp_timestamp!=0x7fffffff) && (flush_limit<=8820) && (curframe->ready==0));
+    	} while ((flush_rtp_timestamp!=0) && (flush_limit<=8820) && (curframe->ready==0));
     	
     	if (flush_limit==8820) {
     		debug(1,"Flush hit the 8820 frame limit!");
@@ -805,7 +805,7 @@ static void *player_thread_func(void *arg) {
 
   late_packet_message_sent=0;
   missing_packets=late_packets=too_late_packets=resend_requests=0;
-  flush_rtp_timestamp=0x7fffffff; // it seems this number has a special significance -- it seems to be used as a null operand, so we'll use it like that too
+  flush_rtp_timestamp=0; // it seems this number has a special significance -- it seems to be used as a null operand, so we'll use it like that too
   int sync_error_out_of_bounds = 0; // number of times in a row that there's been a serious sync error
   while (!please_stop) {
     abuf_t *inframe = buffer_get_frame();
@@ -1073,10 +1073,10 @@ void player_volume(double f) {
 }
 
 void player_flush(uint32_t timestamp) {
-	// debug(1,"Flush requested up to %u. It seems as if 2147483647 is special.",timestamp);
+	// debug(1,"Flush requested up to %u. It seems as if 0 is special.",timestamp);
   pthread_mutex_lock(&flush_mutex);
   flush_requested=1;
-  //if (timestamp!=0x7fffffff)
+  //if (timestamp!=0)
   flush_rtp_timestamp=timestamp; // flush all packets up to (and including?) this
   pthread_mutex_unlock(&flush_mutex);
   send_ssnc_metadata('pfls',NULL,0,1);

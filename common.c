@@ -395,6 +395,15 @@ void command_stop(void) {
 	}
 }
 
+
+// this is for reading an unsigned 32 bit number, such as an RTP timestamp
+
+uint32_t uatoi(const char *nptr) {
+  uint64_t llint = atoll(nptr);
+  uint32_t r = llint;
+  return r;
+}
+
 // Given a volume (0 to -30) and high and low attenuations available in the mixer in dB, return an attenuation depending on the volume and the function's transfer function
 // See http://tangentsoft.net/audio/atten.html for data on good attenuators.
 // We want a smooth attenuation function, like, for example, the ALPS RK27 Potentiometer transfer functions referred to at the link above.

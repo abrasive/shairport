@@ -83,6 +83,8 @@ static pthread_mutex_t playing_mutex = PTHREAD_MUTEX_INITIALIZER;
 static int please_shutdown = 0;
 static pthread_t playing_thread = 0;
 
+static debug_flag=0;
+
 typedef struct {
     int fd;
     stream_cfg stream;
@@ -141,6 +143,31 @@ int send_metadata(uint32_t type,uint32_t code,char *data,uint32_t length,rtsp_me
 
 int send_ssnc_metadata(uint32_t code,char *data,uint32_t length,int block) {
   return send_metadata('ssnc',code,data,length,NULL,block);
+}
+
+ssize_t non_blocking_read(int fd, void *buf, size_t count) {
+  // debug(1,"reading %u from pipe...",count);
+  // we are assuming that the count is always smaller than the FIFO's buffer
+  struct pollfd ufds[1];
+  ssize_t reply;  
+  do {
+    ufds[0].fd=fd;
+    ufds[0].events = POLLIN;
+    int rv = poll(ufds,1,-1);
+    if (rv==-1)
+      debug(1,"error waiting for pipe to unblock...");
+    if (rv==0)
+      debug(1,"timeout waiting for pipe to unblock");
+    reply=read(fd,buf,count);
+    if ((reply==-1) && ((errno == EAGAIN) || (errno == EWOULDBLOCK)))
+      debug(1,"reading to pipe will block...");
+//    else
+//      debug(1,"writing %u to pipe done...",reply);
+  } while ((reply==0) || ((reply==-1) && ((errno == EAGAIN) || (errno == EWOULDBLOCK))));
+  return reply;
+
+
+//  return read(fd,buf,count);
 }
 
 
@@ -497,15 +524,18 @@ static enum rtsp_read_request_response rtsp_read_request(int fd, rtsp_message** 
             reply = rtsp_read_request_response_shutdown_requested;
             goto shutdown;
         }
-        nread = read(fd, buf+inbuf, buflen - inbuf);
+        nread = non_blocking_read(fd, buf+inbuf, buflen - inbuf);
+        debug(1,"Read %d bytes.",nread);
         if (!nread) {
             debug(1, "RTSP connection closed.");
             reply = rtsp_read_request_response_shutdown_requested;
             goto shutdown;
         }
         if (nread < 0) {
-            if (errno==EINTR)
+            if ((errno==EINTR) || (errno==EAGAIN) || (errno==EWOULDBLOCK)) {
+                debug(1,"Oops");
                 continue;
+          }
             perror("read failure");
             reply = rtsp_read_request_response_error;
             goto shutdown;
@@ -515,6 +545,11 @@ static enum rtsp_read_request_response rtsp_read_request(int fd, rtsp_message** 
         char *next;
         while (msg_size < 0 && (next = nextline(buf, inbuf))) {
             msg_size = msg_handle_line(&msg, buf);
+            
+            if (msg_size>50000) {
+              debug(1,"Message of %d bytes to be received.",msg_size);
+              debug_flag=1;
+            }
 
             if (!msg) {
                 warn("no RTSP header received");
@@ -539,7 +574,13 @@ static enum rtsp_read_request_response rtsp_read_request(int fd, rtsp_message** 
     }
 
     while (inbuf < msg_size) {
-        nread = read(fd, buf+inbuf, msg_size-inbuf);
+      int max_chunk = msg_size-inbuf;
+      if (max_chunk>1024*64)
+        max_chunk=1024*64;
+
+        nread = read(fd, buf+inbuf, max_chunk);
+        if (debug_flag)
+          debug(1,"Hi Mike -- read %d bytes",nread);
         if (!nread) {
             reply = rtsp_read_request_response_error;
             goto shutdown;
@@ -554,6 +595,8 @@ static enum rtsp_read_request_response rtsp_read_request(int fd, rtsp_message** 
         inbuf += nread;
     }
 
+    if (debug_flag)
+      debug(1,"content length returned is %d for Content_length of %d.",inbuf,msg_size);
     msg->contentlength = inbuf;
     msg->content = buf;
     *the_packet = msg;
@@ -638,7 +681,7 @@ static void handle_flush(rtsp_conn_info *conn,
       if (p) {
         p = strchr(p, '=') + 1;
         if (p)
-          rtptime = uatoi(p); // unsigned integer -- up to 2^32-1
+          rtptime = atoi(p);
       }
     }
     // debug(1,"RTSP Flush Requested.");
@@ -768,8 +811,7 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn,
             player_volume(volume);
         } else if(!strncmp(cp, "progress: ", 10)) {
             char *progress = cp + 10;
-            debug(2, "progress: \"%s\"\n", progress); // rtpstampstart/rtpstampnow/rtpstampend 44100 per second
-            send_ssnc_metadata('prgr',strdup(progress),strlen(progress),1);
+            debug(1, "progress: \"%s\"\n", progress);
         } else {
             debug(1, "unrecognised parameter: \"%s\" (%d)\n", cp, strlen(cp));
         }
@@ -803,8 +845,7 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn,
 //              is_muted is 1 if [true] mute is enabled, 0 otherwise. 
 //              The "airplay_volume" is what's sent to the player, and is from 0.00 down to -30.00, with -144.00 meaning mute.
 //              This is linear on the volume control slider of iTunes or iOS AirPLay
-//    'prgr' -- progress -- this is metadata from AirPlay consisting of RTP timestamps for the start of the current play sequence, the current play point and the end of the play sequence.
-//              I guess the timestamps wrap at 2^32.
+//
 //    'mdst' -- a sequence of metadata is about to start
 //    'mden' -- a sequence of metadata has ended
 //    'snam' -- the name of the originator -- e.g. "Joe's iPhone" or "iTunes...".
@@ -1421,11 +1462,11 @@ static void *rtsp_conversation_thread_func(void *pconn) {
         struct method_handler *mh;
         for (mh=method_handlers; mh->method; mh++) {
             if (!strcmp(mh->method, req->method)) {
-                // debug(1,"RTSP Packet received of type \"%s\":",mh->method),
-                // msg_print_debug_headers(req);
+                 debug(1,"RTSP Packet received of type \"%s\":",mh->method),
+                 msg_print_debug_headers(req);
                 mh->handler(conn, req, resp);
-                // debug(1,"RTSP Response:");
-                // msg_print_debug_headers(resp);
+                 debug(1,"RTSP Response:");
+                 msg_print_debug_headers(resp);
                 break;
             }
         }
@@ -1583,7 +1624,7 @@ void rtsp_listen_loop(void) {
         socklen_t slen = sizeof(conn->remote);
 
         debug(1, "new RTSP connection.");
-        conn->fd = accept(acceptfd, (struct sockaddr *)&conn->remote, &slen);
+        conn->fd = accept4(acceptfd, (struct sockaddr *)&conn->remote, &slen,SOCK_NONBLOCK);
         if (conn->fd < 0) {
             perror("failed to accept connection");
             free(conn);

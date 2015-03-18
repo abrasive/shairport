@@ -13,7 +13,9 @@ typedef struct {
     void (*mdns_unregister)(void);
 } mdns_backend;
 
-#define MDNS_RECORD_WITH_METADATA "tp=UDP", "sm=false", "ek=1", "et=0,1", "cn=0,1", "ch=2", "md=0,1", \
+// text and progress only -- picture feed really buggy from iTunes
+
+#define MDNS_RECORD_WITH_METADATA "tp=UDP", "sm=false", "ek=1", "et=0,1", "cn=0,1", "ch=2", "md=0,1,2", \
                 "ss=16", "sr=44100", "vn=3", "txtvers=1", \
                 config.password ? "pw=true" : "pw=false"
 

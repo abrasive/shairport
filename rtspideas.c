@@ -83,6 +83,8 @@ static pthread_mutex_t playing_mutex = PTHREAD_MUTEX_INITIALIZER;
 static int please_shutdown = 0;
 static pthread_t playing_thread = 0;
 
+static debug_flag=0;
+
 typedef struct {
     int fd;
     stream_cfg stream;
@@ -482,7 +484,7 @@ fail:
 
 static enum rtsp_read_request_response rtsp_read_request(int fd, rtsp_message** the_packet) {
     enum rtsp_read_request_response reply=rtsp_read_request_response_ok;
-    ssize_t buflen = 512;
+    ssize_t buflen = 1024*1024*7;
     char *buf = malloc(buflen+1);
 
     rtsp_message *msg = NULL;
@@ -515,6 +517,11 @@ static enum rtsp_read_request_response rtsp_read_request(int fd, rtsp_message** 
         char *next;
         while (msg_size < 0 && (next = nextline(buf, inbuf))) {
             msg_size = msg_handle_line(&msg, buf);
+            
+            if (msg_size>50000) {
+              debug(1,"big message, %d bytes.",msg_size);
+              debug_flag=1;
+            }
 
             if (!msg) {
                 warn("no RTSP header received");
@@ -529,6 +536,7 @@ static enum rtsp_read_request_response rtsp_read_request(int fd, rtsp_message** 
     }
 
     if (msg_size > buflen) {
+      debug(1,"realloc required to fit size %d, up from %d",msg_size,buflen);
         buf = realloc(buf, msg_size);
         if (!buf) {
             warn("too much content");
@@ -539,13 +547,23 @@ static enum rtsp_read_request_response rtsp_read_request(int fd, rtsp_message** 
     }
 
     while (inbuf < msg_size) {
-        nread = read(fd, buf+inbuf, msg_size-inbuf);
+      int max_chunk = msg_size-inbuf;
+      if (max_chunk>1024*64)
+        max_chunk=1024*64;
+        
+        nread = read(fd, buf+inbuf, max_chunk);
+        
+        if (debug_flag)
+          debug(1,"Hi Mike -- read %d bytes",nread);
+
         if (!nread) {
             reply = rtsp_read_request_response_error;
             goto shutdown;
         }
-        if (nread==EINTR)
+        if (nread==EINTR) {
+          debug(1,"must continue in rtsp message read");
             continue;
+        }
         if (nread < 0) {
             perror("read failure");
             reply = rtsp_read_request_response_error;
@@ -553,13 +571,16 @@ static enum rtsp_read_request_response rtsp_read_request(int fd, rtsp_message** 
         }
         inbuf += nread;
     }
-
+    if (debug_flag)
+      debug(1,"content length returned is %d for Content_length of %d.",inbuf,msg_size);
     msg->contentlength = inbuf;
     msg->content = buf;
     *the_packet = msg;
     return reply;
 
 shutdown:
+    if (debug_flag)
+      debug(1,"Hi Mike -- in shutdown!");
     if (msg) {
       msg_free(msg); // which will free the content and everything else
     }
@@ -638,7 +659,7 @@ static void handle_flush(rtsp_conn_info *conn,
       if (p) {
         p = strchr(p, '=') + 1;
         if (p)
-          rtptime = uatoi(p); // unsigned integer -- up to 2^32-1
+          rtptime = atoi(p);
       }
     }
     // debug(1,"RTSP Flush Requested.");
@@ -744,6 +765,8 @@ static void handle_setup(rtsp_conn_info *conn,
     msg_add_header(resp, "Transport", resphdr);
 
     msg_add_header(resp, "Session", "1");
+    msg_add_header(resp, "Audio-Jack-Status", "connected");
+
 
     resp->respcode = 200;
 }
@@ -768,8 +791,7 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn,
             player_volume(volume);
         } else if(!strncmp(cp, "progress: ", 10)) {
             char *progress = cp + 10;
-            debug(2, "progress: \"%s\"\n", progress); // rtpstampstart/rtpstampnow/rtpstampend 44100 per second
-            send_ssnc_metadata('prgr',strdup(progress),strlen(progress),1);
+            debug(1, "progress: \"%s\"\n", progress);
         } else {
             debug(1, "unrecognised parameter: \"%s\" (%d)\n", cp, strlen(cp));
         }
@@ -803,8 +825,7 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn,
 //              is_muted is 1 if [true] mute is enabled, 0 otherwise. 
 //              The "airplay_volume" is what's sent to the player, and is from 0.00 down to -30.00, with -144.00 meaning mute.
 //              This is linear on the volume control slider of iTunes or iOS AirPLay
-//    'prgr' -- progress -- this is metadata from AirPlay consisting of RTP timestamps for the start of the current play sequence, the current play point and the end of the play sequence.
-//              I guess the timestamps wrap at 2^32.
+//
 //    'mdst' -- a sequence of metadata is about to start
 //    'mden' -- a sequence of metadata has ended
 //    'snam' -- the name of the originator -- e.g. "Joe's iPhone" or "iTunes...".
@@ -867,7 +888,7 @@ char *base64_encode_so(const unsigned char *data,
 // with thanks!
 //
 
-static int fd = -1;
+static int metapipe_fd = -1;
 static int dirty = 0;
 pc_queue metadata_queue;
 #define metadata_queue_size 500
@@ -901,32 +922,34 @@ void metadata_open(void) {
     char* path = malloc(pl+1);
     snprintf(path, pl+1, "%s/%s", config.meta_dir, fn);
 
-    fd = open(path, O_WRONLY | O_NONBLOCK);
-    //if (fd < 0)
+    metapipe_fd = open(path, O_WRONLY);
+    //if (metapipe_fd < 0)
     //    debug(1, "Could not open metadata FIFO %s. Will try again later.", path);
 
     free(path);
 }
 
 static void metadata_close(void) {
-    close(fd);
-    fd = -1;
+    close(metapipe_fd);
+    metapipe_fd = -1;
 }
 
-ssize_t non_blocking_write(int fd, const void *buf, size_t count) {
+ssize_t non_blocking_write(int local_fd, const void *buf, size_t count) {
+
+/*
   // debug(1,"writing %u to pipe...",count);
   // we are assuming that the count is always smaller than the FIFO's buffer
   struct pollfd ufds[1];
   ssize_t reply;  
   do {
-    ufds[0].fd=fd;
+    ufds[0].fd=local_fd;
     ufds[0].events = POLLOUT;
     int rv = poll(ufds,1,5000);
     if (rv==-1)
       debug(1,"error waiting for pipe to unblock...");
     if (rv==0)
       debug(1,"timeout waiting for pipe to unblock");
-    reply=write(fd,buf,count);
+    reply=write(local_fd,buf,count);
     if ((reply==-1) && ((errno == EAGAIN) || (errno == EWOULDBLOCK)))
       debug(1,"writing to pipe will block...");
 //    else
@@ -934,26 +957,27 @@ ssize_t non_blocking_write(int fd, const void *buf, size_t count) {
   } while ((reply==-1) && ((errno == EAGAIN) || (errno == EWOULDBLOCK)));
   return reply;
 
-
-//  return write(fd,buf,count);
+*/
+  return write(local_fd,buf,count);
 }
 
 void metadata_process(uint32_t type,uint32_t code,char *data,uint32_t length) {
-  debug(2,"Process metadata with type %x, code %x and length %u.",type,code,length);
+  if (code=='PICT')
+    debug(1,"Process metadata with type %x, code %x and length %u.",type,code,length);
   int ret;
   // readers may go away and come back
-  if (fd < 0)
+  if (metapipe_fd < 0)
     metadata_open();
-  if (fd < 0)
+  if (metapipe_fd < 0)
     return;
   char thestring[1024];
   snprintf(thestring,1024,"<type>%x</type><code>%x</code><length>%u</length>\n",type,code,length);
-  ret = non_blocking_write(fd, thestring, strlen(thestring));
+  ret = non_blocking_write(metapipe_fd, thestring, strlen(thestring));
   if (ret < 1)
     return;
   if ((data!=NULL) && (length>0)) {
     snprintf(thestring,1024,"<data encoding=\"base64\">\n");
-    ret = non_blocking_write(fd, thestring, strlen(thestring));
+    ret = non_blocking_write(metapipe_fd, thestring, strlen(thestring));
     if (ret < 1)    // no reader
       return;
     // here, we write the data in base64 form using our nice base64 encoder
@@ -971,17 +995,17 @@ void metadata_process(uint32_t type,uint32_t code,char *data,uint32_t length) {
     	if (base64_encode_so(remaining_data, towrite_count, outbuf, &outbuf_size)==NULL)
     		debug(1,"Error encoding base64 data.");
    		//debug(1,"Remaining count: %d ret: %d, outbuf_size: %d.",remaining_count,ret,outbuf_size);    	
-     	ret = non_blocking_write(fd,outbuf,outbuf_size);
+     	ret = non_blocking_write(metapipe_fd,outbuf,outbuf_size);
      	if (ret<0)
      	  return;
     	remaining_data+=towrite_count;
     	remaining_count-=towrite_count;
-      // ret = write(fd,"\r\n",2);
+      // ret = write(metapipe_fd,"\r\n",2);
       // if (ret<0)
      	//	return;
     }
     snprintf(thestring,1024,"</data>\n");
-    ret = non_blocking_write(fd, thestring, strlen(thestring));
+    ret = non_blocking_write(metapipe_fd, thestring, strlen(thestring));
     if (ret < 1)    // no reader
       return;
   }
@@ -1016,15 +1040,25 @@ int send_metadata(uint32_t type,uint32_t code,char *data,uint32_t length, rtsp_m
   pack.code = code;
   pack.data = data;
   pack.length = length;
+/*
   if (carrier)
     msg_retain(carrier);
   pack.carrier = carrier;
   int rc = pc_queue_add_item(&metadata_queue,&pack,block);
   if ((rc==EBUSY) && (carrier))
     msg_free(carrier);
-  if (rc==EBUSY)
+  if (rc==EBUSY) {
+    if (carrier)
+      msg_free(carrier)
+    if (data)
+      free(data);
     warn("Metadata queue is busy, dropping message of type 0x%08X, code 0x%08X.",type,code);
+  }
   return rc;
+*/
+  if (data)
+    free(data);
+  return 0;
 }
 
 static void handle_set_parameter_metadata(rtsp_conn_info *conn,
@@ -1049,7 +1083,7 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn,
     // If the rtsp_message is NULL and the pointer is also NULL, nothing further is done.
     
     send_metadata('ssnc','mdst',NULL,0,NULL,1);
-
+/*
     while (off < cl) {
         // pick up the metadata tag as an unsigned longint
         uint32_t itag = ntohl(*(uint32_t *)(cp+off));
@@ -1068,7 +1102,7 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn,
         // move on to the next item
         off += vl;
     }
-    
+*/    
   // inform the listener that a set of metadata is ending  
   send_metadata('ssnc','mden',NULL,0,NULL,1);
   // send the user some shairport-originated metadata
@@ -1084,13 +1118,15 @@ static void handle_set_parameter(rtsp_conn_info *conn,
     char *ct = msg_get_header(req, "Content-Type");
 
     if (ct) {
-        debug(2, "SET_PARAMETER Content-Type:\"%s\".", ct);
+        debug(1, "SET_PARAMETER Content-Type:\"%s\".", ct);
 
         if (!strncmp(ct, "application/x-dmap-tagged", 25)) {
-            debug(2, "received metadata tags in SET_PARAMETER request.");
-            handle_set_parameter_metadata(conn, req, resp);
+            debug(1, "received metadata tags in SET_PARAMETER request.");
+            //handle_set_parameter_metadata(conn, req, resp);
+        } else if (!strncmp(ct, "image/none", 10)) {
+          debug(1,"dropping empty picture.");
         } else if (!strncmp(ct, "image", 5)) {
-            // debug(1, "received image in SET_PARAMETER request.");
+            debug(1, "received image in SET_PARAMETER request.");
             // note: the image/type tag isn't reliable, so it's not being sent
             // -- best look at the first few bytes of the image
             send_metadata('ssnc','PICT',req->content,req->contentlength,req,1);
@@ -1405,7 +1441,10 @@ static void *rtsp_conversation_thread_func(void *pconn) {
     
     do {
       reply=rtsp_read_request(conn->fd,&req);
+
       if (reply==rtsp_read_request_response_ok) {
+      debug(1,"RTSP Packet seen of type \"%s\"",req->method);
+
         resp = msg_init();
         resp->respcode = 400;
 
@@ -1413,7 +1452,7 @@ static void *rtsp_conversation_thread_func(void *pconn) {
         hdr = msg_get_header(req, "CSeq");
         if (hdr)
             msg_add_header(resp, "CSeq", hdr);
-        msg_add_header(resp, "Audio-Jack-Status", "connected; type=analog");
+        msg_add_header(resp, "Server", "AirTunes/130.14");
 
         if (rtsp_auth(&auth_nonce, req, resp))
             goto respond;
@@ -1421,11 +1460,11 @@ static void *rtsp_conversation_thread_func(void *pconn) {
         struct method_handler *mh;
         for (mh=method_handlers; mh->method; mh++) {
             if (!strcmp(mh->method, req->method)) {
-                // debug(1,"RTSP Packet received of type \"%s\":",mh->method),
-                // msg_print_debug_headers(req);
+                 debug(1,"RTSP Packet received of type \"%s\".",mh->method);
+                 msg_print_debug_headers(req);
                 mh->handler(conn, req, resp);
-                // debug(1,"RTSP Response:");
-                // msg_print_debug_headers(resp);
+                 debug(1,"RTSP Response:");
+                 msg_print_debug_headers(resp);
                 break;
             }
         }
