@@ -2,8 +2,11 @@ Version 2.2.3 (Work in progress -- not a release yet.)
 -----
 * Bugfix
  * Two memory leaks fixed.
+ * An error handling time specifications for flushes was causing an audible glitch when pausing and resuming some tracks. This has been fixed (thanks https://github.com/Hamster128).
 * Enhancement
- * Adding metadata handling. Brought across the metadata handling from shaiport/abrasive. Though it shows the way -- thanks! -- IMHO it has a number of design and implementation problems and is very likely to change radically. Please don't rely on it having the same behaviour as it does now.
+ * A very experimental metadata feed has been added. Use the option `-M <pipe-directory>`, e.g. `-M /tmp`. Shairport Sync will provide metadata in a pipe called `<pipe-directory>/shairport-sync-metadata`. There's a sample metadata reader at https://github.com/mikebrady/shairport-sync-metadata-reader. The format of the metadata is a mixture of XML-style tags, 4-character codes and base64 data. Please look at `rtsp.c` and `player.c` for examples. Please note that the format of the metadata may change.
+Beware: there appears to be a serious bug in iTunes, such that it may stall for a long period when sending large (more than a few hundred kilobytes) coverart images.
+
 
 Version 2.2.2
 -----
