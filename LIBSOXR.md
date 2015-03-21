@@ -23,8 +23,6 @@ sudo make install
 ```
 Finally, for Shairport Sync to be able to locate `libsoxr-dev` during compilation, you need to tell `ld` where to find it:
 ```
-LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
-export LD_LIBRARY_PATH
 sudo ldconfig -v
 ```
 That's it. Now you can select the `--with-libsoxr` option when you're building Shairport Sync.
