@@ -538,20 +538,39 @@ static enum rtsp_read_request_response rtsp_read_request(int fd, rtsp_message** 
         buflen = msg_size;
     }
 
+    uint64_t threshold_time = get_absolute_time_in_fp() + ((uint64_t)5<<32); // i.e. five seconds from now
+    int warning_message_sent = 0;
+    
+    const size_t max_read_chunk = 50000;
     while (inbuf < msg_size) {
-        nread = read(fd, buf+inbuf, msg_size-inbuf);
-        if (!nread) {
-            reply = rtsp_read_request_response_error;
-            goto shutdown;
+    
+      // we are going to read the stream in chunks and time how long it takes to do so.
+      // If it's taking too long, (and we find out about it), we will send an error message as metadata
+      
+      if (warning_message_sent==0) {
+        uint64_t time_now = get_absolute_time_in_fp();
+        if (time_now>threshold_time) { // it's taking too long
+          debug(1,"Error receiving metadata from source -- transmission seems to be stalled.");
+          send_ssnc_metadata('stal',NULL,0,1);
+          warning_message_sent = 1;
         }
-        if (nread==EINTR)
-            continue;
-        if (nread < 0) {
-            perror("read failure");
-            reply = rtsp_read_request_response_error;
-            goto shutdown;
-        }
-        inbuf += nread;
+      }
+      ssize_t read_chunk = msg_size-inbuf;
+      if (read_chunk > max_read_chunk)
+        read_chunk = max_read_chunk;
+      nread = read(fd, buf+inbuf, read_chunk);
+      if (!nread) {
+        reply = rtsp_read_request_response_error;
+        goto shutdown;
+      }
+      if (nread==EINTR)
+        continue;
+      if (nread < 0) {
+        perror("read failure");
+        reply = rtsp_read_request_response_error;
+        goto shutdown;
+      }
+      inbuf += nread;
     }
 
     msg->contentlength = inbuf;

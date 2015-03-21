@@ -180,6 +180,8 @@ void usage(char *progname) {
     printf("    --statistics            print some interesting statistics -- output to the logfile if running as a daemon.\n");
     printf("    --tolerance=TOLERANCE   allow a synchronization error of TOLERANCE frames (default 88) before trying to correct it.\n");
     printf("    --password=PASSWORD     require PASSWORD to connect. Default is not to require a password.\n");
+    printf("    --meta-dir=DIR          get metadata from the source and pipe it to DIR/shairport-sync-metadata, e.g. --meta-dir=/tmp.\n");
+    printf("    --get-coverart          get cover art from the source and pipe it to DIR/shairport-sync-metadata, e.g. --meta-dir=/tmp.\n");
     printf("\n");
     mdns_ls_backends();
     printf("\n");
@@ -216,6 +218,7 @@ int parse_options(int argc, char **argv) {
     { "password", 0, POPT_ARG_STRING, &config.password, 0, NULL } ,
     { "tolerance", 0, POPT_ARG_INT, &config.tolerance, 0, NULL } ,
     { "meta-dir", 'M', POPT_ARG_STRING, &config.meta_dir, 0, NULL } ,
+    { "get-coverart", 'g', POPT_ARG_NONE, &config.get_coverart, 0, NULL },
     POPT_AUTOHELP
     { NULL, 0, 0, NULL, 0 }
   };
@@ -234,6 +237,10 @@ int parse_options(int argc, char **argv) {
     switch (c) {
       case 'v':
         debuglev++;
+        break;
+      case 'g':
+        if (config.meta_dir==0)
+          die("If you want to get cover art, you must also select the --meta-dir option.");
         break;
       case 'S':
         if (strcmp(stuffing,"basic")==0)           		
@@ -273,7 +280,7 @@ int parse_options(int argc, char **argv) {
   debug(2,"tolerance is %d frames.",config.tolerance);
   debug(2,"password is \"%s\".",config.password);
   debug(2,"metadata directory is \"%s\".",config.meta_dir);
-
+  debug(2,"get-coverart is %d.",config.get_coverart);
   return optind+1;
 }
 
