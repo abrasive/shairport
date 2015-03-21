@@ -21,7 +21,7 @@ Having compiled `libsoxr`, it must now must be installed:
 cd Release
 sudo make install
 ```
-Finally, for Shairport Sync to be able to locate `libsoxr-dev` during compilation, you need to tell `ld` where to find it:
+Finally, for Shairport Sync to be able to locate `libsoxr-dev` during compilation, you need to tell `ld` to catalogue it:
 ```
 sudo ldconfig -v
 ```
