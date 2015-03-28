@@ -52,6 +52,13 @@ do_start()
 	#   2 if daemon could not be started
 	start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON --test > /dev/null \
 		|| return 1
+
+# Sometimes this script starts running before everything needed by Shairport Sync is ready, causing
+# it to fail to launch. For example, the WiFi network might not be established yet, or the ALSA subsystem might not yet be initialised.
+# By changing the sleep value below (set to three seconds by default) you can pause the script for the number of seconds specified,
+# hopefully long enough for everything to be ready before shairport-sync is launched by the following start-stop-daemon command:
+	sleep 3
+
 # Uncomment just one of the following start-stop-daemon lines, or comment them all out and add your own.
 # In the default script, the first line is uncommented, selecting daemon mode (-d), the default device and software volume control
 # BTW, if you're using software volume control, you may have to use alsamixer or similar to set the output device's volume to its maximum level first
