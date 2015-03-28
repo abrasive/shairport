@@ -1,6 +1,7 @@
 Version 2.2.3 (Work in progress -- not a release yet.)
 -----
 * Bugfix
+ * Add a three second delay to the init script to allow the required subsystems to be ready. Seems to be necessary for quite a few systems, especially those using WiFi.
  * Two memory leaks fixed.
  * An error handling time specifications for flushes was causing an audible glitch when pausing and resuming some tracks. This has been fixed (thanks https://github.com/Hamster128).
 * Enhancement
