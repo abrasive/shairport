@@ -1,7 +1,7 @@
 #! /bin/sh
 ### BEGIN INIT INFO
 # Provides:          shairport-sync
-# Required-Start:    $remote_fs $syslog
+# Required-Start:    $all
 # Required-Stop:     $remote_fs $syslog
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
@@ -53,11 +53,10 @@ do_start()
 	start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON --test > /dev/null \
 		|| return 1
 
-# Sometimes this script starts running before everything needed by Shairport Sync is ready, causing
-# it to fail to launch. For example, the WiFi network might not be established yet, or the ALSA subsystem might not yet be initialised.
-# By changing the sleep value below (set to three seconds by default) you can pause the script for the number of seconds specified,
-# hopefully long enough for everything to be ready before shairport-sync is launched by the following start-stop-daemon command:
-	sleep 3
+# This script is set to start running after all other services have started.
+# However, if you find that Shairport Sync is still being started before what it needs is ready,
+# uncomment the next line to get the script to wait for three seconds before attempting to start Shairport Sync.
+#	sleep 3
 
 # Uncomment just one of the following start-stop-daemon lines, or comment them all out and add your own.
 # In the default script, the first line is uncommented, selecting daemon mode (-d), the default device and software volume control
