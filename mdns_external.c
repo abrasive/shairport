@@ -92,16 +92,7 @@ static int mdns_external_avahi_register(char *apname, int port) {
     char *argvwithoutmetadata[] = {
         NULL, apname, "_raop._tcp", mdns_port, MDNS_RECORD_WITHOUT_METADATA, NULL
     };
-
-    char *argvwithmetadata[] = {
-        NULL, apname, "_raop._tcp", mdns_port, MDNS_RECORD_WITH_METADATA, NULL
-    };
-    
-    char **argv;
-    if (config.meta_dir)
-    	argv=argvwithmetadata;
-    else
-    	argv=argvwithoutmetadata;
+    char **argv = argvwithoutmetadata;
     
     argv[0] = "avahi-publish-service";
     int pid = fork_execvp(argv[0], argv);
@@ -135,15 +126,7 @@ static int mdns_external_dns_sd_register(char *apname, int port) {
         NULL, apname, "_raop._tcp", mdns_port, MDNS_RECORD_WITHOUT_METADATA, NULL
     };
 
-    char *argvwithmetadata[] = {
-        NULL, apname, "_raop._tcp", mdns_port, MDNS_RECORD_WITH_METADATA, NULL
-    };
-    
-    char **argv;
-    if (config.meta_dir)
-    	argv=argvwithmetadata;
-    else
-    	argv=argvwithoutmetadata;
+    char **argv=argvwithoutmetadata;
 
     int pid = fork_execvp(argv[0], argv);
     if (pid >= 0)

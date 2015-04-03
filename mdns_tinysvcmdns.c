@@ -123,14 +123,7 @@ static int mdns_tinysvcmdns_register(char *apname, int port) {
     freeifaddrs(ifa);
 
     char *txtwithoutmetadata[] = { MDNS_RECORD_WITHOUT_METADATA, NULL };
-    char *txtwithmetadata[] = { MDNS_RECORD_WITH_METADATA, NULL };
-    
-    char **txt;
-    
-    if (config.meta_dir)
-    	txt = txtwithmetadata;
-    else
-    	txt = txtwithoutmetadata;
+    char **txt = txtwithoutmetadata;
 
     
     
