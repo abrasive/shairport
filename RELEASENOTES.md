@@ -1,13 +1,14 @@
-Version 2.2.3 (Work in progress -- not a release yet.)
+Version 2.3 (Development branch, work in progress -- not a release yet.)
 -----
+* Enhancement
+ * Metadata support is now a compile-time option: `--with-metadata`.
+ * A very experimental metadata feed has been added. Use the option `-M <pipe-directory>`, e.g. `-M /tmp`. Shairport Sync will provide metadata in a pipe called `<pipe-directory>/shairport-sync-metadata`. There's a sample metadata reader at https://github.com/mikebrady/shairport-sync-metadata-reader. The format of the metadata is a mixture of XML-style tags, 4-character codes and base64 data. Please look at `rtsp.c` and `player.c` for examples. Please note that the format of the metadata may change.
+Beware: there appears to be a serious bug in iTunes, such that it may stall for a long period when sending large (more than a few hundred kilobytes) coverart images.
+
 * Bugfix
  * Modify the init script to start after all services are ready. Add in a commented-out sleep command if users find it necessary (thanks to https://github.com/BNoiZe).
  * Two memory leaks fixed.
  * An error handling time specifications for flushes was causing an audible glitch when pausing and resuming some tracks. This has been fixed (thanks to https://github.com/Hamster128).
-* Enhancement
- * A very experimental metadata feed has been added. Use the option `-M <pipe-directory>`, e.g. `-M /tmp`. Shairport Sync will provide metadata in a pipe called `<pipe-directory>/shairport-sync-metadata`. There's a sample metadata reader at https://github.com/mikebrady/shairport-sync-metadata-reader. The format of the metadata is a mixture of XML-style tags, 4-character codes and base64 data. Please look at `rtsp.c` and `player.c` for examples. Please note that the format of the metadata may change.
-Beware: there appears to be a serious bug in iTunes, such that it may stall for a long period when sending large (more than a few hundred kilobytes) coverart images.
-
 
 Version 2.2.2
 -----
