@@ -1,6 +1,6 @@
 Shairport Sync (Development Branch)
 =============
-This branch -- 2.3 -- is the development branch of Shairport Sync and is unstable. To access the stable version, please switch to the 2.2 branch.
+This branch -- 2.3 -- is the development branch of Shairport Sync and is unstable. To access the stable branch, please switch to the 2.2 branch.
 
 What is Shairport Sync?
 ----------
