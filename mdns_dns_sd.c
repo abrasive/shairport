@@ -33,12 +33,15 @@ static DNSServiceRef service;
 
 static int mdns_dns_sd_register(char *apname, int port) {
     const char *recordwithoutmetadata[] = { MDNS_RECORD_WITHOUT_METADATA, NULL };
+#ifdef CONFIG_METADATA
     const char *recordwithmetadata[] = { MDNS_RECORD_WITH_METADATA, NULL };
-    
+#endif    
     char **record;
+#ifdef CONFIG_METADATA
     if (config.meta_dir)
     	record = recordwithmetadata;
     else
+#endif
     	record = recordwithoutmetadata;
     	
     uint16_t length = 0;

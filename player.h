@@ -18,11 +18,6 @@ void player_stop(void);
 
 void player_volume(double f);
 void player_flush(uint32_t timestamp);
-void player_resync(void);
-
-void player_metadata();
-void player_cover_image(char *buf, int len, char *ext);
-void player_cover_clear();
 
 void player_put_packet(seq_t seqno,uint32_t timestamp, uint8_t *data, int len);
 

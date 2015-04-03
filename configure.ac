@@ -74,6 +74,13 @@ AC_ARG_WITH(soxr, [  --with-soxr = choose libsoxr for high-quality interpolation
   AC_MSG_RESULT(>>Including support for soxr-based interpolation)
   AC_CHECK_LIB([soxr],[soxr_create], , AC_MSG_ERROR(soxr support requested but libsoxr not found!))], )
 
+# Look for metadata flag -- set flag for conditional compilation
+AC_ARG_WITH(metadata, [  --with-metadata = include support for a metadata feed], [
+  AC_MSG_RESULT(>>Including metadata support)
+  HAS_METADATA=1
+  AC_DEFINE([CONFIG_METADATA], 1, [Needed by the compiler.])], )
+AM_CONDITIONAL([USE_METADATA], [test "x$HAS_METADATA" = "x1"])
+
 # What follows is a bit messy, because if the relevant library is requested, a compiler flag is defined, a file is included in the compilation
 # and the relevant link files are added.
 

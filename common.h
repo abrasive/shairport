@@ -41,8 +41,10 @@ enum stuffing_type {
 typedef struct {
     char *password;
     char *apname;
+#ifdef CONFIG_METADATA
     char *meta_dir;
     int get_coverart;
+#endif
     uint8_t hw_addr[6];
     int port;
     int resyncthreshold; // if it get's out of whack my more than this, resync. Zero means never resync.

@@ -564,9 +564,11 @@ static abuf_t *buffer_get_frame(void) {
                 // debug(1,"Exact frame gap is %llu; play %d frames of silence. Dac_delay is %d, with %d packets.",exact_frame_gap,fs,dac_delay,seq_diff(ab_read, ab_write));
                 config.output->play(silence, fs);
                 free(silence);
+#ifdef CONFIG_METADATA
                 if (ab_buffering==0) {
                   send_ssnc_metadata('prsm',NULL,0,0); // "resume", but don't wait if the queue is locked
                 }
+#endif
               }
             }
           }
@@ -1061,14 +1063,14 @@ void player_volume(double f) {
   software_mixer_volume = linear_volume; 
   fix_volume = 65536.0 * software_mixer_volume;  
   pthread_mutex_unlock(&vol_mutex);
-  
+#ifdef CONFIG_METADATA
   char *dv = malloc(64); // will be freed in the metadata thread
   if (dv) {
     memset(dv,0,64);
     snprintf(dv,63,"%.2f,%.2f,%.2f,%.2f",audio_information.airplay_volume,audio_information.current_volume_dB/100.0,audio_information.minimum_volume_dB/100.0,audio_information.maximum_volume_dB/100.0);
     send_ssnc_metadata('pvol',dv,strlen(dv),1);
   }
-
+#endif
   
 }
 
@@ -1079,7 +1081,9 @@ void player_flush(uint32_t timestamp) {
   //if (timestamp!=0)
   flush_rtp_timestamp=timestamp; // flush all packets up to (and including?) this
   pthread_mutex_unlock(&flush_mutex);
+#ifdef CONFIG_METADATA
   send_ssnc_metadata('pfls',NULL,0,1);
+#endif
 }
 
 int player_play(stream_cfg *stream) {
@@ -1103,7 +1107,9 @@ int player_play(stream_cfg *stream) {
   init_buffer();
   please_stop = 0;
   command_start();
+#ifdef CONFIG_METADATA
   send_ssnc_metadata('pbeg',NULL,0,1);
+#endif
  
   // set the flowcontrol condition variable to wait on a monotonic clock
 #ifdef COMPILE_FOR_LINUX
@@ -1127,7 +1133,9 @@ void player_stop(void) {
   please_stop = 1;
   pthread_cond_signal(&flowcontrol); // tell it to give up
   pthread_join(player_thread, NULL);
+#ifdef CONFIG_METADATA
   send_ssnc_metadata('pend',NULL,0,1);
+#endif
   config.output->stop();
   command_stop();
   free_buffer();

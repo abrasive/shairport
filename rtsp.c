@@ -91,7 +91,7 @@ typedef struct {
     pthread_t thread;
 } rtsp_conn_info;
 
-
+#ifdef CONFIG_METADATA
 typedef struct {
   pthread_mutex_t pc_queue_lock;
   pthread_cond_t pc_queue_item_added_signal;
@@ -103,6 +103,7 @@ typedef struct {
   uint32_t eoq; // free space at end of queue
   void *items; // a pointer to where the items are actually stored
  } pc_queue; // producer-consumer queue
+#endif
 
 typedef struct {
   uint32_t  referenceCount; // we might start using this...
@@ -120,6 +121,7 @@ typedef struct {
   int respcode;
 } rtsp_message;
 
+#ifdef CONFIG_METADATA
 typedef struct {
   uint32_t type;
   uint32_t code;
@@ -142,49 +144,6 @@ int send_metadata(uint32_t type,uint32_t code,char *data,uint32_t length,rtsp_me
 int send_ssnc_metadata(uint32_t code,char *data,uint32_t length,int block) {
   return send_metadata('ssnc',code,data,length,NULL,block);
 }
-
-
-/*
-pc_queue* pc_queue_create(size_t new_item_size, uint32_t number_of_items) {
-  debug(1,"Creating pc_queue");
-  pc_queue* the_queue = malloc(sizeof(pc_queue)+number_of_items*new_item_size-sizeof(void*));
-  if (the_queue) {
-    int rc = pthread_mutex_init(&the_queue->pc_queue_lock,NULL);
-    if (rc)
-      debug(1,"Error %d creating pc_queue lock",rc);
-    rc = pthread_cond_init(&the_queue->pc_queue_item_added_signal,NULL);
-    if (rc)
-      debug(1,"Error %d creating pc_queue add cond",rc);
-    rc = pthread_cond_init(&the_queue->pc_queue_item_removed_signal,NULL);
-    if (rc)
-      debug(1,"Error %d creating pc_queue remove cond",rc);
-    the_queue->item_size = new_item_size;
-    the_queue->count = 0;
-    the_queue->capacity = number_of_items;
-    the_queue->toq = 0;
-    the_queue->eoq = 0;
-  }
-  return the_queue;
-}
-
-int pc_queue_delete(pc_queue* the_queue) {
-  if (the_queue) {
-    int rc = pthread_mutex_destroy(&the_queue->pc_queue_lock);
-    if (rc)
-      debug(1,"Error %d deleting pc_queue lock",rc);
-    rc = pthread_cond_destroy(&the_queue->pc_queue_item_added_signal);
-    if (rc)
-      debug(1,"Error %d deleting pc_queue add cond",rc);
-    rc = pthread_cond_destroy(&the_queue->pc_queue_item_removed_signal);
-    if (rc)
-      debug(1,"Error %d deleting pc_queue remove cond",rc);
-    free(the_queue);
-  } else {
-    debug(1,"Attempting to delete a NULL pc_queue!");
-  }
-  return 0;
-}
-*/
 
 int pc_queue_add_item(pc_queue* the_queue,const void* the_stuff, int block) {
   int rc;
@@ -263,6 +222,7 @@ int pc_queue_get_item(pc_queue* the_queue,void* the_stuff) {
   return 0;
 }
 
+#endif
 
 // determine if we are the currently playing thread
 static inline int rtsp_playing(void) {
@@ -551,7 +511,9 @@ static enum rtsp_read_request_response rtsp_read_request(int fd, rtsp_message** 
         uint64_t time_now = get_absolute_time_in_fp();
         if (time_now>threshold_time) { // it's taking too long
           debug(1,"Error receiving metadata from source -- transmission seems to be stalled.");
+#ifdef CONFIG_METADATA
           send_ssnc_metadata('stal',NULL,0,1);
+#endif
           warning_message_sent = 1;
         }
       }
@@ -785,11 +747,15 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn,
             float volume = atof(cp + 8);
             debug(2, "volume: %f\n", volume);
             player_volume(volume);
-        } else if(!strncmp(cp, "progress: ", 10)) {
+        } else 
+#ifdef CONFIG_METADATA        
+        if(!strncmp(cp, "progress: ", 10)) {
             char *progress = cp + 10;
             debug(2, "progress: \"%s\"\n", progress); // rtpstampstart/rtpstampnow/rtpstampend 44100 per second
             send_ssnc_metadata('prgr',strdup(progress),strlen(progress),1);
-        } else {
+        } else
+#endif        
+        {
             debug(1, "unrecognised parameter: \"%s\" (%d)\n", cp, strlen(cp));
         }
         cp = next;
@@ -797,7 +763,7 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn,
 }
 
 
-
+#ifdef CONFIG_METADATA
 // Metadata is not used by shairport-sync.
 // Instead we send all metadata to a fifo pipe, so that other apps can listen to the pipe and use the metadata.
 
@@ -1095,6 +1061,8 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn,
   send_metadata('ssnc','sndr',strdup(sender_name),strlen(sender_name),NULL,1);
 }
 
+#endif
+
 static void handle_set_parameter(rtsp_conn_info *conn,
                                  rtsp_message *req, rtsp_message *resp) {
      //if (!req->contentlength)
@@ -1104,7 +1072,7 @@ static void handle_set_parameter(rtsp_conn_info *conn,
 
     if (ct) {
         debug(2, "SET_PARAMETER Content-Type:\"%s\".", ct);
-
+#ifdef CONFIG_METADATA
         if (!strncmp(ct, "application/x-dmap-tagged", 25)) {
             debug(2, "received metadata tags in SET_PARAMETER request.");
             handle_set_parameter_metadata(conn, req, resp);
@@ -1113,7 +1081,9 @@ static void handle_set_parameter(rtsp_conn_info *conn,
             // note: the image/type tag isn't reliable, so it's not being sent
             // -- best look at the first few bytes of the image
             send_metadata('ssnc','PICT',req->content,req->contentlength,req,1);
-         } else if (!strncmp(ct, "text/parameters", 15)) {
+         } else
+#endif         
+         if (!strncmp(ct, "text/parameters", 15)) {
             debug(2, "received parameters in SET_PARAMETER request.");
             handle_set_parameter_parameter(conn, req, resp);
         } else {

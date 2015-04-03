@@ -62,6 +62,7 @@ static void register_service(AvahiClient *c) {
         return;
 
     int ret;
+#ifdef CONFIG_METADATA
     if (config.meta_dir) {
       debug(1,"Avahi with metadata");
       ret = avahi_entry_group_add_service(group,
@@ -77,6 +78,7 @@ static void register_service(AvahiClient *c) {
                                           NULL);
       }
     else {
+#endif
       debug(1,"Avahi without metadata");
       ret = avahi_entry_group_add_service(group,
                                           AVAHI_IF_UNSPEC,
@@ -89,7 +91,9 @@ static void register_service(AvahiClient *c) {
                                           port,
                                           MDNS_RECORD_WITHOUT_METADATA,
                                           NULL);
+#ifdef CONFIG_METADATA                                         
     }
+#endif
     
     if (ret < 0)
         die("avahi_entry_group_add_service failed");

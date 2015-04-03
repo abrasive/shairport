@@ -134,6 +134,9 @@ void print_version(void) {
 #ifdef HAVE_LIBSOXR
 	strcat(version_string,"-soxr");
 #endif
+#ifdef CONFIG_METADATA
+  strcat(version_string,"-metadata");
+#endif
   printf("%s\n",version_string);
 }
 
@@ -180,8 +183,10 @@ void usage(char *progname) {
     printf("    --statistics            print some interesting statistics -- output to the logfile if running as a daemon.\n");
     printf("    --tolerance=TOLERANCE   allow a synchronization error of TOLERANCE frames (default 88) before trying to correct it.\n");
     printf("    --password=PASSWORD     require PASSWORD to connect. Default is not to require a password.\n");
+#ifdef CONFIG_METADATA
     printf("    --meta-dir=DIR          get metadata from the source and pipe it to DIR/shairport-sync-metadata, e.g. --meta-dir=/tmp.\n");
     printf("    --get-coverart          get cover art from the source and pipe it to DIR/shairport-sync-metadata, e.g. --meta-dir=/tmp.\n");
+#endif
     printf("\n");
     mdns_ls_backends();
     printf("\n");
@@ -217,8 +222,10 @@ int parse_options(int argc, char **argv) {
     { "timeout", 't', POPT_ARG_INT, &config.timeout, 0, NULL } ,
     { "password", 0, POPT_ARG_STRING, &config.password, 0, NULL } ,
     { "tolerance", 0, POPT_ARG_INT, &config.tolerance, 0, NULL } ,
+#ifdef CONFIG_METADATA
     { "meta-dir", 'M', POPT_ARG_STRING, &config.meta_dir, 0, NULL } ,
-    { "get-coverart", 'g', POPT_ARG_NONE, &config.get_coverart, 0, NULL },
+    { "get-coverart", 'g', POPT_ARG_NONE, &config.get_coverart, 0, NULL } ,
+#endif
     POPT_AUTOHELP
     { NULL, 0, 0, NULL, 0 }
   };
@@ -238,10 +245,12 @@ int parse_options(int argc, char **argv) {
       case 'v':
         debuglev++;
         break;
+#ifdef CONFIG_METADATA
       case 'g':
         if (config.meta_dir==0)
           die("If you want to get cover art, you must also select the --meta-dir option.");
         break;
+#endif
       case 'S':
         if (strcmp(stuffing,"basic")==0)           		
           config.packet_stuffing = ST_basic;
@@ -279,8 +288,10 @@ int parse_options(int argc, char **argv) {
   debug(2,"busy timeout time is %d.",config.timeout);
   debug(2,"tolerance is %d frames.",config.tolerance);
   debug(2,"password is \"%s\".",config.password);
+#ifdef CONFIG_METADATA
   debug(2,"metadata directory is \"%s\".",config.meta_dir);
   debug(2,"get-coverart is %d.",config.get_coverart);
+#endif
   return optind+1;
 }
 
@@ -538,7 +549,9 @@ int main(int argc, char **argv) {
      md5_finish(&tctx, ap_md5);
 #endif
     memcpy(config.hw_addr, ap_md5, sizeof(config.hw_addr));
+#ifdef CONFIG_METADATA
     metadata_init() ; // create the metadata pipe if necessary
+#endif
 
     rtsp_listen_loop();
 
