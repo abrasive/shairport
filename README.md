@@ -89,10 +89,11 @@ Choose the appropriate `--with-*` options:
 - `--with-ssl=openssl`  or `--with-ssl=polarssl` for encryption and related utilities using either OpenSSL or PolarSSL.
 - `--with-soxr` for libsoxr-based resampling.
 - `--with-piddir` for specifying where the PID file should be stored. This directory is normally chosen automatically. The directory must be writable. If you use this option, you may have to edit the init script to search for the PID file in your new location.
+- `--with-metadata` to add support for Shairport Sync to pipe metadata to a compatible application of your choice. See https://github.com/mikebrady/shairport-sync-metadata-reader for a sample metadata reader.
 
 Here is an example, suitable for most installations:
 
-`$ ./configure --with-alsa --with-avahi --with-ssl=openssl --with-soxr`
+`$ ./configure --with-alsa --with-avahi --with-ssl=openssl --with-metadata --with-soxr`
 
 Omit the `--with-soxr` if the libsoxr library is not available.
 
