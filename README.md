@@ -1,5 +1,7 @@
-Shairport Sync
+Shairport Sync (Development Branch)
 =============
+This branch -- 2.3 -- is the development branch of Shairport Sync and is unstable. To access the stable version, please switch to the 2.2 branch.
+
 What is Shairport Sync?
 ----------
 Shairport Sync emulates an AirPort Express for the purpose of streaming audio from iTunes, iPods, iPhones, iPads and AppleTVs.
