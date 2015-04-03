@@ -1,7 +1,7 @@
 Version 2.2.3 (Work in progress -- not a release yet.)
 -----
 * NOTE: all the metadata stuff has been moved to branch 2.3 -- the development. This will become the 'stable' branch henceforward, with just bug fixes or minor enhancements. Apologies for the inconvenience.
-* Bugfix
+* Bugfixes
  * Modify the init script to start after all services are ready. Add in a commented-out sleep command if users find it necessary (thanks to https://github.com/BNoiZe).
  * Two memory leaks fixed.
  * An error handling time specifications for flushes was causing an audible glitch when pausing and resuming some tracks. This has been fixed (thanks to https://github.com/Hamster128).
