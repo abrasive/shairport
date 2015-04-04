@@ -91,7 +91,7 @@ Stuff the audio stream using the \fImode\f1. "Stuffing" refers to the process of
 \fB-t \f1\fItimeout\f1\fB | --timeout=\f1\fItimeout\f1
 Exit play mode if the stream disappears for more than \fItimeout\f1 seconds.
 
-When shairport-sync plays an audio stream, it startes a play session and will return a busy signal to any other sources that attempt to use it. If the audio stream disappears for longer than \fItimeout\f1 seconds, the play session will be terminated. If you specify a timeout time of \fB0\f1, shairport-sync will never signal that it is busy and will not prevent other sources from "barging in" on an existing play session. The default value is 120 seconds. 
+When shairport-sync plays an audio stream, it starts a play session and will return a busy signal to any other sources that attempt to use it. If the audio stream disappears for longer than \fItimeout\f1 seconds, the play session will be terminated. If you specify a timeout time of \fB0\f1, shairport-sync will never signal that it is busy and will not prevent other sources from "barging in" on an existing play session. The default value is 120 seconds. 
 .TP
 \fB--tolerance=\f1\fIframes\f1
 Allow playback to be up to \fIframes\f1 out of exact synchronization before attempting to correct it. The default is 88 frames, i.e. 2 ms. The smaller the tolerance, the more likely it is that overcorrection will occur. Overcorrection is when more corrections (insertions and deletions) are made than are strictly necessary to keep the stream in sync. Use the \fB--statistics\f1 option to monitor correction levels. Corrections should not greatly exceed net corrections. 
