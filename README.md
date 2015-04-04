@@ -1,13 +1,11 @@
 Shairport Sync
 =============
-This branch -- 2.2 -- is the stable branch of Shairport Sync. To access the development version, please switch to the 2.3 branch.
-
-What is Shairport Sync?
-----------
 Shairport Sync emulates an AirPort Express for the purpose of streaming audio from iTunes, iPods, iPhones, iPads and AppleTVs.
-Audio played by a Shairport Sync-powered device stays synchronised with the source and hence with similar devices playing the same source. Thus, for example, synchronised multi-room audio is possible without difficulty. (Hence the name Shairport Sync, BTW.)
+Audio played by a Shairport Sync-powered device stays synchronised with the source and hence with similar devices playing the same source. Thus, for example, synchronised multi-room audio is possible without difficulty. (Hence the name Shairport Sync, BTW.) 
 
 Shairport Sync does not support AirPlay video or photo streaming.
+
+This branch -- 2.2 -- is the stable branch of Shairport Sync. To access the development version, please switch to the 2.3 branch.
 
 Shairport Sync works by using timing information present in the audio data stream to keep in step with the source. It does this by monitoring and controlling the "latency" -- the time between when a sound is time-stamped at the source and when it is played by the audio output device. To measure latency precisely, it keeps its own clock synchronised with the clock used by the source, usually to within a fraction of a millisecond, using a variant of NTP synchronisation protocols.
 
