@@ -72,7 +72,7 @@ Assuming the usual build essentials and git, Debian, Ubuntu and Raspian users ca
 - `apt-get install avahi-daemon libavahi-client-dev` if you want to use Avahi (recommended).
 - `apt-get install libssl-dev` if you want to use OpenSSL and libcrypto, or use PolarSSL otherwise.
 - `apt-get install libpolarssl-dev` if you want to use PolarSSL, or use OpenSSL/libcrypto otherwise.
-- `apt-get install libsoxr-dev` if you want support for libsoxr-based resampling. This library is not yet part of  Raspian; instructions for how to build it from source are available at [LIBSOXR.md](https://github.com/mikebrady/shairport-sync/blob/2.2/LIBSOXR.md).
+- `apt-get install libsoxr-dev` if you want support for libsoxr-based resampling. This library is not yet part of  Raspian; instructions for how to build it from source are available at [LIBSOXR.md](https://github.com/mikebrady/shairport-sync/blob/2.3/LIBSOXR.md).
 
 Download Shairport Sync:
 
@@ -103,7 +103,7 @@ Run `$sudo make install` to install `shairport-sync` along with an init script w
 
 Man Page
 --------
-You can see a web version of the man page here: http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/2.2/man/shairport-sync.html
+You can see a web version of the man page here: http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/2.3/man/shairport-sync.html
 
 
 Configuring Shairport Sync
