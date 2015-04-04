@@ -214,7 +214,7 @@
 		Listen for metadata coming from the source and send it, along with metadata from
 		shairport-sync itself, to a pipe called <arg>shairport-sync-metadata</arg>
 		in the <arg>directory</arg> you specify. If you add the <opt>--get-cover-art</opt> then
-		cover art will be sent through the pipe too. See https://github.com/mikebrady/shairport-sync-metadata-reader
+		cover art will be sent through the pipe too. See <url href="https://github.com/mikebrady/shairport-sync-metadata-reader"/>
 		for a sample metadata reader.
 		</p></optdesc>
 	  </option>
