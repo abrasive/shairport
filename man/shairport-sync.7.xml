@@ -2,9 +2,9 @@
 <!DOCTYPE manpage SYSTEM "xmltoman.dtd">
 <?xml-stylesheet type="text/xsl" href="xmltoman.xsl" ?>
 
-<!--
+  <!--
   This man pager source file is part of shairport-sync.
-  Copyright (c) Mike Brady 2014--2015
+  Copyright (c) Mike Brady 2014-2015
 
   All rights reserved.
  
@@ -27,7 +27,7 @@
   WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
   OTHER DEALINGS IN THE SOFTWARE.
--->
+  -->
 
   <manpage name="shairport-sync" section="7" desc="Synchronised Audio Player for iTunes / AirPlay">
 
