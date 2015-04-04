@@ -63,4 +63,394 @@
       <cmd>shairport-sync <opt>-V</opt></cmd>
 	</synopsis>
 
+  <description>
+    <p>shairport-sync  plays  audio  streamed  from  iTunes or from an AirPlay
+    device to an audio device connected via an audio back end. At present,
+    the only fully-implemented back end is for ALSA.</p>
+
+    <p> A feature of shairport-sync is that the audio is played synchronously.
+    This means that if many devices are playing the same stream at the same
+    time, all the outputs will stay in step with one another.
+    This allows multiple devices play the same source without getting out of phase with one another,
+    enabling, for example, simultaneous multi-room operation.
+    </p>
+
+	</description>
+
+	<options>
+
+    <p>Many  of  the options take sensible default values, so you can normally
+    ignore most of them. See the EXAMPLES section for typical usages.</p>
+
+    <p>The command line for shairport-sync can take two kinds of options:
+    regular <opt>program options</opt> and <opt>audio backend options</opt>.
+    Program options are
+    always listed first, followed by any audio backend options, preceded by
+    a <opt>--</opt> symbol.</p>
+    
+  <section name="Program Options">
+  <p>These options are used by shairport-sync itself.</p>
+  </section>
+  
+	  <option>
+		<p><opt>-a </opt><arg>service name</arg><opt> | --name=</opt><arg>service name</arg></p>
+		<optdesc><p>
+		Use this <arg>service name</arg> to identify this player in iTunes, etc.
+    The default name is "Shairport Sync on &lt;hostname&gt;".
+    </p></optdesc>
+	  </option>
+
+	  <option>
+		<p><opt>-A | --AirPlayLatency=</opt><arg>latency</arg></p>
+		<optdesc><p>
+		Use this <arg>latency</arg>, in frames, for audio streamed from an AirPlay
+    device. The default is 88,200 frames, where there are 44,100
+    frames to the second.
+    </p></optdesc>
+	  </option>
+
+	  <option>
+		<p><opt>-B </opt><arg>program</arg><opt> | --on-start=</opt><arg>program</arg></p>
+		<optdesc><p>
+		Execute <arg>program</arg> when playback is about to begin. Specify the 
+		full path to the program, e.g. <file>/usr/bin/logger</file>.
+		Executable scripts can be used, but they must have <file>#!/bin/sh</file> (or
+		whatever is appropriate) in the headline.</p>
+		
+		<p>If you want shairport-sync to wait until the command has
+		completed before starting to play, select the <opt>-w</opt> option as well.
+		</p></optdesc>
+	  </option>
+
+	  <option>
+		<p><opt>-D | --disconnectFromOutput</opt></p>
+		<optdesc><p>
+		Disconnect the shairport-sync daemon from the output device and
+    exit. (Requires that the daemon has written its PID to an agreed
+    file -- see the <opt>-d</opt> option).
+		</p></optdesc>
+	  </option>
+
+	  <option>
+		<p><opt>-d | --daemon</opt></p>
+		<optdesc><p>
+		Instruct shairport-sync to demonise itself. It will write its
+    Process ID (PID) to a file, usually at
+    <file>/var/run/shairport-sync.pid</file>, which is used by the
+    <opt>-k</opt>, <opt>-D</opt> and <opt>-R</opt> options to locate
+    the daemon at a later time.
+		</p></optdesc>
+	  </option>
+
+	  <option>
+		<p><opt>-E </opt><arg>program</arg><opt> | --on-stop=</opt><arg>program</arg></p>
+		<optdesc><p>
+		Execute <arg>program</arg> when playback has ended. Specify the 
+		full path to the program, e.g. <file>/usr/bin/logger</file>.
+		Executable scripts can be used, but they must have <file>#!/bin/sh</file> (or
+		whatever is appropriate) in the headline.</p>		
+		<p>If you want shairport-sync to wait until the command has
+		completed before continuing, select the <opt>-w</opt> option as well.
+		</p></optdesc>
+	  </option>
+
+	  <option>
+		<p><opt>--forkedDaapdLatency=</opt><arg>latency</arg></p>
+		<optdesc><p>
+		Use this <arg>latency</arg>, in frames, for audio streamed from a forked-daapd based
+    source. The default is 99,400 frames, where there are 44,100
+    frames to the second.
+    </p></optdesc>
+	  </option>
+	  
+	  <option>
+		<p><opt>--get-coverart</opt></p>
+		<optdesc><p>
+		This option requires the <opt>--meta-dir</opt> option to be set, and enables
+		shairport-sync to request cover art from the source and to transmit it through
+		the metadata pipe.</p>
+		<p>Please note that cover art data may be very large, and may place too great a
+		burden on your network. Also, at the time of writing, there appears to be a
+		serious bug in iTunes which stalls transmission of large cover art items,
+		stalling and potentially crashing shairport-sync.
+    </p></optdesc>
+	  </option>
+
+	  <option>
+		<p><opt>-h | --help</opt></p>
+		<optdesc><p>
+		Print brief help message and exit.
+		</p></optdesc>
+	  </option>
+
+	  <option>
+		<p><opt>-i | --iTunesLatency=</opt><arg>latency</arg></p>
+		<optdesc><p>
+		Use this <arg>latency</arg>, in frames, for audio streamed from an iTunes
+    source, where iTunes is Version 10 or later. The default is 99,400 frames, where there are 44,100
+    frames to the second. If the source is iTunes but is earler than Version 10, the <arg>default latency</arg> is used (see the <opt>-L</opt> option). Some third party programs masquerade as older versions of iTunes.
+    </p></optdesc>
+	  </option>
+
+	  <option>
+		<p><opt>-k | --kill</opt></p>
+		<optdesc><p>
+		Kill the shairport-sync daemon and exit. (Requires that the daemon has
+		written its PID to an agreed file -- see the <opt>-d</opt> option).
+		</p></optdesc>
+	  </option>
+
+	  <option>
+		<p><opt>-L | --latency=</opt><arg>latency</arg></p>
+		<optdesc><p>
+		Use this to set the <arg>default latency</arg>, in frames, for audio coming from an unidentified source or from an iTunes Version 9 or earlier source. The standard value for the <arg>default latency</arg> is 88,200 frames, where there are 44,100
+    frames to the second.
+    </p></optdesc>
+	  </option>
+
+	  <option>
+		<p><opt>--meta-dir=</opt><arg>directory</arg></p>
+		<optdesc><p>
+		Listen for metadata coming from the source and send it, along with metadata from
+		shairport-sync itself, to a pipe called <arg>shairport-sync-metadata</arg>
+		in the <arg>directory</arg> you specify. If you add the <opt>--get-cover-art</opt> then
+		cover art will be sent through the pipe too. See https://github.com/mikebrady/shairport-sync-metadata-reader
+		for a sample metadata reader.
+		</p></optdesc>
+	  </option>
+
+	  <option>
+		<p><opt>-m </opt><arg>mdnsbackend</arg><opt> | --mdns=</opt><arg>mdnsbackend</arg></p>
+		<optdesc><p>
+		Force the use of the specified mDNS backend to advertise the
+    player on the network. The default is to try all mDNS backends until one
+    works.
+		</p></optdesc>
+	  </option>
+
+	  <option>
+		<p><opt>-o </opt><arg>outputbackend</arg><opt> | --output=</opt><arg>outputbackend</arg></p>
+		<optdesc><p>
+		Force the use of the specified output backend to play the audio.
+    The default is to try the first one. (This is not used at
+    present.)
+		</p></optdesc>
+	  </option>
+
+	  <option>
+		<p><opt>-p </opt><arg>port</arg><opt> | --port=</opt><arg>port</arg></p>
+		<optdesc><p>
+		Listen for play requests on <arg>port</arg>. The default is to use port
+    5000.
+		</p></optdesc>
+	  </option>
+
+	  <option>
+		<p><opt>--password=</opt><arg>secret</arg></p>
+		<optdesc><p>
+		Require the password <arg>secret</arg> to be able to connect and stream to the service.
+		</p></optdesc>
+	  </option>
+
+	  <option>
+		<p><opt>-R | --reconnectToOutput</opt></p>
+		<optdesc><p>
+		Reconnect the shairport-sync daemon to the output device and
+    exit. It may take a few seconds to synchronise. (Requires  that
+    the daemon has written its PID to an agreed file -- see the <opt>-d</opt>
+    option).
+		</p></optdesc>
+	  </option>
+
+	  <option>
+		<p><opt>-r </opt><arg>threshold</arg><opt> | --resync=</opt><arg>threshold</arg></p>
+		<optdesc><p>
+		Resynchronise if timings differ by more than <arg>threshold</arg> frames.
+    If the output timing differs from the source timing by more than
+    the threshold, output will be muted and a full resynchronisation
+    will occur. The default threshold is 2,205 frames, i.e. 50
+    milliseconds. Specify <opt>0</opt> to disable resynchronisation.
+		</p></optdesc>
+	  </option>
+
+	  <option>
+		<p><opt>--statistics</opt></p>
+		<optdesc><p>
+		Print some statistics in the standard output, or in the logfile if in daemon mode.
+		</p></optdesc>
+	  </option>
+
+	  <option>
+		<p><opt>-S </opt><arg>mode</arg><opt> | --stuffing=</opt><arg>mode</arg></p>
+		<optdesc><p>
+		Stuff the audio stream using the <arg>mode</arg>.  "Stuffing" refers to the
+    process of adding or removing frames of audio  to  or  from  the
+    stream sent to the output device to keep it exactly in synchrony
+    with the player.
+    The default mode, <opt>basic</opt>, is normally almost  completely  inaudible.
+    The  alternative mode, <opt>soxr</opt>, is even less obtrusive but
+    requires much more processing power. For this mode, support for
+    libsoxr, the SoX Resampler Library, must be selected when
+    shairport-sync is compiled.
+		</p></optdesc>
+	  </option>
+
+	  <option>
+		<p><opt>-t </opt><arg>timeout</arg><opt> | --timeout=</opt><arg>timeout</arg></p>
+		<optdesc><p>
+		Exit play mode if the stream disappears for  more  than  <arg>timeout</arg>
+    seconds.</p>
+    <p>When shairport-sync plays an audio stream, it starts a play
+    session and will return a busy signal to any other sources that
+    attempt to use it. If the audio stream disappears for longer
+    than <arg>timeout</arg> seconds, the play session will be terminated.
+    If you  specify a timeout time of <opt>0</opt>,
+    shairport-sync will never signal that
+    it is busy and will not prevent other sources from "barging in"
+    on an existing play session. The default value is 120 seconds.
+		</p></optdesc>
+	  </option>
+
+	  <option>
+		<p><opt>--tolerance=</opt><arg>frames</arg></p>
+		<optdesc><p>
+		Allow playback to be up to <arg>frames</arg> out of exact synchronization before attempting to correct it.
+		The default is 88 frames, i.e. 2 ms. The smaller the tolerance, the more likely it is that overcorrection will occur.
+		Overcorrection is when more corrections (insertions and deletions) are made than are strictly necessary to keep the stream in sync. Use the <opt>--statistics</opt> option to
+		monitor correction levels. Corrections should not greatly exceed net corrections.
+		</p></optdesc>
+	  </option>
+
+	  <option>
+		<p><opt>-V | --version</opt></p>
+		<optdesc><p>
+		Print version information and exit.
+		</p></optdesc>
+	  </option>
+
+	  <option>
+		<p><opt>-v | --verbose</opt></p>
+		<optdesc><p>
+		Print debug information. Repeat up to three times to get more detail.
+		</p></optdesc>
+	  </option>
+
+	  <option>
+		<p><opt>-w | --wait-cmd</opt></p>
+		<optdesc><p>
+		Wait for commands specified using <opt>-B</opt> or <opt>-E</opt>  to  complete  before
+    continuing execution.
+		</p></optdesc>
+	  </option>
+
+  <section name="Audio Backend Options">
+  <p>These  options are passed to the chosen audio backend. (At present, the
+  only backend implemented is for ALSA.) The audio  backend  options  are
+  preceded by a <opt>--</opt> symbol to introduce them and to separate them from any
+  program options. In this way, option letters can be used  as  program
+  options and also as audio backend options without ambiguity.</p>
+  <p>In the ALSA backend, audio is sent to an output device
+  which you can specify using the <opt>-d</opt> option.
+  The output level (the "volume") is controlled using a level control associated with a mixer.
+  By default, the mixer is implemented in shairport-sync itself, i.e. the type of
+  the mixer is "software".
+  To use a level control on a mixer on the sound card, you must (a)
+  specify that the mixer's type is "hardware" with the <opt>-t</opt> option;
+  (b) you must specify where the mixer is to be found using the <opt>-m</opt> option
+  and finally (c) you must specify the name of the level control you are using
+  with the <opt>-c</opt> option.</p>
+  </section>
+  
+  <option>
+  <p><opt>-c </opt><arg>controlname</arg></p>
+  <optdesc><p>
+  Use the level control called <arg>controlname</arg> on the hardware mixer for
+  controlling volume.
+  This is needed if the mixer type is specified, using the <opt>-t</opt> option,
+  to be <opt>hardware</opt>. There is no default.
+  </p></optdesc>
+  </option>
+
+  <option>
+  <p><opt>-d </opt><arg>device</arg></p>
+  <optdesc><p>
+  Use the specified output <arg>device</arg>. You may specify a card, e.g. <opt>hw:0</opt>, in
+  which case the default output device on the card will be chosen.
+  Alternatively, you can specify a specific device on a card, e.g. <opt>hw:0,0</opt>.
+  The default is the device named <opt>default</opt>.
+  </p></optdesc>
+  </option>
+
+  <option>
+  <p><opt>-m </opt><arg>mixer</arg></p>
+  <optdesc><p>
+  Use the specified hardware <arg>mixer</arg> for volume control. Use this to specify where
+  the mixer is to be found. For example, if the mixer is associated with a card,
+  as is often the case, specify the card, e.g. <opt>hw:0</opt>.
+  If (unusually) the mixer is associated with a specific device on a card,
+  specify the device, e.g. <opt>hw:0,1</opt>.
+  The default is the device named in the <opt>-d</opt> option,
+  if given, or the device named <opt>default</opt>.
+  </p></optdesc>
+  </option>
+
+  <option>
+  <p><opt>-t </opt><arg>devicetype</arg></p>
+  <optdesc>
+  <p>
+  The type of the output device is <arg>devicetype</arg> which must be
+  <opt>hardware</opt> or <opt>software</opt>. The default is <opt>software</opt>.
+  If you specify <opt>hardware</opt> you must also specify the output device using the
+  <opt>-d</opt> option and the name of the volume control using the <opt>-c</opt> option.
+  You may also need to specify the mixer using the <opt>-m</opt> option.
+  </p></optdesc>
+  </option>
+	</options>
+
+  <section name="Examples">
+  <p>Here is a slightly contrived but typical example:</p>
+      <cmd>shairport-sync  <opt>-d</opt>
+      <opt>-a "Joe's Stereo"</opt>
+      <opt>-S soxr</opt>
+      <opt>--</opt>
+      <opt>-d hw:1,0</opt>
+      <opt>-m hw:1</opt>
+      <opt>-t hardware</opt>
+      <opt>-c PCM</opt>      
+      </cmd>
+  <p>The program will run in daemon mode ( <opt>-d</opt> ), will be  visible  as
+  "Joe's Stereo" ( <opt>-a "Joe's Stereo"</opt> ) and will use the SoX Resampler
+  Library-based stuffing ( <opt>-S soxr</opt> ).
+  The audio backend options following the <opt>--</opt> separator specify
+  that  the  audio will be output on output 0 of soundcard 1 (
+  <opt>-d hw:1,0</opt> ) and will take advantage of the same sound card's hardware
+  (<opt>-t hardware</opt>) mixer ( <opt>-m hw:1</opt> )
+  using the level control named "PCM" ( <opt>-c "PCM"</opt> ).
+  </p>
+  <p>The example above is slightly contrived in order to show the use of the <opt>-m</opt> option.
+  Typically, output 0 is the default output of a card,
+  so the output device could be written <opt>-d hw:1</opt> and
+  then the mixer option would be unnecessary, giving the following, simpler, command:</p>
+       <cmd>shairport-sync  <opt>-d</opt>
+      <opt>-a "Joe's Stereo"</opt>
+      <opt>-S soxr</opt>
+      <opt>--</opt>
+      <opt>-d hw:1</opt>
+      <opt>-t hardware</opt>
+      <opt>-c PCM</opt>      
+      </cmd>
+ 
+  </section>
+
+	<section name="Credits">
+	<p>Mike Brady developed shairport-sync from the original shairport by James Laird.</p>
+	<p>shairport-sync can be found at  <url href="https://github.com/mikebrady/shairport-sync."/></p>
+  <p>shairport can be found at <url href="https://github.com/abrasive/shairport."/></p>
+	</section>
+
+	<section name="Comments">
+	  <p>This man page was written using <manref name="xml2man" section="1"
+		  href="http://masqmail.cx/xml2man/"/> by Oliver Kurth.</p>
+	</section>
+
   </manpage>
