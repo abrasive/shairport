@@ -36,6 +36,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <popt.h>
+#include <libconfig.h>
 
 #include "config.h"
 
@@ -199,6 +200,7 @@ int parse_options(int argc, char **argv) {
   char    *stuffing = NULL;  /* used for picking up the stuffing option */
   poptContext optCon;   /* context for parsing command-line options */
   struct poptOption optionsTable[] = {
+    { "config-file", 0, POPT_ARG_STRING, &config.configuration_file, 0, NULL } ,
     { "statistics", 0, POPT_ARG_NONE, &config.statistics_requested, 0, NULL},
     { "version", 'V', POPT_ARG_NONE, NULL, 0, NULL},
     { "verbose", 'v', POPT_ARG_NONE, NULL, 'v', NULL },
@@ -268,6 +270,32 @@ int parse_options(int argc, char **argv) {
   if (c < -1) {
     die("%s: %s",poptBadOption(optCon, POPT_BADOPTION_NOALIAS),poptStrerror(c));
   }
+  
+  // now, die if the -c option was chosen and there were more than two arguments, which should be the app name and the single -c option.
+  
+  if (config.configuration_file!=NULL) {
+    if ((argc!=2) && !((argc==3) && (debuglev!=0)))
+      die("If you choose the -c or --config-file option, no other command-line arguments are permitted -- %d arguments seen",argc);
+    // parse the arguments
+    config_t cfg;
+    config_setting_t *setting;
+    const char *str;
+
+    config_init(&cfg);
+
+    /* Read the file. If there is an error, report it and exit. */
+    if(config_read_file(&cfg, config.configuration_file)) {
+      /* Get the store name. */
+      if(config_lookup_string(&cfg, "name", &str))
+        debug(1,"Store name: %s", str);
+      else
+        debug(1, "No 'name' setting in configuration file.");
+    } else {
+      debug(1,"Couldn't open configuration file.");
+    }
+  
+    config_destroy(&cfg);
+  }
   /* Print out options */
   
   debug(2,"statistics_requester status is %d.",config.statistics_requested);
@@ -292,6 +320,7 @@ int parse_options(int argc, char **argv) {
   debug(2,"metadata directory is \"%s\".",config.meta_dir);
   debug(2,"get-coverart is %d.",config.get_coverart);
 #endif
+
   return optind+1;
 }
 

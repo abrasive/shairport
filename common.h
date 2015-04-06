@@ -39,6 +39,7 @@ enum stuffing_type {
 
 
 typedef struct {
+    char *configuration_file; // if used, all other command-line arguments are ignored
     char *password;
     char *apname;
 #ifdef CONFIG_METADATA

@@ -35,6 +35,10 @@ PKG_CHECK_MODULES(
     [POPT], [popt],
     [LIBS="${POPT_LIBS} ${LIBS}"
      AC_DEFINE([HAVE_LIBPOPT],[1],[Define to 1 if you have popt])])
+PKG_CHECK_MODULES(
+    [LIBCONFIG], [libconfig],
+    [LIBS="${LIBCONFIG_LIBS} ${LIBS}"
+     AC_DEFINE([HAVE_LIBCONFIG],[1],[Define to 1 if you have libconfig])])
 
 # Look for piddir flag
 AC_ARG_WITH(piddir, [ --with-piddir=<pathname> Specify a pathname to a directory in which to write the PID file.], [
