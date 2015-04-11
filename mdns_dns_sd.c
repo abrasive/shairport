@@ -26,6 +26,7 @@
 
 #include <dns_sd.h>
 #include <string.h>
+#include <stdlib.h>
 #include "mdns.h"
 #include "common.h"
 
@@ -33,7 +34,7 @@ static DNSServiceRef service;
 
 static int mdns_dns_sd_register(char *apname, int port) {
     const char *recordwithoutmetadata[] = { MDNS_RECORD_WITHOUT_METADATA, NULL };
-    char **record = recordwithoutmetadata;
+    const char **record = recordwithoutmetadata;
     	
     uint16_t length = 0;
     const char **field;
