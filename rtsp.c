@@ -681,25 +681,25 @@ static void handle_setup(rtsp_conn_info *conn,
     }
     char *hdr = msg_get_header(req, "Transport");
     if (!hdr)
-        return;
+        goto error;
 
     char *p;
     p = strstr(hdr, "control_port=");
     if (!p)
-        return;
+        goto error;
     p = strchr(p, '=') + 1;
     cport = atoi(p);
 
     p = strstr(hdr, "timing_port=");
     if (!p)
-        return;
+        goto error;
     p = strchr(p, '=') + 1;
     tport = atoi(p);
 
     rtsp_take_player();
     rtp_setup(&conn->remote, cport, tport, active_remote, &lsport,&lcport,&ltport);
     if (!lsport)
-        return;
+        goto error;
     char *q;
     p = strstr(hdr,"control_port=");
     if (p) {
@@ -727,6 +727,12 @@ static void handle_setup(rtsp_conn_info *conn,
     msg_add_header(resp, "Session", "1");
 
     resp->respcode = 200;
+    return;
+
+error:
+    warn("Error in setup request.");
+    pthread_mutex_unlock(&play_lock);
+    resp->respcode = 451; // invalid arguments
 }
 
 static void handle_ignore(rtsp_conn_info *conn,
@@ -1124,7 +1130,7 @@ static void handle_announce(rtsp_conn_info *conn,
 
     if (!paesiv || !prsaaeskey || !pfmtp) {
       warn("required params missing from announce");
-      return;
+      goto out;
     }
 
     int len, keylen;
@@ -1132,7 +1138,7 @@ static void handle_announce(rtsp_conn_info *conn,
     if (len != 16) {
       warn("client announced aeskey of %d bytes, wanted 16", len);
       free(aesiv);
-      return;
+      goto out;
     }
     memcpy(conn->stream.aesiv, aesiv, 16);
     free(aesiv);
@@ -1143,7 +1149,7 @@ static void handle_announce(rtsp_conn_info *conn,
     if (keylen != 16) {
       warn("client announced rsaaeskey of %d bytes, wanted 16", keylen);
       free(aeskey);
-      return;
+      goto out;
     }
     memcpy(conn->stream.aeskey, aeskey, 16);
     free(aeskey);
@@ -1168,6 +1174,11 @@ static void handle_announce(rtsp_conn_info *conn,
   } else {
     resp->respcode = 453;
     debug(1,"Already playing.");
+  }
+
+out:
+  if (resp->respcode != 200 && resp->respcode != 453) {
+    pthread_mutex_unlock(&play_lock);
   }
 }
 
