@@ -1,6 +1,6 @@
 Version 2.2.3 (Work in progress -- not a release yet.)
 -----
-* NOTE: all the metadata stuff has been moved to branch 2.3 -- the development. This will become the 'stable' branch henceforward, with just bug fixes or minor enhancements. Apologies for the inconvenience.
+* NOTE: all the metadata stuff has been moved to branch 2.3 -- the development branch. This will become the 'stable' branch henceforward, with just bug fixes or minor enhancements. Apologies for the inconvenience.
 * Bugfixes
  * Fix a compiler warning (thanks to https://github.com/sdigit).
  * Modify the init script to start after all services are ready. Add in a commented-out sleep command if users find it necessary (thanks to https://github.com/BNoiZe).
