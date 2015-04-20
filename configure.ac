@@ -62,7 +62,7 @@ AC_ARG_WITH(ssl, [ choose --with-ssl=openssl or --with-ssl=polarssl for encrypti
   fi
   if test "x${with_ssl}" = xopenssl ; then
     PKG_CHECK_MODULES(
-        [SSL], [libssl],
+        [SSL], [libssl,libcrypto],
         [LIBS="${SSL_LIBS} ${LIBS}"
         AC_DEFINE([HAVE_LIBCRYPTO],[1],[Define to 1 if you have libcrypto])
         AC_DEFINE([HAVE_LIBSSL],[1],[Define to 1 if you have libssl])])
