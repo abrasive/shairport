@@ -1,4 +1,4 @@
-Version 2.2.3 (Work in progress -- not a release yet.)
+Version 2.2.3
 -----
 * NOTE: all the metadata stuff has been moved to branch 2.3 -- the development branch. This will become the 'stable' branch henceforward, with just bug fixes or minor enhancements. Apologies for the inconvenience.
 * Bugfixes
