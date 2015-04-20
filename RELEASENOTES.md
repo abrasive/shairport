@@ -1,4 +1,4 @@
-Version 2.3 (Development branch, work in progress -- not a release yet.)
+Version 2.3
 -----
 * Enhancement
  * Metadata support is now a compile-time option: `--with-metadata`.
