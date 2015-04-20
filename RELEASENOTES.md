@@ -5,7 +5,7 @@ Version 2.2.3
  * Fix a bug when compiling for Arch Linux on Raspberry Pi 2 (thanks to https://github.com/joaodriessen).
  * Fix a compiler warning (thanks to https://github.com/sdigit).
  * Modify the init script to start after all services are ready. Add in a commented-out sleep command if users find it necessary (thanks to https://github.com/BNoiZe).
- * Two memory leaks fixed.
+ * Two memory leaks fixed (thanks to https://github.com/pdgendt).
  * An error handling time specifications for flushes was causing an audible glitch when pausing and resuming some tracks. This has been fixed (thanks to https://github.com/Hamster128).
 
 Version 2.2.2
