@@ -39,6 +39,12 @@ PKG_CHECK_MODULES(
     [LIBCONFIG], [libconfig],
     [LIBS="${LIBCONFIG_LIBS} ${LIBS}"
      AC_DEFINE([HAVE_LIBCONFIG],[1],[Define to 1 if you have libconfig])])
+     
+# Check to see if we should include the initscript
+
+AC_ARG_WITH([initscript],
+[  --with-initscript = include a startup script], ,[with_initscript=1])
+AM_CONDITIONAL([INSTALL_INITSCRIPT], [test "x$with_initscript" = "x1"])
 
 # Look for piddir flag
 AC_ARG_WITH(piddir, [ --with-piddir=<pathname> Specify a pathname to a directory in which to write the PID file.], [
