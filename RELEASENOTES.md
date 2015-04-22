@@ -1,6 +1,7 @@
 Version 2.3
 -----
 * Enhancement
+ * Adding the System V startup script (the "initscript") is now a configuration option. The default is to include it, so if you want to omit the installation of the initscript, add the configuration option `--without-initscript`.
  * Metadata support is now a compile-time option: `--with-metadata`.
  * A very experimental metadata feed has been added. Use the option `-M <pipe-directory>`, e.g. `-M /tmp`. Shairport Sync will provide metadata in a pipe called `<pipe-directory>/shairport-sync-metadata`. There's a sample metadata reader at https://github.com/mikebrady/shairport-sync-metadata-reader. The format of the metadata is a mixture of XML-style tags, 4-character codes and base64 data. Please look at `rtsp.c` and `player.c` for examples. Please note that the format of the metadata may change.
 Beware: there appears to be a serious bug in iTunes, such that it may stall for a long period when sending large (more than a few hundred kilobytes) coverart images.
