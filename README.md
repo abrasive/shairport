@@ -5,7 +5,7 @@ Audio played by a Shairport Sync-powered device stays synchronised with the sour
 
 Shairport Sync does not support AirPlay video or photo streaming.
 
-This branch -- 2.3 -- is the development branch of Shairport Sync and is unstable. To access the stable branch, please switch to the 2.2 branch.
+This branch -- "development" -- is the development branch of Shairport Sync and is unstable. To access the stable branch, please switch to the "master" branch.
 
 More Information
 ----------
