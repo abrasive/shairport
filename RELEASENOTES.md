@@ -1,6 +1,6 @@
 Version 2.2.3
 -----
-* NOTE: all the metadata stuff has been moved to branch 2.3 -- the development branch. This will become the 'stable' branch henceforward, with just bug fixes or minor enhancements. Apologies for the inconvenience.
+* NOTE: all the metadata stuff has been moved to the "development" branch. This will become the stable branch henceforward, with just bug fixes or minor enhancements. Apologies for the inconvenience.
 * Bugfixes
  * Fix a bug when compiling for Arch Linux on Raspberry Pi 2 (thanks to https://github.com/joaodriessen).
  * Fix a compiler warning (thanks to https://github.com/sdigit).
