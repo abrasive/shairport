@@ -40,6 +40,8 @@ endif
 
 if INSTALL_INITSCRIPT
 install-exec-hook:
+	cp scripts/shairport-sync.conf /etc/shairport-sync.conf.sample
+	[ -f /etc/shairport-sync.conf ] || cp scripts/shairport-sync.conf /etc/shairport-sync.conf
 	[ -f /etc/init.d/shairport-sync ] || cp scripts/shairport-sync /etc/init.d/
 	update-rc.d shairport-sync defaults 90 10
 endif
