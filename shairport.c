@@ -36,6 +36,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <popt.h>
+#include <libgen.h>
 #include <libconfig.h>
 
 #include "config.h"
@@ -61,6 +62,7 @@
 
 
 static int shutting_down = 0;
+static char* appName = NULL;
 
 void shairport_shutdown() {
 	if (shutting_down)
@@ -191,7 +193,7 @@ void usage(char *progname) {
 #endif
 #endif
 #ifdef SUPPORT_CONFIG_FILES
-    printf("All other settings are in the configuration file at /etc/%s.conf\n",progname);
+    printf("\nGeneral options can be configured in /etc/%s.conf.\n",appName);
 #endif
     printf("\n");
     mdns_ls_backends();
@@ -282,7 +284,7 @@ int parse_options(int argc, char **argv) {
 #ifdef SUPPORT_CONFIG_FILES
     char configuration_file_path[4096];
     strcpy(configuration_file_path,"/etc/");
-    strcat(configuration_file_path,argv[0]);
+    strcat(configuration_file_path,appName);
     strcat(configuration_file_path,".conf");
     debug(1,"Looking for file \"%s\"",configuration_file_path);
     config_t cfg;
@@ -290,20 +292,20 @@ int parse_options(int argc, char **argv) {
     const char *str;
     int value;
 
-    config_init(&cfg);
+    config_init(&config.cfg);
      debug(1,"config stuff initialised");
     /* Read the file. If there is an error, report it and exit. */
-    if(config_read_file(&cfg,configuration_file_path)) {
+    if(config_read_file(&config.cfg,configuration_file_path)) {
      debug(1,"Configuration file opened.");
 
       debug(1,"name");
       /* Get the Service Name. */
-      if(config_lookup_string(&cfg, "general.name", &str))
-        config.apname=strdup(str);
+      if(config_lookup_string(&config.cfg, "general.name", &str))
+        config.apname=str;
 
       debug(1,"daemonize");
       /* Get the Daemonize setting. */
-      if(config_lookup_string(&cfg, "general.daemonize", &str)) {
+      if(config_lookup_string(&config.cfg, "general.daemonize", &str)) {
         if (strcasecmp(str,"no")==0)
           config.daemonise=0;
         else if (strcasecmp(str,"yes")==0)
@@ -314,25 +316,25 @@ int parse_options(int argc, char **argv) {
 
       debug(1,"mdns_backend");
       /* Get the mdns_backend setting. */
-      if(config_lookup_string(&cfg, "general.mdns_backend", &str))
-        config.mdns_name=strdup(str);
+      if(config_lookup_string(&config.cfg, "general.mdns_backend", &str))
+        config.mdns_name=str;
 
       debug(1,"output_backend");
       /* Get the output_backend setting. */
-      if(config_lookup_string(&cfg, "general.output_backend", &str))
-        config.output_name=strdup(str);
+      if(config_lookup_string(&config.cfg, "general.output_backend", &str))
+        config.output_name=str;
 
       debug(1,"port");
       /* Get the port setting. */
-      if(config_lookup_int(&cfg, "general.port", &value))
+      if(config_lookup_int(&config.cfg, "general.port", &value))
         config.port=value;
       debug(1,"done");
 
     } else {
-      debug(1,"Line %d of the configuration file \"%s\":\n%s",config_error_line(&cfg),config_error_file(&cfg),config_error_text(&cfg));
+      debug(1,"Line %d of the configuration file \"%s\":\n%s",
+        config_error_line(&config.cfg),config_error_file(&config.cfg),config_error_text(&config.cfg));
     }
   
-//    config_destroy(&cfg);
 #endif
 
   /* Print out options */
@@ -423,11 +425,18 @@ const char *pid_file_proc(void) {
 }
 #endif
 
+void exit_function() {
+  debug(1,"atexit function called...");
+#ifdef SUPPORT_CONFIG_FILES
+  config_destroy(&config.cfg);
+#endif  
+}
+
 int main(int argc, char **argv) {
 
     daemon_set_verbosity(LOG_DEBUG);
-
     memset(&config, 0, sizeof(config)); // also clears all strings, BTW
+    atexit(exit_function);
 
     // set defaults
     config.statistics_requested - 0; // don't print stats in the log
@@ -447,6 +456,12 @@ int main(int argc, char **argv) {
     config.apname = malloc(20 + 100);
     snprintf(config.apname, 20 + 100, "Shairport Sync on %s", hostname);
     set_requested_connection_state_to_output(1); // we expect to be able to connect to the output device
+    
+    // this is a bit weird, but apparently necessary
+    char* basec = strdup(argv[0]);
+    char* bname = basename(basec);
+    appName = strdup(bname);
+    free(basec);
     
     /* Check if we are called with -V or --version parameter */
     if (argc >= 2 && ((strcmp(argv[1], "-V")==0) || (strcmp(argv[1], "--version")==0))) {
