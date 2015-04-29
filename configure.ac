@@ -31,20 +31,40 @@ fi
 AC_CHECK_LIB([daemon],[daemon_log], , AC_MSG_ERROR(libdaemon needed))
 AC_CHECK_LIB([pthread],[pthread_create], , AC_MSG_ERROR(pthread library needed))
 AC_CHECK_LIB([m],[exp], , AC_MSG_ERROR(maths library needed))
+
+AC_MSG_RESULT(>>Including libpopt)
 PKG_CHECK_MODULES(
     [POPT], [popt],
     [LIBS="${POPT_LIBS} ${LIBS}"
      AC_DEFINE([HAVE_LIBPOPT],[1],[Define to 1 if you have popt])])
-PKG_CHECK_MODULES(
-    [LIBCONFIG], [libconfig],
-    [LIBS="${LIBCONFIG_LIBS} ${LIBS}"
-     AC_DEFINE([HAVE_LIBCONFIG],[1],[Define to 1 if you have libconfig])])
-     
-# Check to see if we should include the initscript
 
 AC_ARG_WITH([initscript],
 [  --with-initscript = include a startup script], ,[with_initscript=1])
 AM_CONDITIONAL([INSTALL_INITSCRIPT], [test "x$with_initscript" = "x1"])
+
+# Check if we want to support reading arguments from the command line     
+AC_ARG_WITH([command_line_argument_support],
+[  --with-command-line-argument-support = read configuration from command line arguments], ,[with_command_line_argument_support=1])
+
+if test "x${with_command_line_argument_support}" = x1 ; then
+  AC_MSG_RESULT(>>Including command line argument support)
+  AC_DEFINE([COMMAND_LINE_ARGUMENT_SUPPORT],[1],[Define to 1 if you want to support command line arguments])
+fi    
+
+# Check if we want to support reading from a configuration file chosen -- i.e. take parameters from /etc/shairport-sync.conf     
+AC_ARG_WITH([configfile_support],
+[  --with-configfile-support = read configuration from a configuration file], ,[with_configfile_support=1])
+
+if test "x${with_configfile_support}" = x1 ; then
+  AC_MSG_RESULT(>>Including configuration file support)
+  PKG_CHECK_MODULES(
+      [LIBCONFIG], [libconfig],
+      [LIBS="${LIBCONFIG_LIBS} ${LIBS}"])
+  AC_DEFINE([SUPPORT_CONFIG_FILES],[1],[Define to 1 if you want to support configuration files])
+fi
+AM_CONDITIONAL([INSTALL_CONFIG_FILES], [test "x${with_configfile_support}" = "x1"])  
+   
+# Check to see if we should include the initscript
 
 # Look for piddir flag
 AC_ARG_WITH(piddir, [ --with-piddir=<pathname> Specify a pathname to a directory in which to write the PID file.], [

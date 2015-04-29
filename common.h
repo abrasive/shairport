@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 #include <sys/socket.h>
+#include <libconfig.h>
+
 #include "config.h"
 #include "audio.h"
 #include "mdns.h"
@@ -39,7 +41,7 @@ enum stuffing_type {
 
 
 typedef struct {
-    char *configuration_file; // if used, all other command-line arguments are ignored
+    config_t cfg; // if used, all other command-line arguments are ignored
     char *password;
     char *apname;
 #ifdef CONFIG_METADATA

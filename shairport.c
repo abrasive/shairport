@@ -138,20 +138,24 @@ void print_version(void) {
 #ifdef CONFIG_METADATA
   strcat(version_string,"-metadata");
 #endif
+#ifdef SUPPORT_CONFIG_FILES
+  strcat(version_string,"-configfile");
+#endif
   printf("%s\n",version_string);
 }
 
 void usage(char *progname) {
     printf("Usage: %s [options...]\n", progname);
     printf("  or:  %s [options...] -- [audio output-specific options]\n", progname);
-
-    printf("\n");
-    printf("Mandatory arguments to long options are mandatory for short options too.\n");
-
     printf("\n");
     printf("Options:\n");
     printf("    -h, --help              show this help\n");
     printf("    -V, --version           show version information\n");
+    printf("    -k, --kill              kill the existing shairport daemon.\n");
+    printf("    -D, --disconnectFromOutput  disconnect immediately from the output device.\n");
+    printf("    -R, --reconnectToOutput  reconnect to the output device.\n");
+
+#ifdef COMMAND_LINE_ARGUMENT_SUPPORT
     printf("    -v, --verbose           -v print debug information; -vv more; -vvv lots\n");
     printf("    -p, --port=PORT         set RTSP listening port\n");
     printf("    -a, --name=NAME         set advertised name\n");
@@ -167,9 +171,6 @@ void usage(char *progname) {
     printf("                            \"soxr\" uses libsoxr to minimally resample packet frames -- moderate processor overhead.\n");
     printf("                            \"soxr\" option only available if built with soxr support.\n");
     printf("    -d, --daemon            daemonise.\n");
-    printf("    -k, --kill              kill the existing shairport daemon.\n");
-    printf("    -D, --disconnectFromOutput  disconnect immediately from the output device.\n");
-    printf("    -R, --reconnectToOutput  reconnect to the output device.\n");
     printf("    -B, --on-start=PROGRAM  run PROGRAM when playback is about to begin.\n");
     printf("    -E, --on-stop=PROGRAM   run PROGRAM when playback has ended.\n");
     printf("                            For -B and -E options, specify the full path to the program, e.g. /usr/bin/logger.\n");
@@ -188,6 +189,10 @@ void usage(char *progname) {
     printf("    --meta-dir=DIR          get metadata from the source and pipe it to DIR/shairport-sync-metadata, e.g. --meta-dir=/tmp.\n");
     printf("    --get-coverart          get cover art from the source and pipe it to DIR/shairport-sync-metadata, e.g. --meta-dir=/tmp.\n");
 #endif
+#endif
+#ifdef SUPPORT_CONFIG_FILES
+    printf("All other settings are in the configuration file at /etc/%s.conf\n",progname);
+#endif
     printf("\n");
     mdns_ls_backends();
     printf("\n");
@@ -195,12 +200,13 @@ void usage(char *progname) {
 }
 
 int parse_options(int argc, char **argv) {
+  char    *stuffing = NULL;  /* used for picking up the stuffing option */
+
+#ifdef COMMAND_LINE_ARGUMENT_SUPPORT
   signed char    c;            /* used for argument parsing */
   int     i = 0;        /* used for tracking options */
-  char    *stuffing = NULL;  /* used for picking up the stuffing option */
   poptContext optCon;   /* context for parsing command-line options */
   struct poptOption optionsTable[] = {
-    { "config-file", 0, POPT_ARG_STRING, &config.configuration_file, 0, NULL } ,
     { "statistics", 0, POPT_ARG_NONE, &config.statistics_requested, 0, NULL},
     { "version", 'V', POPT_ARG_NONE, NULL, 0, NULL},
     { "verbose", 'v', POPT_ARG_NONE, NULL, 'v', NULL },
@@ -270,32 +276,65 @@ int parse_options(int argc, char **argv) {
   if (c < -1) {
     die("%s: %s",poptBadOption(optCon, POPT_BADOPTION_NOALIAS),poptStrerror(c));
   }
-  
-  // now, die if the -c option was chosen and there were more than two arguments, which should be the app name and the single -c option.
-  
-  if (config.configuration_file!=NULL) {
-    if ((argc!=2) && !((argc==3) && (debuglev!=0)))
-      die("If you choose the -c or --config-file option, no other command-line arguments are permitted -- %d arguments seen",argc);
-    // parse the arguments
+#endif
+
+
+#ifdef SUPPORT_CONFIG_FILES
+    char configuration_file_path[4096];
+    strcpy(configuration_file_path,"/etc/");
+    strcat(configuration_file_path,argv[0]);
+    strcat(configuration_file_path,".conf");
+    debug(1,"Looking for file \"%s\"",configuration_file_path);
     config_t cfg;
     config_setting_t *setting;
     const char *str;
+    int value;
 
     config_init(&cfg);
-
+     debug(1,"config stuff initialised");
     /* Read the file. If there is an error, report it and exit. */
-    if(config_read_file(&cfg, config.configuration_file)) {
-      /* Get the store name. */
-      if(config_lookup_string(&cfg, "name", &str))
-        debug(1,"Store name: %s", str);
-      else
-        debug(1, "No 'name' setting in configuration file.");
+    if(config_read_file(&cfg,configuration_file_path)) {
+     debug(1,"Configuration file opened.");
+
+      debug(1,"name");
+      /* Get the Service Name. */
+      if(config_lookup_string(&cfg, "general.name", &str))
+        config.apname=strdup(str);
+
+      debug(1,"daemonize");
+      /* Get the Daemonize setting. */
+      if(config_lookup_string(&cfg, "general.daemonize", &str)) {
+        if (strcasecmp(str,"no")==0)
+          config.daemonise=0;
+        else if (strcasecmp(str,"yes")==0)
+          config.daemonise=1;
+        else
+          die("Invalid daemonize option choice \"%\". It should be \"yes\" or \"no\"");
+      }
+
+      debug(1,"mdns_backend");
+      /* Get the mdns_backend setting. */
+      if(config_lookup_string(&cfg, "general.mdns_backend", &str))
+        config.mdns_name=strdup(str);
+
+      debug(1,"output_backend");
+      /* Get the output_backend setting. */
+      if(config_lookup_string(&cfg, "general.output_backend", &str))
+        config.output_name=strdup(str);
+
+      debug(1,"port");
+      /* Get the port setting. */
+      if(config_lookup_int(&cfg, "general.port", &value))
+        config.port=value;
+      debug(1,"done");
+
     } else {
-      debug(1,"Couldn't open configuration file.");
+      debug(1,"Line %d of the configuration file \"%s\":\n%s",config_error_line(&cfg),config_error_file(&cfg),config_error_text(&cfg));
     }
   
-    config_destroy(&cfg);
-  }
+//    config_destroy(&cfg);
+#endif
+
   /* Print out options */
   
   debug(2,"statistics_requester status is %d.",config.statistics_requested);
