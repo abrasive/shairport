@@ -9,11 +9,11 @@ This branch -- "development" -- is the development branch of Shairport Sync and 
 
 More Information
 ----------
-Shairport Sync works by using timing information present in the audio data stream to keep in step with the source. It does this by monitoring and controlling the "latency" -- the time between when a sound is time-stamped at the source and when it is played by the audio output device. To measure latency precisely, it keeps its own clock synchronised with the clock used by the source, usually to within a fraction of a millisecond, using a variant of NTP synchronisation protocols.
+Shairport Sync works by using timing information present in the audio data stream to keep in synchrony with the source. It does this by monitoring and controlling the "latency" -- the time between when a sound is time-stamped at the source and when it is played by the audio output device. To measure latency precisely, it keeps its own clock synchronised with the clock used by the source, usually to within a fraction of a millisecond, using a variant of NTP synchronisation protocols.
 
 To maintain the exact latency required, if an output device is running slow relative to the source, Shairport Sync will delete frames of audio to allow the device to keep up; if the device is running fast, Shairport Sync will insert frames to keep time. The number of frames inserted or deleted is so small as to be almost inaudible. Frames are inserted or deleted as necessary at pseudorandom intervals. Alternatively, with `libsoxr` support, Shairport Sync can resample the audio feed to ensure the output device can keep up. This is even less obtrusive than insertion and deletion but requires a good deal of processing power -- most embedded devices probably can't support it.
 
-There are three default latency settings, chosen automatically. One latency matches the latency used by recent versions of iTunes when playing audio and the other matches the latency used by older version of iTunes, by iOS devices and by iTunes and Quicktime Player when playing video. A third default latency is used when the audio source is `forked-daapd`.
+There are four default latency settings, chosen automatically. One latency matches the latency used by recent versions of iTunes when playing audio and the other matches the latency used by older version of iTunes, by iOS devices and by iTunes and Quicktime Player when playing video. A third default latency is used when the audio source is `forked-daapd`. The fourth latency is the default if no other latency is chosen.
 
 Shairport Sync is a pretty substantial rewrite of Shairport 1.0 by James Laird and others -- please see https://github.com/abrasive/shairport/blob/master/README.md#contributors-to-version-1x for a list of the contributors to Shairport 1.x and Shairport 0.x. From a "heritage" point of view, Shairport Sync is a fork of Shairport 1.0 and the active branch is Shairport Sync 2.2.
 
@@ -23,10 +23,11 @@ For more about the motivation behind Shairport Sync, please see the wiki at http
 
 What else?
 --------------
-* Shairport Sync offers finer control at very top and very bottom of the volume range. See http://tangentsoft.net/audio/atten.html for a good discussion of audio "attenuators", upon which volume control in Shairport Sync is modelled. See also the diagram of the volume transfer function in the documents folder.
-* Shairport Sync will mute properly if the hardware supports it.
+* Better Volume Control -- Shairport Sync offers finer control at very top and very bottom of the volume range. See http://tangentsoft.net/audio/atten.html for a good discussion of audio "attenuators", upon which volume control in Shairport Sync is modelled. See also the diagram of the volume transfer function in the documents folder.
+* Hardware Mute -- Shairport Sync will mute properly if the hardware supports it.
 * If Shairport Sync has to use software volume and mute controls, the response time is shorter than before -- now it responds in 0.15 seconds.
-* Shairport Sync sends back a "busy" signal if it's already playing audio from another source, so other sources can't disrupt an existing Shairport Sync session. (If a source disappears without warning, the session automatically terminates after two minutes and the device becomes available again.)
+* Non-Interruptible -- Shairport Sync sends back a "busy" signal if it's already playing audio from another source, so other sources can't disrupt an existing Shairport Sync session. (If a source disappears without warning, the session automatically terminates after two minutes and the device becomes available again.)
+* Metadata -- Shairport Sync can be configured to receive metadata, such as Album Name, Artist Name, Cover Art, etc. and deliver it through a pipe to a recipient application program -- see https://github.com/mikebrady/shairport-sync-metadata-reader for a sample recipient.
 
 Status
 ------
@@ -60,6 +61,7 @@ The following libraries are required:
 * autoconf
 * libtool
 * libpopt
+* libconfig
 
 Optional:
 * libsoxr
@@ -68,7 +70,7 @@ Many linux distributions have Avahi and OpenSSL already in place, so normally it
 
 Assuming the usual build essentials and git, Debian, Ubuntu and Raspian users can get the basics with:
 
-- `apt-get install autoconf libtool libdaemon-dev libasound2-dev libpopt-dev`
+- `apt-get install autoconf libtool libdaemon-dev libasound2-dev libpopt-dev libconfig-dev`
 - `apt-get install avahi-daemon libavahi-client-dev` if you want to use Avahi (recommended).
 - `apt-get install libssl-dev` if you want to use OpenSSL and libcrypto, or use PolarSSL otherwise.
 - `apt-get install libpolarssl-dev` if you want to use PolarSSL, or use OpenSSL/libcrypto otherwise.
@@ -99,21 +101,23 @@ Omit the `--with-soxr` if the libsoxr library is not available.
 
 `$ make` 
 
-Run `$sudo make install` to install `shairport-sync` along with an init script which will automatically launch it at startup. The settings in the init script are the most basic defaults, so you will want to edit it -- the file is `/etc/init.d/shairport-sync` -- to give the service a name, use a different card, use the hardware mixer and volume control, etc. -- there are some examples in the script file.
+Run `$sudo make install` to install `shairport-sync` along with a default configuration file and startup script to launch it automatically at system startup. The settings are the most basic defaults, so you will want to edit the configuration -- the file is `/etc/shairport-sync.conf` -- to give the service a name, use a different card, use the hardware mixer and volume control, etc. -- there are some examples in the sample configuration file.
 
 Man Page
 --------
-You can see a web version of the man page here: http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/2.3/man/shairport-sync.html
+You can view the man page here: http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/2.3/man/shairport-sync.html
 
 
 Configuring Shairport Sync
 --------
-Shairport Sync installs a default configuration at `/etc/init.d/shairport-sync` (it won't replace an existing one) which should work in almost any system with a sound card. If there is a problem, it will be noted in the logfile, normally `/etc/log/syslog`. However, to get the most out of your software and hardware, you need to adjust some of the settings.
+There are two logically distinct parts to getting Shairport Sync to run properly on your machine -- the first part is getting it to start and stop automatically, and this is taken care of using a startup script at `/etc/init.d/shairport-sync`. The second part is giving Shairport Sync the correct settings, e.g. the correct output device to use, the service name that will appear in iTunes, etc. and this is done using the configuration file `/etc/shairport-sync.conf`.
 
-To understand what follows, note that settings and parameters are passed to Shairport Sync through command line arguments. The purpose of the init script at `/etc/init.d/shairport-sync` is to launch or terminate Shairport Sync while passing the correct arguments to it. You are perfectly free to remove the init script and launch and terminate Shairport Sync yourself directly; indeed it is useful when you are troubleshooting the program. If you do launch it directly, make sure it isn't running already!
+Shairport Sync reads its configuration from a configuration file at `/etc/shairport-sync.conf`. (While it can also take configuration settings from command line options, it is recommended that you use the configuration file method.)
+When you run `$sudo make install`,  a default configuration is installed at `/etc/shairport-sync.conf` (it won't replace an existing one) which should work in almost any system with a sound card. A sample configuration file is also installed or updated at `/etc/shairport-sync.conf.sample`. If there is a problem, it will be noted in the logfile, normally `/etc/log/syslog`. However, to get the most out of your software and hardware, you need to adjust some of the settings.
+
+To understand what follows, note that settings and parameters are given to Shairport Sync via the file `/etc/shairport-sync.conf`. The purpose of the init script at `/etc/init.d/shairport-sync` is to launch and terminate Shairport Sync. You are perfectly free to remove the init script and launch and terminate Shairport Sync yourself directly; indeed it is useful when you are troubleshooting the program. If you do launch it directly, make sure it isn't running already!
 
 As well as the man page, don't forget you can launch Shairport Sync with the `-h` option to get some help on the options available.
-
 
 These are the important options:
 
