@@ -750,9 +750,11 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn,
         cp_left -= next-cp;
 
         if (!strncmp(cp, "volume: ", 8)) {
+          if (config.ignore_volume_control==0) {
             float volume = atof(cp + 8);
             debug(2, "volume: %f\n", volume);
             player_volume(volume);
+          }
         } else 
 #ifdef CONFIG_METADATA        
         if(!strncmp(cp, "progress: ", 10)) {
@@ -867,14 +869,13 @@ metadata_package metadata_queue_items[metadata_queue_size];
 static pthread_t metadata_thread;
 
 void metadata_create(void) {
-    if (!config.meta_dir)
+    if (config.metadata_enabled==0)
         return;
 
-    const char fn[] = "shairport-sync-metadata";
-    size_t pl = strlen(config.meta_dir) + 1 + strlen(fn);
+    size_t pl = strlen(config.metadata_pipename) + 1;
 
     char* path = malloc(pl+1);
-    snprintf(path, pl+1, "%s/%s", config.meta_dir, fn);
+    snprintf(path, pl+1, "%s", config.metadata_pipename);
 
     if (mkfifo(path, 0644) && errno != EEXIST)
         die("Could not create metadata FIFO %s", path);
@@ -883,14 +884,13 @@ void metadata_create(void) {
 }
 
 void metadata_open(void) {
-    if (!config.meta_dir)
+    if (config.metadata_enabled==0)
         return;
 
-    const char fn[] = "shairport-sync-metadata";
-    size_t pl = strlen(config.meta_dir) + 1 + strlen(fn);
+    size_t pl = strlen(config.metadata_pipename) + 1;
 
     char* path = malloc(pl+1);
-    snprintf(path, pl+1, "%s/%s", config.meta_dir, fn);
+    snprintf(path, pl+1, "%s", config.metadata_pipename);
 
     fd = open(path, O_WRONLY | O_NONBLOCK);
     //if (fd < 0)
@@ -983,7 +983,7 @@ void* metadata_thread_function(void *ignore) {
   metadata_package pack;
   while (1) {
     pc_queue_get_item(&metadata_queue, &pack);
-    if (config.meta_dir)
+    if (config.metadata_enabled)
       metadata_process(pack.type,pack.code,pack.data,pack.length);
     if (pack.carrier)
       msg_free(pack.carrier); // release the message
@@ -1104,8 +1104,8 @@ static void handle_set_parameter(rtsp_conn_info *conn,
 
 static void handle_announce(rtsp_conn_info *conn,
                             rtsp_message *req, rtsp_message *resp) {
-  // allow a session to be interrupted if the timeout is set to zero
-  if ((config.timeout==0) || (pthread_mutex_trylock(&play_lock) == 0)) {
+  // interrupt session if permitted
+  if ((config.allow_session_interruption==1) || (pthread_mutex_trylock(&play_lock) == 0)) {
     char *paesiv = NULL;
     char *prsaaeskey = NULL;
     char *pfmtp = NULL;
