@@ -52,7 +52,7 @@ static void stop(void) {
     close(fd);
 }
 
-static int init(int argc, char **argv) {
+static int init(int argc, char **argv, config_t *cfgp) {
     if (argc != 1)
         die("bad argument(s) to pipe");
 
