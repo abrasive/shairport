@@ -204,18 +204,18 @@ void usage(char *progname) {
 int parse_options(int argc, char **argv) {
   char    *stuffing = NULL;  /* used for picking up the stuffing option */
 
-#ifdef COMMAND_LINE_ARGUMENT_SUPPORT
   signed char    c;            /* used for argument parsing */
   int     i = 0;        /* used for tracking options */
   poptContext optCon;   /* context for parsing command-line options */
   struct poptOption optionsTable[] = {
-    { "statistics", 0, POPT_ARG_NONE, &config.statistics_requested, 0, NULL},
-    { "version", 'V', POPT_ARG_NONE, NULL, 0, NULL},
     { "verbose", 'v', POPT_ARG_NONE, NULL, 'v', NULL },
-    { "daemon", 'd', POPT_ARG_NONE, &config.daemonise, 0, NULL },
     { "disconnectFromOutput", 'D', POPT_ARG_NONE, NULL, 0, NULL },
     { "reconnectToOutput", 'R', POPT_ARG_NONE, NULL, 0, NULL },
     { "kill", 'k', POPT_ARG_NONE, NULL, 0, NULL },
+#ifdef COMMAND_LINE_ARGUMENT_SUPPORT
+    { "daemon", 'd', POPT_ARG_NONE, &config.daemonise, 0, NULL },
+    { "statistics", 0, POPT_ARG_NONE, &config.statistics_requested, 0, NULL},
+    { "version", 'V', POPT_ARG_NONE, NULL, 0, NULL},
     { "port", 'p', POPT_ARG_INT, &config.port, 0, NULL } ,
     { "name", 'a', POPT_ARG_STRING, &config.apname, 0, NULL } ,
     { "output", 'o', POPT_ARG_STRING, &config.output_name, 0, NULL } ,
@@ -229,35 +229,50 @@ int parse_options(int argc, char **argv) {
     { "forkedDaapdLatency", 0, POPT_ARG_INT, &config.ForkedDaapdLatency, 0, NULL } ,
     { "stuffing", 'S', POPT_ARG_STRING, &stuffing, 'S', NULL } ,
     { "resync", 'r', POPT_ARG_INT, &config.resyncthreshold, 0, NULL } ,
-    { "timeout", 't', POPT_ARG_INT, &config.timeout, 0, NULL } ,
+    { "timeout", 't', POPT_ARG_INT, &config.timeout, 't', NULL } ,
     { "password", 0, POPT_ARG_STRING, &config.password, 0, NULL } ,
     { "tolerance", 0, POPT_ARG_INT, &config.tolerance, 0, NULL } ,
 #ifdef CONFIG_METADATA
-    { "meta-dir", 'M', POPT_ARG_STRING, &config.meta_dir, 0, NULL } ,
-    { "get-coverart", 'g', POPT_ARG_NONE, &config.get_coverart, 0, NULL } ,
+    { "meta-dir", 'M', POPT_ARG_STRING, &config.metadata_pipename, 'M', NULL } ,
+    { "get-coverart", 'g', POPT_ARG_NONE, &config.get_coverart, 'g', NULL } ,
 #endif
     POPT_AUTOHELP
+#endif
     { NULL, 0, 0, NULL, 0 }
   };
+
   
   int optind=argc;
   int j;
   for (j=0;j<argc;j++)
     if (strcmp(argv[j],"--")==0)
       optind=j;
-  
+
   optCon = poptGetContext(NULL, optind,(const char **)argv, optionsTable, 0);
   poptSetOtherOptionHelp(optCon, "[OPTIONS]* ");
 
   /* Now do options processing, get portname */
+ 
   while ((c = poptGetNextOpt(optCon)) >= 0) {
     switch (c) {
       case 'v':
         debuglev++;
         break;
+      case 't':
+        if (config.timeout==0) {
+          config.dont_check_timeout=1;
+          config.allow_session_interruption=1;
+        } else {
+          config.dont_check_timeout=0;
+          config.allow_session_interruption=0;
+        }
+        break;
 #ifdef CONFIG_METADATA
+      case 'M':
+        config.metadata_enabled=1;
+        break;
       case 'g':
-        if (config.meta_dir==0)
+        if (config.metadata_enabled==0)
           die("If you want to get cover art, you must also select the --meta-dir option.");
         break;
 #endif
@@ -278,7 +293,6 @@ int parse_options(int argc, char **argv) {
   if (c < -1) {
     die("%s: %s",poptBadOption(optCon, POPT_BADOPTION_NOALIAS),poptStrerror(c));
   }
-#endif
 
 
 #ifdef SUPPORT_CONFIG_FILES
@@ -286,24 +300,18 @@ int parse_options(int argc, char **argv) {
     strcpy(configuration_file_path,"/etc/");
     strcat(configuration_file_path,appName);
     strcat(configuration_file_path,".conf");
-    debug(1,"Looking for file \"%s\"",configuration_file_path);
-    config_t cfg;
+    debug(2,"Looking for file \"%s\"",configuration_file_path);
     config_setting_t *setting;
     const char *str;
     int value;
 
     config_init(&config.cfg);
-     debug(1,"config stuff initialised");
     /* Read the file. If there is an error, report it and exit. */
     if(config_read_file(&config.cfg,configuration_file_path)) {
-     debug(1,"Configuration file opened.");
-
-      debug(1,"name");
       /* Get the Service Name. */
       if(config_lookup_string(&config.cfg, "general.name", &str))
-        config.apname=str;
+        config.apname=(char *)str;
 
-      debug(1,"daemonize");
       /* Get the Daemonize setting. */
       if(config_lookup_string(&config.cfg, "general.daemonize", &str)) {
         if (strcasecmp(str,"no")==0)
@@ -311,27 +319,144 @@ int parse_options(int argc, char **argv) {
         else if (strcasecmp(str,"yes")==0)
           config.daemonise=1;
         else
-          die("Invalid daemonize option choice \"%\". It should be \"yes\" or \"no\"");
+          die("Invalid daemonize option choice \"%s\". It should be \"yes\" or \"no\"");
       }
 
-      debug(1,"mdns_backend");
       /* Get the mdns_backend setting. */
       if(config_lookup_string(&config.cfg, "general.mdns_backend", &str))
-        config.mdns_name=str;
+        config.mdns_name=(char *)str;
 
-      debug(1,"output_backend");
       /* Get the output_backend setting. */
       if(config_lookup_string(&config.cfg, "general.output_backend", &str))
-        config.output_name=str;
+        config.output_name=(char *)str;
 
-      debug(1,"port");
-      /* Get the port setting. */
+       /* Get the port setting. */
       if(config_lookup_int(&config.cfg, "general.port", &value))
         config.port=value;
-      debug(1,"done");
+
+      /* Get the password setting. */
+      if(config_lookup_string(&config.cfg, "general.password", &str))
+        config.password=(char *)str;
+
+      if(config_lookup_string(&config.cfg, "general.interpolation", &str)) {
+        if (strcasecmp(str,"basic")==0)
+          config.packet_stuffing=ST_basic;
+        else if (strcasecmp(str,"soxr")==0)
+          config.packet_stuffing=ST_soxr;
+        else
+          die("Invalid interpolation option choice \"%s\". It should be \"basic\" or \"soxr\"");
+      }
+
+      /* Get the statistics setting. */
+      if(config_lookup_string(&config.cfg, "general.statistics", &str)) {
+        if (strcasecmp(str,"no")==0)
+          config.statistics_requested=0;
+        else if (strcasecmp(str,"yes")==0)
+          config.statistics_requested=1;
+        else
+          die("Invalid statistics option choice \"%s\". It should be \"yes\" or \"no\"");
+      }
+
+      /* Get the drift tolerance setting. */
+      if(config_lookup_int(&config.cfg, "general.drift", &value))
+        config.tolerance=value;
+
+      /* Get the resync setting. */
+      if(config_lookup_int(&config.cfg, "general.resync_threshold", &value))
+        config.resyncthreshold=value;
+
+      /* Get the verbosity setting. */
+      if(config_lookup_int(&config.cfg, "general.log_verbosity", &value))
+        if ((value>=0) && (value<=3))
+          debuglev=value;
+        else
+          die("Invalid log verbosity setting option choice \"%d\". It should be between 0 and 3, inclusive.",value);
+          
+      /* Get the ignore_volume_control setting. */
+      if(config_lookup_string(&config.cfg, "general.ignore_volume_control", &str)) {
+        if (strcasecmp(str,"no")==0)
+          config.ignore_volume_control=0;
+        else if (strcasecmp(str,"yes")==0)
+          config.ignore_volume_control=1;
+        else
+          die("Invalid ignore_volume_control option choice \"%s\". It should be \"yes\" or \"no\"");
+      }
+
+
+      
+      /* Get the default latency. */
+      if(config_lookup_int(&config.cfg, "latencies.default", &value))
+        config.latency=value;
+
+      /* Get the itunes latency. */
+      if(config_lookup_int(&config.cfg, "latencies.itunes", &value))
+        config.iTunesLatency=value;
+
+      /* Get the AirPlay latency. */
+      if(config_lookup_int(&config.cfg, "latencies.airplay", &value))
+        config.AirPlayLatency=value;
+
+      /* Get the forkedDaapd latency. */
+      if(config_lookup_int(&config.cfg, "latencies.forkedDaapd", &value))
+        config.ForkedDaapdLatency=value;
+
+      /* Get the metadata setting. */
+      if(config_lookup_string(&config.cfg, "metadata.enabled", &str)) {
+        if (strcasecmp(str,"no")==0)
+          config.metadata_enabled=0;
+        else if (strcasecmp(str,"yes")==0)
+          config.metadata_enabled=1;
+        else
+          die("Invalid metadata enabled option choice \"%s\". It should be \"yes\" or \"no\"");
+      }
+      
+      if(config_lookup_string(&config.cfg, "metadata.include_cover_art", &str)) {
+        if (strcasecmp(str,"no")==0)
+          config.get_coverart=0;
+        else if (strcasecmp(str,"yes")==0)
+          config.get_coverart=1;
+        else
+          die("Invalid metadata include_cover_art option choice \"%s\". It should be \"yes\" or \"no\"");
+      }
+      
+      if(config_lookup_string(&config.cfg, "metadata.pipe_name", &str)) {
+        config.metadata_pipename=(char *)str;
+      }
+      
+      if(config_lookup_string(&config.cfg, "sessioncontrol.run_this_before_play_begins", &str)) {
+        config.cmd_start=(char *)str;
+      }
+      
+      if(config_lookup_string(&config.cfg, "sessioncontrol.run_this_after_play_ends", &str)) {
+        config.cmd_stop=(char *)str;
+      }
+      
+      if(config_lookup_string(&config.cfg, "sessioncontrol.wait_for_completion", &str)) {
+        if (strcasecmp(str,"no")==0)
+          config.cmd_blocking=0;
+        else if (strcasecmp(str,"yes")==0)
+          config.cmd_blocking=1;
+        else
+          die("Invalid session control wait_for_completion option choice \"%s\". It should be \"yes\" or \"no\"");
+      }
+      
+      if(config_lookup_string(&config.cfg, "sessioncontrol.allow_session_interruption", &str)) {
+        config.dont_check_timeout=0; // this is for legacy -- only set by -t 0
+        if (strcasecmp(str,"no")==0)
+          config.allow_session_interruption=0;
+        else if (strcasecmp(str,"yes")==0)
+          config.allow_session_interruption=1;
+        else
+          die("Invalid session control allow_interruption option choice \"%s\". It should be \"yes\" or \"no\"");
+      }
+
+      if(config_lookup_int(&config.cfg, "sessioncontrol.session_timeout", &value)) {
+        config.timeout=value;
+        config.dont_check_timeout=0; // this is for legacy -- only set by -t 0
+      }
 
     } else {
-      debug(1,"Line %d of the configuration file \"%s\":\n%s",
+     die("Line %d of the configuration file \"%s\":\n%s",
         config_error_line(&config.cfg),config_error_file(&config.cfg),config_error_text(&config.cfg));
     }
   
@@ -348,17 +473,19 @@ int parse_options(int argc, char **argv) {
   debug(2,"on-stop action is \"%s\".",config.cmd_stop);
   debug(2,"wait-cmd status is %d.",config.cmd_blocking);
   debug(2,"mdns backend \"%s\".",config.mdns_name);
-  debug(2,"latency is %d.",config.userSuppliedLatency);
+  debug(2,"userSuppliedLatency is %d.",config.userSuppliedLatency);
   debug(2,"AirPlayLatency is %d.",config.AirPlayLatency);
   debug(2,"iTunesLatency is %d.",config.iTunesLatency);
   debug(2,"forkedDaapdLatency is %d.",config.ForkedDaapdLatency);
-  debug(2,"stuffing option is \"%s\".",stuffing);
+  debug(2,"stuffing option is \"%d\".",config.packet_stuffing);
   debug(2,"resync time is %d.",config.resyncthreshold);
+  debug(2,"allow a session to be interrupted: %d.",config.allow_session_interruption);
   debug(2,"busy timeout time is %d.",config.timeout);
   debug(2,"tolerance is %d frames.",config.tolerance);
   debug(2,"password is \"%s\".",config.password);
 #ifdef CONFIG_METADATA
-  debug(2,"metadata directory is \"%s\".",config.meta_dir);
+  debug(2,"metdata enabled is %d.",config.metadata_enabled);
+  debug(2,"metadata pipename is \"%s\".",config.metadata_pipename);
   debug(2,"get-coverart is %d.",config.get_coverart);
 #endif
 
@@ -426,7 +553,6 @@ const char *pid_file_proc(void) {
 #endif
 
 void exit_function() {
-  debug(1,"atexit function called...");
 #ifdef SUPPORT_CONFIG_FILES
   config_destroy(&config.cfg);
 #endif  
@@ -612,7 +738,7 @@ int main(int argc, char **argv) {
         audio_ls_outputs();
         die("Invalid audio output specified!");
     }
-    config.output->init(argc-audio_arg, argv+audio_arg);
+    config.output->init(argc-audio_arg, argv+audio_arg, &config.cfg);
 
     daemon_log(LOG_NOTICE, "startup");
 
