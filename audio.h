@@ -2,6 +2,7 @@
 #define _AUDIO_H
 
 #include <stdint.h>
+#include <libconfig.h>
 
 typedef struct {
   double airplay_volume;
@@ -18,7 +19,7 @@ typedef struct {
     char *name;
 
     // start of program
-    int (*init)(int argc, char **argv);
+    int (*init)(int argc, char **argv, config_t* cfgp);
     // at end of program
     void (*deinit)(void);
 
