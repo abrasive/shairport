@@ -100,7 +100,7 @@ static int mdns_external_avahi_register(char *apname, int port) {
     char **argv;
 
 #ifdef CONFIG_METADATA
-    if (config.meta_dir)
+    if (config.metadata_enabled)
     	argv=argvwithmetadata;
     else
 #endif
@@ -146,7 +146,7 @@ static int mdns_external_dns_sd_register(char *apname, int port) {
 
     char **argv;
 #ifdef CONFIG_METADATA
-    if (config.meta_dir)
+    if (config.metadata_enabled)
     	argv=argvwithmetadata;
     else
 #endif

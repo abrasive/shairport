@@ -63,7 +63,7 @@ static void register_service(AvahiClient *c) {
 
     int ret;
 #ifdef CONFIG_METADATA
-    if (config.meta_dir) {
+    if (config.metadata_enabled) {
       debug(1,"Avahi with metadata");
       ret = avahi_entry_group_add_service(group,
                                           AVAHI_IF_UNSPEC,
