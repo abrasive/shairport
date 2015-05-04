@@ -411,10 +411,11 @@ static abuf_t *buffer_get_frame(void) {
 
     // if config.timeout (default 120) seconds have elapsed since the last audio packet was received, then we should stop.
     // config.timeout of zero means don't check..., but iTunes may be confused by a long gap followed by a resumption...
-    if ((time_of_last_audio_packet!=0) && (shutdown_requested==0) && (config.timeout!=0)) {
+    
+    if ((time_of_last_audio_packet!=0) && (shutdown_requested==0) && (config.dont_check_timeout==0)) {
     	uint64_t ct = config.timeout; // go from int to 64-bit int
-      if (local_time_now-time_of_last_audio_packet>=ct<<32) {
-        debug(1,"As Yeats almost said, \"Too long a silence / can make a stone of the heart\"");
+       if ((local_time_now>time_of_last_audio_packet) && (local_time_now-time_of_last_audio_packet>=ct<<32)) {
+       debug(1,"As Yeats almost said, \"Too long a silence / can make a stone of the heart\"");
         rtsp_request_shutdown_stream();
         shutdown_requested=1;
       }
@@ -779,11 +780,13 @@ static void *player_thread_func(void *arg) {
 #define trend_interval 3758
   stats_t statistics[trend_interval];
   int number_of_statistics,oldest_statistic,newest_statistic;
+  int at_least_one_frame_seen = 0;
   int64_t tsum_of_sync_errors,tsum_of_corrections,tsum_of_insertions_and_deletions,tsum_of_drifts;
   int64_t previous_sync_error,previous_correction;
   int64_t minimum_dac_queue_size = 1000000;
   int32_t minimum_buffer_occupancy = BUFFER_FRAMES;
   int32_t maximum_buffer_occupancy = 0;
+  
   audio_information.valid=0;
   
   int play_samples;
@@ -826,7 +829,9 @@ static void *player_thread_func(void *arg) {
           // If it's ahead of time, we add one audio frame to this frame to delay a subsequent frame
           // If it's late, we remove an audio frame from this frame to bring a subsequent frame forward in time
           
-          uint32_t reference_timestamp;
+         at_least_one_frame_seen = 1;
+  
+         uint32_t reference_timestamp;
           uint64_t reference_timestamp_time;
           get_reference_timestamp_stuff(&reference_timestamp,&reference_timestamp_time);
 
@@ -1012,10 +1017,14 @@ static void *player_thread_func(void *arg) {
           double moving_average_drift = (1.0*tsum_of_drifts)/number_of_statistics;
           // if ((play_number/print_interval)%20==0)
           if (config.statistics_requested)
-            inform("Sync error: %.1f (frames); net correction: %.1f (ppm); corrections: %.1f (ppm); missing packets %llu; late packets %llu; too late packets %llu; resend requests %llu; min DAC queue size %lli, min and max buffer occupancy %u and %u.", moving_average_sync_error, moving_average_correction*1000000/352, moving_average_insertions_plus_deletions*1000000/352,missing_packets,late_packets,too_late_packets,resend_requests,minimum_dac_queue_size,minimum_buffer_occupancy,maximum_buffer_occupancy);
+            if (at_least_one_frame_seen)
+              inform("Sync error: %.1f (frames); net correction: %.1f (ppm); corrections: %.1f (ppm); missing packets %llu; late packets %llu; too late packets %llu; resend requests %llu; min DAC queue size %lli, min and max buffer occupancy %u and %u.", moving_average_sync_error, moving_average_correction*1000000/352, moving_average_insertions_plus_deletions*1000000/352,missing_packets,late_packets,too_late_packets,resend_requests,minimum_dac_queue_size,minimum_buffer_occupancy,maximum_buffer_occupancy);
+            else
+              inform("No frames received in the last sampling interval.");
           minimum_dac_queue_size=1000000; // hack reset
           maximum_buffer_occupancy = 0; // can't be less than this
           minimum_buffer_occupancy = BUFFER_FRAMES; // can't be more than this
+          at_least_one_frame_seen = 0;
         }
       }
     }
