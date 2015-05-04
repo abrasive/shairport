@@ -32,7 +32,7 @@
 int Fs;
 long long starttime, samples_played;
 
-static int init(int argc, char **argv) {
+static int init(int argc, char **argv, config_t *cfgp) {
     return 0;
 }
 

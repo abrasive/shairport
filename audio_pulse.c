@@ -58,7 +58,7 @@ static void help(void) {
           );
 }
 
-static int init(int argc, char **argv) {
+static int init(int argc, char **argv, config_t *cfgp) {
     pulse_options.apname = config.apname;
 
     optind = 1; // optind=0 is equivalent to optind=1 plus special behaviour

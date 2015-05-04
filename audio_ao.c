@@ -42,7 +42,7 @@ static void help(void) {
           );
 }
 
-static int init(int argc, char **argv) {
+static int init(int argc, char **argv, config_t *cfgp) {
     ao_initialize();
     int driver = ao_default_driver_id();
     ao_option *ao_opts = NULL;
