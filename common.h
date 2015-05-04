@@ -45,13 +45,17 @@ typedef struct {
     char *password;
     char *apname;
 #ifdef CONFIG_METADATA
-    char *meta_dir;
+    int metadata_enabled;
+    char *metadata_pipename;
     int get_coverart;
 #endif
     uint8_t hw_addr[6];
     int port;
+    int ignore_volume_control;
     int resyncthreshold; // if it get's out of whack my more than this, resync. Zero means never resync.
+    int allow_session_interruption;
     int timeout; // while in play mode, exit if no packets of audio come in for more than this number of seconds . Zero means never exit.
+    int dont_check_timeout; // this is used to maintain backward compatability with the old -t option behaviour; only set by -t 0, cleared by everything else
     char *output_name;
     audio_output *output;
     char *mdns_name;
@@ -65,8 +69,8 @@ typedef struct {
     int daemonise;
     int statistics_requested;
     char *cmd_start, *cmd_stop;
-    int tolerance; // allow this much drift before attempting to correct it
     int cmd_blocking;
+    int tolerance; // allow this much drift before attempting to correct it
     enum stuffing_type packet_stuffing;
     char *pidfile;
     char *logfile;
