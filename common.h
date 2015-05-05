@@ -75,6 +75,7 @@ typedef struct {
     char *pidfile;
     char *logfile;
     char *errfile;
+    char *configfile;
 } shairport_cfg;
 
 //true if Shairport Sync is supposed to be sending output to the output device, false otherwise
