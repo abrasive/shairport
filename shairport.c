@@ -156,6 +156,7 @@ void usage(char *progname) {
     printf("    -k, --kill              kill the existing shairport daemon.\n");
     printf("    -D, --disconnectFromOutput  disconnect immediately from the output device.\n");
     printf("    -R, --reconnectToOutput  reconnect to the output device.\n");
+    printf("    -c, --configfile=FILE   read configuration settings from FILE. Default is /etc/shairport-sync.conf.\n");
 
 #ifdef COMMAND_LINE_ARGUMENT_SUPPORT
     printf("    -v, --verbose           -v print debug information; -vv more; -vvv lots\n");
@@ -188,8 +189,8 @@ void usage(char *progname) {
     printf("    --tolerance=TOLERANCE   allow a synchronization error of TOLERANCE frames (default 88) before trying to correct it.\n");
     printf("    --password=PASSWORD     require PASSWORD to connect. Default is not to require a password.\n");
 #ifdef CONFIG_METADATA
-    printf("    --meta-dir=DIR          get metadata from the source and pipe it to DIR/shairport-sync-metadata, e.g. --meta-dir=/tmp.\n");
-    printf("    --get-coverart          get cover art from the source and pipe it to DIR/shairport-sync-metadata, e.g. --meta-dir=/tmp.\n");
+    printf("    --metadata-pipename=FILE get metadata from the source and pipe it to FILE, e.g. --meta-dir=/tmp/shairport-sync-metadata.\n");
+    printf("    --get-coverart          send cover art through the metadata pipe.\n");
 #endif
 #endif
 #ifdef SUPPORT_CONFIG_FILES
@@ -203,6 +204,9 @@ void usage(char *progname) {
 
 int parse_options(int argc, char **argv) {
   char    *stuffing = NULL;  /* used for picking up the stuffing option */
+  
+  
+  
 
   signed char    c;            /* used for argument parsing */
   int     i = 0;        /* used for tracking options */
@@ -212,6 +216,9 @@ int parse_options(int argc, char **argv) {
     { "disconnectFromOutput", 'D', POPT_ARG_NONE, NULL, 0, NULL },
     { "reconnectToOutput", 'R', POPT_ARG_NONE, NULL, 0, NULL },
     { "kill", 'k', POPT_ARG_NONE, NULL, 0, NULL },
+#ifdef SUPPORT_CONFIG_FILES
+    { "configfile", 'c', POPT_ARG_STRING, &config.configfile, 0, NULL },
+#endif
 #ifdef COMMAND_LINE_ARGUMENT_SUPPORT
     { "daemon", 'd', POPT_ARG_NONE, &config.daemonise, 0, NULL },
     { "statistics", 0, POPT_ARG_NONE, &config.statistics_requested, 0, NULL},
@@ -233,7 +240,7 @@ int parse_options(int argc, char **argv) {
     { "password", 0, POPT_ARG_STRING, &config.password, 0, NULL } ,
     { "tolerance", 0, POPT_ARG_INT, &config.tolerance, 0, NULL } ,
 #ifdef CONFIG_METADATA
-    { "meta-dir", 'M', POPT_ARG_STRING, &config.metadata_pipename, 'M', NULL } ,
+    { "metadata-pipename", 'M', POPT_ARG_STRING, &config.metadata_pipename, 'M', NULL } ,
     { "get-coverart", 'g', POPT_ARG_NONE, &config.get_coverart, 'g', NULL } ,
 #endif
     POPT_AUTOHELP
@@ -273,7 +280,7 @@ int parse_options(int argc, char **argv) {
         break;
       case 'g':
         if (config.metadata_enabled==0)
-          die("If you want to get cover art, you must also select the --meta-dir option.");
+          die("If you want to get cover art, you must also select the --metadata-pipename option.");
         break;
 #endif
       case 'S':
@@ -294,7 +301,6 @@ int parse_options(int argc, char **argv) {
     die("%s: %s",poptBadOption(optCon, POPT_BADOPTION_NOALIAS),poptStrerror(c));
   }
 
-
 #ifdef SUPPORT_CONFIG_FILES
     char configuration_file_path[4096];
     strcpy(configuration_file_path,"/etc/");
@@ -306,8 +312,12 @@ int parse_options(int argc, char **argv) {
     int value;
 
     config_init(&config.cfg);
+    char *cfp = configuration_file_path;
+    // use the configuration file path given in the -c option, if any
+    if (config.configfile)
+      cfp = config.configfile;
     /* Read the file. If there is an error, report it and exit. */
-    if(config_read_file(&config.cfg,configuration_file_path)) {
+    if(config_read_file(&config.cfg,cfp)) {
       /* Get the Service Name. */
       if(config_lookup_string(&config.cfg, "general.name", &str))
         config.apname=(char *)str;
@@ -381,9 +391,7 @@ int parse_options(int argc, char **argv) {
         else
           die("Invalid ignore_volume_control option choice \"%s\". It should be \"yes\" or \"no\"");
       }
-
-
-      
+   
       /* Get the default latency. */
       if(config_lookup_int(&config.cfg, "latencies.default", &value))
         config.latency=value;
