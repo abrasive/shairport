@@ -63,7 +63,7 @@ fi
 
 # Check if we want to support reading from a configuration file chosen -- i.e. take parameters from /etc/shairport-sync.conf     
 AC_ARG_WITH([configfile_support],
-[  --with-configfile-support = read configuration from a configuration file], ,[with_configfile_support=1])
+[  --with-configfile-support = support reading of configuration from a configuration file], ,[with_configfile_support=1])
 
 if test "x${with_configfile_support}" = x1 ; then
   AC_MSG_RESULT(>>Including configuration file support)
@@ -72,7 +72,11 @@ if test "x${with_configfile_support}" = x1 ; then
       [LIBS="${LIBCONFIG_LIBS} ${LIBS}"])
   AC_DEFINE([SUPPORT_CONFIG_FILES],[1],[Define to 1 if you want to support configuration files])
 fi
-AM_CONDITIONAL([INSTALL_CONFIG_FILES], [test "x${with_configfile_support}" = "x1"])  
+
+AC_ARG_WITH([configfiles],
+[  --with-configfiles = include configuration files in installation ], ,[with_configfiles=1])
+AM_CONDITIONAL([INSTALL_CONFIG_FILES], [test "x$with_configfiles" = "x1" -a  "x$with_configfile_support" = "x1" ])
+
    
 # Check to see if we should include the initscript
 
