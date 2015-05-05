@@ -408,6 +408,7 @@ int parse_options(int argc, char **argv) {
       if(config_lookup_int(&config.cfg, "latencies.forkedDaapd", &value))
         config.ForkedDaapdLatency=value;
 
+#ifdef CONFIG_METADATA
       /* Get the metadata setting. */
       if(config_lookup_string(&config.cfg, "metadata.enabled", &str)) {
         if (strcasecmp(str,"no")==0)
@@ -430,7 +431,8 @@ int parse_options(int argc, char **argv) {
       if(config_lookup_string(&config.cfg, "metadata.pipe_name", &str)) {
         config.metadata_pipename=(char *)str;
       }
-      
+#endif
+
       if(config_lookup_string(&config.cfg, "sessioncontrol.run_this_before_play_begins", &str)) {
         config.cmd_start=(char *)str;
       }
