@@ -1,14 +1,15 @@
 Version 2.3.1 -- forthcoming
 -----
 In this release, Shairport Sync gains the ability to read settings from `/etc/shairport-sync.conf`.
-The move away from command-line options is to give more flexibility in adding features and to give better compatability across different versions of Linux.
-Existing command-line options will continue to work, but some will be deprecated and may disappear in a future version of Shairport Sync. New settings will only be available via the configuration file. 
+This gives more flexibility in adding features and to give better compatability across different versions of Linux.
+Existing command-line options continue to work, but some will be deprecated and may disappear in a future version of Shairport Sync. New settings will only be available via the configuration file. 
 
 In moving to the the use of a configuration file, some "housekeeping" is being done -- some logical corrections and other small changes are being made to option names and modes of operations, so the settings in the configuration file do not exactly match command line options.
 
 When `make install` is executed, a sample configuration is installed or updated at `/etc/shairport-sync.conf.sample`. The same file is also installed as `/etc/shairport-sync.conf` if that file doesn't already exist.
 
 * Pesky Change You Must Do Something About
+
 If you enable metadata, please note that the option has changed somewhat. The option `-M` has a new long name equivalent: `--metadata-pipename` and the argument you provide must now be the full name of the metadata pipe, e.g. `-M /tmp/shairport-sync-metadata`.
 
 * Enhancements
