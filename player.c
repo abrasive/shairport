@@ -898,7 +898,7 @@ static void *player_thread_func(void *arg) {
           
           // only allow stuffing if there is enough time to do it -- check DAC buffer...
           if (current_delay<DAC_BUFFER_QUEUE_MINIMUM_LENGTH) {
-            debug(1,"DAC buffer too short to allow stuffing.");
+            // debug(1,"DAC buffer too short to allow stuffing.");
             amount_to_stuff=0;
           }
 
