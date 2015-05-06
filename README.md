@@ -15,7 +15,7 @@ To maintain the exact latency required, if an output device is running slow rela
 
 There are three default latency settings, chosen automatically. One latency (the "iTunes" latency) matches the latency used by recent versions of iTunes when playing audio. The "AirPlay" latency is used by older version of iTunes, by iOS devices and by iTunes and Quicktime Player when playing video. Finally, the "forkedDaapd" latency is used for forked-daapd sources.
 
-Shairport Sync is a pretty substantial rewrite of Shairport 1.0 by James Laird and others -- please see https://github.com/abrasive/shairport/blob/master/README.md#contributors-to-version-1x for a list of the contributors to Shairport 1.x and Shairport 0.x. From a "heritage" point of view, Shairport Sync is a fork of Shairport 1.0 and the active branch is Shairport Sync 2.2.
+Shairport Sync is a pretty substantial rewrite of Shairport 1.0 by James Laird and others -- please see https://github.com/abrasive/shairport/blob/master/README.md#contributors-to-version-1x for a list of the contributors to Shairport 1.x and Shairport 0.x. From a "heritage" point of view, Shairport Sync is a fork of Shairport 1.0.
 
 Shairport Sync works only with Linux and ALSA. The sound card you use must be capable of working with 44,100 samples per second interleaved PCM stereo (you'll get a message in the logfile if there's a problem).
 
