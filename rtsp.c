@@ -622,7 +622,7 @@ static void handle_flush(rtsp_conn_info *conn,
           rtptime = uatoi(p); // unsigned integer -- up to 2^32-1
       }
     }
-    // debug(1,"RTSP Flush Requested.");
+    // debug(1,"RTSP Flush Requested: %u.",rtptime);
     player_flush(rtptime);
     resp->respcode = 200;
 }

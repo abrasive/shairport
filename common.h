@@ -76,6 +76,7 @@ typedef struct {
     char *logfile;
     char *errfile;
     char *configfile;
+    uint dac_buffer_queue_desired_length;
 } shairport_cfg;
 
 //true if Shairport Sync is supposed to be sending output to the output device, false otherwise

@@ -92,8 +92,6 @@ static int late_packet_message_sent;
 static uint64_t packet_count = 0;
 static int32_t last_seqno_read;
 
-
-
 // interthread variables
 static double software_mixer_volume = 1.0;
 static int fix_volume = 0x10000;
@@ -105,7 +103,6 @@ static pthread_mutex_t vol_mutex = PTHREAD_MUTEX_INITIALIZER;
 #define MAX_PACKET      2048
 
 // DAC buffer occupancy stuff
-#define DAC_BUFFER_QUEUE_DESIRED_LENGTH 6615
 #define DAC_BUFFER_QUEUE_MINIMUM_LENGTH 5000
 
 typedef struct audio_buffer_entry {   // decoded audio packets
@@ -517,7 +514,7 @@ static abuf_t *buffer_get_frame(void) {
 
               first_packet_time_to_play = reference_timestamp_time+((delta+(int64_t)config.latency)<<32)/44100; // using the latency requested...
               if (local_time_now>=first_packet_time_to_play) {
-                debug(2,"First packet is late! It should have played before now. Flushing 0.1 seconds");
+                debug(1,"First packet is late! It should have played before now. Flushing 0.1 seconds");
                 player_flush(first_packet_timestamp+4410);
               }
             }
@@ -526,7 +523,7 @@ static abuf_t *buffer_get_frame(void) {
           if (first_packet_time_to_play!=0) {
 
             uint32_t filler_size = frame_size;
-            uint32_t max_dac_delay = DAC_BUFFER_QUEUE_DESIRED_LENGTH;
+            uint32_t max_dac_delay = config.dac_buffer_queue_desired_length;
             // if (dac_delay==0) // i.e. if this is the first fill
               filler_size = 4410; // 0.1 second -- the maximum we'll add to the DAC
 
@@ -576,7 +573,7 @@ static abuf_t *buffer_get_frame(void) {
         }
       }
     }
-    wait = (ab_buffering || (dac_delay>=DAC_BUFFER_QUEUE_DESIRED_LENGTH) || (!ab_synced)) && (!please_stop);
+    wait = (ab_buffering || (dac_delay>=config.dac_buffer_queue_desired_length) || (!ab_synced)) && (!please_stop);
 //    wait = (ab_buffering ||  (seq_diff(ab_read, ab_write) < (config.latency-22000)/(352)) || (!ab_synced)) && (!please_stop);
     if (wait) {
       uint64_t time_to_wait_for_wakeup_fp = ((uint64_t)1<<32)/44100; // this is time period of one frame
@@ -901,7 +898,7 @@ static void *player_thread_func(void *arg) {
           
           // only allow stuffing if there is enough time to do it -- check DAC buffer...
           if (current_delay<DAC_BUFFER_QUEUE_MINIMUM_LENGTH) {
-            // debug(1,"DAC buffer too short to allow stuffing.");
+            debug(1,"DAC buffer too short to allow stuffing.");
             amount_to_stuff=0;
           }
 

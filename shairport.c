@@ -341,8 +341,12 @@ int parse_options(int argc, char **argv) {
         config.output_name=(char *)str;
 
        /* Get the port setting. */
-      if(config_lookup_int(&config.cfg, "general.port", &value))
-        config.port=value;
+      if(config_lookup_int(&config.cfg, "general.port", &value)) {
+        if ((value<0) || (value>65535))
+          die("Invalid port number  \"%sd\". It should be between 0 and 65535, default is 5000",value);
+        else
+          config.port=value;
+      }
 
       /* Get the password setting. */
       if(config_lookup_string(&config.cfg, "general.password", &str))
@@ -390,6 +394,14 @@ int parse_options(int argc, char **argv) {
           config.ignore_volume_control=1;
         else
           die("Invalid ignore_volume_control option choice \"%s\". It should be \"yes\" or \"no\"");
+      }
+      
+      /* Get the dac buffer size setting. */
+      if(config_lookup_int(&config.cfg, "general.dac_buffer_desired_length", &value)) {
+        if ((value<0) || (value>66150))
+          die("Invalid DAC buffer length \"%sd\". It should be between 0 and 66150, default is 6615",value);
+        else
+          config.dac_buffer_queue_desired_length=value;
       }
    
       /* Get the default latency. */
@@ -493,6 +505,8 @@ int parse_options(int argc, char **argv) {
   debug(2,"busy timeout time is %d.",config.timeout);
   debug(2,"tolerance is %d frames.",config.tolerance);
   debug(2,"password is \"%s\".",config.password);
+  debug(2,"ignore_volume_contorl is %d.",config.ignore_volume_control);
+  debug(2,"dac desired buffer length is %d.",config.dac_buffer_queue_desired_length);
 #ifdef CONFIG_METADATA
   debug(2,"metdata enabled is %d.",config.metadata_enabled);
   debug(2,"metadata pipename is \"%s\".",config.metadata_pipename);
@@ -592,6 +606,7 @@ int main(int argc, char **argv) {
     config.apname = malloc(20 + 100);
     snprintf(config.apname, 20 + 100, "Shairport Sync on %s", hostname);
     set_requested_connection_state_to_output(1); // we expect to be able to connect to the output device
+    config.dac_buffer_queue_desired_length = 6615; // 0.15 seconds.
     
     // this is a bit weird, but apparently necessary
     char* basec = strdup(argv[0]);
