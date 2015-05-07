@@ -63,7 +63,7 @@ do_start()
 # BTW, if you're using software volume control, you may have to use alsamixer or similar to set the output device's volume to its maximum level first
 # BTW2, you can use alsamixer to find device identifiers (e.g. hw:1) and mixer names (e.g. "Speaker"). No need to change ALSA's defaults.
 # BTW3, the argument after -a is simply the name the shairport service will be visible as.
-	start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON -- || return 2
+	start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON -- -d || return 2
 #	start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON -- -d -a "Topping TP30 or Griffin iMic on Raspberry Pi" -- -d hw:1 -t hardware -c "PCM" || return 2
 #	start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON -- -d -a "'3D Sound' USB Soundcard on Raspberry Pi" -- -d hw:1 -t hardware -c "Speaker" || return 2
 # BTW, that "3D Sound" USB soundcard sometimes has the mixer name "Headphone" rather than "Speaker" -- use alsamixer to check.
