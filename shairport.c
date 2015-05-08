@@ -152,6 +152,7 @@ void usage(char *progname) {
     printf("\n");
     printf("Options:\n");
     printf("    -h, --help              show this help\n");
+    printf("    -d, --daemon            daemonise.\n");
     printf("    -V, --version           show version information\n");
     printf("    -k, --kill              kill the existing shairport daemon.\n");
     printf("    -D, --disconnectFromOutput  disconnect immediately from the output device.\n");
@@ -173,7 +174,6 @@ void usage(char *progname) {
     printf("                            \"basic\" (default) inserts or deletes audio frames from packet frames with low processor overhead.\n");
     printf("                            \"soxr\" uses libsoxr to minimally resample packet frames -- moderate processor overhead.\n");
     printf("                            \"soxr\" option only available if built with soxr support.\n");
-    printf("    -d, --daemon            daemonise.\n");
     printf("    -B, --on-start=PROGRAM  run PROGRAM when playback is about to begin.\n");
     printf("    -E, --on-stop=PROGRAM   run PROGRAM when playback has ended.\n");
     printf("                            For -B and -E options, specify the full path to the program, e.g. /usr/bin/logger.\n");
@@ -189,7 +189,7 @@ void usage(char *progname) {
     printf("    --tolerance=TOLERANCE   allow a synchronization error of TOLERANCE frames (default 88) before trying to correct it.\n");
     printf("    --password=PASSWORD     require PASSWORD to connect. Default is not to require a password.\n");
 #ifdef CONFIG_METADATA
-    printf("    --metadata-pipename=FILE get metadata from the source and pipe it to FILE, e.g. --meta-dir=/tmp/shairport-sync-metadata.\n");
+    printf("    --metadata-pipename=PIPE send metadata to PIPE, e.g. --metadata-pipename=/tmp/shairport-sync-metadata.\n");
     printf("    --get-coverart          send cover art through the metadata pipe.\n");
 #endif
 #endif
@@ -216,11 +216,11 @@ int parse_options(int argc, char **argv) {
     { "disconnectFromOutput", 'D', POPT_ARG_NONE, NULL, 0, NULL },
     { "reconnectToOutput", 'R', POPT_ARG_NONE, NULL, 0, NULL },
     { "kill", 'k', POPT_ARG_NONE, NULL, 0, NULL },
+    { "daemon", 'd', POPT_ARG_NONE, &config.daemonise, 0, NULL },
 #ifdef SUPPORT_CONFIG_FILES
     { "configfile", 'c', POPT_ARG_STRING, &config.configfile, 0, NULL },
 #endif
 #ifdef COMMAND_LINE_ARGUMENT_SUPPORT
-    { "daemon", 'd', POPT_ARG_NONE, &config.daemonise, 0, NULL },
     { "statistics", 0, POPT_ARG_NONE, &config.statistics_requested, 0, NULL},
     { "version", 'V', POPT_ARG_NONE, NULL, 0, NULL},
     { "port", 'p', POPT_ARG_INT, &config.port, 0, NULL } ,
