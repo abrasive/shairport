@@ -102,7 +102,7 @@ Run `$sudo make install` to install `shairport-sync` along with an init script w
 
 Man Page
 --------
-You can see a web version of the man page here: http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/2.2/man/shairport-sync.html
+You can see a web version of the man page here: http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/master/man/shairport-sync.html
 
 
 Configuring Shairport Sync
