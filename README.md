@@ -81,7 +81,6 @@ Download Shairport Sync:
 Next, `cd` into the shairport-sync directory and execute the following commands:
 
 ```
-$ git checkout development #switch to the development branch of shairport-sync
 $ autoreconf -i -f
 ```
 
