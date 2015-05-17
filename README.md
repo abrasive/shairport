@@ -46,9 +46,16 @@ For information about changes and updates, please refer to the RELEASENOTES.md f
 
 Building And Installing
 ---------------------
-If you're interested in Shairport Sync for OpenWrt, there's an OpenWrt package at https://github.com/mikebrady/shairport-sync-for-openwrt. OpenWrt doesn't support the IQaudIO Pi-DAC.
+Shairport Sync packages exist for a number of popular Linux distributions:
+* OpenWrt: Shairport Sync is available as an optional package in trunk OpenWrt.
+Alternatively, there's an OpenWrt package at https://github.com/mikebrady/shairport-sync-for-openwrt.
 
-An Arch Linux installation package is available (thanks!) at  [EliaCereda/shairport-sync-PKGBUILD](https://github.com/EliaCereda/shairport-sync-PKGBUILD).
+* Buildroot: Shairport Sync is available as an optional package in Buildroot.
+
+* Arch Linux: An Arch Linux installation package suitable for compilation on any architecture is available at [EliaCereda/shairport-sync-PKGBUILD](https://github.com/EliaCereda/shairport-sync-PKGBUILD).
+Arch Linux installation packages, precompiled for the Intel 64-bit and Intel 32 bit architectures, are available in the official repo: https://www.archlinux.org/packages/community/x86_64/shairport-sync/.
+
+(Thanks to all package contributors!)
 
 Otherwise, follow these instructions.
 
