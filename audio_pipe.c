@@ -29,6 +29,7 @@
 #include <fcntl.h>
 #include <memory.h>
 #include <stdlib.h>
+#include <errno.h>
 #include "common.h"
 #include "audio.h"
 
@@ -37,11 +38,14 @@ static int fd = -1;
 char *pipename = NULL;
 
 static void start(int sample_rate) {
-    fd = open(pipename, O_WRONLY);
+  debug(1,"Pipename to start is \"%s\"",pipename);
+    fd = open(pipename, O_WRONLY | O_NONBLOCK);
+    /*
     if (fd < 0) {
         perror("open");
         die("could not open specified pipe for writing");
     }
+    */
 }
 
 static void play(short buf[], int samples) {
@@ -53,10 +57,28 @@ static void stop(void) {
 }
 
 static int init(int argc, char **argv, config_t *cfgp) {
-    if (argc != 1)
-        die("bad argument(s) to pipe");
 
-    pipename = strdup(argv[0]);
+  if (cfgp!=NULL) {
+       /* Get the Output Pipename. */
+      const char *str;
+      if(config_lookup_string(cfgp, "pipe.name", &str)) {
+        pipename = (char*)str;
+      }
+  }
+
+
+    if ((pipename==NULL) && (argc != 1))
+        die("bad or missing argument(s) to pipe");
+
+    if (argc==1)
+      pipename = strdup(argv[0]);
+      
+    // here, create the pipe
+    if (mkfifo(pipename, 0644) && errno != EEXIST)
+      die("Could not create metadata FIFO %s", pipename);
+
+    
+    debug(1,"Pipename is \"%s\"",pipename);
 
     // test open pipe so we error on startup if it's going to fail
     start(44100);
