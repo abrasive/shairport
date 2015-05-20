@@ -98,6 +98,36 @@ static int init(int argc, char **argv, config_t *cfgp) {
   int value;
 
   int hardware_mixer = 0;
+  
+  // get settings from settings file first, allow them to be over-ridden by command line options
+  
+  if (cfgp!=NULL) {
+       /* Get the Output Device Name. */
+      if(config_lookup_string(cfgp, "alsa.output_device", &str)) {
+        alsa_out_dev = (char*)str;
+      }
+      
+      /* Get the Mixer Type setting. */
+      if(config_lookup_string(cfgp, "alsa.mixer_type", &str)) {
+        if (strcasecmp(str,"software")==0)
+          hardware_mixer=0;
+        else if (strcasecmp(str,"hardware")==0)
+          hardware_mixer=1;
+        else
+          die("Invalid alsa mixer option choice \"%s\". It should be \"software\" or \"hardware\"");
+      }
+
+      /* Get the Mixer Device Name. */
+      if(config_lookup_string(cfgp, "alsa.mixer_device", &str)) {
+        alsa_mix_dev = (char*)str;
+      }
+      
+      /* Get the Mixer Control Name. */
+      if(config_lookup_string(cfgp, "alsa.mixer_control_name", &str)) {
+        alsa_mix_ctrl = (char*)str;
+      }
+
+  }
 
   optind = 1; // optind=0 is equivalent to optind=1 plus special behaviour
   argv--;     // so we shift the arguments to satisfy getopt()
@@ -131,34 +161,6 @@ static int init(int argc, char **argv, config_t *cfgp) {
   if (optind < argc)
       die("Invalid audio argument: %s", argv[optind]);
   
-  if (cfgp!=NULL) {
-       /* Get the Output Device Name. */
-      if(config_lookup_string(cfgp, "alsa.output_device", &str)) {
-        alsa_out_dev = (char*)str;
-      }
-      
-      /* Get the Mixer Type setting. */
-      if(config_lookup_string(cfgp, "alsa.mixer_type", &str)) {
-        if (strcasecmp(str,"software")==0)
-          hardware_mixer=0;
-        else if (strcasecmp(str,"hardware")==0)
-          hardware_mixer=1;
-        else
-          die("Invalid alsa mixer option choice \"%s\". It should be \"software\" or \"hardware\"");
-      }
-
-      /* Get the Mixer Device Name. */
-      if(config_lookup_string(cfgp, "alsa.mixer_device", &str)) {
-        alsa_mix_dev = (char*)str;
-      }
-      
-      /* Get the Mixer Control Name. */
-      if(config_lookup_string(cfgp, "alsa.mixer_control_name", &str)) {
-        alsa_mix_ctrl = (char*)str;
-      }
-
-  }
-
   if (!hardware_mixer)
       return 0;
 
