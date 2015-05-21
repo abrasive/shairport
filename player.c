@@ -573,8 +573,31 @@ static abuf_t *buffer_get_frame(void) {
         }
       }
     }
-    wait = (ab_buffering || (dac_delay>=config.dac_buffer_queue_desired_length) || (!ab_synced)) && (!please_stop);
-//    wait = (ab_buffering ||  (seq_diff(ab_read, ab_write) < (config.latency-22000)/(352)) || (!ab_synced)) && (!please_stop);
+    
+    // here, we work out whether to wait or not
+    // if we are getting feedback from the backend, we can use that.
+    // otherwise we have to release a buffer when the time is right.
+
+    if (config.output->delay)
+			wait = (ab_buffering || (dac_delay>=config.dac_buffer_queue_desired_length) || (!ab_synced)) && (!please_stop);
+		else {		
+			int do_wait = 1;
+			if ((curframe) && (curframe->ready) && (curframe->timestamp)) {
+				uint32_t reference_timestamp;
+				uint64_t reference_timestamp_time;
+				get_reference_timestamp_stuff(&reference_timestamp,&reference_timestamp_time);
+				if (reference_timestamp) { // if we have a reference time
+					uint32_t packet_timestamp=curframe->timestamp;
+					int64_t delta = ((int64_t)packet_timestamp-(int64_t)reference_timestamp);
+					int64_t time_to_play = reference_timestamp_time+((delta+(int64_t)(config.latency-config.dac_buffer_queue_desired_length))<<32)/44100; // using the latency requested...
+					if (local_time_now>=time_to_play) {
+						do_wait = 0;
+					}
+				}
+    	}    
+	    wait = (ab_buffering ||  (do_wait!=0) || (!ab_synced)) && (!please_stop);
+//	    wait = (ab_buffering ||  (seq_diff(ab_read, ab_write) < (config.latency-22000)/(352)) || (!ab_synced)) && (!please_stop);
+	  }
     if (wait) {
       uint64_t time_to_wait_for_wakeup_fp = ((uint64_t)1<<32)/44100; // this is time period of one frame
       time_to_wait_for_wakeup_fp *= 4*352; // four full 352-frame packets
@@ -873,9 +896,6 @@ static void *player_thread_func(void *arg) {
               debug(1,"Delay error when checking running latency.");
               current_delay=0;
             }
-//          } else {
-//            current_delay = 0;
-//          }
             if (current_delay<minimum_dac_queue_size)
               minimum_dac_queue_size=current_delay;
             

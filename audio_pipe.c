@@ -39,13 +39,10 @@ char *pipename = NULL;
 
 static void start(int sample_rate) {
   debug(1,"Pipename to start is \"%s\"",pipename);
-    fd = open(pipename, O_WRONLY | O_NONBLOCK);
-    /*
-    if (fd < 0) {
-        perror("open");
-        die("could not open specified pipe for writing");
-    }
-    */
+  if (strcasecmp(pipename,"STDOUT")==0)
+    fd = STDOUT_FILENO;
+  else
+    fd = open(pipename, O_WRONLY);
 }
 
 static void play(short buf[], int samples) {
@@ -53,6 +50,7 @@ static void play(short buf[], int samples) {
 }
 
 static void stop(void) {
+  if (fd!=STDOUT_FILENO)
     close(fd);
 }
 
@@ -72,10 +70,12 @@ static int init(int argc, char **argv, config_t *cfgp) {
 
     if (argc==1)
       pipename = strdup(argv[0]);
-      
+    
+    
     // here, create the pipe
-    if (mkfifo(pipename, 0644) && errno != EEXIST)
-      die("Could not create metadata FIFO %s", pipename);
+    if (strcasecmp(pipename,"STDOUT")!=0)
+      if (mkfifo(pipename, 0644) && errno != EEXIST)
+        die("Could not create metadata FIFO %s", pipename);
 
     
     debug(1,"Pipename is \"%s\"",pipename);
@@ -88,14 +88,12 @@ static int init(int argc, char **argv, config_t *cfgp) {
 }
 
 static void deinit(void) {
-    if (fd > 0)
+    if ((fd > 0) && (fd!=STDOUT_FILENO))
         close(fd);
-    if (pipename)
-        free(pipename);
 }
 
 static void help(void) {
-    printf("    pipe takes 1 argument: the name of the FIFO to write to.\n");
+    printf("    pipe takes 1 argument: the name of the FIFO to write to, which can be \"stdout\".\n");
 }
 
 audio_output audio_pipe = {
