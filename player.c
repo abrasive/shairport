@@ -849,117 +849,133 @@ static void *player_thread_func(void *arg) {
           } else {
             td_in_frames = -((-td*44100)>>32);
           }
+          
+          // This is the timing error for the next audio frame in the DAC, if applicable
+          int64_t sync_error =0;
+          
+          int amount_to_stuff = 0;
+          
+          // check sequencing
+          if (last_seqno_read==-1)
+            last_seqno_read=inframe->sequence_number;
+          else {
+            last_seqno_read = (SUCCESSOR(last_seqno_read) & 0xffff);           
+            if (inframe->sequence_number!=last_seqno_read) {
+              debug(1,"Player: packets out of sequence: expected: %d, got: %d, sync error: %d frames.",last_seqno_read,inframe->sequence_number,sync_error);
+              last_seqno_read=inframe->sequence_number; // reset warning...
+            }
+          }
 
+          
           if (config.output->delay) {
             current_delay = config.output->delay();
             if (current_delay==-1) {
               debug(1,"Delay error when checking running latency.");
               current_delay=0;
             }
-          } else {
-            current_delay = 0;
-          }
-          if (current_delay<minimum_dac_queue_size)
-            minimum_dac_queue_size=current_delay;
-          
-          uint32_t bo = seq_diff(ab_read,ab_write);
-          
-          if (bo<minimum_buffer_occupancy)
-            minimum_buffer_occupancy=bo;
-
-          if (bo>maximum_buffer_occupancy)
-            maximum_buffer_occupancy=bo;
-
-          // this is the actual delay, including the latency we actually want, which will fluctuate a good bit about a potentially rising or falling trend.
-          int64_t delay = td_in_frames+rt-(nt-current_delay);
-          
-          // This is the timing error for the next audio frame in the DAC.
-          int64_t sync_error = delay-config.latency;
-          
-          // before we finally commit to this frame, check its sequencing and timing
-          // check sequencing
-          if (last_seqno_read==-1)
-            last_seqno_read=inframe->sequence_number;
-          else {
-            last_seqno_read = (SUCCESSOR(last_seqno_read) & 0xffff);           
-            if (inframe->sequence_number!=last_seqno_read)
-              debug(1,"Player: packets out of sequence: expected: %d, got: %d, sync error: %d frames.",last_seqno_read,inframe->sequence_number,sync_error);
-              last_seqno_read=inframe->sequence_number; // reset warning...
-          }
-          
-          int amount_to_stuff = 0;
-          // require a certain error before bothering to fix it...
-          if (sync_error>config.tolerance) {
-            amount_to_stuff = -1;
-          }
-          if (sync_error<-config.tolerance) {
-            amount_to_stuff = 1;
-          }
-          
-          // only allow stuffing if there is enough time to do it -- check DAC buffer...
-          if (current_delay<DAC_BUFFER_QUEUE_MINIMUM_LENGTH) {
-            // debug(1,"DAC buffer too short to allow stuffing.");
-            amount_to_stuff=0;
-          }
-
-          // try to keep the corrections definitely below 1 in 1000 audio frames
-          if (amount_to_stuff) {
-            uint32_t x = random()%1000;
-            if (x>352)
-              amount_to_stuff=0;
-          }
+//          } else {
+//            current_delay = 0;
+//          }
+            if (current_delay<minimum_dac_queue_size)
+              minimum_dac_queue_size=current_delay;
             
-          if ((amount_to_stuff==0) && (fix_volume==0x10000)) {
-            // if no stuffing needed and no volume adjustment, then
-            // don't send to stuff_buffer_* and don't copy to outbuf; just send directly to the output device...
-            config.output->play(inbuf, frame_size);
-          } else {
+            uint32_t bo = seq_diff(ab_read,ab_write);
+            
+            if (bo<minimum_buffer_occupancy)
+              minimum_buffer_occupancy=bo;
+
+            if (bo>maximum_buffer_occupancy)
+              maximum_buffer_occupancy=bo;
+
+            // this is the actual delay, including the latency we actually want, which will fluctuate a good bit about a potentially rising or falling trend.
+            int64_t delay = td_in_frames+rt-(nt-current_delay);
+            
+            // This is the timing error for the next audio frame in the DAC.
+            sync_error = delay-config.latency;
+            
+            // before we finally commit to this frame, check its sequencing and timing
+            
+            // require a certain error before bothering to fix it...
+            if (sync_error>config.tolerance) {
+              amount_to_stuff = -1;
+            }
+            if (sync_error<-config.tolerance) {
+              amount_to_stuff = 1;
+            }
+            
+            // only allow stuffing if there is enough time to do it -- check DAC buffer...
+            if (current_delay<DAC_BUFFER_QUEUE_MINIMUM_LENGTH) {
+              // debug(1,"DAC buffer too short to allow stuffing.");
+              amount_to_stuff=0;
+            }
+
+            // try to keep the corrections definitely below 1 in 1000 audio frames
+            if (amount_to_stuff) {
+              uint32_t x = random()%1000;
+              if (x>352)
+                amount_to_stuff=0;
+            }
+              
+            if ((amount_to_stuff==0) && (fix_volume==0x10000)) {
+              // if no stuffing needed and no volume adjustment, then
+              // don't send to stuff_buffer_* and don't copy to outbuf; just send directly to the output device...
+              config.output->play(inbuf, frame_size);
+            } else {
 #ifdef HAVE_LIBSOXR
-            switch (config.packet_stuffing) {
-              case ST_basic:
+              switch (config.packet_stuffing) {
+                case ST_basic:
 //                if (amount_to_stuff) debug(1,"Basic stuff...");
-                  play_samples = stuff_buffer_basic(inbuf, outbuf,amount_to_stuff);
-                break;
-              case ST_soxr:
+                    play_samples = stuff_buffer_basic(inbuf, outbuf,amount_to_stuff);
+                  break;
+                case ST_soxr:
 //                if (amount_to_stuff) debug(1,"Soxr stuff...");
-                  play_samples = stuff_buffer_soxr(inbuf, outbuf,amount_to_stuff);
-                break;
-            }     
+                    play_samples = stuff_buffer_soxr(inbuf, outbuf,amount_to_stuff);
+                  break;
+              }     
 #else
 //          if (amount_to_stuff) debug(1,"Standard stuff...");
-            play_samples = stuff_buffer_basic(inbuf, outbuf,amount_to_stuff);
+              play_samples = stuff_buffer_basic(inbuf, outbuf,amount_to_stuff);
 #endif
 
-      /*
-      {
-        int co;
-        int is_silent=1;
-        short *p = outbuf;
-        for (co=0;co<play_samples;co++) {
-          if (*p!=0)
-            is_silent=0;
-          p++;
-        }
-        if (is_silent)
-          debug(1,"Silence!");
-      }
-      */
-
-             config.output->play(outbuf, play_samples);
+        /*
+        {
+          int co;
+          int is_silent=1;
+          short *p = outbuf;
+          for (co=0;co<play_samples;co++) {
+            if (*p!=0)
+              is_silent=0;
+            p++;
           }
-          
-          // check for loss of sync
-          // timestamp of zero means an inserted silent frame in place of a missing frame
-          if ((inframe->timestamp!=0) && (!please_stop) && (config.resyncthreshold!=0) && (abs(sync_error)>config.resyncthreshold)) {
-            sync_error_out_of_bounds++;
-            // debug(1,"Sync error out of bounds: Error: %lld; previous error: %lld; DAC: %lld; timestamp: %llx, time now %llx",sync_error,previous_sync_error,current_delay,inframe->timestamp,local_time_now);    
-             if (sync_error_out_of_bounds>3) {
-              debug(1,"Lost sync with source for %d consecutive packets -- flushing and resyncing. Error: %lld.",sync_error_out_of_bounds,sync_error);
+          if (is_silent)
+            debug(1,"Silence!");
+        }
+        */
+
+               config.output->play(outbuf, play_samples);
+            }
+            
+            // check for loss of sync
+            // timestamp of zero means an inserted silent frame in place of a missing frame
+            if ((inframe->timestamp!=0) && (!please_stop) && (config.resyncthreshold!=0) && (abs(sync_error)>config.resyncthreshold)) {
+              sync_error_out_of_bounds++;
+              // debug(1,"Sync error out of bounds: Error: %lld; previous error: %lld; DAC: %lld; timestamp: %llx, time now %llx",sync_error,previous_sync_error,current_delay,inframe->timestamp,local_time_now);    
+               if (sync_error_out_of_bounds>3) {
+                debug(1,"Lost sync with source for %d consecutive packets -- flushing and resyncing. Error: %lld.",sync_error_out_of_bounds,sync_error);
+                sync_error_out_of_bounds = 0;
+                player_flush(nt);
+               }
+            } else {
               sync_error_out_of_bounds = 0;
-              player_flush(nt);
-             }
+            }
           } else {
-            sync_error_out_of_bounds = 0;
+            // if there is no delay procedure, there can be no synchronising
+            if (fix_volume==0x10000)
+              config.output->play(inbuf, frame_size);
+            else {
+              play_samples = stuff_buffer_basic(inbuf, outbuf,0);
+              config.output->play(outbuf, frame_size);
+            }
           }
 
           // mark the frame as finished 
