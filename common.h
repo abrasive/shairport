@@ -76,7 +76,7 @@ typedef struct {
     char *logfile;
     char *errfile;
     char *configfile;
-    uint dac_buffer_queue_desired_length;
+    uint backend_buffer_desired_length; // this will be the desired number of frames in the audio backend buffer -- the DAC buffer for ALSA
 } shairport_cfg;
 
 //true if Shairport Sync is supposed to be sending output to the output device, false otherwise

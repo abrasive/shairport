@@ -505,21 +505,23 @@ static abuf_t *buffer_get_frame(void) {
               // debug(1,"First frame seen with timestamp...");
               first_packet_timestamp=curframe->timestamp; // we will keep buffering until we are supposed to start playing this
  
-              // here, see if we should start playing. We need to know when to allow the packets to be sent to the player
-              // we will get a fix every second or so, which will be stored as a pair consisting of
-              // the time when the packet with a particular timestamp should be played.
-              // it might not be the timestamp of our first packet, however, so we might have to do some calculations.
+              // Here, see if we should start playing. We need to know when to allow the packets to be sent to the player.
+              // We will be getting a timing fix every second or so from the source, which will be stored as a pair consisting of <local-time>-<timestamp>
+              // i.e. the local time that corresponds to a specific packet timestamp.
+              // It might not be the timestamp of our first packet, however, so we might have to do some calculations.
+              // Also, we have to allow for the desired latency.
           
               int64_t delta = ((int64_t)first_packet_timestamp-(int64_t)reference_timestamp);
               
-              // Now, if the back end can tell us about its latency, we will set the first packet's time to play to be the exact time.
-              // Otherwise we will set it to the exact time less the config.dac_buffer_queue_desired_length, a proxy for the lead time we want the stream to appear at the output
-              // We will probably change this in the future to pick up the lead time from the back end itself
+              // Now, if the back end can tell us about its latency, we will set the first packet's time to play to be the exact time it's supposed to play plus the desired latency.
+              // Otherwise we will set it to the exact time plus desired latency less the config.backend_buffer_desired_length, a proxy for the lead time we want the stream to appear at the output.
+              
+              // We may change this in the future to pick up the lead time from the back end itself
 
               if (config.output->delay)
               	first_packet_time_to_play = reference_timestamp_time+((delta+(int64_t)config.latency)<<32)/44100; // using the latency requested...
               else
-              	first_packet_time_to_play = reference_timestamp_time+((delta+(int64_t)config.latency-(int64_t)config.dac_buffer_queue_desired_length)<<32)/44100; // using the latency requested...
+              	first_packet_time_to_play = reference_timestamp_time+((delta+(int64_t)config.latency-(int64_t)config.backend_buffer_desired_length)<<32)/44100; // using the latency requested...
 
               if (local_time_now>=first_packet_time_to_play) {
                 debug(1,"First packet is late! It should have played before now. Flushing 0.1 seconds");
@@ -531,7 +533,7 @@ static abuf_t *buffer_get_frame(void) {
           if (first_packet_time_to_play!=0) {
 
             uint32_t filler_size = frame_size;
-            uint32_t max_dac_delay = config.dac_buffer_queue_desired_length;
+            uint32_t max_dac_delay = config.backend_buffer_desired_length;
             // if (dac_delay==0) // i.e. if this is the first fill
               filler_size = 4410; // 0.1 second -- the maximum we'll add to the DAC
 
@@ -582,13 +584,9 @@ static abuf_t *buffer_get_frame(void) {
       }
     }
     
-    // here, we work out whether to wait or not
-    // if we are getting feedback from the backend, we can use that.
-    // otherwise we have to release a buffer when the time is right.
+    // Here, we work out whether to release a packet or wait
+    // We release a buffer when the time is right.
 
-    if (config.output->delay)
-			wait = (ab_buffering || (dac_delay>=config.dac_buffer_queue_desired_length) || (!ab_synced)) && (!please_stop);
-		else {		
 			int do_wait = 1;
 			if ((curframe) && (curframe->ready) && (curframe->timestamp)) {
 				uint32_t reference_timestamp;
@@ -597,7 +595,7 @@ static abuf_t *buffer_get_frame(void) {
 				if (reference_timestamp) { // if we have a reference time
 					uint32_t packet_timestamp=curframe->timestamp;
 					int64_t delta = ((int64_t)packet_timestamp-(int64_t)reference_timestamp);
-					int64_t offset = (int64_t)config.latency-(int64_t)config.dac_buffer_queue_desired_length;
+					int64_t offset = (int64_t)config.latency-(int64_t)config.backend_buffer_desired_length;
 					int64_t net_offset = delta+offset;
 					int64_t time_to_play = reference_timestamp_time;
 					int64_t net_offset_fp_sec;
@@ -617,8 +615,7 @@ static abuf_t *buffer_get_frame(void) {
 				}
     	}    
 	    wait = (ab_buffering ||  (do_wait!=0) || (!ab_synced)) && (!please_stop);
-//	    wait = (ab_buffering ||  (seq_diff(ab_read, ab_write) < (config.latency-22000)/(352)) || (!ab_synced)) && (!please_stop);
-	  }
+
     if (wait) {
       uint64_t time_to_wait_for_wakeup_fp = ((uint64_t)1<<32)/44100; // this is time period of one frame
       time_to_wait_for_wakeup_fp *= 4*352; // four full 352-frame packets
