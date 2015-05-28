@@ -42,6 +42,7 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <limits.h>
 
 #include "config.h"
 
@@ -1104,7 +1105,15 @@ int player_play(stream_cfg *stream) {
   if (rc)
     debug(1,"Error initialising condition variable.");
   config.output->start(sampling_rate);
-  pthread_create(&player_thread, NULL, player_thread_func, NULL);
+
+  size_t size = (PTHREAD_STACK_MIN + 128 * 1024);
+  pthread_attr_t tattr;
+  pthread_attr_init(&tattr);
+  rc = pthread_attr_setstacksize(&tattr, size);
+  if (rc)
+    debug(1, "Error setting stack size for player_thread: %s", strerror(errno));
+  pthread_create(&player_thread, &tattr, player_thread_func, NULL);
+  pthread_attr_destroy(&tattr);
 
   return 0;
 }
