@@ -36,7 +36,7 @@
 #include <pthread.h>
 #include <math.h>
 #include <sys/stat.h>
-#include <sys/signal.h>
+#include <signal.h>
 #include <sys/syslog.h>
 #include <assert.h>
 #include <fcntl.h>
