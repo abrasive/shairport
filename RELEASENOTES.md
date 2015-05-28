@@ -1,3 +1,9 @@
+Version 2.2.4
+-----
+* Bugfixes
+ * Fix an out-of-stack-space error that can occur in certain cases (thanks to https://github.com/joerg-krause).
+ * Fix a couple of compiler warnings (thanks to https://github.com/joerg-krause).
+
 Version 2.2.3
 -----
 * NOTE: all the metadata stuff has been moved to the "development" branch. This will become the stable branch henceforward, with just bug fixes or minor enhancements. Apologies for the inconvenience.
