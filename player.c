@@ -474,15 +474,7 @@ static abuf_t *buffer_get_frame(void) {
     		flush_limit=0;
     	}
     	    
-      dac_delay = 0;
       curframe = audio_buffer + BUFIDX(ab_read);
-      if (config.output->delay) {
-        dac_delay = config.output->delay();
-        if (dac_delay==-1) {
-          debug(1,"Error getting dac_delay at start of loop.");
-          dac_delay=0;
-        }
-      }
 
       if (curframe->ready) {
          if (ab_buffering) { // if we are getting packets but not yet forwarding them to the player
@@ -526,8 +518,7 @@ static abuf_t *buffer_get_frame(void) {
 
             uint32_t filler_size = frame_size;
             uint32_t max_dac_delay = 4410;
-            // if (dac_delay==0) // i.e. if this is the first fill
-              filler_size = 4410; // 0.1 second -- the maximum we'll add to the DAC
+            filler_size = 4410; // 0.1 second -- the maximum we'll add to the DAC
 
             if (local_time_now>=first_packet_time_to_play) {
               // we've gone past the time...
@@ -539,6 +530,14 @@ static abuf_t *buffer_get_frame(void) {
               first_packet_timestamp = 0;
               first_packet_time_to_play = 0;
             } else {
+              if (config.output->delay) {
+                dac_delay = config.output->delay();
+                if (dac_delay==-1) {
+                  debug(1,"Error getting dac_delay in buffer_get_frame.");
+                  dac_delay=0;
+                }
+              } else
+                dac_delay=0;
               uint64_t gross_frame_gap = ((first_packet_time_to_play-local_time_now)*44100)>>32;
               int64_t exact_frame_gap = gross_frame_gap-dac_delay;
               if (exact_frame_gap<=0) {
