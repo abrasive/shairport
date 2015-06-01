@@ -41,7 +41,7 @@ enum stuffing_type {
 
 
 typedef struct {
-    config_t cfg;
+    config_t* cfg;
     char *password;
     char *apname;
 #ifdef CONFIG_METADATA
@@ -76,7 +76,8 @@ typedef struct {
     char *logfile;
     char *errfile;
     char *configfile;
-    uint backend_buffer_desired_length; // this will be the desired number of frames in the audio backend buffer -- the DAC buffer for ALSA
+    uint audio_backend_buffer_desired_length; // this will be the desired number of frames in the audio backend buffer -- the DAC buffer for ALSA
+    uint audio_backend_latency_offset; // this will be the offset to compensate for any fixed latency there might be in the audio 
 } shairport_cfg;
 
 //true if Shairport Sync is supposed to be sending output to the output device, false otherwise
@@ -113,6 +114,7 @@ shairport_cfg config;
 char sender_name[1024];
 char sender_ip[1024];
 char album_name[1024]; // we might need this for picture diagnostics
+config_t config_file_stuff;
 
 void command_start(void);
 void command_stop(void);
