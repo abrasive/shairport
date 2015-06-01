@@ -35,7 +35,7 @@
 #include "audio.h"
 
 static void help(void);
-static int init(int argc, char **argv, config_t* cfgp);
+static int init(int argc, char **argv);
 static void deinit(void);
 static void start(int sample_rate);
 static void play(short buf[], int samples);
@@ -93,22 +93,41 @@ static void help(void) {
           );
 }
 
-static int init(int argc, char **argv, config_t *cfgp) {
+static int init(int argc, char **argv) {
   const char *str;
   int value;
 
   int hardware_mixer = 0;
+
+  config.audio_backend_buffer_desired_length = 6615; // this is the default for ALSA
+  config.audio_backend_latency_offset = 0; // this is the default for ALSA
   
   // get settings from settings file first, allow them to be over-ridden by command line options
   
-  if (cfgp!=NULL) {
-       /* Get the Output Device Name. */
-      if(config_lookup_string(cfgp, "alsa.output_device", &str)) {
+  if (config.cfg!=NULL) {
+      /* Get the desired buffer size setting. */
+      if(config_lookup_int(config.cfg, "alsa.audio_backend_buffer_desired_length", &value)) {
+        if ((value<0) || (value>66150))
+          die("Invalid alsa audio backend buffer desired length \"%sd\". It should be between 0 and 66150, default is 6615",value);
+        else
+          config.audio_backend_buffer_desired_length=value;
+      }
+   
+      /* Get the latency offset. */
+      if(config_lookup_int(config.cfg, "alsa.audio_backend_latency_offset", &value)) {
+        if ((value<-22050) || (value>22050))
+          die("Invalid alsa audio backend buffer latency offset \"%sd\". It should be between -22050 and +22050, default is 0",value);
+        else
+          config.audio_backend_latency_offset=value;
+      }
+
+      /* Get the Output Device Name. */
+      if(config_lookup_string(config.cfg, "alsa.output_device", &str)) {
         alsa_out_dev = (char*)str;
       }
       
       /* Get the Mixer Type setting. */
-      if(config_lookup_string(cfgp, "alsa.mixer_type", &str)) {
+      if(config_lookup_string(config.cfg, "alsa.mixer_type", &str)) {
         if (strcasecmp(str,"software")==0)
           hardware_mixer=0;
         else if (strcasecmp(str,"hardware")==0)
@@ -118,12 +137,12 @@ static int init(int argc, char **argv, config_t *cfgp) {
       }
 
       /* Get the Mixer Device Name. */
-      if(config_lookup_string(cfgp, "alsa.mixer_device", &str)) {
+      if(config_lookup_string(config.cfg, "alsa.mixer_device", &str)) {
         alsa_mix_dev = (char*)str;
       }
       
       /* Get the Mixer Control Name. */
-      if(config_lookup_string(cfgp, "alsa.mixer_control_name", &str)) {
+      if(config_lookup_string(config.cfg, "alsa.mixer_control_name", &str)) {
         alsa_mix_ctrl = (char*)str;
       }
 
