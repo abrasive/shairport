@@ -485,16 +485,6 @@ static abuf_t *buffer_get_frame(void) {
       }
 
       if (curframe->ready) {
-/*
-				// This is broken -- it causes infinite loops. It's in the wrong place, and anyway isn't used much.
-        if ((flush_rtp_timestamp) && (flush_rtp_timestamp>=curframe->timestamp)) {
-          debug(1,"Dropping flushed packet seqno %u, timestamp %u",curframe->sequence_number,curframe->timestamp);
-          curframe->ready=0;
-          if (flush_rtp_timestamp==curframe->timestamp) // if we are finished...
-          	flush_rtp_timestamp=0;
-          ab_read==SUCCESSOR(ab_read);
-        } else
-*/        
          if (ab_buffering) { // if we are getting packets but not yet forwarding them to the player
           if (first_packet_timestamp==0) { // if this is the very first packet
            // debug(1,"First frame seen, time %u, with %d frames...",curframe->timestamp,seq_diff(ab_read, ab_write));
@@ -505,23 +495,25 @@ static abuf_t *buffer_get_frame(void) {
               // debug(1,"First frame seen with timestamp...");
               first_packet_timestamp=curframe->timestamp; // we will keep buffering until we are supposed to start playing this
  
-              // Here, see if we should start playing. We need to know when to allow the packets to be sent to the player.
-              // We will be getting a timing fix every second or so from the source, which will be stored as a pair consisting of <local-time>-<timestamp>
-              // i.e. the local time that corresponds to a specific packet timestamp.
-              // It might not be the timestamp of our first packet, however, so we might have to do some calculations.
-              // Also, we have to allow for the desired latency.
+              // Here, calculate when we should start playing. We need to know when to allow the packets to be sent to the player.
+              // We will send packets of silence from now until that time and then we will send the first packet,
+              // which will be followed by the subsequent packets.
+              
+              // we will get a fix every second or so, which will be stored as a pair consisting of
+              // the time when the packet with a particular timestamp should be played, neglecting latencies, etc.
+              
+              // It probably won't  be the timestamp of our first packet, however, so we might have to do some calculations.
+              
+              // To calculate when the first packet will be played, we figure out the exact time the packet should
+              // be played according to its timestamp and the reference time. We then need to add the desired latency, typically 88200 frames.
+              
+              // Then we need to offset this by the backend latency offset. For example, if we knew that the audio back end has a latency of 100 ms, we would
+              // ask for the first packet to be emitted 100 ms earlier than it should, i.e. -4410 frames, so that when it got through the audio back end,
+              // if would be in sync. To do this, we would give it a latency offset of -100 ms, i.e. -4410 frames.
           
               int64_t delta = ((int64_t)first_packet_timestamp-(int64_t)reference_timestamp);
               
-              // Now, if the back end can tell us about its latency, we will set the first packet's time to play to be the exact time it's supposed to play plus the desired latency.
-              // Otherwise we will set it to the exact time plus desired latency less the config.backend_buffer_desired_length, a proxy for the lead time we want the stream to appear at the output.
-              
-              // We may change this in the future to pick up the lead time from the back end itself
-
-              if (config.output->delay)
-              	first_packet_time_to_play = reference_timestamp_time+((delta+(int64_t)config.latency)<<32)/44100; // using the latency requested...
-              else
-              	first_packet_time_to_play = reference_timestamp_time+((delta+(int64_t)config.latency-(int64_t)config.backend_buffer_desired_length)<<32)/44100; // using the latency requested...
+              first_packet_time_to_play = reference_timestamp_time+((delta+(int64_t)config.latency+(int64_t)config.audio_backend_latency_offset)<<32)/44100;
 
               if (local_time_now>=first_packet_time_to_play) {
                 debug(1,"First packet is late! It should have played before now. Flushing 0.1 seconds");
@@ -533,7 +525,7 @@ static abuf_t *buffer_get_frame(void) {
           if (first_packet_time_to_play!=0) {
 
             uint32_t filler_size = frame_size;
-            uint32_t max_dac_delay = config.backend_buffer_desired_length;
+            uint32_t max_dac_delay = 4410;
             // if (dac_delay==0) // i.e. if this is the first fill
               filler_size = 4410; // 0.1 second -- the maximum we'll add to the DAC
 
@@ -586,27 +578,34 @@ static abuf_t *buffer_get_frame(void) {
     
     // Here, we work out whether to release a packet or wait
     // We release a buffer when the time is right.
+    
+    // To work out when the time is right, we need to take account of (1) the actual time the packet should be released,
+    // (2) the latency requested, (3) the audio backend latency offset and (4) the desired length of the audio backend's buffer
+    
+    // The time is right if the current time is later or the same as
+    // The packet time + (latency + latency offset - backend_buffer_length).
+    // Note: the last three items are expressed in frames and must be converted to time.
 
 			int do_wait = 1;
-			if ((curframe) && (curframe->ready) && (curframe->timestamp)) {
+			if ((ab_synced) && (curframe) && (curframe->ready) && (curframe->timestamp)) {
 				uint32_t reference_timestamp;
 				uint64_t reference_timestamp_time;
 				get_reference_timestamp_stuff(&reference_timestamp,&reference_timestamp_time);
 				if (reference_timestamp) { // if we have a reference time
 					uint32_t packet_timestamp=curframe->timestamp;
 					int64_t delta = ((int64_t)packet_timestamp-(int64_t)reference_timestamp);
-					int64_t offset = (int64_t)config.latency-(int64_t)config.backend_buffer_desired_length;
+					int64_t offset = (int64_t)config.latency+config.audio_backend_latency_offset-(int64_t)config.audio_backend_buffer_desired_length;
 					int64_t net_offset = delta+offset;
 					int64_t time_to_play = reference_timestamp_time;
 					int64_t net_offset_fp_sec;
 					if (net_offset>=0) {
 						net_offset_fp_sec = (net_offset<<32)/44100;
 						time_to_play+=net_offset_fp_sec; // using the latency requested...
-						debug(2,"Net Offset: %lld, adjusted: %lld.",net_offset,net_offset_fp_sec);
+						// debug(2,"Net Offset: %lld, adjusted: %lld.",net_offset,net_offset_fp_sec);
 					} else {
 						net_offset_fp_sec = ((-net_offset)<<32)/44100;
 						time_to_play-=net_offset_fp_sec;
-						debug(2,"Net Offset: %lld, adjusted: -%lld.",net_offset,net_offset_fp_sec);
+						// debug(2,"Net Offset: %lld, adjusted: -%lld.",net_offset,net_offset_fp_sec);
 					}
 						
 					if (local_time_now>=time_to_play) {
@@ -845,7 +844,6 @@ static void *player_thread_func(void *arg) {
   outbuf = malloc(OUTFRAME_BYTES(frame_size));
   silence = malloc(OUTFRAME_BYTES(frame_size));
   memset(silence, 0, OUTFRAME_BYTES(frame_size));
-
   late_packet_message_sent=0;
   missing_packets=late_packets=too_late_packets=resend_requests=0;
   flush_rtp_timestamp=0; // it seems this number has a special significance -- it seems to be used as a null operand, so we'll use it like that too
