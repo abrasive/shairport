@@ -54,12 +54,14 @@ static void stop(void) {
     close(fd);
 }
 
-static int init(int argc, char **argv, config_t *cfgp) {
+static int init(int argc, char **argv) {
+  config.audio_backend_buffer_desired_length = 44100; // one second. 
+  config.audio_backend_latency_offset = 0;
 
-  if (cfgp!=NULL) {
+  if (config.cfg!=NULL) {
        /* Get the Output Pipename. */
       const char *str;
-      if(config_lookup_string(cfgp, "pipe.name", &str)) {
+      if(config_lookup_string(config.cfg, "pipe.name", &str)) {
         pipename = (char*)str;
       }
   }

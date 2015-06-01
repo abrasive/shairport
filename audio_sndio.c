@@ -23,7 +23,7 @@
 static struct sio_hdl *sio;
 static struct sio_par par;
 
-static int init(int argc, char **argv, config_t *cfgp) {
+static int init(int argc, char **argv) {
 	sio = sio_open(SIO_DEVANY, SIO_PLAY, 0);
 	if (!sio)
 		die("sndio: cannot connect to sound server");
@@ -40,6 +40,9 @@ static int init(int argc, char **argv, config_t *cfgp) {
 		die("sndio: failed to set audio parameters");
 	if (!sio_getpar(sio, &par))
 		die("sndio: failed to get audio parameters");
+	
+	config.audio_backend_buffer_desired_length = 44100; // one second. 
+  config.audio_backend_latency_offset = 0;
 
 	return 0;
 }

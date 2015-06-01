@@ -42,7 +42,7 @@ static void help(void) {
           );
 }
 
-static int init(int argc, char **argv, config_t *cfgp) {
+static int init(int argc, char **argv) {
     ao_initialize();
     int driver = ao_default_driver_id();
     ao_option *ao_opts = NULL;
@@ -50,6 +50,10 @@ static int init(int argc, char **argv, config_t *cfgp) {
     optind = 1; // optind=0 is equivalent to optind=1 plus special behaviour
     argv--;     // so we shift the arguments to satisfy getopt()
     argc++;
+    
+    config.audio_backend_buffer_desired_length = 44100; // one second. 
+    config.audio_backend_latency_offset = 0;
+
     // some platforms apparently require optreset = 1; - which?
     int opt;
     char *mid;
