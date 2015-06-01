@@ -19,7 +19,7 @@ typedef struct {
     char *name;
 
     // start of program
-    int (*init)(int argc, char **argv, config_t* cfgp);
+    int (*init)(int argc, char **argv);
     // at end of program
     void (*deinit)(void);
 
