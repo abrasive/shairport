@@ -38,76 +38,69 @@ static int fd = -1;
 char *pipename = NULL;
 
 static void start(int sample_rate) {
-  debug(1,"Pipename to start is \"%s\"",pipename);
-  if (strcasecmp(pipename,"STDOUT")==0)
+  debug(1, "Pipename to start is \"%s\"", pipename);
+  if (strcasecmp(pipename, "STDOUT") == 0)
     fd = STDOUT_FILENO;
   else
     fd = open(pipename, O_WRONLY);
 }
 
-static void play(short buf[], int samples) {
-    int ignore = write(fd, buf, samples*4);
-}
+static void play(short buf[], int samples) { int ignore = write(fd, buf, samples * 4); }
 
 static void stop(void) {
-  if (fd!=STDOUT_FILENO)
+  if (fd != STDOUT_FILENO)
     close(fd);
 }
 
 static int init(int argc, char **argv) {
-  config.audio_backend_buffer_desired_length = 44100; // one second. 
+  config.audio_backend_buffer_desired_length = 44100; // one second.
   config.audio_backend_latency_offset = 0;
 
-  if (config.cfg!=NULL) {
-       /* Get the Output Pipename. */
-      const char *str;
-      if(config_lookup_string(config.cfg, "pipe.name", &str)) {
-        pipename = (char*)str;
-      }
+  if (config.cfg != NULL) {
+    /* Get the Output Pipename. */
+    const char *str;
+    if (config_lookup_string(config.cfg, "pipe.name", &str)) {
+      pipename = (char *)str;
+    }
   }
 
+  if ((pipename == NULL) && (argc != 1))
+    die("bad or missing argument(s) to pipe");
 
-    if ((pipename==NULL) && (argc != 1))
-        die("bad or missing argument(s) to pipe");
+  if (argc == 1)
+    pipename = strdup(argv[0]);
 
-    if (argc==1)
-      pipename = strdup(argv[0]);
-    
-    
-    // here, create the pipe
-    if (strcasecmp(pipename,"STDOUT")!=0)
-      if (mkfifo(pipename, 0644) && errno != EEXIST)
-        die("Could not create metadata FIFO %s", pipename);
+  // here, create the pipe
+  if (strcasecmp(pipename, "STDOUT") != 0)
+    if (mkfifo(pipename, 0644) && errno != EEXIST)
+      die("Could not create metadata FIFO %s", pipename);
 
-    
-    debug(1,"Pipename is \"%s\"",pipename);
+  debug(1, "Pipename is \"%s\"", pipename);
 
-    // test open pipe so we error on startup if it's going to fail
-    start(44100);
-    stop();
+  // test open pipe so we error on startup if it's going to fail
+  start(44100);
+  stop();
 
-    return 0;
+  return 0;
 }
 
 static void deinit(void) {
-    if ((fd > 0) && (fd!=STDOUT_FILENO))
-        close(fd);
+  if ((fd > 0) && (fd != STDOUT_FILENO))
+    close(fd);
 }
 
 static void help(void) {
-    printf("    pipe takes 1 argument: the name of the FIFO to write to, which can be \"stdout\".\n");
+  printf("    pipe takes 1 argument: the name of the FIFO to write to, which can be \"stdout\".\n");
 }
 
-audio_output audio_pipe = {
-    .name = "pipe",
-    .help = &help,
-    .init = &init,
-    .deinit = &deinit,
-    .start = &start,
-    .stop = &stop,
-    .flush = NULL,
-    .delay = NULL,
-    .play = &play,
-    .volume = NULL,
-    .parameters = NULL
-};
+audio_output audio_pipe = {.name = "pipe",
+                           .help = &help,
+                           .init = &init,
+                           .deinit = &deinit,
+                           .start = &start,
+                           .stop = &stop,
+                           .flush = NULL,
+                           .delay = NULL,
+                           .play = &play,
+                           .volume = NULL,
+                           .parameters = NULL};

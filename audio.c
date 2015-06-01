@@ -56,36 +56,32 @@ static audio_output *outputs[] = {
 #ifdef CONFIG_AO
     &audio_ao,
 #endif
-    &audio_dummy,
-    &audio_pipe,
-    NULL
-};
-
+    &audio_dummy, &audio_pipe, NULL};
 
 audio_output *audio_get_output(char *name) {
-    audio_output **out;
+  audio_output **out;
 
-    // default to the first
-    if (!name)
-        return outputs[0];
+  // default to the first
+  if (!name)
+    return outputs[0];
 
-    for (out=outputs; *out; out++)
-        if (!strcasecmp(name, (*out)->name))
-            return *out;
+  for (out = outputs; *out; out++)
+    if (!strcasecmp(name, (*out)->name))
+      return *out;
 
-    return NULL;
+  return NULL;
 }
 
 void audio_ls_outputs(void) {
-    audio_output **out;
+  audio_output **out;
 
-    printf("Available audio outputs:\n");
-    for (out=outputs; *out; out++)
-        printf("    %s%s\n", (*out)->name, out==outputs ? " (default)" : "");
+  printf("Available audio outputs:\n");
+  for (out = outputs; *out; out++)
+    printf("    %s%s\n", (*out)->name, out == outputs ? " (default)" : "");
 
-    for (out=outputs; *out; out++) {
-        printf("\n");
-        printf("Options for output %s:\n", (*out)->name);
-        (*out)->help();
-    }
+  for (out = outputs; *out; out++) {
+    printf("\n");
+    printf("Options for output %s:\n", (*out)->name);
+    (*out)->help();
+  }
 }
