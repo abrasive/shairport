@@ -107,7 +107,7 @@ static int init(int argc, char **argv) {
     /* Get the desired buffer size setting. */
     if (config_lookup_int(config.cfg, "alsa.audio_backend_buffer_desired_length", &value)) {
       if ((value < 0) || (value > 66150))
-        die("Invalid alsa audio backend buffer desired length \"%sd\". It should be between 0 and "
+        die("Invalid alsa audio backend buffer desired length \"%d\". It should be between 0 and "
             "66150, default is 6615",
             value);
       else
@@ -116,9 +116,8 @@ static int init(int argc, char **argv) {
 
     /* Get the latency offset. */
     if (config_lookup_int(config.cfg, "alsa.audio_backend_latency_offset", &value)) {
-      if ((value < -22050) || (value > 22050))
-        die("Invalid alsa audio backend buffer latency offset \"%sd\". It should be between -22050 "
-            "and +22050, default is 0",
+      if ((value < -66150) || (value > 66150))
+        die("Invalid alsa audio backend buffer latency offset \"%d\". It should be between -66150 and +66150, default is 0",
             value);
       else
         config.audio_backend_latency_offset = value;
