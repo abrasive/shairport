@@ -972,9 +972,6 @@ void metadata_process(uint32_t type, uint32_t code, char *data, uint32_t length)
         return;
       remaining_data += towrite_count;
       remaining_count -= towrite_count;
-      // ret = write(fd,"\r\n",2);
-      // if (ret<0)
-      //	return;
     }
     snprintf(thestring, 1024, "</data>\n");
     ret = non_blocking_write(fd, thestring, strlen(thestring));

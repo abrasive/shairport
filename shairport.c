@@ -497,38 +497,6 @@ int parse_options(int argc, char **argv) {
   }
 
 #endif
-
-  /* Print out options */
-
-  debug(2, "statistics_requester status is %d.", config.statistics_requested);
-  debug(2, "daemon status is %d.", config.daemonise);
-  debug(2, "rtsp listening port is %d.", config.port);
-  debug(2, "Shairport Sync player name is \"%s\".", config.apname);
-  debug(2, "Audio Output name is \"%s\".", config.output_name);
-  debug(2, "on-start action is \"%s\".", config.cmd_start);
-  debug(2, "on-stop action is \"%s\".", config.cmd_stop);
-  debug(2, "wait-cmd status is %d.", config.cmd_blocking);
-  debug(2, "mdns backend \"%s\".", config.mdns_name);
-  debug(2, "userSuppliedLatency is %d.", config.userSuppliedLatency);
-  debug(2, "AirPlayLatency is %d.", config.AirPlayLatency);
-  debug(2, "iTunesLatency is %d.", config.iTunesLatency);
-  debug(2, "forkedDaapdLatency is %d.", config.ForkedDaapdLatency);
-  debug(2, "stuffing option is \"%d\".", config.packet_stuffing);
-  debug(2, "resync time is %d.", config.resyncthreshold);
-  debug(2, "allow a session to be interrupted: %d.", config.allow_session_interruption);
-  debug(2, "busy timeout time is %d.", config.timeout);
-  debug(2, "tolerance is %d frames.", config.tolerance);
-  debug(2, "password is \"%s\".", config.password);
-  debug(2, "ignore_volume_control is %d.", config.ignore_volume_control);
-  debug(2, "audio backend desired buffer length is %d.",
-        config.audio_backend_buffer_desired_length);
-  debug(2, "audio backend latency offset is %d.", config.audio_backend_latency_offset);
-#ifdef CONFIG_METADATA
-  debug(2, "metdata enabled is %d.", config.metadata_enabled);
-  debug(2, "metadata pipename is \"%s\".", config.metadata_pipename);
-  debug(2, "get-coverart is %d.", config.get_coverart);
-#endif
-
   return optind + 1;
 }
 
@@ -797,6 +765,37 @@ int main(int argc, char **argv) {
   config.output->init(argc - audio_arg, argv + audio_arg);
 
   daemon_log(LOG_NOTICE, "startup");
+  
+  /* Print out options */
+
+  debug(2, "statistics_requester status is %d.", config.statistics_requested);
+  debug(2, "daemon status is %d.", config.daemonise);
+  debug(2, "rtsp listening port is %d.", config.port);
+  debug(2, "Shairport Sync player name is \"%s\".", config.apname);
+  debug(2, "Audio Output name is \"%s\".", config.output_name);
+  debug(2, "on-start action is \"%s\".", config.cmd_start);
+  debug(2, "on-stop action is \"%s\".", config.cmd_stop);
+  debug(2, "wait-cmd status is %d.", config.cmd_blocking);
+  debug(2, "mdns backend \"%s\".", config.mdns_name);
+  debug(2, "userSuppliedLatency is %d.", config.userSuppliedLatency);
+  debug(2, "AirPlayLatency is %d.", config.AirPlayLatency);
+  debug(2, "iTunesLatency is %d.", config.iTunesLatency);
+  debug(2, "forkedDaapdLatency is %d.", config.ForkedDaapdLatency);
+  debug(2, "stuffing option is \"%d\".", config.packet_stuffing);
+  debug(2, "resync time is %d.", config.resyncthreshold);
+  debug(2, "allow a session to be interrupted: %d.", config.allow_session_interruption);
+  debug(2, "busy timeout time is %d.", config.timeout);
+  debug(2, "tolerance is %d frames.", config.tolerance);
+  debug(2, "password is \"%s\".", config.password);
+  debug(2, "ignore_volume_control is %d.", config.ignore_volume_control);
+  debug(2, "audio backend desired buffer length is %d.",
+        config.audio_backend_buffer_desired_length);
+  debug(2, "audio backend latency offset is %d.", config.audio_backend_latency_offset);
+#ifdef CONFIG_METADATA
+  debug(2, "metdata enabled is %d.", config.metadata_enabled);
+  debug(2, "metadata pipename is \"%s\".", config.metadata_pipename);
+  debug(2, "get-coverart is %d.", config.get_coverart);
+#endif
 
   uint8_t ap_md5[16];
 

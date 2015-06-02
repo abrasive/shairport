@@ -855,6 +855,11 @@ typedef struct stats { // statistics for running averages
 } stats_t;
 
 static void *player_thread_func(void *arg) {
+	// check that there are enough buffers to accommodate the desired latency and the latency offset
+	
+	int maximum_latency = config.latency+config.audio_backend_latency_offset;
+	if ((maximum_latency+(352-1))/352 + 10 > BUFFER_FRAMES)
+		die("Not enough buffers available for a total latency of %d frames. A maximum of %d 352-frame packets may be accommodated.",maximum_latency,BUFFER_FRAMES);
   connection_state_to_output = get_requested_connection_state_to_output();
 // this is about half a minute
 #define trend_interval 3758

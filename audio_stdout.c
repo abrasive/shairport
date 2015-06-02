@@ -35,21 +35,16 @@
 
 static int fd = -1;
 
-char *pipename = NULL;
-
 static void start(int sample_rate) {
-  debug(1, "Pipename to start is \"%s\"", pipename);
-  if (strcasecmp(pipename, "STDOUT") == 0)
-    fd = STDOUT_FILENO;
-  else
-    fd = open(pipename, O_WRONLY);
+  fd = STDOUT_FILENO;
 }
 
-static void play(short buf[], int samples) { int ignore = write(fd, buf, samples * 4); }
+static void play(short buf[], int samples) {
+  int ignore = write(fd, buf, samples * 4);
+}
 
 static void stop(void) {
-  if (fd != STDOUT_FILENO)
-    close(fd);
+  // don't close stdout
 }
 
 static int init(int argc, char **argv) {
@@ -60,63 +55,40 @@ static int init(int argc, char **argv) {
   config.audio_backend_latency_offset = 0;
 
   if (config.cfg != NULL) {
-    /* Get the Output Pipename. */
-    const char *str;
-    if (config_lookup_string(config.cfg, "pipe.name", &str)) {
-      pipename = (char *)str;
-    }
-
     /* Get the desired buffer size setting. */
-    if (config_lookup_int(config.cfg, "pipe.audio_backend_buffer_desired_length", &value)) {
-      if ((value < 0) || (value > 66150))
-        die("Invalid pipe audio backend buffer desired length \"%sd\". It should be between 0 and "
-            "66150, default is 44100",
+    debug(1,"Get buffer length");
+    if (config_lookup_int(config.cfg, "stdout.audio_backend_buffer_desired_length", &value)) {
+      if ((value < 0) || (value > 132300))
+        die("Invalid stdout audio backend buffer desired length \"%d\". It should be between 0 and 132300, default is 44100",
             value);
       else
         config.audio_backend_buffer_desired_length = value;
     }
 
     /* Get the latency offset. */
-    if (config_lookup_int(config.cfg, "pipe.audio_backend_latency_offset", &value)) {
-      if ((value < -22050) || (value > 22050))
-        die("Invalid pipe audio backend buffer latency offset \"%sd\". It should be between -22050 "
-            "and +22050, default is 0",
+    debug(1,"Get latency");
+    if (config_lookup_int(config.cfg, "stdout.audio_backend_latency_offset", &value)) {
+      debug(1,"Got a latency value of %d.",value);
+      if ((value < -66150) || (value > 66150))
+        die("Invalid stdout audio backend buffer latency offset \"%d\". It should be between -66150 and +66150, default is 0",
             value);
       else
         config.audio_backend_latency_offset = value;
     }
   }
-
-  if ((pipename == NULL) && (argc != 1))
-    die("bad or missing argument(s) to pipe");
-
-  if (argc == 1)
-    pipename = strdup(argv[0]);
-
-  // here, create the pipe
-  if (strcasecmp(pipename, "STDOUT") != 0)
-    if (mkfifo(pipename, 0644) && errno != EEXIST)
-      die("Could not create output pipe \"%s\"", pipename);
-
-  debug(1, "Pipename is \"%s\"", pipename);
-
-  // test open pipe so we error on startup if it's going to fail
-  start(44100);
-  stop();
-
+  debug(1,"buffer: %d, latency: %d.",config.audio_backend_buffer_desired_length,config.audio_backend_latency_offset);
   return 0;
 }
 
 static void deinit(void) {
-  if ((fd > 0) && (fd != STDOUT_FILENO))
-    close(fd);
+  // don't close stdout
 }
 
 static void help(void) {
-  printf("    pipe takes 1 argument: the name of the FIFO to write to.\n");
+  printf("    stdout takes no arguments\n");
 }
 
-audio_output audio_pipe = {.name = "pipe",
+audio_output audio_stdout = {.name = "stdout",
                            .help = &help,
                            .init = &init,
                            .deinit = &deinit,
