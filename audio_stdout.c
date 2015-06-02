@@ -1,5 +1,7 @@
 /*
- * pipe output driver. This file is part of Shairport.
+ * stdout output driver. This file is part of Shairport Sync.
+ * Copyright (c) Mike Brady 2015
+ * Based on pipe output driver
  * Copyright (c) James Laird 2013
  * All rights reserved.
  *
@@ -56,7 +58,6 @@ static int init(int argc, char **argv) {
 
   if (config.cfg != NULL) {
     /* Get the desired buffer size setting. */
-    debug(1,"Get buffer length");
     if (config_lookup_int(config.cfg, "stdout.audio_backend_buffer_desired_length", &value)) {
       if ((value < 0) || (value > 132300))
         die("Invalid stdout audio backend buffer desired length \"%d\". It should be between 0 and 132300, default is 44100",
@@ -66,9 +67,7 @@ static int init(int argc, char **argv) {
     }
 
     /* Get the latency offset. */
-    debug(1,"Get latency");
     if (config_lookup_int(config.cfg, "stdout.audio_backend_latency_offset", &value)) {
-      debug(1,"Got a latency value of %d.",value);
       if ((value < -66150) || (value > 66150))
         die("Invalid stdout audio backend buffer latency offset \"%d\". It should be between -66150 and +66150, default is 0",
             value);
@@ -76,7 +75,6 @@ static int init(int argc, char **argv) {
         config.audio_backend_latency_offset = value;
     }
   }
-  debug(1,"buffer: %d, latency: %d.",config.audio_backend_buffer_desired_length,config.audio_backend_latency_offset);
   return 0;
 }
 
