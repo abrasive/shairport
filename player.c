@@ -964,6 +964,14 @@ static void *player_thread_func(void *arg) {
             }
           }
 
+					uint32_t bo = seq_diff(ab_read, ab_write);
+
+					if (bo < minimum_buffer_occupancy)
+						minimum_buffer_occupancy = bo;
+
+					if (bo > maximum_buffer_occupancy)
+						maximum_buffer_occupancy = bo;
+
           if (config.output->delay) {
             current_delay = config.output->delay();
             if (current_delay == -1) {
@@ -972,14 +980,6 @@ static void *player_thread_func(void *arg) {
             }
             if (current_delay < minimum_dac_queue_size)
               minimum_dac_queue_size = current_delay;
-
-            uint32_t bo = seq_diff(ab_read, ab_write);
-
-            if (bo < minimum_buffer_occupancy)
-              minimum_buffer_occupancy = bo;
-
-            if (bo > maximum_buffer_occupancy)
-              maximum_buffer_occupancy = bo;
 
             // this is the actual delay, including the latency we actually want, which will
             // fluctuate a good bit about a potentially rising or falling trend.
@@ -1135,14 +1135,22 @@ static void *player_thread_func(void *arg) {
           // if ((play_number/print_interval)%20==0)
           if (config.statistics_requested)
             if (at_least_one_frame_seen)
-              inform("Sync error: %.1f (frames); net correction: %.1f (ppm); corrections: %.1f "
-                     "(ppm); missing packets %llu; late packets %llu; too late packets %llu; "
-                     "resend requests %llu; min DAC queue size %lli, min and max buffer occupancy "
-                     "%u and %u.",
-                     moving_average_sync_error, moving_average_correction * 1000000 / 352,
-                     moving_average_insertions_plus_deletions * 1000000 / 352, missing_packets,
-                     late_packets, too_late_packets, resend_requests, minimum_dac_queue_size,
-                     minimum_buffer_occupancy, maximum_buffer_occupancy);
+            	if (config.output->delay) 
+								inform("Sync error: %.1f (frames); net correction: %.1f (ppm); corrections: %.1f "
+											 "(ppm); missing packets %llu; late packets %llu; too late packets %llu; "
+											 "resend requests %llu; min DAC queue size %lli, min and max buffer occupancy "
+											 "%u and %u.",
+											 moving_average_sync_error, moving_average_correction * 1000000 / 352,
+											 moving_average_insertions_plus_deletions * 1000000 / 352, missing_packets,
+											 late_packets, too_late_packets, resend_requests, minimum_dac_queue_size,
+											 minimum_buffer_occupancy, maximum_buffer_occupancy);
+              else
+								inform("Synchronisation disabled. Missing packets %llu; late packets %llu; too late packets %llu; "
+											 "resend requests %llu; min and max buffer occupancy "
+											 "%u and %u.",
+											 missing_packets,
+											 late_packets, too_late_packets, resend_requests,
+											 minimum_buffer_occupancy, maximum_buffer_occupancy);            
             else
               inform("No frames received in the last sampling interval.");
           minimum_dac_queue_size = 1000000;         // hack reset
