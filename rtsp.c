@@ -942,7 +942,7 @@ void metadata_process(uint32_t type, uint32_t code, char *data, uint32_t length)
   if (fd < 0)
     return;
   char thestring[1024];
-  snprintf(thestring, 1024, "<type>%x</type><code>%x</code><length>%u</length>\n", type, code,
+  snprintf(thestring, 1024, "<item>\n<type>%x</type><code>%x</code><length>%u</length>\n", type, code,
            length);
   ret = non_blocking_write(fd, thestring, strlen(thestring));
   if (ret < 1)
@@ -973,7 +973,7 @@ void metadata_process(uint32_t type, uint32_t code, char *data, uint32_t length)
       remaining_data += towrite_count;
       remaining_count -= towrite_count;
     }
-    snprintf(thestring, 1024, "</data>\n");
+    snprintf(thestring, 1024, "</data>\n</item>\n");
     ret = non_blocking_write(fd, thestring, strlen(thestring));
     if (ret < 1) // no reader
       return;
