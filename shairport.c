@@ -132,6 +132,15 @@ void print_version(void) {
 #ifdef CONFIG_PULSE
   strcat(version_string, "-pulse");
 #endif
+#ifdef CONFIG_DUMMY
+  strcat(version_string, "-dummy");
+#endif
+#ifdef CONFIG_STDOUT
+  strcat(version_string, "-stdout");
+#endif
+#ifdef CONFIG_PIPE
+  strcat(version_string, "-pipe");
+#endif
 #ifdef HAVE_LIBSOXR
   strcat(version_string, "-soxr");
 #endif

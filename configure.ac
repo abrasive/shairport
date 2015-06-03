@@ -48,6 +48,15 @@ else
   AC_CHECK_LIB([popt],[poptGetContext], , AC_MSG_ERROR(libpopt needed))
 fi
 
+AC_ARG_WITH([dummy],[  --with-dummy = include the dummy audio back end ],[AC_MSG_RESULT(>>Including the dummy audio back end) AC_DEFINE([CONFIG_DUMMY], 1, [Needed by the compiler.]) ], )
+AM_CONDITIONAL([USE_DUMMY], [test "x$with_dummy" = "x1" ])
+
+AC_ARG_WITH([stdout],[  --with-stdout = include the stdout audio back end ],[ AC_MSG_RESULT(>>Including the stdout audio back end)  AC_DEFINE([CONFIG_STDOUT], 1, [Needed by the compiler.]) ], )
+AM_CONDITIONAL([USE_STDOUT], [test "x$with_stdout" = "x1" ])
+
+AC_ARG_WITH([pipe],[  --with-pipe = include the pipe audio back end ],[ AC_MSG_RESULT(>>Including the pipe audio back end)  AC_DEFINE([CONFIG_PIPE], 1, [Needed by the compiler.]) ], )
+AM_CONDITIONAL([USE_PIPE], [test "x$with_pipe" = "x1" ])
+
 AC_ARG_WITH([initscript],
 [  --with-initscript = include a startup script], ,[with_initscript=1])
 AM_CONDITIONAL([INSTALL_INITSCRIPT], [test "x$with_initscript" = "x1"])
@@ -173,8 +182,8 @@ AC_ARG_WITH(ao, [  --with-ao = choose native AO (Audio Output?) API support -- p
 AM_CONDITIONAL([USE_AO], [test "x$HAS_AO" = "x1"])
 
 # Look for pulseaudio flag
-AC_ARG_WITH(pulseaudio, [  --with-pulseaudio = choose native PulseAudio API support -- probably broken], [
-  AC_MSG_RESULT(>>Including a PulseAudio back end --- N.B. this is probably broken!)
+AC_ARG_WITH(pulseaudio, [  --with-pulseaudio = choose native PulseAudio API support -- N.B. no synchronisation -- so underflow or overflow is inevitable!], [
+  AC_MSG_RESULT(>>Including a PulseAudio back end -- N.B. no synchronisation -- so underflow or overflow is inevitable!)
   HAS_PULSE=1
   AC_DEFINE([CONFIG_PULSE], 1, [Needed by the compiler.])
   AC_CHECK_LIB([pulse-simple], [pa_simple_new], , AC_MSG_ERROR(PulseAudio support requires the pulse-simple library!))

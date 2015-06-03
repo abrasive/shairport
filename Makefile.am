@@ -26,6 +26,18 @@ if USE_SNDIO
 shairport_sync_SOURCES += audio_sndio.c
 endif
 
+if USE_STDOUT
+shairport_sync_SOURCES += audio_stdout.c
+endif
+
+if USE_PIPE
+shairport_sync_SOURCES += audio_pipe.c
+endif
+
+if USE_DUMMY
+shairport_sync_SOURCES += audio_dummy.c
+endif
+
 if USE_AO
 shairport_sync_SOURCES += audio_ao.c
 endif
