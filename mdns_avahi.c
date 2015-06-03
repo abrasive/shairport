@@ -42,131 +42,104 @@ static AvahiThreadedPoll *tpoll = NULL;
 static char *name = NULL;
 static int port = 0;
 
-static void egroup_callback(AvahiEntryGroup *g,
-                            AvahiEntryGroupState state,
+static void egroup_callback(AvahiEntryGroup *g, AvahiEntryGroupState state,
                             AVAHI_GCC_UNUSED void *userdata) {
-    if (state==AVAHI_ENTRY_GROUP_COLLISION)
-        die("service name already exists on network!");
-    if (state==AVAHI_ENTRY_GROUP_FAILURE)
-        die("avahi entry group failure!");
+  if (state == AVAHI_ENTRY_GROUP_COLLISION)
+    die("service name already exists on network!");
+  if (state == AVAHI_ENTRY_GROUP_FAILURE)
+    die("avahi entry group failure!");
 }
 
 static void register_service(AvahiClient *c) {
-    debug(1, "avahi: register_service.");
-    if (!group)
-        group = avahi_entry_group_new(c, egroup_callback, NULL);
-    if (!group)
-        die("avahi_entry_group_new failed");
+  debug(1, "avahi: register_service.");
+  if (!group)
+    group = avahi_entry_group_new(c, egroup_callback, NULL);
+  if (!group)
+    die("avahi_entry_group_new failed");
 
-    if (!avahi_entry_group_is_empty(group))
-        return;
+  if (!avahi_entry_group_is_empty(group))
+    return;
 
-    int ret;
+  int ret;
 #ifdef CONFIG_METADATA
-    if (config.metadata_enabled) {
-      debug(1,"Avahi with metadata");
-      ret = avahi_entry_group_add_service(group,
-                                          AVAHI_IF_UNSPEC,
-                                          AVAHI_PROTO_UNSPEC,
-                                          0,
-                                          name,
-                                          "_raop._tcp",
-                                          NULL,
-                                          NULL,
-                                          port,
-                                          MDNS_RECORD_WITH_METADATA,
-                                          NULL);
-      }
-    else {
+  if (config.metadata_enabled) {
+    debug(1, "Avahi with metadata");
+    ret = avahi_entry_group_add_service(group, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC, 0, name,
+                                        "_raop._tcp", NULL, NULL, port, MDNS_RECORD_WITH_METADATA,
+                                        NULL);
+  } else {
 #endif
-      debug(1,"Avahi without metadata");
-      ret = avahi_entry_group_add_service(group,
-                                          AVAHI_IF_UNSPEC,
-                                          AVAHI_PROTO_UNSPEC,
-                                          0,
-                                          name,
-                                          "_raop._tcp",
-                                          NULL,
-                                          NULL,
-                                          port,
-                                          MDNS_RECORD_WITHOUT_METADATA,
-                                          NULL);
-#ifdef CONFIG_METADATA                                         
-    }
+    debug(1, "Avahi without metadata");
+    ret = avahi_entry_group_add_service(group, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC, 0, name,
+                                        "_raop._tcp", NULL, NULL, port,
+                                        MDNS_RECORD_WITHOUT_METADATA, NULL);
+#ifdef CONFIG_METADATA
+  }
 #endif
-    
-    if (ret < 0)
-        die("avahi_entry_group_add_service failed");
 
-    ret = avahi_entry_group_commit(group);
-    if (ret < 0)
-        die("avahi_entry_group_commit failed");
+  if (ret < 0)
+    die("avahi_entry_group_add_service failed");
+
+  ret = avahi_entry_group_commit(group);
+  if (ret < 0)
+    die("avahi_entry_group_commit failed");
 }
 
-static void client_callback(AvahiClient *c,
-                            AvahiClientState state,
-                            AVAHI_GCC_UNUSED void * userdata) {
-    switch (state) {
-        case AVAHI_CLIENT_S_REGISTERING:
-            if (group)
-                avahi_entry_group_reset(group);
-            break;
+static void client_callback(AvahiClient *c, AvahiClientState state,
+                            AVAHI_GCC_UNUSED void *userdata) {
+  switch (state) {
+  case AVAHI_CLIENT_S_REGISTERING:
+    if (group)
+      avahi_entry_group_reset(group);
+    break;
 
-        case AVAHI_CLIENT_S_RUNNING:
-            register_service(c);
-            break;
+  case AVAHI_CLIENT_S_RUNNING:
+    register_service(c);
+    break;
 
-        case AVAHI_CLIENT_FAILURE:
-        case AVAHI_CLIENT_S_COLLISION:
-            die("avahi client failure");
+  case AVAHI_CLIENT_FAILURE:
+  case AVAHI_CLIENT_S_COLLISION:
+    die("avahi client failure");
 
-        case AVAHI_CLIENT_CONNECTING:
-            break;
-    }
+  case AVAHI_CLIENT_CONNECTING:
+    break;
+  }
 }
 
 static int avahi_register(char *srvname, int srvport) {
-    debug(1, "avahi: avahi_register.");
-    name = strdup(srvname);
-    port = srvport;
+  debug(1, "avahi: avahi_register.");
+  name = strdup(srvname);
+  port = srvport;
 
-    int err;
-    if (!(tpoll = avahi_threaded_poll_new())) {
-        warn("couldn't create avahi threaded tpoll!");
-        return -1;
-    }
-    if (!(client = avahi_client_new(avahi_threaded_poll_get(tpoll), 
-                                    0,
-                                    client_callback,
-                                    NULL,
-                                    &err))) {
-        warn("couldn't create avahi client: %s!", avahi_strerror(err));
-        return -1;
-    }
+  int err;
+  if (!(tpoll = avahi_threaded_poll_new())) {
+    warn("couldn't create avahi threaded tpoll!");
+    return -1;
+  }
+  if (!(client =
+            avahi_client_new(avahi_threaded_poll_get(tpoll), 0, client_callback, NULL, &err))) {
+    warn("couldn't create avahi client: %s!", avahi_strerror(err));
+    return -1;
+  }
 
-    if (avahi_threaded_poll_start(tpoll) < 0) {
-        warn("couldn't start avahi tpoll thread");
-        return -1;
-    }
+  if (avahi_threaded_poll_start(tpoll) < 0) {
+    warn("couldn't start avahi tpoll thread");
+    return -1;
+  }
 
-    return 0;
+  return 0;
 }
 
 static void avahi_unregister(void) {
-    debug(1, "avahi: avahi_unregister.");
-    if (tpoll)
-        avahi_threaded_poll_stop(tpoll);
-    tpoll = NULL;
+  debug(1, "avahi: avahi_unregister.");
+  if (tpoll)
+    avahi_threaded_poll_stop(tpoll);
+  tpoll = NULL;
 
-    if (name)
-        free(name);
-    name = NULL;
+  if (name)
+    free(name);
+  name = NULL;
 }
 
-mdns_backend mdns_avahi = 
-{
-    .name = "avahi",
-    .mdns_register = avahi_register,
-    .mdns_unregister = avahi_unregister
-};
-
+mdns_backend mdns_avahi = {
+    .name = "avahi", .mdns_register = avahi_register, .mdns_unregister = avahi_unregister};

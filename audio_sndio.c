@@ -23,65 +23,62 @@
 static struct sio_hdl *sio;
 static struct sio_par par;
 
-static int init(int argc, char **argv, config_t *cfgp) {
-	sio = sio_open(SIO_DEVANY, SIO_PLAY, 0);
-	if (!sio)
-		die("sndio: cannot connect to sound server");
+static int init(int argc, char **argv) {
+  sio = sio_open(SIO_DEVANY, SIO_PLAY, 0);
+  if (!sio)
+    die("sndio: cannot connect to sound server");
 
-	sio_initpar(&par);
+  sio_initpar(&par);
 
-	par.bits = 16;
-	par.rate = 44100;
-	par.pchan = 2;
-	par.le = SIO_LE_NATIVE;
-	par.sig = 1;
+  par.bits = 16;
+  par.rate = 44100;
+  par.pchan = 2;
+  par.le = SIO_LE_NATIVE;
+  par.sig = 1;
 
-	if (!sio_setpar(sio, &par))
-		die("sndio: failed to set audio parameters");
-	if (!sio_getpar(sio, &par))
-		die("sndio: failed to get audio parameters");
+  if (!sio_setpar(sio, &par))
+    die("sndio: failed to set audio parameters");
+  if (!sio_getpar(sio, &par))
+    die("sndio: failed to get audio parameters");
 
-	return 0;
+  config.audio_backend_buffer_desired_length = 44100; // one second.
+  config.audio_backend_latency_offset = 0;
+
+  return 0;
 }
 
-static void deinit(void) {
-	sio_close(sio);
-}
+static void deinit(void) { sio_close(sio); }
 
 static void start(int sample_rate) {
-	if (sample_rate != par.rate)
-		die("unexpected sample rate!");
-	sio_start(sio);
+  if (sample_rate != par.rate)
+    die("unexpected sample rate!");
+  sio_start(sio);
 }
 
 static void play(short buf[], int samples) {
-	sio_write(sio, (char *)buf, samples * par.bps * par.pchan);
+  sio_write(sio, (char *)buf, samples * par.bps * par.pchan);
 }
 
-static void stop(void) {
-	sio_stop(sio);
-}
+static void stop(void) { sio_stop(sio); }
 
 static void help(void) {
-	printf("    There are no options for sndio audio.\n");
-	printf("    Use AUDIODEVICE environment variable.\n");
+  printf("    There are no options for sndio audio.\n");
+  printf("    Use AUDIODEVICE environment variable.\n");
 }
 
 static void volume(double vol) {
-	unsigned int v = vol * SIO_MAXVOL;
-	sio_setvol(sio, v);
+  unsigned int v = vol * SIO_MAXVOL;
+  sio_setvol(sio, v);
 }
 
-audio_output audio_sndio = {
-	.name = "sndio",
-	.help = &help,
-	.init = &init,
-	.deinit = &deinit,
-	.start = &start,
-	.stop = &stop,
-	.flush = NULL,
-	.delay = NULL,
-	.play = &play,
-	.volume = &volume,
-	.parameters = NULL
-};
+audio_output audio_sndio = {.name = "sndio",
+                            .help = &help,
+                            .init = &init,
+                            .deinit = &deinit,
+                            .start = &start,
+                            .stop = &stop,
+                            .flush = NULL,
+                            .delay = NULL,
+                            .play = &play,
+                            .volume = &volume,
+                            .parameters = NULL};
