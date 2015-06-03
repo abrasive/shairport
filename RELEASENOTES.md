@@ -1,10 +1,12 @@
 Version 2.3.1
 -----
-Some big changes "under the hood" leading to limited support for unsynchronised output to `stdout` or a named `pipe` and continuation of defacto support for unsynchronised PulseAudio. Also, support for a configuration file, an option to ignore volume control and other improvements are provided.
+Some big changes "under the hood" leading to limited support for unsynchronised output to `stdout` or a named `pipe` and continuation of defacto support for unsynchronised PulseAudio. Also, support for a configuration file in preference to command line options, an option to ignore volume control and other improvements are provided.
 
 In this release, Shairport Sync gains the ability to read settings from `/etc/shairport-sync.conf`.
 This gives more flexibility in adding features gives better compatability across different versions of Linux.
-Existing command-line options continue to work, but some will be deprecated and may disappear in a future version of Shairport Sync. New settings will only be available via the configuration file. 
+Existing command-line options continue to work, but some will be deprecated and may disappear in a future version of Shairport Sync. New settings will only be available via the configuration file.
+
+Note that, for the present, settings in the configuration will have priority over command line options for Shairport Sync itself, in contravention of the normal unix convention. Audio back end command line options Ii.e. thopse after yher `--` have priority over configuration file settings for the audio backends.
 
 In moving to the the use of a configuration file, some "housekeeping" is being done -- some logical corrections and other small changes are being made to option names and modes of operations, so the settings in the configuration file do not exactly match command line options.
 
@@ -12,7 +14,7 @@ When `make install` is executed, a sample configuration is installed or updated 
 
 * Pesky Change You Must Do Something About
 
-If you enable metadata, please note that the option has changed somewhat. The option `-M` has a new long name equivalent: `--metadata-pipename` and the argument you provide must now be the full name of the metadata pipe, e.g. `-M /tmp/shairport-sync-metadata`.
+If you are using metadata, please note that the option has changed somewhat. The option `-M` has a new long name equivalent: `--metadata-pipename` and the argument you provide must now be the full name of the metadata pipe, e.g. `-M /tmp/shairport-sync-metadata`.
 
 * Enchancements
  * A new, supported audio back end called `stdio`. To activate, set  `output_backend = "stdout"` in the general section of the configuration file. Output is provided synchronously with the source feed. No stuffing or stripping is done. If you are feeding it to an output device that runs slower or faster, you'll eventually get buffer overflow or underflow in that device. To include support for this back end, use the configuration option `--with-stdout`.
