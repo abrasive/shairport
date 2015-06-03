@@ -1,6 +1,6 @@
 Version 2.3.1
 -----
-Some big changes "under the hood" leading to limited support for unsynchronised output to `stdout` or a named `pipe` and continuation of defacto support for unsynchronised PulseAudio. Also, support for a configuration file in preference to command line options, an option to ignore volume control and other improvements are provided.
+Some big changes "under the hood" have been made, leading to limited support for unsynchronised output to `stdout` or to a named pipe and continuation of defacto support for unsynchronised PulseAudio. Also, support for a configuration file in preference to command line options, an option to ignore volume control and other improvements are provided.
 
 In this release, Shairport Sync gains the ability to read settings from `/etc/shairport-sync.conf`.
 This gives more flexibility in adding features gives better compatability across different versions of Linux.
