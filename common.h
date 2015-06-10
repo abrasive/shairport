@@ -48,6 +48,8 @@ typedef struct {
 #endif
   uint8_t hw_addr[6];
   int port;
+  int udp_port_base;
+  int udp_port_range;
   int ignore_volume_control;
   int resyncthreshold; // if it get's out of whack my more than this, resync. Zero means never
                        // resync.

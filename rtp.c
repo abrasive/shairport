@@ -396,7 +396,7 @@ static void *rtp_timing_receiver(void *arg) {
   return NULL;
 }
 
-static int bind_port(SOCKADDR *remote, int *sock, int desired_port) {
+static int bind_port(SOCKADDR *remote, int *sock) {
   struct addrinfo hints, *info;
 
   memset(&hints, 0, sizeof(hints));
@@ -405,21 +405,32 @@ static int bind_port(SOCKADDR *remote, int *sock, int desired_port) {
   hints.ai_flags = AI_PASSIVE;
 
   char buffer[10];
-  snprintf(buffer, 10, "%d", desired_port);
+  
+  // look for a port in the range, if any was specified.
+  int desired_port = config.udp_port_base;
+  int ret;
+  do {
+    snprintf(buffer, 10, "%d", desired_port);
 
-  int ret = getaddrinfo(NULL, buffer, &hints, &info);
+    ret = getaddrinfo(NULL, buffer, &hints, &info);
 
-  if (ret < 0)
-    die("failed to get usable addrinfo?! %s.", gai_strerror(ret));
+    if (ret < 0)
+      die("failed to get usable addrinfo?! %s.", gai_strerror(ret));
 
-  *sock = socket(remote->SAFAMILY, SOCK_DGRAM, IPPROTO_UDP);
-  ret = bind(*sock, info->ai_addr, info->ai_addrlen);
+    *sock = socket(remote->SAFAMILY, SOCK_DGRAM, IPPROTO_UDP);
+    ret = bind(*sock, info->ai_addr, info->ai_addrlen);
 
-  freeaddrinfo(info);
+    freeaddrinfo(info);
 
-  if (ret < 0)
-    die("could not bind a UDP port!");
-
+  } while ((ret<0) && (errno==EADDRINUSE) && (desired_port!=0) && (desired_port++ < config.udp_port_base+config.udp_port_range));
+  
+  debug(1,"UDP port chosen: %d.",desired_port);
+  
+  if (ret < 0) {
+     die("error: could not bind a UDP port!");
+  }
+ 
+  
   int sport;
   SOCKADDR local;
   socklen_t local_len = sizeof(local);
@@ -510,9 +521,9 @@ void rtp_setup(SOCKADDR *remote, int cport, int tport, uint32_t active_remote, i
   // now, we open three sockets -- one for the audio stream, one for the timing and one for the
   // control
 
-  *lsport = bind_port(remote, &audio_socket, 0);
-  *lcport = bind_port(remote, &control_socket, 0);
-  *ltport = bind_port(remote, &timing_socket, 0);
+  *lsport = bind_port(remote, &audio_socket);
+  *lcport = bind_port(remote, &control_socket);
+  *ltport = bind_port(remote, &timing_socket);
 
   debug(2, "listening for audio, control and timing on ports %d, %d, %d.", *lsport, *lcport,
         *ltport);
