@@ -39,7 +39,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
-#include <sys/poll.h>
+#include <poll.h>
 
 #include "config.h"
 

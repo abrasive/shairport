@@ -8,8 +8,6 @@ general =
 //	mdns_backend = "avahi"; // not used, not tested
 //	output_backend = "alsa"; // alsa is default, other possibilities are "stdout", "pulse", "dummy". Only alsa supports synchronisation.
 //	port = 5000;
-//  udp_port_base = 7000; // start allocation UDP ports from this port number
-//  udp_port_range = 100; // look for free ports in this number of places, starting at the UDP port base (only three are needed).
 //	password = "secret"; // default is no password
 //	interpolation = "basic"; // aka "stuffing". Default is "basic", alternative is "soxr"
 //	statistics = "no"; // print statistics in the log
@@ -52,7 +50,6 @@ sessioncontrol =
 //
 
 // These are parameters for the alsa back end, the only back end that supports synchronisation
-alsa =
 {
 //  output_device = "default";
 //  mixer_type = "software"; // "software" or "hardware"
@@ -70,7 +67,7 @@ pipe =
 //  name = "/path/to/pipe"; // there is no default pipe name for the output
 };
 
-// These are parameters for the stdout audio back end, an experimental back end that directs output to stdout.
+// These are parameters for the stdout back end, an experimental back end that directs output to stdout.
 stdout =
 {
 //  audio_backend_latency_offset = 0; // Set this offset to compensate for a fixed delay in the audio back end. E.g. if the output device delays by 100 ms, set this to -4410.

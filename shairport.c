@@ -369,6 +369,24 @@ int parse_options(int argc, char **argv) {
         config.port = value;
     }
 
+    /* Get the udp port base setting. */
+    if (config_lookup_int(config.cfg, "general.udp_port_base", &value)) {
+      if ((value < 0) || (value > 65535))
+        die("Invalid port number  \"%sd\". It should be between 0 and 65535, default is 7000",
+            value);
+      else
+        config.udp_port_base = value;
+    }
+
+    /* Get the udp port range setting. This is number of ports that will be tried for free ports , starting at the port base. Only three ports are needed. */
+    if (config_lookup_int(config.cfg, "general.udp_port_range", &value)) {
+      if ((value < 0) || (value > 65535))
+        die("Invalid port range  \"%sd\". It should be between 0 and 65535, default is 100",
+            value);
+      else
+        config.udp_port_range = value;
+    }
+
     /* Get the password setting. */
     if (config_lookup_string(config.cfg, "general.password", &str))
       config.password = (char *)str;
@@ -606,6 +624,8 @@ int main(int argc, char **argv) {
   set_requested_connection_state_to_output(
       1); // we expect to be able to connect to the output device
   config.audio_backend_buffer_desired_length = 6615; // 0.15 seconds.
+  config.udp_port_base = 7000;
+  config.udp_port_range = 100;
 
   // this is a bit weird, but apparently necessary
   char *basec = strdup(argv[0]);
@@ -780,6 +800,8 @@ int main(int argc, char **argv) {
   debug(2, "statistics_requester status is %d.", config.statistics_requested);
   debug(2, "daemon status is %d.", config.daemonise);
   debug(2, "rtsp listening port is %d.", config.port);
+  debug(2, "udp base port is %d.", config.udp_port_base);
+  debug(2, "udp port range is %d.", config.udp_port_range);
   debug(2, "Shairport Sync player name is \"%s\".", config.apname);
   debug(2, "Audio Output name is \"%s\".", config.output_name);
   debug(2, "on-start action is \"%s\".", config.cmd_start);
