@@ -1112,6 +1112,7 @@ static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_m
 static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
   // interrupt session if permitted
   if ((config.allow_session_interruption == 1) || (pthread_mutex_trylock(&play_lock) == 0)) {
+    resp->respcode = 456; // 456 - Header Field Not Valid for Resource
     char *paesiv = NULL;
     char *prsaaeskey = NULL;
     char *pfmtp = NULL;
@@ -1133,7 +1134,19 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
 
       cp = next;
     }
+    
+    if (paesiv==NULL) {
+      warn("AESIV missing from ANNOUNCE");
+    }
 
+    if (prsaaeskey==NULL) {
+      warn("RSAAESKEY missing from ANNOUNCE");
+    }
+
+    if (pfmtp==NULL) {
+      warn("FMTP missing from ANNOUNCE");
+    }
+    
     if (!paesiv || !prsaaeskey || !pfmtp) {
       warn("required params missing from announce");
       goto out;
