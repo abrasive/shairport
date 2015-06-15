@@ -1148,7 +1148,19 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
     }
     
     if (!paesiv || !prsaaeskey || !pfmtp) {
-      warn("required params missing from announce");
+      warn("required params missing from the following ANNOUNCE message:");
+      // print each line of the request content
+      // the problem is that nextline has replace all returns, newlines, etc. by NULLs
+      char *cp = req->content;
+      int cp_left = req->contentlength;
+      while (cp_left>1) {
+        if (strlen(cp)!=0)
+          warn("    %s",cp);
+        cp+=strlen(cp)+1;
+        cp_left-=strlen(cp)+1;
+      }
+      char *next;
+
       goto out;
     }
 
