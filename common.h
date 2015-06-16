@@ -77,7 +77,9 @@ typedef struct {
   char *pidfile;
   char *logfile;
   char *errfile;
+#ifdef SUPPORT_CONFIG_FILES
   char *configfile;
+#endif
   uint audio_backend_buffer_desired_length; // this will be the desired number of frames in the
                                             // audio backend buffer -- the DAC buffer for ALSA
   uint audio_backend_latency_offset; // this will be the offset to compensate for any fixed latency

@@ -62,6 +62,9 @@
 
 static int shutting_down = 0;
 static char *appName = NULL;
+#ifdef SUPPORT_CONFIG_FILES
+  char configuration_file_path[4096];
+#endif
 
 void shairport_shutdown() {
   if (shutting_down)
@@ -320,22 +323,14 @@ int parse_options(int argc, char **argv) {
   }
 
 #ifdef SUPPORT_CONFIG_FILES
-  char configuration_file_path[4096];
-  strcpy(configuration_file_path, "/etc/");
-  strcat(configuration_file_path, appName);
-  strcat(configuration_file_path, ".conf");
-  debug(2, "Looking for file \"%s\"", configuration_file_path);
   config_setting_t *setting;
   const char *str;
   int value;
 
   config_init(&config_file_stuff);
-  char *cfp = configuration_file_path;
-  // use the configuration file path given in the -c option, if any
-  if (config.configfile)
-    cfp = config.configfile;
+  debug(1, "Looking for configuration file \"%s\"", config.configfile);
   /* Read the file. If there is an error, report it and exit. */
-  if (config_read_file(&config_file_stuff, cfp)) {
+  if (config_read_file(&config_file_stuff, config.configfile)) {
     // make config.cfg point to it
     config.cfg = &config_file_stuff;
     /* Get the Service Name. */
@@ -601,7 +596,20 @@ int main(int argc, char **argv) {
   memset(&config, 0, sizeof(config)); // also clears all strings, BTW
   atexit(exit_function);
 
+  // this is a bit weird, but apparently necessary
+  char *basec = strdup(argv[0]);
+  char *bname = basename(basec);
+  appName = strdup(bname);
+  free(basec);
+
   // set defaults
+#ifdef SUPPORT_CONFIG_FILES
+  strcpy(configuration_file_path, "/etc/");
+  strcat(configuration_file_path, appName);
+  strcat(configuration_file_path, ".conf");
+  config.configfile = configuration_file_path;
+#endif 
+
   config.statistics_requested - 0; // don't print stats in the log
   config.latency = 88200;          // AirPlay. Is also reset in rtsp.c when play is about to start
   config.userSuppliedLatency = 0;  // zero means none supplied
@@ -626,12 +634,6 @@ int main(int argc, char **argv) {
   config.audio_backend_buffer_desired_length = 6615; // 0.15 seconds.
   config.udp_port_base = 6001;
   config.udp_port_range = 100;
-
-  // this is a bit weird, but apparently necessary
-  char *basec = strdup(argv[0]);
-  char *bname = basename(basec);
-  appName = strdup(bname);
-  free(basec);
 
   /* Check if we are called with -V or --version parameter */
   if (argc >= 2 && ((strcmp(argv[1], "-V") == 0) || (strcmp(argv[1], "--version") == 0))) {
@@ -822,6 +824,9 @@ int main(int argc, char **argv) {
   debug(2, "audio backend desired buffer length is %d.",
         config.audio_backend_buffer_desired_length);
   debug(2, "audio backend latency offset is %d.", config.audio_backend_latency_offset);
+#ifdef SUPPORT_CONFIG_FILES
+  debug(2, "Configuration file name \"%s\".", config.configfile);
+#endif
 #ifdef CONFIG_METADATA
   debug(2, "metdata enabled is %d.", config.metadata_enabled);
   debug(2, "metadata pipename is \"%s\".", config.metadata_pipename);
