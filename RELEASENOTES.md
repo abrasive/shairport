@@ -5,6 +5,7 @@ Version 2.3.4
 * Bugfixes
  * Fix an out-of-stack-space error that can occur in certain cases (thanks to https://github.com/joerg-krause).
  * Fix a couple of compiler warnings (thanks to https://github.com/joerg-krause).
+ * Tidy up a couple of debug messages that were emitting misleading information.
  
 Version 2.3.3.2
 ----
