@@ -442,7 +442,7 @@ static int bind_port(SOCKADDR *remote, int *sock) {
 
   } while ((ret<0) && (errno==EADDRINUSE) && (desired_port!=0) && (desired_port++ < config.udp_port_base+config.udp_port_range));
   
-  debug(1,"UDP port chosen: %d.",desired_port);
+  // debug(1,"UDP port chosen: %d.",desired_port);
   
   if (ret < 0) {
      die("error: could not bind a UDP port!");
