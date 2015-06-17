@@ -152,7 +152,7 @@ static void *rtp_audio_receiver(void *arg) {
 static void *rtp_control_receiver(void *arg) {
   // we inherit the signal mask (SIGUSR1)
   reference_timestamp = 0; // nothing valid received yet
-  uint8_t packet[2048];
+  uint8_t packet[2048], *pktp;
   struct timespec tn;
   uint64_t remote_time_of_sync, local_time_now, remote_time_now;
   uint32_t sync_rtp_timestamp, rtp_timestamp_less_latency;
@@ -212,6 +212,24 @@ static void *rtp_control_receiver(void *arg) {
         // times).",((local_time_now-reference_timestamp_time)*1000000)>>32);
       } else {
         debug(1, "Sync packet received before we got a timing packet back.");
+      }
+    } else if (packet[1] == 0xd6) { // resent audio data in the control path -- whaale only?
+      // debug(1, "Control Port -- Retransmitted Audio Data Packet received.");
+      pktp = packet+4;
+      plen -= 4;
+      seq_t seqno = ntohs(*(unsigned short *)(pktp + 2));
+
+      uint32_t timestamp = ntohl(*(unsigned long *)(pktp + 4));
+
+      pktp += 12;
+      plen -= 12;
+
+      // check if packet contains enough content to be reasonable
+      if (plen >= 16) {
+        player_put_packet(seqno, timestamp, pktp, plen);
+        continue;
+      } else {
+        debug(1, "Too-short retransmitted audio packet received in control port, ignored.");
       }
     } else
       debug(1, "Control Port -- Unknown RTP packet of type 0x%02X length %d.", packet[1], nread);
