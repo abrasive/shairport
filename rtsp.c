@@ -628,13 +628,18 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
 
   char *ar = msg_get_header(req, "Active-Remote");
   if (ar) {
-    // debug(1,"Active-Remote string seen: \"%s\".",ar);
+    debug(1,"Active-Remote string seen: \"%s\".",ar);
     // get the active remote
     char *p;
     active_remote = strtoul(ar, &p, 10);
-    // debug(1,"Active Remote is %u.",active_remote);
+    send_metadata('ssnc','acre',ar,strlen(ar),req,1);
   }
 
+  ar = msg_get_header(req, "DACP-ID");
+  if (ar) {
+    debug(1,"DACP-ID string seen: \"%s\".",ar);
+    send_metadata('ssnc','daid',ar,strlen(ar),req,1);
+  }
   // select latency
   // if iTunes V10 or later is detected, use the iTunes latency setting
   // if AirPlay is detected, use the AirPlay latency setting
@@ -942,13 +947,13 @@ void metadata_process(uint32_t type, uint32_t code, char *data, uint32_t length)
   if (fd < 0)
     return;
   char thestring[1024];
-  snprintf(thestring, 1024, "<item>\n<type>%x</type><code>%x</code><length>%u</length>\n", type, code,
+  snprintf(thestring, 1024, "<item><type>%x</type><code>%x</code><length>%u</length>", type, code,
            length);
   ret = non_blocking_write(fd, thestring, strlen(thestring));
   if (ret < 1)
     return;
   if ((data != NULL) && (length > 0)) {
-    snprintf(thestring, 1024, "<data encoding=\"base64\">\n");
+    snprintf(thestring, 1024, "\n<data encoding=\"base64\">\n");
     ret = non_blocking_write(fd, thestring, strlen(thestring));
     if (ret < 1) // no reader
       return;
@@ -973,11 +978,15 @@ void metadata_process(uint32_t type, uint32_t code, char *data, uint32_t length)
       remaining_data += towrite_count;
       remaining_count -= towrite_count;
     }
-    snprintf(thestring, 1024, "</data>\n</item>\n");
+    snprintf(thestring, 1024, "</data>");
     ret = non_blocking_write(fd, thestring, strlen(thestring));
     if (ret < 1) // no reader
       return;
   }
+  snprintf(thestring, 1024, "</item>\n");
+  ret = non_blocking_write(fd, thestring, strlen(thestring));
+  if (ret < 1) // no reader
+    return;
 }
 
 void *metadata_thread_function(void *ignore) {
@@ -1006,6 +1015,24 @@ void metadata_init(void) {
 
 int send_metadata(uint32_t type, uint32_t code, char *data, uint32_t length, rtsp_message *carrier,
                   int block) {
+
+  // parameters: type, code, pointer to data or NULL, length of data or NULL, the rtsp_message or
+  // NULL
+  // the rtsp_message is sent for 'core' messages, because it contains the data and must not be
+  // freed until the data has been read. So, it is passed to send_metadata to be retained,
+  // sent to the thread where metadata is processed and released (and probably freed).
+  
+  // The rtsp_message is also sent for certain non-'core' messages.
+
+  // The reading of the parameters is a bit complex
+  // If the rtsp_message field is non-null, then it represents an rtsp_message which should be freed
+  // in the thread handler when the parameter pointed to by the pointer and specified by the length
+  // is finished with
+  // If the rtsp_message is NULL, then if the pointer is non-null, it points to a malloc'ed block
+  // and should be freed when the thread is finished with it. The length of the data in the block is
+  // given in length
+  // If the rtsp_message is NULL and the pointer is also NULL, nothing further is done.
+
   metadata_package pack;
   pack.type = type;
   pack.code = code;
@@ -1031,21 +1058,6 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn, rtsp_message *re
 
   // inform the listener that a set of metadata is starting
   // this doesn't include the cover art though...
-
-  // parameters: type, code, pointer to data or NULL, length of data or NULL, the rtsp_message or
-  // NULL
-  // the rtsp_message is sent for 'core' messages, because it contains the data and must not be
-  // freed until the data has been read. So, it is passed to send_metadata to be retained,
-  // sent to the thread where metadata is processed and released (and probably freed).
-
-  // The reading of the parameters is a bit complex
-  // If the rtsp_message field is non-null, then it represents an rtsp_message which should be freed
-  // in the thread handler when the parameter pointed to by the pointer and specified by the length
-  // is finished with
-  // If the rtsp_message is NULL, then if the pointer is non-null, it points to a malloc'ed block
-  // and should be freed when the thread is finished with it. The length of the data in the block is
-  // given in length
-  // If the rtsp_message is NULL and the pointer is also NULL, nothing further is done.
 
   send_metadata('ssnc', 'mdst', NULL, 0, NULL, 1);
 
@@ -1140,7 +1152,7 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
       conn->stream.encrypted = 0;
     } else {
       conn->stream.encrypted = 1;
-      debug(1,"Encrypted session requested?");
+      debug(1,"Encrypted session requested");
     }
     
     if (!pfmtp) {
