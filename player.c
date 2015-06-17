@@ -294,9 +294,8 @@ static void free_buffer(void) {
 
 void player_put_packet(seq_t seqno, uint32_t timestamp, uint8_t *data, int len) {
 
-  packet_count++;
-
   pthread_mutex_lock(&ab_mutex);
+  packet_count++;
   time_of_last_audio_packet = get_absolute_time_in_fp();
   if (connection_state_to_output) { // if we are supposed to be processing these packets
 
