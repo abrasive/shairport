@@ -1135,20 +1135,16 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
       cp = next;
     }
     
-    if (paesiv==NULL) {
-      warn("AESIV missing from ANNOUNCE");
-    }
-
-    if (prsaaeskey==NULL) {
-      warn("RSAAESKEY missing from ANNOUNCE");
-    }
-
-    if (pfmtp==NULL) {
-      warn("FMTP missing from ANNOUNCE");
+    if ((paesiv==NULL) && (prsaaeskey==NULL)) {
+      debug(1,"Unencrypted session requested?");
+      conn->stream.encrypted = 0;
+    } else {
+      conn->stream.encrypted = 1;
+      debug(1,"Encrypted session requested?");
     }
     
-    if (!paesiv || !prsaaeskey || !pfmtp) {
-      warn("required params missing from the following ANNOUNCE message:");
+    if (!pfmtp) {
+      warn("FMTP params missing from the following ANNOUNCE message:");
       // print each line of the request content
       // the problem is that nextline has replace all returns, newlines, etc. by NULLs
       char *cp = req->content;
@@ -1159,32 +1155,31 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
         cp+=strlen(cp)+1;
         cp_left-=strlen(cp)+1;
       }
-      char *next;
-
       goto out;
     }
-
-    int len, keylen;
-    uint8_t *aesiv = base64_dec(paesiv, &len);
-    if (len != 16) {
-      warn("client announced aeskey of %d bytes, wanted 16", len);
+    
+    if (conn->stream.encrypted) {
+      int len, keylen;
+      uint8_t *aesiv = base64_dec(paesiv, &len);
+      if (len != 16) {
+        warn("client announced aeskey of %d bytes, wanted 16", len);
+        free(aesiv);
+        goto out;
+      }
+      memcpy(conn->stream.aesiv, aesiv, 16);
       free(aesiv);
-      goto out;
-    }
-    memcpy(conn->stream.aesiv, aesiv, 16);
-    free(aesiv);
 
-    uint8_t *rsaaeskey = base64_dec(prsaaeskey, &len);
-    uint8_t *aeskey = rsa_apply(rsaaeskey, len, &keylen, RSA_MODE_KEY);
-    free(rsaaeskey);
-    if (keylen != 16) {
-      warn("client announced rsaaeskey of %d bytes, wanted 16", keylen);
+      uint8_t *rsaaeskey = base64_dec(prsaaeskey, &len);
+      uint8_t *aeskey = rsa_apply(rsaaeskey, len, &keylen, RSA_MODE_KEY);
+      free(rsaaeskey);
+      if (keylen != 16) {
+        warn("client announced rsaaeskey of %d bytes, wanted 16", keylen);
+        free(aeskey);
+        goto out;
+      }
+      memcpy(conn->stream.aeskey, aeskey, 16);
       free(aeskey);
-      goto out;
     }
-    memcpy(conn->stream.aeskey, aeskey, 16);
-    free(aeskey);
-
     int i;
     for (i = 0; i < sizeof(conn->stream.fmtp) / sizeof(conn->stream.fmtp[0]); i++)
       conn->stream.fmtp[i] = atoi(strsep(&pfmtp, " \t"));
@@ -1446,11 +1441,11 @@ static void *rtsp_conversation_thread_func(void *pconn) {
       struct method_handler *mh;
       for (mh = method_handlers; mh->method; mh++) {
         if (!strcmp(mh->method, req->method)) {
-          // debug(1,"RTSP Packet received of type \"%s\":",mh->method),
-          // msg_print_debug_headers(req);
+          //debug(1,"RTSP Packet received of type \"%s\":",mh->method),
+          //msg_print_debug_headers(req);
           mh->handler(conn, req, resp);
-          // debug(1,"RTSP Response:");
-          // msg_print_debug_headers(resp);
+          //debug(1,"RTSP Response:");
+          //msg_print_debug_headers(resp);
           break;
         }
       }
