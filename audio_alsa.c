@@ -95,23 +95,39 @@ static void help(void) {
 static int init(int argc, char **argv) {
   const char *str;
   int value;
+  
+  uint32_t buffer_length_hardware = 22050;
 
   int hardware_mixer = 0;
 
-  config.audio_backend_buffer_desired_length = 6615; // this is the default for ALSA
   config.audio_backend_latency_offset = 0;           // this is the default for ALSA
+  config.audio_backend_buffer_desired_length = 6615; // default for alsa with a software mixer
+  
+  
 
   // get settings from settings file first, allow them to be over-ridden by command line options
 
   if (config.cfg != NULL) {
     /* Get the desired buffer size setting. */
-    if (config_lookup_int(config.cfg, "alsa.audio_backend_buffer_desired_length", &value)) {
+    if (config_lookup_int(config.cfg, "alsa.audio_backend_buffer_desired_length_software", &value)) {
       if ((value < 0) || (value > 66150))
-        die("Invalid alsa audio backend buffer desired length \"%d\". It should be between 0 and "
+        die("Invalid alsa audio backend buffer desired length (software) \"%d\". It should be between 0 and "
             "66150, default is 6615",
             value);
-      else
+      else {
         config.audio_backend_buffer_desired_length = value;
+      }
+    }
+    
+    /* Get the desired buffer size setting. */
+    if (config_lookup_int(config.cfg, "alsa.audio_backend_buffer_desired_length_hardware", &value)) {
+      if ((value < 0) || (value > 66150))
+        die("Invalid alsa audio backend buffer desired length (hardware) \"%d\". It should be between 0 and "
+            "66150, default is 22050",
+            value);
+      else {
+        buffer_length_hardware = value;
+      }
     }
 
     /* Get the latency offset. */
@@ -183,6 +199,8 @@ static int init(int argc, char **argv) {
 
   if (!hardware_mixer)
     return 0;
+  
+  config.audio_backend_latency_offset = buffer_length_hardware;
 
   if (alsa_mix_dev == NULL)
     alsa_mix_dev = alsa_out_dev;
