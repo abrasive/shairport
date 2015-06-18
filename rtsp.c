@@ -632,14 +632,19 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
     // get the active remote
     char *p;
     active_remote = strtoul(ar, &p, 10);
+#ifdef CONFIG_METADATA
     send_metadata('ssnc','acre',ar,strlen(ar),req,1);
+#endif
   }
 
+#ifdef CONFIG_METADATA
   ar = msg_get_header(req, "DACP-ID");
   if (ar) {
     debug(1,"DACP-ID string seen: \"%s\".",ar);
     send_metadata('ssnc','daid',ar,strlen(ar),req,1);
   }
+#endif
+
   // select latency
   // if iTunes V10 or later is detected, use the iTunes latency setting
   // if AirPlay is detected, use the AirPlay latency setting
