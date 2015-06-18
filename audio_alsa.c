@@ -200,7 +200,7 @@ static int init(int argc, char **argv) {
   if (!hardware_mixer)
     return 0;
   
-  config.audio_backend_latency_offset = buffer_length_hardware;
+  config.audio_backend_buffer_desired_length = buffer_length_hardware;
 
   if (alsa_mix_dev == NULL)
     alsa_mix_dev = alsa_out_dev;
