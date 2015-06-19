@@ -819,7 +819,8 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn, rtsp_message *r
 //              I guess the timestamps wrap at 2^32.
 //    'mdst' -- a sequence of metadata is about to start
 //    'mden' -- a sequence of metadata has ended
-//    'snam' -- the name of the originator -- e.g. "Joe's iPhone" or "iTunes...".
+//    'snam' -- A device -- e.g. "Joe's iPhone" -- has opened a play session. Specifically, it's the "X-Apple-Client-Name" string
+//    'snua' -- A "user agent" -- e.g. "iTunes/12..." -- has opened a play session. Specifically, it's the "User-Agent" string
 //
 // including a simple base64 encoder to minimise malloc/free activity
 
@@ -1087,9 +1088,6 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn, rtsp_message *re
 
   // inform the listener that a set of metadata is ending
   send_metadata('ssnc', 'mden', NULL, 0, NULL, 1);
-  // send the user some shairport-originated metadata
-  // send the name of the player, e.g. "Joe's iPhone" or "iTunes"
-  send_metadata('ssnc', 'sndr', strdup(sender_name), strlen(sender_name), NULL, 1);
 }
 
 #endif
@@ -1203,15 +1201,17 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
 
     char *hdr = msg_get_header(req, "X-Apple-Client-Name");
     if (hdr) {
-      strncpy(sender_name, hdr, 1024);
-      debug(1, "Play connection from \"%s\".", hdr);
-    } else {
-      hdr = msg_get_header(req, "User-Agent");
-      if (hdr) {
-        debug(1, "Play connection from \"%s\".", hdr);
-        strncpy(sender_name, hdr, 1024);
-      } else
-        sender_name[0] = 0;
+      debug(1, "Play connection from device named \"%s\".", hdr);
+      #ifdef CONFIG_METADATA
+      send_metadata('ssnc','snam',hdr,strlen(hdr),req,1);
+      #endif
+    }
+    hdr = msg_get_header(req, "User-Agent");
+    if (hdr) {
+      debug(1, "Play connection from user agent \"%s\".", hdr);
+      #ifdef CONFIG_METADATA
+      send_metadata('ssnc','snua',hdr,strlen(hdr),req,1);
+      #endif
     }
     resp->respcode = 200;
   } else {
