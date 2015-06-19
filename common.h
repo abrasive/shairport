@@ -116,9 +116,6 @@ uint64_t get_absolute_time_in_fp(void);
 uint32_t uatoi(const char *nptr);
 
 shairport_cfg config;
-char sender_name[1024];
-char sender_ip[1024];
-char album_name[1024]; // we might need this for picture diagnostics
 config_t config_file_stuff;
 
 void command_start(void);
