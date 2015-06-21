@@ -628,12 +628,22 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
 
   char *ar = msg_get_header(req, "Active-Remote");
   if (ar) {
-    // debug(1,"Active-Remote string seen: \"%s\".",ar);
+    debug(1,"Active-Remote string seen: \"%s\".",ar);
     // get the active remote
     char *p;
     active_remote = strtoul(ar, &p, 10);
-    // debug(1,"Active Remote is %u.",active_remote);
+#ifdef CONFIG_METADATA
+    send_metadata('ssnc','acre',ar,strlen(ar),req,1);
+#endif
   }
+
+#ifdef CONFIG_METADATA
+  ar = msg_get_header(req, "DACP-ID");
+  if (ar) {
+    debug(1,"DACP-ID string seen: \"%s\".",ar);
+    send_metadata('ssnc','daid',ar,strlen(ar),req,1);
+  }
+#endif
 
   // select latency
   // if iTunes V10 or later is detected, use the iTunes latency setting
@@ -809,7 +819,8 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn, rtsp_message *r
 //              I guess the timestamps wrap at 2^32.
 //    'mdst' -- a sequence of metadata is about to start
 //    'mden' -- a sequence of metadata has ended
-//    'snam' -- the name of the originator -- e.g. "Joe's iPhone" or "iTunes...".
+//    'snam' -- A device -- e.g. "Joe's iPhone" -- has opened a play session. Specifically, it's the "X-Apple-Client-Name" string
+//    'snua' -- A "user agent" -- e.g. "iTunes/12..." -- has opened a play session. Specifically, it's the "User-Agent" string
 //
 // including a simple base64 encoder to minimise malloc/free activity
 
@@ -942,13 +953,13 @@ void metadata_process(uint32_t type, uint32_t code, char *data, uint32_t length)
   if (fd < 0)
     return;
   char thestring[1024];
-  snprintf(thestring, 1024, "<item>\n<type>%x</type><code>%x</code><length>%u</length>\n", type, code,
+  snprintf(thestring, 1024, "<item><type>%x</type><code>%x</code><length>%u</length>", type, code,
            length);
   ret = non_blocking_write(fd, thestring, strlen(thestring));
   if (ret < 1)
     return;
   if ((data != NULL) && (length > 0)) {
-    snprintf(thestring, 1024, "<data encoding=\"base64\">\n");
+    snprintf(thestring, 1024, "\n<data encoding=\"base64\">\n");
     ret = non_blocking_write(fd, thestring, strlen(thestring));
     if (ret < 1) // no reader
       return;
@@ -973,11 +984,15 @@ void metadata_process(uint32_t type, uint32_t code, char *data, uint32_t length)
       remaining_data += towrite_count;
       remaining_count -= towrite_count;
     }
-    snprintf(thestring, 1024, "</data>\n</item>\n");
+    snprintf(thestring, 1024, "</data>");
     ret = non_blocking_write(fd, thestring, strlen(thestring));
     if (ret < 1) // no reader
       return;
   }
+  snprintf(thestring, 1024, "</item>\n");
+  ret = non_blocking_write(fd, thestring, strlen(thestring));
+  if (ret < 1) // no reader
+    return;
 }
 
 void *metadata_thread_function(void *ignore) {
@@ -1006,6 +1021,24 @@ void metadata_init(void) {
 
 int send_metadata(uint32_t type, uint32_t code, char *data, uint32_t length, rtsp_message *carrier,
                   int block) {
+
+  // parameters: type, code, pointer to data or NULL, length of data or NULL, the rtsp_message or
+  // NULL
+  // the rtsp_message is sent for 'core' messages, because it contains the data and must not be
+  // freed until the data has been read. So, it is passed to send_metadata to be retained,
+  // sent to the thread where metadata is processed and released (and probably freed).
+  
+  // The rtsp_message is also sent for certain non-'core' messages.
+
+  // The reading of the parameters is a bit complex
+  // If the rtsp_message field is non-null, then it represents an rtsp_message which should be freed
+  // in the thread handler when the parameter pointed to by the pointer and specified by the length
+  // is finished with
+  // If the rtsp_message is NULL, then if the pointer is non-null, it points to a malloc'ed block
+  // and should be freed when the thread is finished with it. The length of the data in the block is
+  // given in length
+  // If the rtsp_message is NULL and the pointer is also NULL, nothing further is done.
+
   metadata_package pack;
   pack.type = type;
   pack.code = code;
@@ -1032,21 +1065,6 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn, rtsp_message *re
   // inform the listener that a set of metadata is starting
   // this doesn't include the cover art though...
 
-  // parameters: type, code, pointer to data or NULL, length of data or NULL, the rtsp_message or
-  // NULL
-  // the rtsp_message is sent for 'core' messages, because it contains the data and must not be
-  // freed until the data has been read. So, it is passed to send_metadata to be retained,
-  // sent to the thread where metadata is processed and released (and probably freed).
-
-  // The reading of the parameters is a bit complex
-  // If the rtsp_message field is non-null, then it represents an rtsp_message which should be freed
-  // in the thread handler when the parameter pointed to by the pointer and specified by the length
-  // is finished with
-  // If the rtsp_message is NULL, then if the pointer is non-null, it points to a malloc'ed block
-  // and should be freed when the thread is finished with it. The length of the data in the block is
-  // given in length
-  // If the rtsp_message is NULL and the pointer is also NULL, nothing further is done.
-
   send_metadata('ssnc', 'mdst', NULL, 0, NULL, 1);
 
   while (off < cl) {
@@ -1070,9 +1088,6 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn, rtsp_message *re
 
   // inform the listener that a set of metadata is ending
   send_metadata('ssnc', 'mden', NULL, 0, NULL, 1);
-  // send the user some shairport-originated metadata
-  // send the name of the player, e.g. "Joe's iPhone" or "iTunes"
-  send_metadata('ssnc', 'sndr', strdup(sender_name), strlen(sender_name), NULL, 1);
 }
 
 #endif
@@ -1112,6 +1127,7 @@ static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_m
 static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
   // interrupt session if permitted
   if ((config.allow_session_interruption == 1) || (pthread_mutex_trylock(&play_lock) == 0)) {
+    resp->respcode = 456; // 456 - Header Field Not Valid for Resource
     char *paesiv = NULL;
     char *prsaaeskey = NULL;
     char *pfmtp = NULL;
@@ -1133,48 +1149,69 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
 
       cp = next;
     }
-
-    if (!paesiv || !prsaaeskey || !pfmtp) {
-      warn("required params missing from announce");
+    
+    if ((paesiv==NULL) && (prsaaeskey==NULL)) {
+      debug(1,"Unencrypted session requested?");
+      conn->stream.encrypted = 0;
+    } else {
+      conn->stream.encrypted = 1;
+      debug(1,"Encrypted session requested");
+    }
+    
+    if (!pfmtp) {
+      warn("FMTP params missing from the following ANNOUNCE message:");
+      // print each line of the request content
+      // the problem is that nextline has replace all returns, newlines, etc. by NULLs
+      char *cp = req->content;
+      int cp_left = req->contentlength;
+      while (cp_left>1) {
+        if (strlen(cp)!=0)
+          warn("    %s",cp);
+        cp+=strlen(cp)+1;
+        cp_left-=strlen(cp)+1;
+      }
       goto out;
     }
-
-    int len, keylen;
-    uint8_t *aesiv = base64_dec(paesiv, &len);
-    if (len != 16) {
-      warn("client announced aeskey of %d bytes, wanted 16", len);
+    
+    if (conn->stream.encrypted) {
+      int len, keylen;
+      uint8_t *aesiv = base64_dec(paesiv, &len);
+      if (len != 16) {
+        warn("client announced aeskey of %d bytes, wanted 16", len);
+        free(aesiv);
+        goto out;
+      }
+      memcpy(conn->stream.aesiv, aesiv, 16);
       free(aesiv);
-      goto out;
-    }
-    memcpy(conn->stream.aesiv, aesiv, 16);
-    free(aesiv);
 
-    uint8_t *rsaaeskey = base64_dec(prsaaeskey, &len);
-    uint8_t *aeskey = rsa_apply(rsaaeskey, len, &keylen, RSA_MODE_KEY);
-    free(rsaaeskey);
-    if (keylen != 16) {
-      warn("client announced rsaaeskey of %d bytes, wanted 16", keylen);
+      uint8_t *rsaaeskey = base64_dec(prsaaeskey, &len);
+      uint8_t *aeskey = rsa_apply(rsaaeskey, len, &keylen, RSA_MODE_KEY);
+      free(rsaaeskey);
+      if (keylen != 16) {
+        warn("client announced rsaaeskey of %d bytes, wanted 16", keylen);
+        free(aeskey);
+        goto out;
+      }
+      memcpy(conn->stream.aeskey, aeskey, 16);
       free(aeskey);
-      goto out;
     }
-    memcpy(conn->stream.aeskey, aeskey, 16);
-    free(aeskey);
-
     int i;
     for (i = 0; i < sizeof(conn->stream.fmtp) / sizeof(conn->stream.fmtp[0]); i++)
       conn->stream.fmtp[i] = atoi(strsep(&pfmtp, " \t"));
 
     char *hdr = msg_get_header(req, "X-Apple-Client-Name");
     if (hdr) {
-      strncpy(sender_name, hdr, 1024);
-      debug(1, "Play connection from \"%s\".", hdr);
-    } else {
-      hdr = msg_get_header(req, "User-Agent");
-      if (hdr) {
-        debug(1, "Play connection from \"%s\".", hdr);
-        strncpy(sender_name, hdr, 1024);
-      } else
-        sender_name[0] = 0;
+      debug(1, "Play connection from device named \"%s\".", hdr);
+      #ifdef CONFIG_METADATA
+      send_metadata('ssnc','snam',hdr,strlen(hdr),req,1);
+      #endif
+    }
+    hdr = msg_get_header(req, "User-Agent");
+    if (hdr) {
+      debug(1, "Play connection from user agent \"%s\".", hdr);
+      #ifdef CONFIG_METADATA
+      send_metadata('ssnc','snua',hdr,strlen(hdr),req,1);
+      #endif
     }
     resp->respcode = 200;
   } else {
@@ -1421,11 +1458,11 @@ static void *rtsp_conversation_thread_func(void *pconn) {
       struct method_handler *mh;
       for (mh = method_handlers; mh->method; mh++) {
         if (!strcmp(mh->method, req->method)) {
-          // debug(1,"RTSP Packet received of type \"%s\":",mh->method),
-          // msg_print_debug_headers(req);
+          //debug(1,"RTSP Packet received of type \"%s\":",mh->method),
+          //msg_print_debug_headers(req);
           mh->handler(conn, req, resp);
-          // debug(1,"RTSP Response:");
-          // msg_print_debug_headers(resp);
+          //debug(1,"RTSP Response:");
+          //msg_print_debug_headers(resp);
           break;
         }
       }

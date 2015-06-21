@@ -4,6 +4,7 @@
 #include "audio.h"
 
 typedef struct {
+  int encrypted;
   uint8_t aesiv[16], aeskey[16];
   int32_t fmtp[12];
 } stream_cfg;

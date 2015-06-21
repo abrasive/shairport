@@ -83,9 +83,9 @@ static aes_context dctx;
 
 static pthread_t player_thread;
 static int please_stop;
+static int encrypted; // Normally the audio is encrypted, but it may not be
 
-static int
-    connection_state_to_output; // if true, then play incoming stuff; if false drop everything
+static int connection_state_to_output; // if true, then play incoming stuff; if false drop everything
 
 static alac_file *decoder_info;
 
@@ -226,23 +226,23 @@ static void alac_decode(short *dest, uint8_t *buf, int len) {
   unsigned char packet[MAX_PACKET];
   unsigned char packetp[MAX_PACKET];
   assert(len <= MAX_PACKET);
-
-  unsigned char iv[16];
-  int aeslen = len & ~0xf;
-  memcpy(iv, aesiv, sizeof(iv));
-
-#ifdef HAVE_LIBPOLARSSL
-  aes_crypt_cbc(&dctx, AES_DECRYPT, aeslen, iv, buf, packet);
-#endif
-#ifdef HAVE_LIBSSL
-  AES_cbc_encrypt(buf, packet, aeslen, &aes, iv, AES_DECRYPT);
-#endif
-
-  memcpy(packet + aeslen, buf + aeslen, len - aeslen);
-
   int outsize;
 
-  alac_decode_frame(decoder_info, packet, dest, &outsize);
+  if (encrypted) {
+    unsigned char iv[16];
+    int aeslen = len & ~0xf;
+    memcpy(iv, aesiv, sizeof(iv));
+#ifdef HAVE_LIBPOLARSSL
+    aes_crypt_cbc(&dctx, AES_DECRYPT, aeslen, iv, buf, packet);
+#endif
+#ifdef HAVE_LIBSSL
+    AES_cbc_encrypt(buf, packet, aeslen, &aes, iv, AES_DECRYPT);
+#endif
+    memcpy(packet + aeslen, buf + aeslen, len - aeslen);
+    alac_decode_frame(decoder_info, packet, dest, &outsize);
+  } else {
+    alac_decode_frame(decoder_info, buf, dest, &outsize);
+  }
 
   assert(outsize == FRAME_BYTES(frame_size));
 }
@@ -294,9 +294,8 @@ static void free_buffer(void) {
 
 void player_put_packet(seq_t seqno, uint32_t timestamp, uint8_t *data, int len) {
 
-  packet_count++;
-
   pthread_mutex_lock(&ab_mutex);
+  packet_count++;
   time_of_last_audio_packet = get_absolute_time_in_fp();
   if (connection_state_to_output) { // if we are supposed to be processing these packets
 
@@ -1236,20 +1235,21 @@ void player_flush(uint32_t timestamp) {
 
 int player_play(stream_cfg *stream) {
   packet_count = 0;
+  encrypted = stream->encrypted;
   if (config.buffer_start_fill > BUFFER_FRAMES)
     die("specified buffer starting fill %d > buffer size %d", config.buffer_start_fill,
         BUFFER_FRAMES);
-
+  if (encrypted) {
 #ifdef HAVE_LIBPOLARSSL
-  memset(&dctx, 0, sizeof(aes_context));
-  aes_setkey_dec(&dctx, stream->aeskey, 128);
+    memset(&dctx, 0, sizeof(aes_context));
+    aes_setkey_dec(&dctx, stream->aeskey, 128);
 #endif
 
 #ifdef HAVE_LIBSSL
-  AES_set_decrypt_key(stream->aeskey, 128, &aes);
+    AES_set_decrypt_key(stream->aeskey, 128, &aes);
 #endif
-
-  aesiv = stream->aesiv;
+    aesiv = stream->aesiv;
+  }
   init_decoder(stream->fmtp);
   // must be after decoder init
   init_buffer();
