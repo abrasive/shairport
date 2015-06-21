@@ -1,4 +1,4 @@
-Version 2.3.5 -- forthcoming
+Version 2.3.5
 ----
 * Changes
  * The metadata item 'sndr' is no longer sent in metadata. It's been replaced by 'snam' and 'snua' -- see below.
