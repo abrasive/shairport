@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.50])
-AC_INIT([shairport-sync], [2.3.5], [mikebrady@eircom.net])
+AC_INIT([shairport-sync], [2.3.6], [mikebrady@eircom.net])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([shairport.c])
 AC_CONFIG_HEADERS([config.h])
@@ -46,6 +46,7 @@ if  test "x${with_pkg_config}" = x1 ; then
        AC_DEFINE([HAVE_LIBPOPT],[1],[Define to 1 if you have popt])])
 else
   AC_CHECK_LIB([popt],[poptGetContext], , AC_MSG_ERROR(libpopt needed))
+  AC_DEFINE([HAVE_LIBPOPT],[1],[Define to 1 if you have popt])
 fi
 
 AC_ARG_WITH([dummy],[  --with-dummy = include the dummy audio back end ],[AC_MSG_RESULT(>>Including the dummy audio back end) AC_DEFINE([CONFIG_DUMMY], 1, [Needed by the compiler.]) ], )
@@ -76,9 +77,13 @@ AC_ARG_WITH([configfile_support],
 
 if test "x${with_configfile_support}" = x1 ; then
   AC_MSG_RESULT(>>Including configuration file support)
-  PKG_CHECK_MODULES(
-      [LIBCONFIG], [libconfig],
-      [LIBS="${LIBCONFIG_LIBS} ${LIBS}"])
+  if  test "x${with_pkg_config}" = x1 ; then
+    PKG_CHECK_MODULES(
+        [LIBCONFIG], [libconfig],
+        [LIBS="${LIBCONFIG_LIBS} ${LIBS}"])
+  else
+    AC_CHECK_LIB([config],[config_init], , AC_MSG_ERROR([libconfig library needed]))
+  fi
   AC_DEFINE([SUPPORT_CONFIG_FILES],[1],[Define to 1 if you want to support configuration files])
 fi
 
@@ -110,11 +115,18 @@ AC_ARG_WITH(ssl, [ choose --with-ssl=openssl or --with-ssl=polarssl for encrypti
     AC_MSG_ERROR(choose either "openssl" or "polarssl" encryption)
   fi
   if test "x${with_ssl}" = xopenssl ; then
-    PKG_CHECK_MODULES(
-        [SSL], [libssl,libcrypto],
-        [LIBS="${SSL_LIBS} ${LIBS}"
-        AC_DEFINE([HAVE_LIBCRYPTO],[1],[Define to 1 if you have libcrypto])
-        AC_DEFINE([HAVE_LIBSSL],[1],[Define to 1 if you have libssl])])
+    if  test "x${with_pkg_config}" = x1 ; then
+      PKG_CHECK_MODULES(
+          [SSL], [libssl,libcrypto],
+          [LIBS="${SSL_LIBS} ${LIBS}"
+          AC_DEFINE([HAVE_LIBCRYPTO],[1],[Define to 1 if you have libcrypto])
+          AC_DEFINE([HAVE_LIBSSL],[1],[Define to 1 if you have libssl])])
+    else
+      AC_CHECK_LIB([crypto], [main], , AC_MSG_ERROR(libcrypto selected but the library cannot be found!))
+      AC_CHECK_LIB([ssl], [main], , AC_MSG_ERROR(libssl selected but the library cannot be found!))
+      AC_DEFINE([HAVE_LIBCRYPTO],[1],[Define to 1 if you have libcrypto])
+      AC_DEFINE([HAVE_LIBSSL],[1],[Define to 1 if you have libssl])
+    fi
   elif test "x${with_ssl}" = xpolarssl ; then
     AC_CHECK_LIB([polarssl],[ssl_init], , AC_MSG_ERROR(PolarSSL selected but the library cannot be found!))
   else
@@ -159,10 +171,15 @@ AC_ARG_WITH(alsa, [  --with-alsa = choose native ALSA API support (GNU/Linux onl
   HAS_ALSA=1
   AM_CONDITIONAL([USE_ALSA], [test 0])
   AC_DEFINE([CONFIG_ALSA], 1, [Needed by the compiler.])
-  PKG_CHECK_MODULES(
-    [ALSA], [alsa],
-    [LIBS="${ALSA_LIBS} ${LIBS}"
-     AC_DEFINE([HAVE_LIBASOUND],[1],[Define to 1 if you have ALSA])])])
+  if  test "x${with_pkg_config}" = x1 ; then
+    PKG_CHECK_MODULES(
+      [ALSA], [alsa],
+      [LIBS="${ALSA_LIBS} ${LIBS}"
+       AC_DEFINE([HAVE_LIBASOUND],[1],[Define to 1 if you have ALSA])])
+  else
+    AC_CHECK_LIB([asound], [snd_pcm_open], , AC_MSG_ERROR(ALSA support requires the asound library!))
+    AC_DEFINE([HAVE_LIBASOUND],[1],[Define to 1 if you have ALSA])
+  fi ])
 AM_CONDITIONAL([USE_ALSA], [test "x$HAS_ALSA" = "x1"])
 
 # Look for SNDIO flag
