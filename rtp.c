@@ -307,6 +307,8 @@ static void *rtp_timing_receiver(void *arg) {
       processing_time;
   local_to_remote_time_jitters = 0;
   local_to_remote_time_jitters_count = 0;
+  uint64_t first_local_to_remote_time_difference = 0;
+  uint64_t first_local_to_remote_time_difference_time;
   uint64_t l2rtd = 0;
   while (1) {
     if (please_shutdown)
@@ -398,6 +400,14 @@ static void *rtp_timing_receiver(void *arg) {
       // with dispersion of %lld us with delta of %lld us",rtus,ji);
 
       local_to_remote_time_difference = l2rtd;
+      if (first_local_to_remote_time_difference==0) {
+        first_local_to_remote_time_difference = local_to_remote_time_difference;
+        first_local_to_remote_time_difference_time = get_absolute_time_in_fp();
+      }
+      if (first_local_to_remote_time_difference>=local_to_remote_time_difference) 
+        debug(1,"Clock drift is -%lld ppb.",(((first_local_to_remote_time_difference-local_to_remote_time_difference)*1000000000)/(get_absolute_time_in_fp()-first_local_to_remote_time_difference_time)));
+      else
+        debug(1,"Clock drift is %lld ppb.",(((local_to_remote_time_difference-first_local_to_remote_time_difference)*1000000000)/(get_absolute_time_in_fp()-first_local_to_remote_time_difference_time)));
     } else {
       debug(1, "Timing port -- Unknown RTP packet of type 0x%02X length %d.", packet[1], nread);
     }
