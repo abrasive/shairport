@@ -404,10 +404,19 @@ static void *rtp_timing_receiver(void *arg) {
         first_local_to_remote_time_difference = local_to_remote_time_difference;
         first_local_to_remote_time_difference_time = get_absolute_time_in_fp();
       }
-      if (first_local_to_remote_time_difference>=local_to_remote_time_difference) 
-        debug(1,"Clock drift is -%lld ppb.",(((first_local_to_remote_time_difference-local_to_remote_time_difference)*1000000000)/(get_absolute_time_in_fp()-first_local_to_remote_time_difference_time)));
-      else
-        debug(1,"Clock drift is %lld ppb.",(((local_to_remote_time_difference-first_local_to_remote_time_difference)*1000000000)/(get_absolute_time_in_fp()-first_local_to_remote_time_difference_time)));
+      
+     uint64_t clock_drift;
+      if (first_local_to_remote_time_difference>=local_to_remote_time_difference)  {
+        clock_drift = ((first_local_to_remote_time_difference - local_to_remote_time_difference) * 1000000)>>32;
+        debug(1, "-%llu", clock_drift);
+        //debug(1,"Clock drift is -%lld usec.",clock_drift);
+      }
+      else {
+        clock_drift = ((local_to_remote_time_difference - first_local_to_remote_time_difference) * 1000000) >>32;
+        //debug(1,"Clock drift is %lld usec.",clock_drift);
+        debug(1, "%llu", clock_drift);
+      }
+      
     } else {
       debug(1, "Timing port -- Unknown RTP packet of type 0x%02X length %d.", packet[1], nread);
     }
