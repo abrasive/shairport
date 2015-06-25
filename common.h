@@ -120,6 +120,8 @@ uint32_t uatoi(const char *nptr);
 shairport_cfg config;
 config_t config_file_stuff;
 
+int64_t session_corrections;
+
 void command_start(void);
 void command_stop(void);
 

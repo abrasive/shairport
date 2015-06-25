@@ -406,15 +406,21 @@ static void *rtp_timing_receiver(void *arg) {
       }
       
      uint64_t clock_drift;
+     int64_t current_delay;
+//     if (config.output->delay) {
+//            current_delay = config.output->delay();
+//      }
       if (first_local_to_remote_time_difference>=local_to_remote_time_difference)  {
         clock_drift = ((first_local_to_remote_time_difference - local_to_remote_time_difference) * 1000000)>>32;
-        debug(1, "-%llu", clock_drift);
+//        debug(1, "-%llu\t%lld\t%lld", clock_drift,(session_corrections*1000000)/44100,current_delay);
+        debug(1, "-%llu\t%lld", clock_drift,(session_corrections*1000000)/44100);
         //debug(1,"Clock drift is -%lld usec.",clock_drift);
       }
       else {
         clock_drift = ((local_to_remote_time_difference - first_local_to_remote_time_difference) * 1000000) >>32;
         //debug(1,"Clock drift is %lld usec.",clock_drift);
-        debug(1, "%llu", clock_drift);
+//        debug(1, "%llu\t%lld\t%lld", clock_drift,(session_corrections*1000000)/44100,current_delay);
+        debug(1, "%llu\t%lld\t", clock_drift,(session_corrections*1000000)/44100);
       }
       
     } else {

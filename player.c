@@ -855,6 +855,7 @@ typedef struct stats { // statistics for running averages
 } stats_t;
 
 static void *player_thread_func(void *arg) {
+		session_corrections = 0;
 	// check that there are enough buffers to accommodate the desired latency and the latency offset
 	
 	int maximum_latency = config.latency+config.audio_backend_latency_offset;
@@ -1115,11 +1116,14 @@ static void *player_thread_func(void *arg) {
 
           tsum_of_sync_errors += sync_error;
           tsum_of_drifts += statistics[newest_statistic].drift;
-          if (amount_to_stuff > 0)
+          if (amount_to_stuff > 0) {
             tsum_of_insertions_and_deletions += amount_to_stuff;
-          else
+          } else {
             tsum_of_insertions_and_deletions -= amount_to_stuff;
+          }
           tsum_of_corrections += amount_to_stuff;
+          session_corrections += amount_to_stuff;
+
 
           newest_statistic = (newest_statistic + 1) % trend_interval;
           number_of_statistics++;
