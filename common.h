@@ -121,6 +121,8 @@ shairport_cfg config;
 config_t config_file_stuff;
 
 int64_t session_corrections;
+uint32_t play_segment_reference_frame;
+uint64_t play_segment_reference_frame_remote_time;
 
 void command_start(void);
 void command_stop(void);

@@ -492,8 +492,8 @@ static abuf_t *buffer_get_frame(void) {
             // debug(1,"First frame seen, time %u, with %d
             // frames...",curframe->timestamp,seq_diff(ab_read, ab_write));
             uint32_t reference_timestamp;
-            uint64_t reference_timestamp_time;
-            get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time);
+            uint64_t reference_timestamp_time,remote_reference_timestamp_time;
+            get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time, &remote_reference_timestamp_time);
             if (reference_timestamp) { // if we have a reference time
               // debug(1,"First frame seen with timestamp...");
               first_packet_timestamp = curframe->timestamp; // we will keep buffering until we are
@@ -601,12 +601,13 @@ static abuf_t *buffer_get_frame(void) {
                 // with %d packets.",exact_frame_gap,fs,dac_delay,seq_diff(ab_read, ab_write));
                 config.output->play(silence, fs);
                 free(silence);
-#ifdef CONFIG_METADATA
                 if (ab_buffering == 0) {
-                  send_ssnc_metadata('prsm', NULL, 0,
-                                     0); // "resume", but don't wait if the queue is locked
-                }
+                  uint64_t reference_timestamp_time; // don't need this...
+                  get_reference_timestamp_stuff(&play_segment_reference_frame, &reference_timestamp_time, &play_segment_reference_frame_remote_time);
+#ifdef CONFIG_METADATA
+                  send_ssnc_metadata('prsm', NULL, 0, 0); // "resume", but don't wait if the queue is locked
 #endif
+                }
               }
             }
           }
@@ -629,8 +630,8 @@ static abuf_t *buffer_get_frame(void) {
     int do_wait = 1;
     if ((ab_synced) && (curframe) && (curframe->ready) && (curframe->timestamp)) {
       uint32_t reference_timestamp;
-      uint64_t reference_timestamp_time;
-      get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time);
+      uint64_t reference_timestamp_time,remote_reference_timestamp_time;
+      get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time, &remote_reference_timestamp_time);
       if (reference_timestamp) { // if we have a reference time
         uint32_t packet_timestamp = curframe->timestamp;
         int64_t delta = ((int64_t)packet_timestamp - (int64_t)reference_timestamp);
@@ -856,6 +857,7 @@ typedef struct stats { // statistics for running averages
 
 static void *player_thread_func(void *arg) {
 		session_corrections = 0;
+		play_segment_reference_frame = 0; // zero signals that we are not in a play segment
 	// check that there are enough buffers to accommodate the desired latency and the latency offset
 	
 	int maximum_latency = config.latency+config.audio_backend_latency_offset;
@@ -924,8 +926,8 @@ static void *player_thread_func(void *arg) {
           at_least_one_frame_seen = 1;
 
           uint32_t reference_timestamp;
-          uint64_t reference_timestamp_time;
-          get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time);
+          uint64_t reference_timestamp_time,remote_reference_timestamp_time;
+          get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time, &remote_reference_timestamp_time);
 
           int64_t rt, nt;
           rt = reference_timestamp;
@@ -1232,6 +1234,7 @@ void player_flush(uint32_t timestamp) {
   // if (timestamp!=0)
   flush_rtp_timestamp = timestamp; // flush all packets up to (and including?) this
   pthread_mutex_unlock(&flush_mutex);
+  play_segment_reference_frame = 0;
 #ifdef CONFIG_METADATA
   send_ssnc_metadata('pfls', NULL, 0, 1);
 #endif

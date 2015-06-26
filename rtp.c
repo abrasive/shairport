@@ -68,6 +68,7 @@ static pthread_t rtp_audio_thread, rtp_control_thread, rtp_timing_thread;
 
 static uint32_t reference_timestamp;
 static uint64_t reference_timestamp_time;
+static uint64_t remote_reference_timestamp_time;
 
 // debug variables
 static int request_sent;
@@ -199,12 +200,13 @@ static void *rtp_control_receiver(void *arg) {
           // after the one whose RTP is given. Weird.
         }
         pthread_mutex_lock(&reference_time_mutex);
+        remote_reference_timestamp_time = remote_time_of_sync;
         reference_timestamp_time = remote_time_of_sync - local_to_remote_time_difference;
         reference_timestamp = sync_rtp_timestamp;
         pthread_mutex_unlock(&reference_time_mutex);
         // debug(1,"New Reference timestamp and timestamp time...");
         // get estimated remote time now
-        remote_time_now = local_time_now + local_to_remote_time_difference;
+        // remote_time_now = local_time_now + local_to_remote_time_difference;
 
         // debug(1,"Sync Time is %lld us late (remote
         // times).",((remote_time_now-remote_time_of_sync)*1000000)>>32);
@@ -404,23 +406,40 @@ static void *rtp_timing_receiver(void *arg) {
         first_local_to_remote_time_difference = local_to_remote_time_difference;
         first_local_to_remote_time_difference_time = get_absolute_time_in_fp();
       }
+     
+     int64_t source_drift_usec;
+     if (play_segment_reference_frame!=0) {
+      uint32_t reference_timestamp;
+      uint64_t reference_timestamp_time,remote_reference_timestamp_time;
+      get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time, &remote_reference_timestamp_time);
+      uint64_t frame_difference = 0;
+      if (reference_timestamp>=play_segment_reference_frame)
+        frame_difference = (uint64_t)reference_timestamp-(uint64_t)play_segment_reference_frame;
+      else // rollover
+        frame_difference = (uint64_t)reference_timestamp+0x100000000-(uint64_t)play_segment_reference_frame;
+      uint64_t frame_time_difference_calculated = (((uint64_t)frame_difference<<32)/44100);
+      uint64_t frame_time_difference_specified = remote_reference_timestamp_time-play_segment_reference_frame_remote_time;
+      // debug(1,"%llu frames since play started, %llu usec calculated, %llu usec actual",frame_difference, (frame_time_difference_calculated*1000000)>>32, (frame_time_difference_specified*1000000)>>32);
+      if (frame_time_difference_specified>=frame_time_difference_calculated)
+        source_drift_usec = frame_time_difference_specified-frame_time_difference_calculated;
+      else
+        source_drift_usec = -(frame_time_difference_calculated-frame_time_difference_specified);
+     } else
+      source_drift_usec = 0;
+     source_drift_usec = (source_drift_usec*1000000)>>32; // turn it to microseconds
       
      uint64_t clock_drift;
      int64_t current_delay;
-//     if (config.output->delay) {
-//            current_delay = config.output->delay();
-//      }
+     if (config.output->delay) {
+            current_delay = config.output->delay();
+      }
       if (first_local_to_remote_time_difference>=local_to_remote_time_difference)  {
         clock_drift = ((first_local_to_remote_time_difference - local_to_remote_time_difference) * 1000000)>>32;
-//        debug(1, "-%llu\t%lld\t%lld", clock_drift,(session_corrections*1000000)/44100,current_delay);
-        debug(1, "-%llu\t%lld", clock_drift,(session_corrections*1000000)/44100);
-        //debug(1,"Clock drift is -%lld usec.",clock_drift);
+        debug(1, "-%llu\t%lld\t%lld\t%lld", clock_drift,(session_corrections*1000000)/44100,current_delay,source_drift_usec);
       }
       else {
         clock_drift = ((local_to_remote_time_difference - first_local_to_remote_time_difference) * 1000000) >>32;
-        //debug(1,"Clock drift is %lld usec.",clock_drift);
-//        debug(1, "%llu\t%lld\t%lld", clock_drift,(session_corrections*1000000)/44100,current_delay);
-        debug(1, "%llu\t%lld\t", clock_drift,(session_corrections*1000000)/44100);
+        debug(1, "%llu\t%lld\t%lld\t%lld", clock_drift,(session_corrections*1000000)/44100,current_delay,source_drift_usec);
       }
       
     } else {
@@ -581,10 +600,11 @@ void rtp_setup(SOCKADDR *remote, int cport, int tport, uint32_t active_remote, i
   request_sent = 0;
 }
 
-void get_reference_timestamp_stuff(uint32_t *timestamp, uint64_t *timestamp_time) {
+void get_reference_timestamp_stuff(uint32_t *timestamp, uint64_t *timestamp_time, uint64_t *remote_timestamp_time) {
   pthread_mutex_lock(&reference_time_mutex);
   *timestamp = reference_timestamp;
   *timestamp_time = reference_timestamp_time;
+  *remote_timestamp_time = remote_reference_timestamp_time;
   pthread_mutex_unlock(&reference_time_mutex);
 }
 
