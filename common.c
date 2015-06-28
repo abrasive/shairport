@@ -33,6 +33,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <popt.h>
+#include <sys/wait.h>
 
 #include <assert.h>
 #include "common.h"
