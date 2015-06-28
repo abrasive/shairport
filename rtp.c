@@ -309,6 +309,9 @@ static void *rtp_timing_receiver(void *arg) {
       processing_time;
   local_to_remote_time_jitters = 0;
   local_to_remote_time_jitters_count = 0;
+  uint64_t first_remote_time = 0;
+  uint64_t first_local_time = 0;
+  
   uint64_t first_local_to_remote_time_difference = 0;
   uint64_t first_local_to_remote_time_difference_time;
   uint64_t l2rtd = 0;
@@ -406,6 +409,27 @@ static void *rtp_timing_receiver(void *arg) {
         first_local_to_remote_time_difference = local_to_remote_time_difference;
         first_local_to_remote_time_difference_time = get_absolute_time_in_fp();
       }
+      
+      int64_t clock_drift, clock_drift_in_usec;
+      if (first_local_time==0) {
+        first_local_time = arrival_time;
+        first_remote_time = local_time_by_remote_clock;
+        uint64_t clock_drift = 0;
+      } else {
+        uint64_t local_time_change = arrival_time - first_local_time;
+        uint64_t remote_time_change = local_time_by_remote_clock - first_remote_time;
+        
+        if (local_time_change >= remote_time_change)
+          clock_drift = local_time_change - remote_time_change;
+        else
+          clock_drift = -(remote_time_change - local_time_change);
+      }
+      if (clock_drift>=0)
+        clock_drift_in_usec = (clock_drift * 1000000)>>32;
+      else
+        clock_drift_in_usec = -(((-clock_drift) * 1000000)>>32);
+      
+      
      
      int64_t source_drift_usec;
      if (play_segment_reference_frame!=0) {
@@ -428,19 +452,11 @@ static void *rtp_timing_receiver(void *arg) {
       source_drift_usec = 0;
      source_drift_usec = (source_drift_usec*1000000)>>32; // turn it to microseconds
       
-     uint64_t clock_drift;
-     int64_t current_delay;
+     int64_t current_delay = 0;
      if (config.output->delay) {
             current_delay = config.output->delay();
       }
-      if (first_local_to_remote_time_difference>=local_to_remote_time_difference)  {
-        clock_drift = ((first_local_to_remote_time_difference - local_to_remote_time_difference) * 1000000)>>32;
-        debug(1, "-%llu\t%lld\t%lld\t%lld", clock_drift,(session_corrections*1000000)/44100,current_delay,source_drift_usec);
-      }
-      else {
-        clock_drift = ((local_to_remote_time_difference - first_local_to_remote_time_difference) * 1000000) >>32;
-        debug(1, "%llu\t%lld\t%lld\t%lld", clock_drift,(session_corrections*1000000)/44100,current_delay,source_drift_usec);
-      }
+     debug(1, "%lld\t%lld\t%lld\t%lld", clock_drift_in_usec,(session_corrections*1000000)/44100,current_delay,source_drift_usec);
       
     } else {
       debug(1, "Timing port -- Unknown RTP packet of type 0x%02X length %d.", packet[1], nread);
