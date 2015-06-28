@@ -49,6 +49,8 @@ typedef struct {
 typedef struct time_ping_record {
   uint64_t local_to_remote_difference;
   uint64_t dispersion;
+  uint64_t local_time;
+  uint64_t remote_time;
 } time_ping_record;
 
 // only one RTP session can be active at a time.
@@ -373,11 +375,17 @@ static void *rtp_timing_receiver(void *arg) {
         time_pings[cc].dispersion = (time_pings[cc].dispersion * 133) /
                                     100; // make the dispersions 'age' by this rational factor
       }
+      // these are for diagnostics only -- not used
+      time_pings[0].local_time = arrival_time;
+      time_pings[0].remote_time = distant_transmit_time;
+      
       time_pings[0].local_to_remote_difference = local_time_by_remote_clock - arrival_time;
       time_pings[0].dispersion = return_time;
       if (time_ping_count < time_ping_history)
         time_ping_count++;
-
+      
+      uint64_t local_time_chosen = arrival_time;;
+      uint64_t remote_time_chosen = distant_transmit_time;
       // now pick the timestamp with the lowest dispersion
       uint64_t l2rtd = time_pings[0].local_to_remote_difference;
       uint64_t tld = time_pings[0].dispersion;
@@ -385,6 +393,8 @@ static void *rtp_timing_receiver(void *arg) {
         if (time_pings[cc].dispersion < tld) {
           l2rtd = time_pings[cc].local_to_remote_difference;
           tld = time_pings[cc].dispersion;
+          local_time_chosen = time_pings[cc].local_time;
+          remote_time_chosen = time_pings[cc].remote_time;
         }
       int64_t ji;
 
@@ -412,12 +422,12 @@ static void *rtp_timing_receiver(void *arg) {
       
       int64_t clock_drift, clock_drift_in_usec;
       if (first_local_time==0) {
-        first_local_time = arrival_time;
-        first_remote_time = local_time_by_remote_clock;
+        first_local_time = local_time_chosen;
+        first_remote_time = remote_time_chosen;
         uint64_t clock_drift = 0;
       } else {
-        uint64_t local_time_change = arrival_time - first_local_time;
-        uint64_t remote_time_change = local_time_by_remote_clock - first_remote_time;
+        uint64_t local_time_change = local_time_chosen - first_local_time;
+        uint64_t remote_time_change = remote_time_chosen - first_remote_time;
         
         if (local_time_change >= remote_time_change)
           clock_drift = local_time_change - remote_time_change;
