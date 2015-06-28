@@ -40,6 +40,8 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <poll.h>
+#include <sys/stat.h>
+
 
 #include "config.h"
 
