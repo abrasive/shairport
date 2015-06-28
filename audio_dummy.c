@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/time.h>
+#include "common.h"
 #include "audio.h"
 
 int Fs;
