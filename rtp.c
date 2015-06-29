@@ -429,10 +429,11 @@ static void *rtp_timing_receiver(void *arg) {
         uint64_t local_time_change = local_time_chosen - first_local_time;
         uint64_t remote_time_change = remote_time_chosen - first_remote_time;
         
-        if (local_time_change >= remote_time_change)
-          clock_drift = local_time_change - remote_time_change;
+
+        if (remote_time_change >= local_time_change)
+          clock_drift = remote_time_change - local_time_change;
         else
-          clock_drift = -(remote_time_change - local_time_change);
+          clock_drift = -(local_time_change - remote_time_change);
       }
       if (clock_drift>=0)
         clock_drift_in_usec = (clock_drift * 1000000)>>32;
