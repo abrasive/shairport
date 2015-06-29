@@ -467,7 +467,7 @@ static void *rtp_timing_receiver(void *arg) {
      if (config.output->delay) {
             current_delay = config.output->delay();
       }
-     debug(1, "%lld\t%lld\t%lld\t%lld", clock_drift_in_usec,(session_corrections*1000000)/44100,current_delay,source_drift_usec);
+     debug(1, "%lld\t%lld\t%lld\t%lld\t%u", clock_drift_in_usec,(session_corrections*1000000)/44100,current_delay,source_drift_usec,buffer_occupancy);
       
     } else {
       debug(1, "Timing port -- Unknown RTP packet of type 0x%02X length %d.", packet[1], nread);

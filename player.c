@@ -877,6 +877,7 @@ static void *player_thread_func(void *arg) {
   int32_t maximum_buffer_occupancy = 0;
 
   audio_information.valid = 0;
+  buffer_occupancy = 0;
 
   int play_samples;
   int64_t current_delay;
@@ -967,13 +968,13 @@ static void *player_thread_func(void *arg) {
             }
           }
 
-					uint32_t bo = seq_diff(ab_read, ab_write);
+					buffer_occupancy = seq_diff(ab_read, ab_write);
 
-					if (bo < minimum_buffer_occupancy)
-						minimum_buffer_occupancy = bo;
+					if (buffer_occupancy < minimum_buffer_occupancy)
+						minimum_buffer_occupancy = buffer_occupancy;
 
-					if (bo > maximum_buffer_occupancy)
-						maximum_buffer_occupancy = bo;
+					if (buffer_occupancy > maximum_buffer_occupancy)
+						maximum_buffer_occupancy = buffer_occupancy;
 
           if (config.output->delay) {
             current_delay = config.output->delay();

@@ -120,6 +120,7 @@ uint32_t uatoi(const char *nptr);
 shairport_cfg config;
 config_t config_file_stuff;
 
+uint32_t buffer_occupancy;
 int64_t session_corrections;
 uint32_t play_segment_reference_frame;
 uint64_t play_segment_reference_frame_remote_time;
