@@ -96,7 +96,7 @@ static int init(int argc, char **argv) {
   const char *str;
   int value;
   
-  uint32_t buffer_length_hardware = 22050;
+  uint32_t buffer_length_hardware = 6615; // default for alsa with a hardware mixer
 
   int hardware_mixer = 0;
 
@@ -123,7 +123,7 @@ static int init(int argc, char **argv) {
     if (config_lookup_int(config.cfg, "alsa.audio_backend_buffer_desired_length_hardware", &value)) {
       if ((value < 0) || (value > 66150))
         die("Invalid alsa audio backend buffer desired length (hardware) \"%d\". It should be between 0 and "
-            "66150, default is 22050",
+            "66150, default is 6615",
             value);
       else {
         buffer_length_hardware = value;
