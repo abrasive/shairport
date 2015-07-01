@@ -453,12 +453,14 @@ static void *rtp_timing_receiver(void *arg) {
       else // rollover
         frame_difference = (uint64_t)reference_timestamp+0x100000000-(uint64_t)play_segment_reference_frame;
       uint64_t frame_time_difference_calculated = (((uint64_t)frame_difference<<32)/44100);
-      uint64_t frame_time_difference_specified = remote_reference_timestamp_time-play_segment_reference_frame_remote_time;
-      // debug(1,"%llu frames since play started, %llu usec calculated, %llu usec actual",frame_difference, (frame_time_difference_calculated*1000000)>>32, (frame_time_difference_specified*1000000)>>32);
-      if (frame_time_difference_specified>=frame_time_difference_calculated)
-        source_drift_usec = frame_time_difference_specified-frame_time_difference_calculated;
+      uint64_t frame_time_difference_actual = remote_reference_timestamp_time-play_segment_reference_frame_remote_time; // this is all done by reference to the sources' system clock
+      // debug(1,"%llu frames since play started, %llu usec calculated, %llu usec actual",frame_difference, (frame_time_difference_calculated*1000000)>>32, (frame_time_difference_actual*1000000)>>32);
+      if (frame_time_difference_calculated>=frame_time_difference_actual) // i.e. if the time it should have taken to send the packets is greater than the actual time difference measured on the source clock
+        // then the source DAC's clock is running fast relative to the source system clock
+        source_drift_usec = frame_time_difference_calculated-frame_time_difference_actual;
       else
-        source_drift_usec = -(frame_time_difference_calculated-frame_time_difference_specified);
+        // otherwise the source DAC's clock is running slow relative to the source system clock
+        source_drift_usec = -(frame_time_difference_actual-frame_time_difference_calculated);
      } else
       source_drift_usec = 0;
      source_drift_usec = (source_drift_usec*1000000)>>32; // turn it to microseconds
