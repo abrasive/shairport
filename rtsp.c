@@ -1153,11 +1153,11 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
     }
     
     if ((paesiv==NULL) && (prsaaeskey==NULL)) {
-      debug(1,"Unencrypted session requested?");
+      //debug(1,"Unencrypted session requested?");
       conn->stream.encrypted = 0;
     } else {
       conn->stream.encrypted = 1;
-      debug(1,"Encrypted session requested");
+      //debug(1,"Encrypted session requested");
     }
     
     if (!pfmtp) {

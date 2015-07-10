@@ -462,14 +462,21 @@ static void *rtp_timing_receiver(void *arg) {
         // otherwise the source DAC's clock is running slow relative to the source system clock
         source_drift_usec = -(frame_time_difference_actual-frame_time_difference_calculated);
      } else
-      source_drift_usec = 0;
+       source_drift_usec = 0;
      source_drift_usec = (source_drift_usec*1000000)>>32; // turn it to microseconds
       
      int64_t current_delay = 0;
      if (config.output->delay) {
             current_delay = config.output->delay();
-      }
-     debug(1, "%lld\t%lld\t%lld\t%lld\t%u\t%llu", clock_drift_in_usec,(session_corrections*1000000)/44100,current_delay,source_drift_usec,buffer_occupancy,(return_time*1000000)>>32);
+     }
+     //  Useful for troubleshooting:
+     //    clock_drift between source and local clock -- +ve means source is faster
+     //    session_corrections -- the amount of correction done, in microseconds. +ve means frames added
+     //    current_delay = delay in DAC buffer in frames
+     //    source_drift_usec = how much faster (+ve) or slower the source DAC is running relative to the source clock
+     //    buffer_occupancy = the number of buffers occupied. Crude, but should show no long term trend if source and device are in sync.
+     //    return_time = the time from soliciting a timing packet to getting it back. It should be short ( < 5 ms) and pretty consistent.
+     // debug(1, "%lld\t%lld\t%lld\t%lld\t%u\t%llu", clock_drift_in_usec,(session_corrections*1000000)/44100,current_delay,source_drift_usec,buffer_occupancy,(return_time*1000000)>>32);
       
     } else {
       debug(1, "Timing port -- Unknown RTP packet of type 0x%02X length %d.", packet[1], nread);
