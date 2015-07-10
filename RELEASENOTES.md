@@ -2,11 +2,9 @@ Version 2.3.7
 ----
 * Changes
   * Removed the two different buffer lengths for the alsa back end that made a brief appearance in 2.3.5.
-
 * Enhancements
  * Command line arguments are now given precedence over config file settings. This conforms to standard unix practice.
  * A `–without-pkg-config` configuration argument now allows for build systems, e.g. for older OpenWrt builds, that haven't fully implemented it. There is still some unhappiness in arch linux builds.
-
 * More
  *  Quite a bit of extra diagnostic code was written to investigate clock drift, DAC timings and so on. It was useful but has been commented out. If might be useful in the future.
 
