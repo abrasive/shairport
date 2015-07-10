@@ -229,7 +229,8 @@ void usage(char *progname) {
 
 int parse_options(int argc, char **argv) {
   char *stuffing = NULL; /* used for picking up the stuffing option */
-
+  
+  
   signed char c;      /* used for argument parsing */
   int i = 0;          /* used for tracking options */
   poptContext optCon; /* context for parsing command-line options */
@@ -269,7 +270,9 @@ int parse_options(int argc, char **argv) {
 #endif
       {NULL, 0, 0, NULL, 0}};
 
-  int optind = argc;
+// we have to parse the command line arguments to look for a config file
+  int optind;
+  optind = argc;
   int j;
   for (j = 0; j < argc; j++)
     if (strcmp(argv[j], "--") == 0)
@@ -277,50 +280,6 @@ int parse_options(int argc, char **argv) {
 
   optCon = poptGetContext(NULL, optind, (const char **)argv, optionsTable, 0);
   poptSetOtherOptionHelp(optCon, "[OPTIONS]* ");
-
-  /* Now do options processing, get portname */
-
-  while ((c = poptGetNextOpt(optCon)) >= 0) {
-    switch (c) {
-    case 'v':
-      debuglev++;
-      break;
-    case 't':
-      if (config.timeout == 0) {
-        config.dont_check_timeout = 1;
-        config.allow_session_interruption = 1;
-      } else {
-        config.dont_check_timeout = 0;
-        config.allow_session_interruption = 0;
-      }
-      break;
-#ifdef CONFIG_METADATA
-    case 'M':
-      config.metadata_enabled = 1;
-      break;
-    case 'g':
-      if (config.metadata_enabled == 0)
-        die("If you want to get cover art, you must also select the --metadata-pipename option.");
-      break;
-#endif
-    case 'S':
-      if (strcmp(stuffing, "basic") == 0)
-        config.packet_stuffing = ST_basic;
-      else if (strcmp(stuffing, "soxr") == 0)
-#ifdef HAVE_LIBSOXR
-        config.packet_stuffing = ST_soxr;
-#else
-        die("soxr option not available -- this version of shairport-sync was built without libsoxr "
-            "support");
-#endif
-      else
-        die("Illegal stuffing option \"%s\" -- must be \"basic\" or \"soxr\"", stuffing);
-      break;
-    }
-  }
-  if (c < -1) {
-    die("%s: %s", poptBadOption(optCon, POPT_BADOPTION_NOALIAS), poptStrerror(c));
-  }
 
 #ifdef SUPPORT_CONFIG_FILES
   config_setting_t *setting;
@@ -519,6 +478,63 @@ int parse_options(int argc, char **argv) {
   }
 
 #endif
+
+// now, do the command line options again, but this time do them fully -- it's a unix convention that command line
+// arguments have precedence over configuration file settings.
+
+  optind = argc;
+  for (j = 0; j < argc; j++)
+    if (strcmp(argv[j], "--") == 0)
+      optind = j;
+
+  optCon = poptGetContext(NULL, optind, (const char **)argv, optionsTable, 0);
+  poptSetOtherOptionHelp(optCon, "[OPTIONS]* ");
+
+  /* Now do options processing, get portname */
+  int tdebuglev = 0;
+  while ((c = poptGetNextOpt(optCon)) >= 0) {
+    switch (c) {
+    case 'v':
+      tdebuglev++;
+      break;
+    case 't':
+      if (config.timeout == 0) {
+        config.dont_check_timeout = 1;
+        config.allow_session_interruption = 1;
+      } else {
+        config.dont_check_timeout = 0;
+        config.allow_session_interruption = 0;
+      }
+      break;
+#ifdef CONFIG_METADATA
+    case 'M':
+      config.metadata_enabled = 1;
+      break;
+    case 'g':
+      if (config.metadata_enabled == 0)
+        die("If you want to get cover art, you must also select the --metadata-pipename option.");
+      break;
+#endif
+    case 'S':
+      if (strcmp(stuffing, "basic") == 0)
+        config.packet_stuffing = ST_basic;
+      else if (strcmp(stuffing, "soxr") == 0)
+#ifdef HAVE_LIBSOXR
+        config.packet_stuffing = ST_soxr;
+#else
+        die("soxr option not available -- this version of shairport-sync was built without libsoxr "
+            "support");
+#endif
+      else
+        die("Illegal stuffing option \"%s\" -- must be \"basic\" or \"soxr\"", stuffing);
+      break;
+    }
+  }
+  if (c < -1) {
+    die("%s: %s", poptBadOption(optCon, POPT_BADOPTION_NOALIAS), poptStrerror(c));
+  }
+  if (tdebuglev!=0)
+    debuglev = tdebuglev;
   return optind + 1;
 }
 
