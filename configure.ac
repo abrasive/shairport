@@ -62,6 +62,10 @@ AC_ARG_WITH([initscript],
 [  --with-initscript = include a startup script], ,[with_initscript=1])
 AM_CONDITIONAL([INSTALL_INITSCRIPT], [test "x$with_initscript" = "x1"])
 
+AC_ARG_WITH([systemd],
+[  --with-systemd = include a systemd service], ,[with_systemd=1])
+AM_CONDITIONAL([INSTALL_SYSTEMD], [test "x$with_systemd" = "x1"])
+
 # Check if we want to support reading arguments from the command line     
 AC_ARG_WITH([command_line_argument_support],
 [  --with-command-line-argument-support = read configuration from command line arguments], ,[with_command_line_argument_support=1])
