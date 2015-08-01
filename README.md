@@ -98,9 +98,9 @@ Choose the appropriate `--with-*` options:
 
 Here is an example, suitable for most installations:
 
-`$ ./configure --with-alsa --with-avahi --with-ssl=openssl --with-metadata --with-soxr`
+`$ ./configure --with-alsa --with-avahi --with-ssl=openssl --with-metadata --with-systemv --with-soxr`
 
-Omit the `--with-soxr` if the libsoxr library is not available.
+Omit the `--with-soxr` if the libsoxr library is not available. For installation into a `systemd` system, replace the `--with-systemv` with `--with-systemd`.
 
 `$ make` 
 

@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.50])
-AC_INIT([shairport-sync], [2.3.7], [mikebrady@eircom.net])
+AC_INIT([shairport-sync], [2.3.8], [mikebrady@eircom.net])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([shairport.c])
 AC_CONFIG_HEADERS([config.h])
@@ -32,14 +32,14 @@ fi
 ##### to control how to deal with them
 
 AC_ARG_WITH([pkg_config],
-[  --with-pkg-config = use pkg-config to find libraries], ,[with_pkg_config=1])
+[  --with-pkg-config = use pkg-config to find libraries], ,[with_pkg_config=yes])
 
 AC_CHECK_LIB([daemon],[daemon_log], , AC_MSG_ERROR(libdaemon needed))
 AC_CHECK_LIB([pthread],[pthread_create], , AC_MSG_ERROR(pthread library needed))
 AC_CHECK_LIB([m],[exp], , AC_MSG_ERROR(maths library needed))
 
 AC_MSG_RESULT(>>Including libpopt)
-if  test "x${with_pkg_config}" = x1 ; then
+if  test "x${with_pkg_config}" = xyes ; then
   PKG_CHECK_MODULES(
       [POPT], [popt],
       [LIBS="${POPT_LIBS} ${LIBS}"
@@ -50,54 +50,41 @@ else
 fi
 
 AC_ARG_WITH([dummy],[  --with-dummy = include the dummy audio back end ],[AC_MSG_RESULT(>>Including the dummy audio back end) AC_DEFINE([CONFIG_DUMMY], 1, [Needed by the compiler.]) ], )
-AM_CONDITIONAL([USE_DUMMY], [test "x$with_dummy" = "x1" ])
+AM_CONDITIONAL([USE_DUMMY], [test "x$with_dummy" = "xyes" ])
 
 AC_ARG_WITH([stdout],[  --with-stdout = include the stdout audio back end ],[ AC_MSG_RESULT(>>Including the stdout audio back end)  AC_DEFINE([CONFIG_STDOUT], 1, [Needed by the compiler.]) ], )
-AM_CONDITIONAL([USE_STDOUT], [test "x$with_stdout" = "x1" ])
+
+AM_CONDITIONAL([USE_STDOUT], [test "x$with_stdout" = "xyes" ])
 
 AC_ARG_WITH([pipe],[  --with-pipe = include the pipe audio back end ],[ AC_MSG_RESULT(>>Including the pipe audio back end)  AC_DEFINE([CONFIG_PIPE], 1, [Needed by the compiler.]) ], )
-AM_CONDITIONAL([USE_PIPE], [test "x$with_pipe" = "x1" ])
+AM_CONDITIONAL([USE_PIPE], [test "x$with_pipe" = "xyes" ])
 
-AC_ARG_WITH([initscript],
-[  --with-initscript = include a startup script], ,[with_initscript=1])
-AM_CONDITIONAL([INSTALL_INITSCRIPT], [test "x$with_initscript" = "x1"])
+# Check to see if we should include the System V initscript
+
+AC_ARG_WITH([systemv],
+[  --with-systemv = include a startup script], , )
+AM_CONDITIONAL([INSTALL_SYSTEMV], [test "x$with_systemv" = "xyes"])
+
+# Check to see if we should include the systemd stuff to define it as a service
 
 AC_ARG_WITH([systemd],
-[  --with-systemd = include a systemd service], ,[with_systemd=1])
-AM_CONDITIONAL([INSTALL_SYSTEMD], [test "x$with_systemd" = "x1"])
+[  --with-systemd = include a systemd service], , )
+AM_CONDITIONAL([INSTALL_SYSTEMD], [test "x$with_systemd" = "xyes"])
 
-# Check if we want to support reading arguments from the command line     
-AC_ARG_WITH([command_line_argument_support],
-[  --with-command-line-argument-support = read configuration from command line arguments], ,[with_command_line_argument_support=1])
-
-if test "x${with_command_line_argument_support}" = x1 ; then
-  AC_MSG_RESULT(>>Including command line argument support)
-  AC_DEFINE([COMMAND_LINE_ARGUMENT_SUPPORT],[1],[Define to 1 if you want to support command line arguments])
-fi    
-
-# Check if we want to support reading from a configuration file chosen -- i.e. take parameters from /etc/shairport-sync.conf     
-AC_ARG_WITH([configfile_support],
-[  --with-configfile-support = support reading of configuration from a configuration file], ,[with_configfile_support=1])
-
-if test "x${with_configfile_support}" = x1 ; then
-  AC_MSG_RESULT(>>Including configuration file support)
-  if  test "x${with_pkg_config}" = x1 ; then
-    PKG_CHECK_MODULES(
-        [LIBCONFIG], [libconfig],
-        [LIBS="${LIBCONFIG_LIBS} ${LIBS}"])
-  else
-    AC_CHECK_LIB([config],[config_init], , AC_MSG_ERROR([libconfig library needed]))
-  fi
-  AC_DEFINE([SUPPORT_CONFIG_FILES],[1],[Define to 1 if you want to support configuration files])
+# Add the libconfig package
+if  test "x${with_pkg_config}" = xyes ; then
+  PKG_CHECK_MODULES(
+      [LIBCONFIG], [libconfig],
+      [LIBS="${LIBCONFIG_LIBS} ${LIBS}"])
+else
+  AC_CHECK_LIB([config],[config_init], , AC_MSG_ERROR([libconfig library needed]))
 fi
 
 AC_ARG_WITH([configfiles],
-[  --with-configfiles = include configuration files in installation ], ,[with_configfiles=1])
-AM_CONDITIONAL([INSTALL_CONFIG_FILES], [test "x$with_configfiles" = "x1" -a  "x$with_configfile_support" = "x1" ])
+[  --with-configfiles = include configuration files in installation ], ,[with_configfiles=yes])
+AM_CONDITIONAL([INSTALL_CONFIG_FILES], [test "x$with_configfiles" = "xyes"])
 
    
-# Check to see if we should include the initscript
-
 # Look for piddir flag
 AC_ARG_WITH(piddir, [ --with-piddir=<pathname> Specify a pathname to a directory in which to write the PID file.], [
 	AC_MSG_CHECKING(--with-piddir argument)
@@ -146,9 +133,8 @@ AC_ARG_WITH(soxr, [  --with-soxr = choose libsoxr for high-quality interpolation
 # Look for metadata flag -- set flag for conditional compilation
 AC_ARG_WITH(metadata, [  --with-metadata = include support for a metadata feed], [
   AC_MSG_RESULT(>>Including metadata support)
-  HAS_METADATA=1
   AC_DEFINE([CONFIG_METADATA], 1, [Needed by the compiler.])], )
-AM_CONDITIONAL([USE_METADATA], [test "x$HAS_METADATA" = "x1"])
+AM_CONDITIONAL([USE_METADATA], [test "x$with_metadata" = "xyes"])
 
 # What follows is a bit messy, because if the relevant library is requested, a compiler flag is defined, a file is included in the compilation
 # and the relevant link files are added.
