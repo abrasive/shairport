@@ -1,19 +1,19 @@
 Version 2.3.8
 ----
 * Pesky changes you must make
- * You must change the `./configure` arguments. The flag `with-initscript` has changed to `with-systemv`. It was previously enabled by default; now you must enable it explicitly.
+ * You probably need to change your `./configure` arguments. The flag `with-initscript` has changed to `with-systemv`. It was previously enabled by default; now you must enable it explicitly.
 
 * Changes
- * Support for installing into `systemd` and Fedora systems. For `systemd` support, use the configuration flag `--with-systemd` in place of `--with-systemv`.
+ * Support for installing into `systemd` and Fedora systems. For `systemd` support, use the configuration flag `--with-systemd` in place of `--with-systemv`. (Arch Linux users should continue to use the package provided by Elia Cereda.)
  * Renamed `with-initscript` configuration flag to `with-systemv` to better describe its role.
  * System V startup script is no longer enabled by default; if you want it, ask for it with the `--with-systemv` configuration flag.
  * Added limited support for FreeBSD. You must specify `LDFLAGS='-I/usr/local/lib'` and `CPPFLAGS='-L/usr/local/include'` before running `./configure --with-foo etc.`
- * Removed "-configfile" annotation from the version string because it'n no longer optional; it's always there.
- * Removed the `dummy`, `pipe` and `stdout` backends from the standard build -- they are now optional and are no longer automatically included in the build.
+ * Removed the `-configfile` annotation from the version string because it's no longer optional; it's always there.
+ * Removed the `dummy`, `pipe` and `stdout` backends from the standard build – they are now optional and are no longer automatically included in the build.
 
 * Bug fixes
- * Allow more stack space to prevent a segfault in certain configurations. Thanks @joerg-krause.
- * Add missing header files. Thanks @joerg-krause.
+ * Allow more stack space to prevent a segfault in certain configurations (thanks to https://github.com/joerg-krause).
+ * Add missing header files(thanks to https://github.com/joerg-krause).
  * Removed some (hopefully) mostly silent bugs from the configure.ac file.
  
 Version 2.3.7
