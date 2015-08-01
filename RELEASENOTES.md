@@ -6,7 +6,7 @@ Version 2.3.8
 * Changes
  * Support for installing into `systemd` and Fedora systems. For `systemd` support, use the configuration flag `--with-systemd` in place of `--with-systemv`.
  * Renamed `with-initscript` configuration flag to `with-systemv` to better describe its role.
- * System V startup script is no longer enabled by default; if you want is, ask for it with the `--with-systemv` configuration flag.
+ * System V startup script is no longer enabled by default; if you want it, ask for it with the `--with-systemv` configuration flag.
  * Added limited support for FreeBSD. You must specify `LDFLAGS='-I/usr/local/lib'` and `CPPFLAGS='-L/usr/local/include'` before running `./configure --with-foo etc.`
  * Removed "-configfile" annotation from the version string because it'n no longer optional; it's always there.
  * Removed the `dummy`, `pipe` and `stdout` backends from the standard build -- they are now optional and are no longer automatically included in the build.
