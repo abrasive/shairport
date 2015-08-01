@@ -663,7 +663,7 @@ static abuf_t *buffer_get_frame(void) {
       time_to_wait_for_wakeup_fp *= 4 * 352; // four full 352-frame packets
       time_to_wait_for_wakeup_fp /= 3; // four thirds of a packet time
 
-#ifdef COMPILE_FOR_LINUX
+#ifdef COMPILE_FOR_LINUX_AND_FREEBSD
       uint64_t time_of_wakeup_fp = local_time_now + time_to_wait_for_wakeup_fp;
       uint64_t sec = time_of_wakeup_fp >> 32;
       uint64_t nsec = ((time_of_wakeup_fp & 0xffffffff) * 1000000000) >> 32;
@@ -1268,7 +1268,7 @@ int player_play(stream_cfg *stream) {
 #endif
 
 // set the flowcontrol condition variable to wait on a monotonic clock
-#ifdef COMPILE_FOR_LINUX
+#ifdef COMPILE_FOR_LINUX_AND_FREEBSD
   pthread_condattr_t attr;
   pthread_condattr_init(&attr);
   pthread_condattr_setclock(&attr, CLOCK_MONOTONIC); // can't do this in OS X, and don't need it.
@@ -1280,7 +1280,7 @@ int player_play(stream_cfg *stream) {
   if (rc)
     debug(1, "Error initialising condition variable.");
   config.output->start(sampling_rate);
-  size_t size = (PTHREAD_STACK_MIN + 128 * 1024);
+  size_t size = (PTHREAD_STACK_MIN + 256 * 1024);
   pthread_attr_t tattr;
   pthread_attr_init(&tattr);
   rc = pthread_attr_setstacksize(&tattr, size);
