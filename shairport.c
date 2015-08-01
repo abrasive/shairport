@@ -62,9 +62,7 @@
 
 static int shutting_down = 0;
 static char *appName = NULL;
-#ifdef SUPPORT_CONFIG_FILES
-  char configuration_file_path[4096];
-#endif
+char configuration_file_path[4096];
 
 void shairport_shutdown() {
   if (shutting_down)
@@ -150,9 +148,6 @@ void print_version(void) {
 #ifdef CONFIG_METADATA
   strcat(version_string, "-metadata");
 #endif
-#ifdef SUPPORT_CONFIG_FILES
-  strcat(version_string, "-configfile");
-#endif
   printf("%s\n", version_string);
 }
 
@@ -170,7 +165,6 @@ void usage(char *progname) {
   printf("    -c, --configfile=FILE   read configuration settings from FILE. Default is "
          "/etc/shairport-sync.conf.\n");
 
-#ifdef COMMAND_LINE_ARGUMENT_SUPPORT
   printf("    -v, --verbose           -v print debug information; -vv more; -vvv lots\n");
   printf("    -p, --port=PORT         set RTSP listening port\n");
   printf("    -a, --name=NAME         set advertised name\n");
@@ -217,10 +211,7 @@ void usage(char *progname) {
          "--metadata-pipename=/tmp/shairport-sync-metadata.\n");
   printf("    --get-coverart          send cover art through the metadata pipe.\n");
 #endif
-#endif
-#ifdef SUPPORT_CONFIG_FILES
   printf("\nGeneral options can be configured in /etc/%s.conf.\n", appName);
-#endif
   printf("\n");
   mdns_ls_backends();
   printf("\n");
@@ -240,10 +231,7 @@ int parse_options(int argc, char **argv) {
       {"reconnectToOutput", 'R', POPT_ARG_NONE, NULL, 0, NULL},
       {"kill", 'k', POPT_ARG_NONE, NULL, 0, NULL},
       {"daemon", 'd', POPT_ARG_NONE, &config.daemonise, 0, NULL},
-#ifdef SUPPORT_CONFIG_FILES
       {"configfile", 'c', POPT_ARG_STRING, &config.configfile, 0, NULL},
-#endif
-#ifdef COMMAND_LINE_ARGUMENT_SUPPORT
       {"statistics", 0, POPT_ARG_NONE, &config.statistics_requested, 0, NULL},
       {"version", 'V', POPT_ARG_NONE, NULL, 0, NULL},
       {"port", 'p', POPT_ARG_INT, &config.port, 0, NULL},
@@ -267,7 +255,6 @@ int parse_options(int argc, char **argv) {
       {"get-coverart", 'g', POPT_ARG_NONE, &config.get_coverart, 'g', NULL},
 #endif
       POPT_AUTOHELP
-#endif
       {NULL, 0, 0, NULL, 0}};
 
 // we have to parse the command line arguments to look for a config file
@@ -281,7 +268,6 @@ int parse_options(int argc, char **argv) {
   optCon = poptGetContext(NULL, optind, (const char **)argv, optionsTable, 0);
   poptSetOtherOptionHelp(optCon, "[OPTIONS]* ");
 
-#ifdef SUPPORT_CONFIG_FILES
   config_setting_t *setting;
   const char *str;
   int value;
@@ -477,8 +463,6 @@ int parse_options(int argc, char **argv) {
     }
   }
 
-#endif
-
 // now, do the command line options again, but this time do them fully -- it's a unix convention that command line
 // arguments have precedence over configuration file settings.
 
@@ -600,10 +584,8 @@ const char *pid_file_proc(void) {
 #endif
 
 void exit_function() {
-#ifdef SUPPORT_CONFIG_FILES
   if (config.cfg)
     config_destroy(config.cfg);
-#endif
 }
 
 int main(int argc, char **argv) {
@@ -619,12 +601,10 @@ int main(int argc, char **argv) {
   free(basec);
 
   // set defaults
-#ifdef SUPPORT_CONFIG_FILES
   strcpy(configuration_file_path, "/etc/");
   strcat(configuration_file_path, appName);
   strcat(configuration_file_path, ".conf");
   config.configfile = configuration_file_path;
-#endif 
 
   config.statistics_requested - 0; // don't print stats in the log
   config.latency = 88200;          // AirPlay. Is also reset in rtsp.c when play is about to start
@@ -840,9 +820,7 @@ int main(int argc, char **argv) {
   debug(2, "audio backend desired buffer length is %d.",
         config.audio_backend_buffer_desired_length);
   debug(2, "audio backend latency offset is %d.", config.audio_backend_latency_offset);
-#ifdef SUPPORT_CONFIG_FILES
   debug(2, "Configuration file name \"%s\".", config.configfile);
-#endif
 #ifdef CONFIG_METADATA
   debug(2, "metdata enabled is %d.", config.metadata_enabled);
   debug(2, "metadata pipename is \"%s\".", config.metadata_pipename);
