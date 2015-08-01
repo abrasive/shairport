@@ -41,7 +41,15 @@ extern audio_output audio_pulse;
 #ifdef CONFIG_ALSA
 extern audio_output audio_alsa;
 #endif
-extern audio_output audio_dummy, audio_pipe, audio_stdout;
+#ifdef CONFIG_DUMMY
+extern audio_output audio_dummy;
+#endif
+#ifdef CONFIG_PIPE
+extern audio_output audio_pipe;
+#endif
+#ifdef CONFIG_STDOUT
+extern audio_output audio_stdout;
+#endif
 
 static audio_output *outputs[] = {
 #ifdef CONFIG_SNDIO
@@ -56,7 +64,16 @@ static audio_output *outputs[] = {
 #ifdef CONFIG_AO
     &audio_ao,
 #endif
-    &audio_dummy, &audio_pipe, &audio_stdout, NULL};
+#ifdef CONFIG_DUMMY
+    &audio_dummy,
+#endif
+#ifdef CONFIG_PIPE 
+    &audio_pipe,
+#endif
+#ifdef CONFIG_STDOUT
+    &audio_stdout,
+#endif
+    NULL};
 
 audio_output *audio_get_output(char *name) {
   audio_output **out;
