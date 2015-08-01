@@ -11,7 +11,7 @@ AC_CONFIG_HEADERS([config.h])
 #
 # Specifying the OS type, defaulting to linux.
 #
-AC_ARG_WITH(os_type, AS_HELP_STRING([--with-os-type=OSType],[Specify the distribution to target: One of linux darwin]))
+AC_ARG_WITH(os_type, AS_HELP_STRING([--with-os-type=OSType],[Specify the distribution to target: One of linux freebsd or darwin]))
 if test "z$with_os_type" = "z"; then
   with_os_type="linux"
 fi
@@ -24,7 +24,7 @@ AC_PROG_INSTALL
 PKG_PROG_PKG_CONFIG([0.9.0])
 
 # Checks for libraries.
-if test "x${with_os_type}" = xlinux; then
+if test "x${with_os_type}" = xlinux -o "x${with_os_type}" = xfreebsd ; then
  AC_CHECK_LIB([rt],[clock_gettime], , AC_MSG_ERROR(librt needed))
 fi
 
