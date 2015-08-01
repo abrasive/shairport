@@ -18,9 +18,9 @@
 #endif
 #endif
 
-#if defined(__linux__)
-/* Linux. --------------------------------------------------- */
-#define COMPILE_FOR_LINUX 1
+#if defined(__linux__) || defined(__FreeBSD__)
+/* Linux and FreeBSD */
+#define COMPILE_FOR_LINUX_AND_FREEBSD 1
 #endif
 
 // struct sockaddr_in6 is bigger than struct sockaddr. derp
@@ -77,9 +77,7 @@ typedef struct {
   char *pidfile;
   char *logfile;
   char *errfile;
-#ifdef SUPPORT_CONFIG_FILES
   char *configfile;
-#endif
   uint32_t audio_backend_buffer_desired_length; // this will be the desired number of frames in the
                                             // audio backend buffer -- the DAC buffer for ALSA
   uint32_t audio_backend_latency_offset; // this will be the offset to compensate for any fixed latency
