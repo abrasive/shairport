@@ -1,3 +1,9 @@
+Version 2.2.5
+-----
+* Bugfixes
+ * Fix a segfault error that can occur in certain cases (thanks again to https://github.com/joerg-krause).
+ * Include header files in common.c (thanks again to https://github.com/joerg-krause).
+
 Version 2.2.4
 -----
 * Bugfixes
