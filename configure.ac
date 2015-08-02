@@ -62,13 +62,13 @@ AM_CONDITIONAL([USE_PIPE], [test "x$with_pipe" = "xyes" ])
 # Check to see if we should include the System V initscript
 
 AC_ARG_WITH([systemv],
-[  --with-systemv = include a startup script], , )
+[  --with-systemv = install a System V startup script during a make install], , )
 AM_CONDITIONAL([INSTALL_SYSTEMV], [test "x$with_systemv" = "xyes"])
 
 # Check to see if we should include the systemd stuff to define it as a service
 
 AC_ARG_WITH([systemd],
-[  --with-systemd = include a systemd service], , )
+[  --with-systemd = install a systemd service description file during a make install], , )
 AM_CONDITIONAL([INSTALL_SYSTEMD], [test "x$with_systemd" = "xyes"])
 
 # Add the libconfig package
@@ -81,7 +81,7 @@ else
 fi
 
 AC_ARG_WITH([configfiles],
-[  --with-configfiles = include configuration files in installation ], ,[with_configfiles=yes])
+[  --with-configfiles = install configuration files during a make install ], ,[with_configfiles=yes])
 AM_CONDITIONAL([INSTALL_CONFIG_FILES], [test "x$with_configfiles" = "xyes"])
 
    
