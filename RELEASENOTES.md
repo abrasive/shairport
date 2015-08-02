@@ -4,9 +4,9 @@ Version 2.3.8
  * You probably need to change your `./configure` arguments. The flag `with-initscript` has changed to `with-systemv`. It was previously enabled by default; now you must enable it explicitly.
 
 * Changes
- * Support for installing into `systemd` and Fedora systems. For `systemd` support, use the configuration flag `--with-systemd` in place of `--with-systemv`. (Arch Linux users should continue to use the package provided by Elia Cereda.)
- * Renamed `with-initscript` configuration flag to `with-systemv` to better describe its role.
- * System V startup script is no longer enabled by default; if you want it, ask for it with the `--with-systemv` configuration flag.
+ * Added limited support for installing into `systemd` and Fedora systems. For `systemd` support, use the configuration flag `--with-systemd` in place of `--with-systemv`. The installation does not do everything needed, such as defining special users and groups.
+ * Renamed `with-initscript` configuration flag to `with-systemv` to describe its role more accurately.
+ * A System V startup script is no longer installed by default; if you want it, ask for it with the `--with-systemv` configuration flag.
  * Added limited support for FreeBSD. You must specify `LDFLAGS='-I/usr/local/lib'` and `CPPFLAGS='-L/usr/local/include'` before running `./configure --with-foo etc.`
  * Removed the `-configfile` annotation from the version string because it's no longer optional; it's always there.
  * Removed the `dummy`, `pipe` and `stdout` backends from the standard build – they are now optional and are no longer automatically included in the build.
