@@ -1,6 +1,6 @@
 Version 2.3.8
 ----
-* Pesky changes you must make
+* Annoying changes you must make
  * You probably need to change your `./configure` arguments. The flag `with-initscript` has changed to `with-systemv`. It was previously enabled by default; now you must enable it explicitly.
 
 * Changes
