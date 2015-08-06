@@ -922,30 +922,6 @@ static void metadata_close(void) {
   fd = -1;
 }
 
-ssize_t non_blocking_write(int fd, const void *buf, size_t count) {
-  // debug(1,"writing %u to pipe...",count);
-  // we are assuming that the count is always smaller than the FIFO's buffer
-  struct pollfd ufds[1];
-  ssize_t reply;
-  do {
-    ufds[0].fd = fd;
-    ufds[0].events = POLLOUT;
-    int rv = poll(ufds, 1, 5000);
-    if (rv == -1)
-      debug(1, "error waiting for pipe to unblock...");
-    if (rv == 0)
-      debug(1, "timeout waiting for pipe to unblock");
-    reply = write(fd, buf, count);
-    if ((reply == -1) && ((errno == EAGAIN) || (errno == EWOULDBLOCK)))
-      debug(1, "writing to pipe will block...");
-    //    else
-    //      debug(1,"writing %u to pipe done...",reply);
-  } while ((reply == -1) && ((errno == EAGAIN) || (errno == EWOULDBLOCK)));
-  return reply;
-
-  //  return write(fd,buf,count);
-}
-
 void metadata_process(uint32_t type, uint32_t code, char *data, uint32_t length) {
   debug(2, "Process metadata with type %x, code %x and length %u.", type, code, length);
   int ret;
