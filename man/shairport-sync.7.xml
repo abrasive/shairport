@@ -39,6 +39,7 @@
       <opt>[-a </opt><arg>name</arg><opt>]</opt>
       <opt>[-A </opt><arg>latency</arg><opt>]</opt>
       <opt>[-B </opt><arg>command</arg><opt>]</opt>
+      <opt>[-c </opt><arg>configurationfile</arg><opt>]</opt>
       <opt>[-E </opt><arg>command</arg><opt>]</opt>
       <opt>[--forkedDaapdLatency=</opt><arg>latency</arg><opt>]</opt>
       <opt>[--get-cover-art]</opt>
@@ -74,8 +75,210 @@
     This allows multiple devices play the same source without getting out of phase with one another,
     enabling, for example, simultaneous multi-room operation.
     </p>
-
+    
+    <p>Settings can be made using the configuration file (recommended for all new installations) or the by using command-line options.</p>
+ 
 	</description>
+	
+	<section name="Configuration File Settings">
+	   <p>You should use the configuration file for setting up shairport-sync.
+	  This file is normally <file>/etc/shairport-sync.conf</file>.
+	  You may need to have root privileges to modify it.</p>
+	  
+	  <p>Settings are organised into <i>groups</i>, for example, there is a "general" group of
+	  standard settings, and there is an "alsa" group with settings that pertain to the ALSA
+	  back end.</p>	
+	  
+	  <p>Most of the settings have sensible default values, so most users will only need to set (1) the service name, (2) a password (if desired) and
+	  (3) the output device. If the output device has a hardware mixer that can be used for volume control, then (4) the fact that the output mixer is hardware and (5) the output device mixer's volume-control name should be specificed. It is highly desirable to use the hardware mixer for volume control, if available -- response time is reduced to zero and the processor load is reduced.</p>	
+	  
+	  <p>A sample configuration file, with all settings commented out and with some usage notes,
+	  is installed at <file>/etc/shairport-sync.conf.sample</file>.</p>
+	  
+	  <p>To retain backwards compatability with previous versions of shairport-sync
+	  you can use still use command line options, but any new features, etc. will
+	  be available only via configuration file settings.</p>
+
+	  <p>The configuration file is processed using the <file>libconfig</file> library
+	  -- see <url href="http://www.hyperrealm.com/libconfig/libconfig_manual.html"/>.</p>
+
+    <option><p><opt>"GENERAL" SETTINGS</opt></p></option>
+    These are the settings available within the <opt>general</opt> group:
+
+    <option>
+		<p><opt>name=</opt><arg>"service_name"</arg><opt>;</opt></p>
+		<optdesc><p>
+		Use this <arg>service_name</arg> to identify this player in iTunes, etc.
+    The default name is "Shairport Sync on &lt;hostname&gt;".
+    </p></optdesc>
+	  </option>
+
+    <option>
+    <p><opt>mdns_backend=</opt><arg>"avahi"</arg><opt>;</opt></p>
+    <optdesc>Not used, not tested</optdesc>
+    </option>
+    <option>
+    <p><opt>output_backend=</opt><arg>"alsa"</arg><opt>;</opt></p>
+    <optdesc><p>Default is "alsa"; other possibilities are "stdout", "pulse", "dummy". Only alsa supports synchronisation.</p></optdesc>
+    </option>
+    <option>
+    <p><opt>port=</opt><arg>5000</arg><opt>;</opt></p>
+    <optdesc><p>This is the port on which Shairport Sync listens for service requests.</p></optdesc>
+    </option>
+    <option>
+    <p><opt>udp_port_base=</opt><arg>6001</arg><opt>;</opt></p>
+    <optdesc><p>Allocation of UDP ports starts from this port number.</p></optdesc>
+    </option>
+    <option>
+    <p><opt>udp_port_range=</opt><arg>100</arg><opt>;</opt></p>
+    <optdesc><p>Look for free ports in this number of places, starting at the UDP port base. Only three ports are needed.</p></optdesc>
+    </option>
+    <option>
+    <p><opt>password=</opt><arg>"secret"</arg><opt>;</opt></p>
+    <optdesc><p>The default is that no password is needed.</p></optdesc>
+    </option>
+    <option>
+    <p><opt>interpolation=</opt><arg>"basic"</arg><opt>;</opt></p>
+    <optdesc><p>Interpolation method, also known as the "stuffing" method. The default is "basic", alternative is "soxr".</p></optdesc>
+    </option>
+    <option>
+    <p><opt>statistics=</opt><arg>"no"</arg><opt>;</opt></p>
+    <optdesc><p>Log statistics from time to time.</p></optdesc>
+    </option>
+    <option>
+    <p><opt>drift=</opt><arg>88</arg><opt>;</opt></p>
+    <optdesc><p>Allow synchronisation to drift by this number of frames before trying to correct it.</p></optdesc>
+    </option>
+    <option>
+    <p><opt>resync_threshold=</opt><arg>2205</arg><opt>;</opt></p>
+    <optdesc><p>A synchronisation error greater than this will cause audio to be muted while Shairport Sync attempts to resynchrone with the audio feed; 0 disables it.</p></optdesc>
+    </option>
+    <option>
+    <p><opt>log_verbosity=</opt><arg>0</arg><opt>;</opt></p>
+    <optdesc><p>"0" means no verbosity, "3" is most verbose.</p></optdesc>
+    </option>
+    <option>
+    <p><opt>ignore_volume_control=</opt><arg>"no"</arg><opt>;</opt></p>
+    <optdesc><p>Set this to "yes" if you want the volume to be at 100% no matter what the source's volume control is set to.</p></optdesc>
+    </option>
+
+    <option><p><opt>"LATENCIES" SETTINGS</opt></p></option>
+    These are the settings available within the <opt>latencies</opt> group:
+
+
+    <option>
+    <p><opt>default=</opt><arg>88200</arg><opt>;</opt></p>
+    <optdesc>Comment Here</optdesc>
+    </option>
+    <option>
+    <p><opt>itunes=</opt><arg>99400</arg><opt>;</opt></p>
+    <optdesc>Comment Here</optdesc>
+    </option>
+    <option>
+    <p><opt>airplay=</opt><arg>88200</arg><opt>;</opt></p>
+    <optdesc>Comment Here</optdesc>
+    </option>
+    <option>
+    <p><opt>forkedDaapd=</opt><arg>99400</arg><opt>;</opt></p>
+    <optdesc>Comment Here</optdesc>
+    </option>
+    <option><p><opt>"METADATA" SETTINGS</opt></p></option>
+    These are the settings available within the <opt>metadata</opt> group:
+
+
+    <option>
+    <p><opt>enabled=</opt><arg>"no"</arg><opt>;</opt></p>
+    <optdesc>Comment Here</optdesc>
+    </option>
+    <option>
+    <p><opt>include_cover_art=</opt><arg>"no"</arg><opt>;</opt></p>
+    <optdesc>Comment Here</optdesc>
+    </option>
+    <option>
+    <p><opt>pipe_name=</opt><arg>"/tmp/shairport-sync-metadata"</arg><opt>;</opt></p>
+    <optdesc>Comment Here</optdesc>
+    </option>
+    
+    <option><p><opt>"SESSIONCONTROL" SETTINGS</opt></p></option>
+    These are the settings available within the <opt>sessioncontrol</opt> group:
+
+    <option>
+    <p><opt>run_this_before_play_begins=</opt><arg>"/path/to/application and args"</arg><opt>;</opt></p>
+    <optdesc>Comment Here</optdesc>
+    </option>
+    <option>
+    <p><opt>run_this_after_play_ends=</opt><arg>"/path/to/application and args"</arg><opt>;</opt></p>
+    <optdesc>Comment Here</optdesc>
+    </option>
+    <option>
+    <p><opt>wait_for_completion=</opt><arg>"no"</arg><opt>;</opt></p>
+    <optdesc>Comment Here</optdesc>
+    </option>
+    <option>
+    <p><opt>allow_session_interruption=</opt><arg>"no"</arg><opt>;</opt></p>
+    <optdesc>Comment Here</optdesc>
+    </option>
+    <option>
+    <p><opt>session_timeout=</opt><arg>120</arg><opt>;</opt></p>
+    <optdesc>Comment Here</optdesc>
+    </option>
+    
+    <option><p><opt>"ALSA" SETTINGS</opt></p></option>
+    These are the settings available within the <opt>alsa</opt> group:
+
+    <option>
+    <p><opt>output_device=</opt><arg>"default"</arg><opt>;</opt></p>
+    <optdesc>Comment Here</optdesc>
+    </option>
+    <option>
+    <p><opt>mixer_type=</opt><arg>"software"</arg><opt>;</opt></p>
+    <optdesc>"software" or "hardware"</optdesc>
+    </option>
+    <option>
+    <p><opt>mixer_device=</opt><arg>"default"</arg><opt>;</opt></p>
+    <optdesc>actually, the mixer default is whatever the output_device is. Normally you wouldn't have to use this.</optdesc>
+    </option>
+    <option>
+    <p><opt>mixer_control_name=</opt><arg>"PCM"</arg><opt>;</opt></p>
+    <optdesc>the name of the mixer to use -- there is no default.</optdesc>
+    </option>
+    <option>
+    <p><opt>audio_backend_latency_offset=</opt><arg>0</arg><opt>;</opt></p>
+    <optdesc>Set this offset to compensate for a fixed delay in the audio back end. E.g. if the output device delays by 100 ms, set this to -4410.</optdesc>
+    </option>
+    <option>
+    <p><opt>audio_backend_buffer_desired_length=</opt><arg>6615</arg><opt>;</opt></p>
+    <optdesc>If set too small, buffer underflow occurs on low-powered machines. Too long and the response times with software mixer become annoying.</optdesc>
+    </option>
+    
+    <option><p><opt>"PIPE" SETTINGS</opt></p></option>
+    These are the settings available within the <opt>pipe</opt> group:
+
+    <option>
+    <p><opt>audio_backend_latency_offset=</opt><arg>0</arg><opt>;</opt></p>
+    <optdesc>Set this offset to compensate for a fixed delay in the audio back end. E.g. if the output device delays by 100 ms, set this to -4410.</optdesc>
+    </option>
+    <option>
+    <p><opt>audio_backend_buffer_desired_length=</opt><arg>44100</arg><opt>;</opt></p>
+    <optdesc>Comment Here</optdesc>
+    </option>
+    <option>
+    <p><opt>name=</opt><arg>"/path/to/pipe"</arg><opt>;</opt></p>
+    <optdesc>there is no default pipe name for the output</optdesc>
+    </option>
+     
+    <option><p><opt>"STDOUT" SETTINGS</opt></p></option>
+    These are the settings available within the <opt>stdout</opt> group:
+
+    <option>
+    <p><opt>audio_backend_latency_offset=</opt><arg>0</arg><opt>;</opt></p>
+    <optdesc>Set this offset to compensate for a fixed delay in the audio back end. E.g. if the output device delays by 100 ms, set this to -4410.</optdesc>
+    </option>
+    <option>
+    <p><opt>audio_backend_buffer_desired_length=</opt><arg>44100</arg><opt>;</opt></p>
+    <optdesc>Comment Here</optdesc>
+    </option>
+	</section>
 
 	<options>
 
@@ -120,6 +323,13 @@
 		<p>If you want shairport-sync to wait until the command has
 		completed before starting to play, select the <opt>-w</opt> option as well.
 		</p></optdesc>
+	  </option>
+
+	  <option>
+		<p><opt>-c </opt><arg>filename</arg><opt> | --configfile=</opt><arg>filename</arg></p>
+		<optdesc><p>
+		Read configuration settings from <arg>filename</arg>. The default is to read them from <file>/etc/shairport-sync.conf</file>. For information about configuration settings, see the  "Configuration File Settings" section above.
+    </p></optdesc>
 	  </option>
 
 	  <option>

@@ -2,7 +2,7 @@
 .SH NAME
 shairport-sync \- Synchronised Audio Player for iTunes / AirPlay
 .SH SYNOPSIS
-\fBshairport-sync [-dvw]\fB [-a \fB\fIname\fB]\fB [-A \fB\fIlatency\fB]\fB [-B \fB\fIcommand\fB]\fB [-E \fB\fIcommand\fB]\fB [--forkedDaapdLatency=\fB\fIlatency\fB]\fB [--get-cover-art]\fB [-i \fB\fIlatency\fB]\fB [-L \fB\fIlatency\fB]\fB [-m \fB\fIbackend\fB]\fB [--meta-dir=\fB\fIdirectory\fB]\fB [-o \fB\fIbackend\fB]\fB [--password=\fB\fIsecret\fB]\fB [-r \fB\fIthreshold\fB]\fB [--statistics]\fB [-S \fB\fImode\fB]\fB [-t \fB\fItimeout\fB]\fB [--tolerance=\fB\fIframes\fB]\fB [-- \fB\fIaudio_backend_options\fB]\fB
+\fBshairport-sync [-dvw]\fB [-a \fB\fIname\fB]\fB [-A \fB\fIlatency\fB]\fB [-B \fB\fIcommand\fB]\fB [-c \fB\fIconfigurationfile\fB]\fB [-E \fB\fIcommand\fB]\fB [--forkedDaapdLatency=\fB\fIlatency\fB]\fB [--get-cover-art]\fB [-i \fB\fIlatency\fB]\fB [-L \fB\fIlatency\fB]\fB [-m \fB\fIbackend\fB]\fB [--meta-dir=\fB\fIdirectory\fB]\fB [-o \fB\fIbackend\fB]\fB [--password=\fB\fIsecret\fB]\fB [-r \fB\fIthreshold\fB]\fB [--statistics]\fB [-S \fB\fImode\fB]\fB [-t \fB\fItimeout\fB]\fB [--tolerance=\fB\fIframes\fB]\fB [-- \fB\fIaudio_backend_options\fB]\fB
 
 shairport-sync -D\fB
 
@@ -20,6 +20,149 @@ shairport-sync -V\fB
 shairport-sync plays audio streamed from iTunes or from an AirPlay device to an audio device connected via an audio back end. At present, the only fully-implemented back end is for ALSA.
 
 A feature of shairport-sync is that the audio is played synchronously. This means that if many devices are playing the same stream at the same time, all the outputs will stay in step with one another. This allows multiple devices play the same source without getting out of phase with one another, enabling, for example, simultaneous multi-room operation. 
+
+Settings can be made using the configuration file (recommended for all new installations) or the by using command-line options.
+.SH CONFIGURATION FILE SETTINGS
+You should use the configuration file for setting up shairport-sync. This file is normally \fI/etc/shairport-sync.conf\f1. You may need to have root privileges to modify it.
+
+Settings are organised into groups, for example, there is a "general" group of standard settings, and there is an "alsa" group with settings that pertain to the ALSA back end.
+
+Most of the settings have sensible default values, so most users will only need to set (1) the service name, (2) a password (if desired) and (3) the output device. If the output device has a hardware mixer that can be used for volume control, then (4) the fact that the output mixer is hardware and (5) the output device mixer's volume-control name should be specificed. It is highly desirable to use the hardware mixer for volume control, if available -- response time is reduced to zero and the processor load is reduced.
+
+A sample configuration file, with all settings commented out and with some usage notes, is installed at \fI/etc/shairport-sync.conf.sample\f1.
+
+To retain backwards compatability with previous versions of shairport-sync you can use still use command line options, but any new features, etc. will be available only via configuration file settings.
+
+The configuration file is processed using the \fIlibconfig\f1 library -- see \fBhttp://www.hyperrealm.com/libconfig/libconfig_manual.html\f1.
+.TP
+\fB"GENERAL" SETTINGS\f1
+These are the settings available within the \fBgeneral\f1 group: 
+.TP
+\fBname=\f1\fI"service_name"\f1\fB;\f1
+Use this \fIservice_name\f1 to identify this player in iTunes, etc. The default name is "Shairport Sync on <hostname>". 
+.TP
+\fBmdns_backend=\f1\fI"avahi"\f1\fB;\f1
+Not used, not tested 
+.TP
+\fBoutput_backend=\f1\fI"alsa"\f1\fB;\f1
+Default is "alsa"; other possibilities are "stdout", "pulse", "dummy". Only alsa supports synchronisation.
+.TP
+\fBport=\f1\fI5000\f1\fB;\f1
+This is the port on which Shairport Sync listens for service requests.
+.TP
+\fBudp_port_base=\f1\fI6001\f1\fB;\f1
+Allocation of UDP ports starts from this port number.
+.TP
+\fBudp_port_range=\f1\fI100\f1\fB;\f1
+Look for free ports in this number of places, starting at the UDP port base. Only three ports are needed.
+.TP
+\fBpassword=\f1\fI"secret"\f1\fB;\f1
+The default is that no password is needed.
+.TP
+\fBinterpolation=\f1\fI"basic"\f1\fB;\f1
+Interpolation method, also known as the "stuffing" method. The default is "basic", alternative is "soxr".
+.TP
+\fBstatistics=\f1\fI"no"\f1\fB;\f1
+Log statistics from time to time.
+.TP
+\fBdrift=\f1\fI88\f1\fB;\f1
+Allow synchronisation to drift by this number of frames before trying to correct it.
+.TP
+\fBresync_threshold=\f1\fI2205\f1\fB;\f1
+A synchronisation error greater than this will cause audio to be muted while Shairport Sync attempts to resynchrone with the audio feed; 0 disables it.
+.TP
+\fBlog_verbosity=\f1\fI0\f1\fB;\f1
+"0" means no verbosity, "3" is most verbose.
+.TP
+\fBignore_volume_control=\f1\fI"no"\f1\fB;\f1
+Set this to "yes" if you want the volume to be at 100% no matter what the source's volume control is set to.
+.TP
+\fB"LATENCIES" SETTINGS\f1
+These are the settings available within the \fBlatencies\f1 group: 
+.TP
+\fBdefault=\f1\fI88200\f1\fB;\f1
+Comment Here 
+.TP
+\fBitunes=\f1\fI99400\f1\fB;\f1
+Comment Here 
+.TP
+\fBairplay=\f1\fI88200\f1\fB;\f1
+Comment Here 
+.TP
+\fBforkedDaapd=\f1\fI99400\f1\fB;\f1
+Comment Here 
+.TP
+\fB"METADATA" SETTINGS\f1
+These are the settings available within the \fBmetadata\f1 group: 
+.TP
+\fBenabled=\f1\fI"no"\f1\fB;\f1
+Comment Here 
+.TP
+\fBinclude_cover_art=\f1\fI"no"\f1\fB;\f1
+Comment Here 
+.TP
+\fBpipe_name=\f1\fI"/tmp/shairport-sync-metadata"\f1\fB;\f1
+Comment Here 
+.TP
+\fB"SESSIONCONTROL" SETTINGS\f1
+These are the settings available within the \fBsessioncontrol\f1 group: 
+.TP
+\fBrun_this_before_play_begins=\f1\fI"/path/to/application and args"\f1\fB;\f1
+Comment Here 
+.TP
+\fBrun_this_after_play_ends=\f1\fI"/path/to/application and args"\f1\fB;\f1
+Comment Here 
+.TP
+\fBwait_for_completion=\f1\fI"no"\f1\fB;\f1
+Comment Here 
+.TP
+\fBallow_session_interruption=\f1\fI"no"\f1\fB;\f1
+Comment Here 
+.TP
+\fBsession_timeout=\f1\fI120\f1\fB;\f1
+Comment Here 
+.TP
+\fB"ALSA" SETTINGS\f1
+These are the settings available within the \fBalsa\f1 group: 
+.TP
+\fBoutput_device=\f1\fI"default"\f1\fB;\f1
+Comment Here 
+.TP
+\fBmixer_type=\f1\fI"software"\f1\fB;\f1
+"software" or "hardware" 
+.TP
+\fBmixer_device=\f1\fI"default"\f1\fB;\f1
+actually, the mixer default is whatever the output_device is. Normally you wouldn't have to use this. 
+.TP
+\fBmixer_control_name=\f1\fI"PCM"\f1\fB;\f1
+the name of the mixer to use -- there is no default. 
+.TP
+\fBaudio_backend_latency_offset=\f1\fI0\f1\fB;\f1
+Set this offset to compensate for a fixed delay in the audio back end. E.g. if the output device delays by 100 ms, set this to -4410. 
+.TP
+\fBaudio_backend_buffer_desired_length=\f1\fI6615\f1\fB;\f1
+If set too small, buffer underflow occurs on low-powered machines. Too long and the response times with software mixer become annoying. 
+.TP
+\fB"PIPE" SETTINGS\f1
+These are the settings available within the \fBpipe\f1 group: 
+.TP
+\fBaudio_backend_latency_offset=\f1\fI0\f1\fB;\f1
+Set this offset to compensate for a fixed delay in the audio back end. E.g. if the output device delays by 100 ms, set this to -4410. 
+.TP
+\fBaudio_backend_buffer_desired_length=\f1\fI44100\f1\fB;\f1
+Comment Here 
+.TP
+\fBname=\f1\fI"/path/to/pipe"\f1\fB;\f1
+there is no default pipe name for the output 
+.TP
+\fB"STDOUT" SETTINGS\f1
+These are the settings available within the \fBstdout\f1 group: 
+.TP
+\fBaudio_backend_latency_offset=\f1\fI0\f1\fB;\f1
+Set this offset to compensate for a fixed delay in the audio back end. E.g. if the output device delays by 100 ms, set this to -4410. 
+.TP
+\fBaudio_backend_buffer_desired_length=\f1\fI44100\f1\fB;\f1
+Comment Here 
 .SH OPTIONS
 Many of the options take sensible default values, so you can normally ignore most of them. See the EXAMPLES section for typical usages.
 
@@ -37,6 +180,9 @@ Use this \fIlatency\f1, in frames, for audio streamed from an AirPlay device. Th
 Execute \fIprogram\f1 when playback is about to begin. Specify the full path to the program, e.g. \fI/usr/bin/logger\f1. Executable scripts can be used, but they must have \fI#!/bin/sh\f1 (or whatever is appropriate) in the headline.
 
 If you want shairport-sync to wait until the command has completed before starting to play, select the \fB-w\f1 option as well. 
+.TP
+\fB-c \f1\fIfilename\f1\fB | --configfile=\f1\fIfilename\f1
+Read configuration settings from \fIfilename\f1. The default is to read them from \fI/etc/shairport-sync.conf\f1. For information about configuration settings, see the "Configuration File Settings" section above. 
 .TP
 \fB-D | --disconnectFromOutput\f1
 Disconnect the shairport-sync daemon from the output device and exit. (Requires that the daemon has written its PID to an agreed file -- see the \fB-d\f1 option). 
@@ -70,7 +216,7 @@ Kill the shairport-sync daemon and exit. (Requires that the daemon has written i
 Use this to set the \fIdefault latency\f1, in frames, for audio coming from an unidentified source or from an iTunes Version 9 or earlier source. The standard value for the \fIdefault latency\f1 is 88,200 frames, where there are 44,100 frames to the second. 
 .TP
 \fB--meta-dir=\f1\fIdirectory\f1
-Listen for metadata coming from the source and send it, along with metadata from shairport-sync itself, to a pipe called \fIshairport-sync-metadata\f1 in the \fIdirectory\f1 you specify. If you add the \fB--get-cover-art\f1 then cover art will be sent through the pipe too. See https://github.com/mikebrady/shairport-sync-metadata-reader for a sample metadata reader. 
+Listen for metadata coming from the source and send it, along with metadata from shairport-sync itself, to a pipe called \fIshairport-sync-metadata\f1 in the \fIdirectory\f1 you specify. If you add the \fB--get-cover-art\f1 then cover art will be sent through the pipe too. See \fBhttps://github.com/mikebrady/shairport-sync-metadata-reader\f1 for a sample metadata reader. 
 .TP
 \fB-m \f1\fImdnsbackend\f1\fB | --mdns=\f1\fImdnsbackend\f1
 Force the use of the specified mDNS backend to advertise the player on the network. The default is to try all mDNS backends until one works. 
