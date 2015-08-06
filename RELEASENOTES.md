@@ -1,3 +1,9 @@
+Version 2.3.9
+----
+* Bug fix
+ * Specifying the configuration file using a *relative* file path now works properly.
+ * The debug verbosity requested with `-v`, `-vv`, etc. is now honoured before the configuration file is read. It is read and honoured from when the command line arguments are scanned the first time to get a possible configuration file path.
+
 Version 2.3.8
 ----
 * Annoying changes you must make
