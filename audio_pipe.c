@@ -40,24 +40,32 @@ static int fd = -1;
 char *pipename = NULL;
 
 static void start(int sample_rate) {
-  debug(1, "Pipename to start is \"%s\"", pipename);
-  if (strcasecmp(pipename, "STDOUT") == 0)
-    fd = STDOUT_FILENO;
-  else
-    fd = open(pipename, O_WRONLY);
+  // this will leave fd as -1 if a reader hasn't been attached
+  fd = open(pipename, O_WRONLY | O_NONBLOCK);
 }
 
-static void play(short buf[], int samples) { int ignore = write(fd, buf, samples * 4); }
+static void play(short buf[], int samples) {
+  // if the file is not open, try to open it.
+  if (fd == -1) {
+     fd = open(pipename, O_WRONLY | O_NONBLOCK); 
+  }
+  // if it's got a reader, write to it.
+  if (fd != -1) {
+    int ignore = non_blocking_write(fd, buf, samples * 4);
+  }
+}
 
 static void stop(void) {
-  if (fd != STDOUT_FILENO)
-    close(fd);
+// Don't close the pipe just because a play session has stopped.
+//  if (fd > 0)
+//    close(fd);
 }
 
 static int init(int argc, char **argv) {
+  debug(1, "pipe init");
   const char *str;
   int value;
-
+  
   config.audio_backend_buffer_desired_length = 44100; // one second.
   config.audio_backend_latency_offset = 0;
 
@@ -67,6 +75,9 @@ static int init(int argc, char **argv) {
     if (config_lookup_string(config.cfg, "pipe.name", &str)) {
       pipename = (char *)str;
     }
+ 
+    if ((pipename) && (strcasecmp(pipename, "STDOUT") == 0))
+      die("Can't use \"pipe\" backend for STDOUT. Use the \"stdout\" backend instead.");
 
     /* Get the desired buffer size setting. */
     if (config_lookup_int(config.cfg, "pipe.audio_backend_buffer_desired_length", &value)) {
@@ -86,29 +97,25 @@ static int init(int argc, char **argv) {
         config.audio_backend_latency_offset = value;
     }
   }
-
+  
   if ((pipename == NULL) && (argc != 1))
     die("bad or missing argument(s) to pipe");
 
   if (argc == 1)
     pipename = strdup(argv[0]);
-
+  
+  
   // here, create the pipe
-  if (strcasecmp(pipename, "STDOUT") != 0)
-    if (mkfifo(pipename, 0644) && errno != EEXIST)
-      die("Could not create output pipe \"%s\"", pipename);
+  if (mkfifo(pipename, 0644) && errno != EEXIST)
+    die("Could not create output pipe \"%s\"", pipename);
 
   debug(1, "Pipename is \"%s\"", pipename);
-
-  // test open pipe so we error on startup if it's going to fail
-  start(44100);
-  stop();
 
   return 0;
 }
 
 static void deinit(void) {
-  if ((fd > 0) && (fd != STDOUT_FILENO))
+   if (fd > 0)
     close(fd);
 }
 
