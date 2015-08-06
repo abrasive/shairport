@@ -62,7 +62,8 @@
 
 static int shutting_down = 0;
 static char *appName = NULL;
-char configuration_file_path[4096];
+char configuration_file_path[4096+1];
+char actual_configuration_file_path[4096+1];
 
 void shairport_shutdown() {
   if (shutting_down)
@@ -267,200 +268,222 @@ int parse_options(int argc, char **argv) {
 
   optCon = poptGetContext(NULL, optind, (const char **)argv, optionsTable, 0);
   poptSetOtherOptionHelp(optCon, "[OPTIONS]* ");
+  
+   /* Now do options processing just to get a debug level */
+  debuglev = 0;
+  while ((c = poptGetNextOpt(optCon)) >= 0) {
+    switch (c) {
+    case 'v':
+      debuglev++;
+      break;
+    }
+  }
+  if (c < -1) {
+    die("%s: %s", poptBadOption(optCon, POPT_BADOPTION_NOALIAS), poptStrerror(c));
+  }
 
   config_setting_t *setting;
   const char *str;
   int value;
 
+  debug(1,"Looking for the configuration file \"%s\".",config.configfile);
+  
   config_init(&config_file_stuff);
-  debug(1, "Looking for configuration file \"%s\"", config.configfile);
-  /* Read the file. If there is an error, report it and exit. */
-  if (config_read_file(&config_file_stuff, config.configfile)) {
-    // make config.cfg point to it
-    config.cfg = &config_file_stuff;
-    /* Get the Service Name. */
-    if (config_lookup_string(config.cfg, "general.name", &str))
-      config.apname = (char *)str;
-
-    /* Get the Daemonize setting. */
-    if (config_lookup_string(config.cfg, "general.daemonize", &str)) {
-      if (strcasecmp(str, "no") == 0)
-        config.daemonise = 0;
-      else if (strcasecmp(str, "yes") == 0)
-        config.daemonise = 1;
-      else
-        die("Invalid daemonize option choice \"%s\". It should be \"yes\" or \"no\"");
-    }
-
-    /* Get the mdns_backend setting. */
-    if (config_lookup_string(config.cfg, "general.mdns_backend", &str))
-      config.mdns_name = (char *)str;
-
-    /* Get the output_backend setting. */
-    if (config_lookup_string(config.cfg, "general.output_backend", &str))
-      config.output_name = (char *)str;
-
-    /* Get the port setting. */
-    if (config_lookup_int(config.cfg, "general.port", &value)) {
-      if ((value < 0) || (value > 65535))
-        die("Invalid port number  \"%sd\". It should be between 0 and 65535, default is 5000",
-            value);
-      else
-        config.port = value;
-    }
-
-    /* Get the udp port base setting. */
-    if (config_lookup_int(config.cfg, "general.udp_port_base", &value)) {
-      if ((value < 0) || (value > 65535))
-        die("Invalid port number  \"%sd\". It should be between 0 and 65535, default is 6001",
-            value);
-      else
-        config.udp_port_base = value;
-    }
-
-    /* Get the udp port range setting. This is number of ports that will be tried for free ports , starting at the port base. Only three ports are needed. */
-    if (config_lookup_int(config.cfg, "general.udp_port_range", &value)) {
-      if ((value < 0) || (value > 65535))
-        die("Invalid port range  \"%sd\". It should be between 0 and 65535, default is 100",
-            value);
-      else
-        config.udp_port_range = value;
-    }
-
-    /* Get the password setting. */
-    if (config_lookup_string(config.cfg, "general.password", &str))
-      config.password = (char *)str;
-
-    if (config_lookup_string(config.cfg, "general.interpolation", &str)) {
-      if (strcasecmp(str, "basic") == 0)
-        config.packet_stuffing = ST_basic;
-      else if (strcasecmp(str, "soxr") == 0)
-        config.packet_stuffing = ST_soxr;
-      else
-        die("Invalid interpolation option choice \"%s\". It should be \"basic\" or \"soxr\"");
-    }
-
-    /* Get the statistics setting. */
-    if (config_lookup_string(config.cfg, "general.statistics", &str)) {
-      if (strcasecmp(str, "no") == 0)
-        config.statistics_requested = 0;
-      else if (strcasecmp(str, "yes") == 0)
-        config.statistics_requested = 1;
-      else
-        die("Invalid statistics option choice \"%s\". It should be \"yes\" or \"no\"");
-    }
-
-    /* Get the drift tolerance setting. */
-    if (config_lookup_int(config.cfg, "general.drift", &value))
-      config.tolerance = value;
-
-    /* Get the resync setting. */
-    if (config_lookup_int(config.cfg, "general.resync_threshold", &value))
-      config.resyncthreshold = value;
-
-    /* Get the verbosity setting. */
-    if (config_lookup_int(config.cfg, "general.log_verbosity", &value))
-      if ((value >= 0) && (value <= 3))
-        debuglev = value;
-      else
-        die("Invalid log verbosity setting option choice \"%d\". It should be between 0 and 3, "
-            "inclusive.",
-            value);
-
-    /* Get the ignore_volume_control setting. */
-    if (config_lookup_string(config.cfg, "general.ignore_volume_control", &str)) {
-      if (strcasecmp(str, "no") == 0)
-        config.ignore_volume_control = 0;
-      else if (strcasecmp(str, "yes") == 0)
-        config.ignore_volume_control = 1;
-      else
-        die("Invalid ignore_volume_control option choice \"%s\". It should be \"yes\" or \"no\"");
-    }
-
-    /* Get the default latency. */
-    if (config_lookup_int(config.cfg, "latencies.default", &value))
-      config.latency = value;
-
-    /* Get the itunes latency. */
-    if (config_lookup_int(config.cfg, "latencies.itunes", &value))
-      config.iTunesLatency = value;
-
-    /* Get the AirPlay latency. */
-    if (config_lookup_int(config.cfg, "latencies.airplay", &value))
-      config.AirPlayLatency = value;
-
-    /* Get the forkedDaapd latency. */
-    if (config_lookup_int(config.cfg, "latencies.forkedDaapd", &value))
-      config.ForkedDaapdLatency = value;
-
-#ifdef CONFIG_METADATA
-    /* Get the metadata setting. */
-    if (config_lookup_string(config.cfg, "metadata.enabled", &str)) {
-      if (strcasecmp(str, "no") == 0)
-        config.metadata_enabled = 0;
-      else if (strcasecmp(str, "yes") == 0)
-        config.metadata_enabled = 1;
-      else
-        die("Invalid metadata enabled option choice \"%s\". It should be \"yes\" or \"no\"");
-    }
-
-    if (config_lookup_string(config.cfg, "metadata.include_cover_art", &str)) {
-      if (strcasecmp(str, "no") == 0)
-        config.get_coverart = 0;
-      else if (strcasecmp(str, "yes") == 0)
-        config.get_coverart = 1;
-      else
-        die("Invalid metadata include_cover_art option choice \"%s\". It should be \"yes\" or "
-            "\"no\"");
-    }
-
-    if (config_lookup_string(config.cfg, "metadata.pipe_name", &str)) {
-      config.metadata_pipename = (char *)str;
-    }
-#endif
-
-    if (config_lookup_string(config.cfg, "sessioncontrol.run_this_before_play_begins", &str)) {
-      config.cmd_start = (char *)str;
-    }
-
-    if (config_lookup_string(config.cfg, "sessioncontrol.run_this_after_play_ends", &str)) {
-      config.cmd_stop = (char *)str;
-    }
-
-    if (config_lookup_string(config.cfg, "sessioncontrol.wait_for_completion", &str)) {
-      if (strcasecmp(str, "no") == 0)
-        config.cmd_blocking = 0;
-      else if (strcasecmp(str, "yes") == 0)
-        config.cmd_blocking = 1;
-      else
-        die("Invalid session control wait_for_completion option choice \"%s\". It should be "
-            "\"yes\" or \"no\"");
-    }
-
-    if (config_lookup_string(config.cfg, "sessioncontrol.allow_session_interruption", &str)) {
-      config.dont_check_timeout = 0; // this is for legacy -- only set by -t 0
-      if (strcasecmp(str, "no") == 0)
-        config.allow_session_interruption = 0;
-      else if (strcasecmp(str, "yes") == 0)
-        config.allow_session_interruption = 1;
-      else
-        die("Invalid session control allow_interruption option choice \"%s\". It should be \"yes\" "
-            "or \"no\"");
-    }
-
-    if (config_lookup_int(config.cfg, "sessioncontrol.session_timeout", &value)) {
-      config.timeout = value;
-      config.dont_check_timeout = 0; // this is for legacy -- only set by -t 0
-    }
-
+  
+  char *config_file_real_path = realpath(config.configfile, NULL);
+  if (config_file_real_path==NULL) {
+    debug(2,"Can't resolve the configuration file \"%s\".",config.configfile);
   } else {
-    if (config_error_type(&config_file_stuff) == CONFIG_ERR_FILE_IO)
-      debug(1, "Error reading configuration file \"%s\": \"%s\".",
+    debug(2, "Looking for configuration file at full path \"%s\"", config_file_real_path);
+    /* Read the file. If there is an error, report it and exit. */
+    if (config_read_file(&config_file_stuff, config_file_real_path)) {
+      // make config.cfg point to it
+      config.cfg = &config_file_stuff;
+      /* Get the Service Name. */
+      if (config_lookup_string(config.cfg, "general.name", &str))
+        config.apname = (char *)str;
+
+      /* Get the Daemonize setting. */
+      if (config_lookup_string(config.cfg, "general.daemonize", &str)) {
+        if (strcasecmp(str, "no") == 0)
+          config.daemonise = 0;
+        else if (strcasecmp(str, "yes") == 0)
+          config.daemonise = 1;
+        else
+          die("Invalid daemonize option choice \"%s\". It should be \"yes\" or \"no\"");
+      }
+
+      /* Get the mdns_backend setting. */
+      if (config_lookup_string(config.cfg, "general.mdns_backend", &str))
+        config.mdns_name = (char *)str;
+
+      /* Get the output_backend setting. */
+      if (config_lookup_string(config.cfg, "general.output_backend", &str))
+        config.output_name = (char *)str;
+
+      /* Get the port setting. */
+      if (config_lookup_int(config.cfg, "general.port", &value)) {
+        if ((value < 0) || (value > 65535))
+          die("Invalid port number  \"%sd\". It should be between 0 and 65535, default is 5000",
+              value);
+        else
+          config.port = value;
+      }
+
+      /* Get the udp port base setting. */
+      if (config_lookup_int(config.cfg, "general.udp_port_base", &value)) {
+        if ((value < 0) || (value > 65535))
+          die("Invalid port number  \"%sd\". It should be between 0 and 65535, default is 6001",
+              value);
+        else
+          config.udp_port_base = value;
+      }
+
+      /* Get the udp port range setting. This is number of ports that will be tried for free ports , starting at the port base. Only three ports are needed. */
+      if (config_lookup_int(config.cfg, "general.udp_port_range", &value)) {
+        if ((value < 0) || (value > 65535))
+          die("Invalid port range  \"%sd\". It should be between 0 and 65535, default is 100",
+              value);
+        else
+          config.udp_port_range = value;
+      }
+
+      /* Get the password setting. */
+      if (config_lookup_string(config.cfg, "general.password", &str))
+        config.password = (char *)str;
+
+      if (config_lookup_string(config.cfg, "general.interpolation", &str)) {
+        if (strcasecmp(str, "basic") == 0)
+          config.packet_stuffing = ST_basic;
+        else if (strcasecmp(str, "soxr") == 0)
+          config.packet_stuffing = ST_soxr;
+        else
+          die("Invalid interpolation option choice \"%s\". It should be \"basic\" or \"soxr\"");
+      }
+
+      /* Get the statistics setting. */
+      if (config_lookup_string(config.cfg, "general.statistics", &str)) {
+        if (strcasecmp(str, "no") == 0)
+          config.statistics_requested = 0;
+        else if (strcasecmp(str, "yes") == 0)
+          config.statistics_requested = 1;
+        else
+          die("Invalid statistics option choice \"%s\". It should be \"yes\" or \"no\"");
+      }
+
+      /* Get the drift tolerance setting. */
+      if (config_lookup_int(config.cfg, "general.drift", &value))
+        config.tolerance = value;
+
+      /* Get the resync setting. */
+      if (config_lookup_int(config.cfg, "general.resync_threshold", &value))
+        config.resyncthreshold = value;
+
+      /* Get the verbosity setting. */
+      if (config_lookup_int(config.cfg, "general.log_verbosity", &value))
+        if ((value >= 0) && (value <= 3))
+          debuglev = value;
+        else
+          die("Invalid log verbosity setting option choice \"%d\". It should be between 0 and 3, "
+              "inclusive.",
+              value);
+
+      /* Get the ignore_volume_control setting. */
+      if (config_lookup_string(config.cfg, "general.ignore_volume_control", &str)) {
+        if (strcasecmp(str, "no") == 0)
+          config.ignore_volume_control = 0;
+        else if (strcasecmp(str, "yes") == 0)
+          config.ignore_volume_control = 1;
+        else
+          die("Invalid ignore_volume_control option choice \"%s\". It should be \"yes\" or \"no\"");
+      }
+
+      /* Get the default latency. */
+      if (config_lookup_int(config.cfg, "latencies.default", &value))
+        config.latency = value;
+
+      /* Get the itunes latency. */
+      if (config_lookup_int(config.cfg, "latencies.itunes", &value))
+        config.iTunesLatency = value;
+
+      /* Get the AirPlay latency. */
+      if (config_lookup_int(config.cfg, "latencies.airplay", &value))
+        config.AirPlayLatency = value;
+
+      /* Get the forkedDaapd latency. */
+      if (config_lookup_int(config.cfg, "latencies.forkedDaapd", &value))
+        config.ForkedDaapdLatency = value;
+
+  #ifdef CONFIG_METADATA
+      /* Get the metadata setting. */
+      if (config_lookup_string(config.cfg, "metadata.enabled", &str)) {
+        if (strcasecmp(str, "no") == 0)
+          config.metadata_enabled = 0;
+        else if (strcasecmp(str, "yes") == 0)
+          config.metadata_enabled = 1;
+        else
+          die("Invalid metadata enabled option choice \"%s\". It should be \"yes\" or \"no\"");
+      }
+
+      if (config_lookup_string(config.cfg, "metadata.include_cover_art", &str)) {
+        if (strcasecmp(str, "no") == 0)
+          config.get_coverart = 0;
+        else if (strcasecmp(str, "yes") == 0)
+          config.get_coverart = 1;
+        else
+          die("Invalid metadata include_cover_art option choice \"%s\". It should be \"yes\" or "
+              "\"no\"");
+      }
+
+      if (config_lookup_string(config.cfg, "metadata.pipe_name", &str)) {
+        config.metadata_pipename = (char *)str;
+      }
+  #endif
+
+      if (config_lookup_string(config.cfg, "sessioncontrol.run_this_before_play_begins", &str)) {
+        config.cmd_start = (char *)str;
+      }
+
+      if (config_lookup_string(config.cfg, "sessioncontrol.run_this_after_play_ends", &str)) {
+        config.cmd_stop = (char *)str;
+      }
+
+      if (config_lookup_string(config.cfg, "sessioncontrol.wait_for_completion", &str)) {
+        if (strcasecmp(str, "no") == 0)
+          config.cmd_blocking = 0;
+        else if (strcasecmp(str, "yes") == 0)
+          config.cmd_blocking = 1;
+        else
+          die("Invalid session control wait_for_completion option choice \"%s\". It should be "
+              "\"yes\" or \"no\"");
+      }
+
+      if (config_lookup_string(config.cfg, "sessioncontrol.allow_session_interruption", &str)) {
+        config.dont_check_timeout = 0; // this is for legacy -- only set by -t 0
+        if (strcasecmp(str, "no") == 0)
+          config.allow_session_interruption = 0;
+        else if (strcasecmp(str, "yes") == 0)
+          config.allow_session_interruption = 1;
+        else
+          die("Invalid session control allow_interruption option choice \"%s\". It should be \"yes\" "
+              "or \"no\"");
+      }
+
+      if (config_lookup_int(config.cfg, "sessioncontrol.session_timeout", &value)) {
+        config.timeout = value;
+        config.dont_check_timeout = 0; // this is for legacy -- only set by -t 0
+      }
+
+    } else {
+      if (config_error_type(&config_file_stuff) == CONFIG_ERR_FILE_IO)
+        debug(1, "Error reading configuration file \"%s\": \"%s\".",
+              config_error_file(&config_file_stuff), config_error_text(&config_file_stuff));
+      else {
+        die("Line %d of the configuration file \"%s\":\n%s", config_error_line(&config_file_stuff),
             config_error_file(&config_file_stuff), config_error_text(&config_file_stuff));
-    else {
-      die("Line %d of the configuration file \"%s\":\n%s", config_error_line(&config_file_stuff),
-          config_error_file(&config_file_stuff), config_error_text(&config_file_stuff));
+      }
     }
+    free(config_file_real_path);
   }
 
 // now, do the command line options again, but this time do them fully -- it's a unix convention that command line
@@ -820,7 +843,14 @@ int main(int argc, char **argv) {
   debug(2, "audio backend desired buffer length is %d.",
         config.audio_backend_buffer_desired_length);
   debug(2, "audio backend latency offset is %d.", config.audio_backend_latency_offset);
-  debug(2, "Configuration file name \"%s\".", config.configfile);
+  
+  char *realConfigPath = realpath(config.configfile,NULL);
+  if (realConfigPath) {
+    debug(2, "configuration file name \"%s\" resolves to \"%s\".", config.configfile,realConfigPath);
+    free(realConfigPath);
+  } else {
+     debug(2, "configuration file name \"%s\" can not be resolved.", config.configfile);
+  }   
 #ifdef CONFIG_METADATA
   debug(2, "metdata enabled is %d.", config.metadata_enabled);
   debug(2, "metadata pipename is \"%s\".", config.metadata_pipename);
