@@ -1,3 +1,8 @@
+Version 2.3.11
+----
+Documentation Update
+* Beginning to update the `man` document to include information about the configuration file. It's pretty sparse, but it's a start.
+
 Version 2.3.10
 ----
 * Bug fix
