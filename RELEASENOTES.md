@@ -1,3 +1,12 @@
+Version 2.3.10
+----
+* Bug fix
+ * The "pipe" backend used output code that would block if the pipe didn't have a reader. This has been replaced by non-blocking code. Here are some implications:
+  * When the pipe is created, Shairport Sync will not block if a reader isn't present.
+  * If the pipe doesn't have a reader when Shairport Sync wants to output to it, the output will be discarded.
+  * If a reader disappears while writing is occuring, the write will time out after five seconds.
+  * Shairport Sync will only close the pipe on termination.
+
 Version 2.3.9
 ----
 * Bug fix
