@@ -90,6 +90,8 @@ int get_requested_connection_state_to_output();
 
 void set_requested_connection_state_to_output(int v);
 
+ssize_t non_blocking_write(int fd, const void *buf, size_t count); // used in a few places
+
 int debuglev;
 void die(char *format, ...);
 void warn(char *format, ...);
