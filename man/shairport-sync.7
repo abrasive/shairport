@@ -25,11 +25,33 @@ Settings can be made using the configuration file (recommended for all new insta
 .SH CONFIGURATION FILE SETTINGS
 You should use the configuration file for setting up shairport-sync. This file is normally \fI/etc/shairport-sync.conf\f1. You may need to have root privileges to modify it.
 
-Settings are organised into groups, for example, there is a "general" group of standard settings, and there is an "alsa" group with settings that pertain to the ALSA back end.
+Settings are organised into groups, for example, there is a "general" group of standard settings, and there is an "alsa" group with settings that pertain to the ALSA back end. Here is an example of a typical configuration file:
 
-Most of the settings have sensible default values, so most users will only need to set (1) the service name, (2) a password (if desired) and (3) the output device. If the output device has a hardware mixer that can be used for volume control, then (4) the fact that the output mixer is hardware and (5) the output device mixer's volume-control name should be specificed. It is highly desirable to use the hardware mixer for volume control, if available -- response time is reduced to zero and the processor load is reduced.
+\fBgeneral = {\f1
 
-A sample configuration file, with all settings commented out and with some usage notes, is installed at \fI/etc/shairport-sync.conf.sample\f1.
+\fBname = "Mike's Boombox";\f1
+
+\fBinterpolation = "soxr";\f1
+
+\fBpassword = "secret";\f1
+
+\fB};\f1
+
+\fB\f1
+
+\fBalsa = {\f1
+
+\fBoutput_device = "hw:0";\f1
+
+\fBmixer_type = "hardware";\f1
+
+\fBmixer_control_name = "PCM";\f1
+
+\fB};\f1
+
+Most settings have sensible default values, so -- as in the example above -- users generally only need to set (1) the service name, (2) a password (if desired) and (3) the output device. If the output device has a hardware mixer that can be used for volume control, then (4) the fact that the output mixer is hardware and (5) the output device mixer's volume-control name should be specificed. It is highly desirable to use the hardware mixer for volume control, if available -- response time is reduced to zero and the processor load is reduced. In the example above, "soxr" interpolation was also enabled.
+
+A sample configuration file with all possible settings, but with all of them commented out, is installed at \fI/etc/shairport-sync.conf.sample\f1.
 
 To retain backwards compatability with previous versions of shairport-sync you can use still use command line options, but any new features, etc. will be available only via configuration file settings.
 
@@ -93,9 +115,9 @@ This is the \fIlatency\f1, in frames, used for forkedDaapd sources. Default is 9
 This is the \fIlatency\f1, in frames, used when the source is unrecognised. Default is 88,200. 
 .TP
 \fB"METADATA" SETTINGS\f1
-These are the settings available within the \fBmetadata\f1 group:
+Shairport Sync can process metadata provided by the source, such as Track Number, Album Name, cover art, etc. and can provide additional metadata such as volume level, pause/resume, etc. It provides the metadata to a pipe, by default \fI/tmp/shairport-sync-metadata\f1. To process metadata, Shairport Sync must have been compiled with metadata support included. The \fBmetadata\f1 group of settings allow you to enable metadata handling and to control certain aspects of it. These are the settings available within the \fBmetadata\f1 group:
 .TP
-\fBenabled=\f1\fI"no"\f1\fB;\f1
+\fBenabled=\f1\fI"choice"\f1\fB;\f1
 Comment Here 
 .TP
 \fBinclude_cover_art=\f1\fI"no"\f1\fB;\f1

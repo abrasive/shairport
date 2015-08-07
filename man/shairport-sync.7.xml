@@ -87,13 +87,24 @@
 	  
 	  <p>Settings are organised into <i>groups</i>, for example, there is a "general" group of
 	  standard settings, and there is an "alsa" group with settings that pertain to the ALSA
-	  back end.</p>	
+	  back end. Here is an example of a typical configuration file:</p>
 	  
-	  <p>Most of the settings have sensible default values, so most users will only need to set (1) the service name, (2) a password (if desired) and
-	  (3) the output device. If the output device has a hardware mixer that can be used for volume control, then (4) the fact that the output mixer is hardware and (5) the output device mixer's volume-control name should be specificed. It is highly desirable to use the hardware mixer for volume control, if available -- response time is reduced to zero and the processor load is reduced.</p>	
+	  <p><opt>general = {</opt></p>
+    <p><p><opt>name = "Mike's Boombox";</opt></p></p>
+    <p><p><opt>interpolation = "soxr";</opt></p></p>
+    <p><p><opt>password = "secret";</opt></p></p>
+    <p><opt>};</opt></p>
+    <p><opt></opt></p>
+    <p><opt>alsa = {</opt></p>
+    <p><p><opt>output_device = "hw:0";</opt></p></p>
+    <p><p><opt>mixer_type = "hardware";</opt></p></p>
+    <p><p><opt>mixer_control_name = "PCM";</opt></p></p>
+    <p><opt>};</opt></p>
 	  
-	  <p>A sample configuration file, with all settings commented out and with some usage notes,
-	  is installed at <file>/etc/shairport-sync.conf.sample</file>.</p>
+	  <p>Most settings have sensible default values, so -- as in the example above -- users generally only need to set (1) the service name, (2) a password (if desired) and
+	  (3) the output device. If the output device has a hardware mixer that can be used for volume control, then (4) the fact that the output mixer is hardware and (5) the output device mixer's volume-control name should be specificed. It is highly desirable to use the hardware mixer for volume control, if available -- response time is reduced to zero and the processor load is reduced. In the example above, "soxr" interpolation was also enabled.</p>
+	  
+	  <p>A sample configuration file with all possible settings, but with all of them commented out, is installed at <file>/etc/shairport-sync.conf.sample</file>.</p>
 	  
 	  <p>To retain backwards compatability with previous versions of shairport-sync
 	  you can use still use command line options, but any new features, etc. will
@@ -201,11 +212,11 @@
    </option>
 
     <option><p><opt>"METADATA" SETTINGS</opt></p></option>
-    <p>These are the settings available within the <opt>metadata</opt> group:</p>
+    <p>Shairport Sync can process metadata provided by the source, such as Track Number, Album Name, cover art, etc. and can provide additional metadata such as volume level, pause/resume, etc. It provides the metadata to a pipe, by default <file>/tmp/shairport-sync-metadata</file>. To process metadata, Shairport Sync must have been compiled with metadata support included. The <opt>metadata</opt> group of settings allow you to enable metadata handling and to control certain aspects of it. These are the settings available within the <opt>metadata</opt> group:</p>
 
 
     <option>
-    <p><opt>enabled=</opt><arg>"no"</arg><opt>;</opt></p>
+    <p><opt>enabled=</opt><arg>"choice"</arg><opt>;</opt></p>
     <optdesc>Comment Here</optdesc>
     </option>
     <option>
