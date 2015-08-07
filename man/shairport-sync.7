@@ -36,64 +36,64 @@ To retain backwards compatability with previous versions of shairport-sync you c
 The configuration file is processed using the \fIlibconfig\f1 library -- see \fBhttp://www.hyperrealm.com/libconfig/libconfig_manual.html\f1.
 .TP
 \fB"GENERAL" SETTINGS\f1
-These are the settings available within the \fBgeneral\f1 group: 
+These are the settings available within the \fBgeneral\f1 group:
 .TP
 \fBname=\f1\fI"service_name"\f1\fB;\f1
 Use this \fIservice_name\f1 to identify this player in iTunes, etc. The default name is "Shairport Sync on <hostname>". 
 .TP
-\fBmdns_backend=\f1\fI"avahi"\f1\fB;\f1
-Not used, not tested 
+\fBmdns_backend=\f1\fI"backend"\f1\fB;\f1
+Shairport Sync has a number of modules of code ("backends") for interacting with the mDNS service to be used to advertise itself. Normally, the first mDNS backend that works is selected. This setting forces the selection of the specific mDNS \fIbackend\f1. The default is "avahi". Perform the command \fBshairport-sync -h\f1 to get a list of available mDNS modules. 
 .TP
-\fBoutput_backend=\f1\fI"alsa"\f1\fB;\f1
-Default is "alsa"; other possibilities are "stdout", "pulse", "dummy". Only alsa supports synchronisation.
+\fBoutput_backend=\f1\fI"backend"\f1\fB;\f1
+Shairport Sync has a number of modules of code ("backends") through which audio is output. Normally, the first audio backend that works is selected. This setting forces the selection of the specific audio \fIbackend\f1. The default is "alsa". Perform the command \fBshairport-sync -h\f1 to get a list of available audio backends. Only the alsa backend supports synchronisation. 
 .TP
-\fBport=\f1\fI5000\f1\fB;\f1
-This is the port on which Shairport Sync listens for service requests.
+\fBport=\f1\fIportnumber\f1\fB;\f1
+Use this to specify the \fIportnumber\f1 Shairport Sync uses to listen for service requests from iTunes, etc. The default is port 5000. 
 .TP
 \fBudp_port_base=\f1\fI6001\f1\fB;\f1
-Allocation of UDP ports starts from this port number.
+When Shairport Sync starts to play audio, it establises three UDP connections to the audio source. Use this setting to specify the starting \fIportnumber\f1 for these three ports. It will pick the first three unused ports starting from \fIportnumber\f1. The default is port 6001. 
 .TP
 \fBudp_port_range=\f1\fI100\f1\fB;\f1
-Look for free ports in this number of places, starting at the UDP port base. Only three ports are needed.
+Use this in conjunction with the prevous setting to specify the range of ports that can be checked for availability. Only three ports are needed. The default is 100, thus 100 ports will be checked from port 6001 upwards until three are found. 
 .TP
-\fBpassword=\f1\fI"secret"\f1\fB;\f1
-The default is that no password is needed.
+\fBpassword=\f1\fI"password"\f1\fB;\f1
+Require the password \fIpassword\f1 to connect to the service. If you leave this setting commented out, no password is needed. 
 .TP
-\fBinterpolation=\f1\fI"basic"\f1\fB;\f1
-Interpolation method, also known as the "stuffing" method. The default is "basic", alternative is "soxr".
+\fBinterpolation=\f1\fI"mode"\f1\fB;\f1
+Interpolate, or "stuff", the audio stream using the \fImode\f1. Interpolation here refers to the process of adding or removing frames of audio to or from the stream sent to the output device to keep it exactly in synchrony with the player. The default mode, "basic", is normally almost completely inaudible. The alternative mode, "soxr", is even less obtrusive but requires much more processing power. For this mode, support for libsoxr, the SoX Resampler Library, must be selected when shairport-sync is compiled. 
 .TP
-\fBstatistics=\f1\fI"no"\f1\fB;\f1
-Log statistics from time to time.
+\fBstatistics=\f1\fI"setting"\f1\fB;\f1
+Use this \fIsetting\f1 to enable ("yes") or disable ("no") the output of some statistical information on the console or in the log. The default is to disable statistics. 
 .TP
-\fBdrift=\f1\fI88\f1\fB;\f1
-Allow synchronisation to drift by this number of frames before trying to correct it.
+\fBdrift=\f1\fIframes\f1\fB;\f1
+Allow playback to be up to \fIframes\f1 out of exact synchronization before attempting to correct it. The default is 88 frames, i.e. 2 ms. The smaller the tolerance, the more likely it is that overcorrection will occur. Overcorrection is when more corrections (insertions and deletions) are made than are strictly necessary to keep the stream in sync. Use the \fBstatistics\f1 setting to monitor correction levels. Corrections should not greatly exceed net corrections. 
 .TP
-\fBresync_threshold=\f1\fI2205\f1\fB;\f1
-A synchronisation error greater than this will cause audio to be muted while Shairport Sync attempts to resynchrone with the audio feed; 0 disables it.
+\fBresync_threshold=\f1\fIthreshold\f1\fB;\f1
+Resynchronise if timings differ by more than \fBthreshold\f1 frames. If the output timing differs from the source timing by more than the threshold, output will be muted and a full resynchronisation will occur. The default threshold is 2,205 frames, i.e. 50 milliseconds. Specify 0 to disable resynchronisation. 
 .TP
 \fBlog_verbosity=\f1\fI0\f1\fB;\f1
-"0" means no verbosity, "3" is most verbose.
+Use this to specify how much debugging information should be output or logged. "0" means no debug information, "3" means most debug information. The default is "0". 
 .TP
-\fBignore_volume_control=\f1\fI"no"\f1\fB;\f1
-Set this to "yes" if you want the volume to be at 100% no matter what the source's volume control is set to.
+\fBignore_volume_control=\f1\fI"choice"\f1\fB;\f1
+Set this \fIchoice\f1 to "yes" if you want the volume to be at 100% no matter what the source's volume control is set to. This might be useful if you want to set the volume on the output device, independently of the setting at the source. The default is "no". 
 .TP
 \fB"LATENCIES" SETTINGS\f1
-These are the settings available within the \fBlatencies\f1 group: 
+There are four default latency settings, chosen automatically. One latency matches the latency used by recent versions of iTunes when playing audio and another matches the latency used by so-called "AirPlay" devices, including iOS devices and iTunes and Quicktime Player when they are playing video. A third latency is used when the audio source is forked-daapd. The fourth latency is the default if no other latency is chosen and is used for older versions of iTunes.
 .TP
-\fBdefault=\f1\fI88200\f1\fB;\f1
-Comment Here 
+\fBitunes=\f1\fIlatency\f1\fB;\f1
+This is the \fIlatency\f1, in frames, used for iTunes 10 or later. Default is 99,400. 
 .TP
-\fBitunes=\f1\fI99400\f1\fB;\f1
-Comment Here 
+\fBairplay=\f1\fIlatency\f1\fB;\f1
+This is the \fIlatency\f1, in frames, used for AirPlay devices, including iOS devices and iTunes and Quicktime Player when they are playing video. Default is 88,200. 
 .TP
-\fBairplay=\f1\fI88200\f1\fB;\f1
-Comment Here 
+\fBforkedDaapd=\f1\fIlatency\f1\fB;\f1
+This is the \fIlatency\f1, in frames, used for forkedDaapd sources. Default is 99,400. 
 .TP
-\fBforkedDaapd=\f1\fI99400\f1\fB;\f1
-Comment Here 
+\fBdefault=\f1\fIlatency\f1\fB;\f1
+This is the \fIlatency\f1, in frames, used when the source is unrecognised. Default is 88,200. 
 .TP
 \fB"METADATA" SETTINGS\f1
-These are the settings available within the \fBmetadata\f1 group: 
+These are the settings available within the \fBmetadata\f1 group:
 .TP
 \fBenabled=\f1\fI"no"\f1\fB;\f1
 Comment Here 
