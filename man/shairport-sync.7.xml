@@ -123,6 +123,29 @@
     The default name is "Shairport Sync on &lt;hostname&gt;".
     </optdesc>
 	  </option>
+	  
+	  <option>
+    <p><opt>password=</opt><arg>"password"</arg><opt>;</opt></p>
+    <optdesc>Require the password <arg>password</arg> to connect to the service. If you leave this setting commented out, no password is needed.</optdesc>
+    </option>
+    <option>
+    <p><opt>interpolation=</opt><arg>"mode"</arg><opt>;</opt></p>
+    <optdesc>Interpolate, or "stuff", the audio stream using the <arg>mode</arg>.  Interpolation here refers to the
+    process of adding or removing frames of audio  to  or  from  the
+    stream sent to the output device to keep it exactly in synchrony
+    with the player.
+    The default mode, "basic", is normally almost  completely  inaudible.
+    The  alternative mode, "soxr", is even less obtrusive but
+    requires much more processing power. For this mode, support for
+    libsoxr, the SoX Resampler Library, must be selected when
+    shairport-sync is compiled.
+		</optdesc>
+    </option>
+    
+    <option>
+    <p><opt>statistics=</opt><arg>"setting"</arg><opt>;</opt></p>
+    <optdesc>Use this <arg>setting</arg> to enable ("yes") or disable ("no") the output of some statistical information on the console or in the log. The default is to disable statistics.</optdesc>
+    </option>
 
     <option>
     <p><opt>mdns_backend=</opt><arg>"backend"</arg><opt>;</opt></p>
@@ -145,29 +168,8 @@
     <optdesc>Use this in conjunction with the prevous setting to specify the range of ports that can be checked for availability. Only three ports are needed. The default is 100, thus 100 ports will be checked from port 6001 upwards until three are found.</optdesc>
     </option>
     <option>
-    <p><opt>password=</opt><arg>"password"</arg><opt>;</opt></p>
-    <optdesc>Require the password <arg>password</arg> to connect to the service. If you leave this setting commented out, no password is needed.</optdesc>
-    </option>
-    <option>
-    <p><opt>interpolation=</opt><arg>"mode"</arg><opt>;</opt></p>
-    <optdesc>Interpolate, or "stuff", the audio stream using the <arg>mode</arg>.  Interpolation here refers to the
-    process of adding or removing frames of audio  to  or  from  the
-    stream sent to the output device to keep it exactly in synchrony
-    with the player.
-    The default mode, "basic", is normally almost  completely  inaudible.
-    The  alternative mode, "soxr", is even less obtrusive but
-    requires much more processing power. For this mode, support for
-    libsoxr, the SoX Resampler Library, must be selected when
-    shairport-sync is compiled.
-		</optdesc>
-    </option>
-    <option>
-    <p><opt>statistics=</opt><arg>"setting"</arg><opt>;</opt></p>
-    <optdesc>Use this <arg>setting</arg> to enable ("yes") or disable ("no") the output of some statistical information on the console or in the log. The default is to disable statistics.</optdesc>
-    </option>
-    <option>
     <p><opt>drift=</opt><arg>frames</arg><opt>;</opt></p>
-    <optdesc>Allow playback to be up to <arg>frames</arg> out of exact synchronization before attempting to correct it.
+    <optdesc>Allow playback to drift up to <arg>frames</arg> out of exact synchronization before attempting to correct it.
 		The default is 88 frames, i.e. 2 ms. The smaller the tolerance, the more likely it is that overcorrection will occur.
 		Overcorrection is when more corrections (insertions and deletions) are made than are strictly necessary to keep the stream in sync. Use the <opt>statistics</opt> setting to
 		monitor correction levels. Corrections should not greatly exceed net corrections.
@@ -192,6 +194,7 @@
 
     <option><p><opt>"LATENCIES" SETTINGS</opt></p></option>
     <p>There are four default latency settings, chosen automatically. One latency matches the latency used by recent versions of iTunes when playing audio and another matches the latency used by so-called "AirPlay" devices, including iOS devices and iTunes and Quicktime Player when they are playing video. A third latency is used when the audio source is forked-daapd. The fourth latency is the default if no other latency is chosen and is used for older versions of iTunes.</p>
+    <p>If you want to change latencies to compensate for a delay in the audio output device (which will have the same effect on all sources), instead of changing these individual latencies, consider using the <opt>audio_backend_latency_offset</opt> setting in the <opt>alsa</opt> group (or the appropriate other group if you're not outputing through the alsa backend).</p>
 
 
     <option>
@@ -212,36 +215,39 @@
    </option>
 
     <option><p><opt>"METADATA" SETTINGS</opt></p></option>
-    <p>Shairport Sync can process metadata provided by the source, such as Track Number, Album Name, cover art, etc. and can provide additional metadata such as volume level, pause/resume, etc. It provides the metadata to a pipe, by default <file>/tmp/shairport-sync-metadata</file>. To process metadata, Shairport Sync must have been compiled with metadata support included. The <opt>metadata</opt> group of settings allow you to enable metadata handling and to control certain aspects of it. These are the settings available within the <opt>metadata</opt> group:</p>
+    <p>Shairport Sync can process metadata provided by the source, such as Track Number, Album Name, cover art, etc. and can provide additional metadata such as volume level, pause/resume, etc. It provides the metadata to a pipe, by default <file>/tmp/shairport-sync-metadata</file>. To process metadata, Shairport Sync must have been compiled with metadata support included. You can check tht this is so by running <opt>shairport-sync -V</opt>; the identification string will contain the word <opt>metadata</opt>.</p><p>The <opt>metadata</opt> group of settings allow you to enable metadata handling and to control certain aspects of it:</p>
 
 
     <option>
     <p><opt>enabled=</opt><arg>"choice"</arg><opt>;</opt></p>
-    <optdesc>Comment Here</optdesc>
+    <optdesc>Set the <arg>choice</arg> to "yes" to enable Shairport Sync to look for metadata from the audio source and to forward it, along with metadata generated by Shairport Sync itself, to the metadata pipe. The default is "no".</optdesc>
     </option>
     <option>
-    <p><opt>include_cover_art=</opt><arg>"no"</arg><opt>;</opt></p>
-    <optdesc>Comment Here</optdesc>
+    <p><opt>include_cover_art=</opt><arg>"choice"</arg><opt>;</opt></p>
+    <optdesc>Set the <arg>choice</arg> to "yes" to enable Shairport Sync to look for cover art from the audio source and to forward it to the metadata pipe. A reason for not enabling cover art is that the images can sometimes be very large and mey delay transmission of subsequent metadata through the pipe. The default is "no".</optdesc>
     </option>
     <option>
-    <p><opt>pipe_name=</opt><arg>"/tmp/shairport-sync-metadata"</arg><opt>;</opt></p>
-    <optdesc>Comment Here</optdesc>
+    <p><opt>pipe_name=</opt><arg>"filepathname"</arg><opt>;</opt></p>
+    <optdesc>Specify the absolute path name of the pipe through which metadata should be sent The default is <file>/tmp/shairport-sync-metadata</file>".</optdesc>
     </option>
     
     <option><p><opt>"SESSIONCONTROL" SETTINGS</opt></p></option>
-    These are the settings available within the <opt>sessioncontrol</opt> group:
+    <p>Shairport Sync can run programs just before it starts to play an audio stream and just after it finishes. You specify them using the sessioncontrol group settings run_this_before_play_begins and run_this_after_play_ends. </p>
+
 
     <option>
     <p><opt>run_this_before_play_begins=</opt><arg>"/path/to/application and args"</arg><opt>;</opt></p>
-    <optdesc>Comment Here</optdesc>
+    <optdesc>Here you can specify a program and its arguments that will be run just before a play session begins. Be careful to include the full path to the application.
+    The application must be marked as executable and, if it is a script, its first line must begin with the standard <file>#!/bin/...</file> as appropriate.</optdesc>
     </option>
     <option>
     <p><opt>run_this_after_play_ends=</opt><arg>"/path/to/application and args"</arg><opt>;</opt></p>
-    <optdesc>Comment Here</optdesc>
+    <optdesc>Here you can specify a program and its arguments that will be run just after a play session ends. Be careful to include the full path to the application.
+    The application must be marked as executable and, if it is a script, its first line must begin with the standard <file>#!/bin/...</file> as appropriate.</optdesc>
     </option>
     <option>
-    <p><opt>wait_for_completion=</opt><arg>"no"</arg><opt>;</opt></p>
-    <optdesc>Comment Here</optdesc>
+    <p><opt>wait_for_completion=</opt><arg>"choice"</arg><opt>;</opt></p>
+    <optdesc>Set <arg>choice</arg> to "yes" to make Shairport Sync wait until the programs specified in the <opt>run_this_before_play_begins</opt> and <opt>run_this_after_play_ends=</opt> have completed execution before continuing. The default is "no".</optdesc>
     </option>
     <option>
     <p><opt>allow_session_interruption=</opt><arg>"no"</arg><opt>;</opt></p>
