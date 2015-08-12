@@ -247,7 +247,7 @@
     </option>
     <option>
     <p><opt>wait_for_completion=</opt><arg>"choice"</arg><opt>;</opt></p>
-    <optdesc>Set <arg>choice</arg> to "yes" to make Shairport Sync wait until the programs specified in the <opt>run_this_before_play_begins</opt> and <opt>run_this_after_play_ends=</opt> have completed execution before continuing. The default is "no".</optdesc>
+    <optdesc>Set <arg>choice</arg> to "yes" to make Shairport Sync wait until the programs specified in the <opt>run_this_before_play_begins</opt> and <opt>run_this_after_play_ends</opt> have completed execution before continuing. The default is "no".</optdesc>
     </option>
     <option>
     <p><opt>allow_session_interruption=</opt><arg>"no"</arg><opt>;</opt></p>
