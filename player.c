@@ -902,8 +902,9 @@ static void *player_thread_func(void *arg) {
   missing_packets = late_packets = too_late_packets = resend_requests = 0;
   flush_rtp_timestamp = 0; // it seems this number has a special significance -- it seems to be used
                            // as a null operand, so we'll use it like that too
-  int sync_error_out_of_bounds =
-      0; // number of times in a row that there's been a serious sync error
+  int sync_error_out_of_bounds = 0; // number of times in a row that there's been a serious sync error
+
+  uint64_t tens_of_seconds = 0;
   while (!please_stop) {
     abuf_t *inframe = buffer_get_frame();
     if (inframe) {
@@ -1009,6 +1010,17 @@ static void *player_thread_func(void *arg) {
             }
 
             // try to keep the corrections definitely below 1 in 1000 audio frames
+            
+            // calculate the time elapsed since the play session started.
+            
+            uint64_t time_since_play_started = local_time_now - first_packet_time_to_play;
+            if ((local_time_now) && (first_packet_time_to_play)) {
+              uint64_t t = tens_of_seconds;
+              tens_of_seconds = (time_since_play_started / 10)>>32;
+              // if (tens_of_seconds!=t)
+              //  debug(1,"%llu seconds of play have elapsed.",tens_of_seconds*10);           
+            }
+
             if (amount_to_stuff) {
               uint32_t x = random() % 1000;
               if (x > 352)
