@@ -140,55 +140,64 @@ Here you can specify a program and its arguments that will be run just before a 
 Here you can specify a program and its arguments that will be run just after a play session ends. Be careful to include the full path to the application. The application must be marked as executable and, if it is a script, its first line must begin with the standard \fI#!/bin/...\f1 as appropriate. 
 .TP
 \fBwait_for_completion=\f1\fI"choice"\f1\fB;\f1
-Set \fIchoice\f1 to "yes" to make Shairport Sync wait until the programs specified in the \fBrun_this_before_play_begins\f1 and \fBrun_this_after_play_ends=\f1 have completed execution before continuing. The default is "no". 
+Set \fIchoice\f1 to "yes" to make Shairport Sync wait until the programs specified in the \fBrun_this_before_play_begins\f1 and \fBrun_this_after_play_ends\f1 have completed execution before continuing. The default is "no". 
 .TP
-\fBallow_session_interruption=\f1\fI"no"\f1\fB;\f1
-Comment Here 
+\fBallow_session_interruption=\f1\fI"choice"\f1\fB;\f1
+If \fBchoice\f1 is set to "yes", then another source will be able to interrupt an existing play session and start a new one. When set to "no" (the default), other devices attempting to interrupt a session will fail, receiving a busy signal. 
 .TP
-\fBsession_timeout=\f1\fI120\f1\fB;\f1
-Comment Here 
+\fBsession_timeout=\f1\fIseconds\f1\fB;\f1
+If a play session has been established and the source disappears without warning (such as a device going out of range of a network) then wait for \fIseconds\f1 seconds before ending the session. Once the session has terminated, other devices can use it. The default is 120 seconds. 
 .TP
 \fB"ALSA" SETTINGS\f1
-These are the settings available within the \fBalsa\f1 group: 
+These settings are for the ALSA back end, used used to communicate with audio output devices in the ALSA system. (By the way, you can use tools such as \fBalsamixer\f1 or \fBaplay\f1 to discover what devices are available.) Use these settings to select the output device and the mixer control to be used to control the output volume. You can additionally set the desired size of the output buffer and you can adjust overall latency. Here are the \fBalsa\f1 group settings:
 .TP
-\fBoutput_device=\f1\fI"default"\f1\fB;\f1
-Comment Here 
+\fBoutput_device=\f1\fI"output_device"\f1\fB;\f1
+Use the output device called \fIoutput_device\f1. The default is the device called "device". 
 .TP
-\fBmixer_type=\f1\fI"software"\f1\fB;\f1
-"software" or "hardware" 
 .TP
-\fBmixer_device=\f1\fI"default"\f1\fB;\f1
-actually, the mixer default is whatever the output_device is. Normally you wouldn't have to use this. 
+\fBmixer_control_name=\f1\fI"name"\f1\fB;\f1
+Specify the \fIname\f1 of the mixer control to be used by shairport-sync to control the volume. The mixer control must be on the mixer device, which by default is the output device. If you do not specify a mixer control name, shaiport-sync will control the volume in software. \fBmixer_type=\f1\fI"mixer_type"\f1\fB;\f1
+This setting is deprecated and will be removed soon. If you wish to use a mixer control to control the volume, then set \fImixer_type\f1 to "hardware". The default is "software". 
 .TP
-\fBmixer_control_name=\f1\fI"PCM"\f1\fB;\f1
-the name of the mixer to use -- there is no default. 
+\fBmixer_device=\f1\fI"mixer_device"\f1\fB;\f1
+By default, the mixer is assumed to be output_device is. Use this setting to specify a device other than the output device. 
 .TP
-\fBaudio_backend_latency_offset=\f1\fI0\f1\fB;\f1
-Set this offset to compensate for a fixed delay in the audio back end. E.g. if the output device delays by 100 ms, set this to -4410. 
+\fBaudio_backend_latency_offset=\f1\fIoffset\f1\fB;\f1
+Set this \fIoffset\f1, in frames, to compensate for a fixed delay in the audio back end. For example, if the output device delays by 100 ms, set this to -4410. 
 .TP
-\fBaudio_backend_buffer_desired_length=\f1\fI6615\f1\fB;\f1
-If set too small, buffer underflow occurs on low-powered machines. Too long and the response times with software mixer become annoying. 
+\fBaudio_backend_buffer_desired_length=\f1\fIlength\f1\fB;\f1
+Use this to set the desired number frames to be in the output device's hardware output buffer. The default is 6,615 frames, or 0.15 seconds. If set too small, buffer underflow may occur on low-powered machines. If too large, the response times when using a software mixer become annoying, or it may exceed the hardware buffer size. It may need to be larger on low-powered machines performing other tasks, such as processing metadata. 
 .TP
 \fB"PIPE" SETTINGS\f1
-These are the settings available within the \fBpipe\f1 group: 
-.TP
-\fBaudio_backend_latency_offset=\f1\fI0\f1\fB;\f1
-Set this offset to compensate for a fixed delay in the audio back end. E.g. if the output device delays by 100 ms, set this to -4410. 
-.TP
-\fBaudio_backend_buffer_desired_length=\f1\fI44100\f1\fB;\f1
-Comment Here 
+These settings are for the PIPE backend, used to route audio to a named unix pipe. The audio is in raw CD audio format: PCM 16 bit little endian, 44,100 samples per second, stereo.
+
+Use the \fIname\f1 setting to set the name and location of the pipe.
+
+There are two further settings affecting timing that might be useful if the pipe reader is, for example, a program to play an audio stream such as \fBaplay\f1. The \fIaudio_backend_latency_offset\f1 affects precisely when the first audio packet is sent and the \fIaudio_backend_buffer_desired_length\f1 setting affects the nominal output buffer size.
+
+These are the settings available within the \fBpipe\f1 group:
 .TP
 \fBname=\f1\fI"/path/to/pipe"\f1\fB;\f1
-there is no default pipe name for the output 
+Use this to specify the name and location of the pipe. The pipe will be created and opened when Shairport Sync starts up and will be closed upon shutdown. Frames of audio will be sent to the pipe in packets of 352 frames and will be discarded if the pipe has not have a reader attached. The sender will wait for up to five seconds for a packet to be written before discarding it. 
+.TP
+\fBaudio_backend_latency_offset=\f1\fIoffset_in_frames\f1\fB;\f1
+Packets of audio frames are written to the pipe synchronously -- that is, they are written to at exactly the time they should be played. You can offset the time of initial audio output relative to its nominal time using this setting. For example to send an audio stream to the pipe 100 milliseconds before it is due to be played, set this to -4410. 
+.TP
+\fBaudio_backend_buffer_desired_length=\f1\fIbuffer_length_in_frames\f1\fB;\f1
+Use this setting, in frames, to set the size of the output buffer. It works by determining how soon the second and subsequent packets of audio frames are sent to the pipe. For example, if you send the first packet of audio exactly when it is due and, using a \fIaudio_backend_buffer_desired_length\f1 setting of 44100, send subsequent packets of audio a second before they are due to be played, they will be buffered in the pipe reader's buffer, giving it a nominal buffer size of 44,100 frames. Note that if the pipe reader consumes audio faster or slower than they are supplied, the buffer will empty or overflow eventually -- Shairport Sync performs no stuffing or interpolation when writing to a pipe. 
 .TP
 \fB"STDOUT" SETTINGS\f1
-These are the settings available within the \fBstdout\f1 group: 
+These settings are for the STDOUT backend, used to route audio to standard output ("stdout"). The audio is in raw CD audio format: PCM 16 bit little endian, 44,100 samples per second, stereo.
+
+There are two settings affecting timing that might be useful if the stdout reader is, for example, a program to play an audio stream such as \fBaplay\f1. The \fIaudio_backend_latency_offset\f1 affects precisely when the first audio packet is sent and the \fIaudio_backend_buffer_desired_length\f1 setting affects the nominal output buffer size.
+
+These are the settings available within the \fBstdout\f1 group:
 .TP
-\fBaudio_backend_latency_offset=\f1\fI0\f1\fB;\f1
-Set this offset to compensate for a fixed delay in the audio back end. E.g. if the output device delays by 100 ms, set this to -4410. 
+\fBaudio_backend_latency_offset=\f1\fIoffset_in_frames\f1\fB;\f1
+Packets of audio frames are written to stdout synchronously -- that is, they are written at exactly the time they should be played. You can offset the time of initial audio output relative to its nominal time using this setting. For example to send an audio stream to stdout 100 milliseconds before it is due to be played, set this to -4410. 
 .TP
-\fBaudio_backend_buffer_desired_length=\f1\fI44100\f1\fB;\f1
-Comment Here 
+\fBaudio_backend_buffer_desired_length=\f1\fIbuffer_length_in_frames\f1\fB;\f1
+Use this setting, in frames, to set the size of the output buffer. It works by determining how soon the second and subsequent packets of audio frames are sent to stdout. For example, if you send the first packet of audio exactly when it is due and, using a \fIaudio_backend_buffer_desired_length\f1 setting of 44100, send subsequent packets of audio a second before they are due to be played, they will be buffered in the stdout reader's buffer, giving it a nominal buffer size of 44,100 frames. Note that if the stdout reader consumes audio faster or slower than they are supplied, the buffer will empty or overflow eventually -- Shairport Sync performs no stuffing or interpolation when writing to stdout. 
 .SH OPTIONS
 Many of the options take sensible default values, so you can normally ignore most of them. See the EXAMPLES section for typical usages.
 
