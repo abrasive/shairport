@@ -130,7 +130,7 @@ static pthread_mutex_t ab_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t flush_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t flowcontrol;
 
-static int64_t first_packet_time_to_play; // nanoseconds
+static int64_t first_packet_time_to_play, time_since_play_started; // nanoseconds
 
 static audio_parameters audio_information;
 
@@ -441,6 +441,7 @@ static abuf_t *buffer_get_frame(void) {
       ab_resync();
       first_packet_timestamp = 0;
       first_packet_time_to_play = 0;
+      time_since_play_started = 0;
       flush_requested = 0;
     }
     pthread_mutex_unlock(&flush_mutex);
@@ -557,6 +558,7 @@ static abuf_t *buffer_get_frame(void) {
               ab_resync();
               first_packet_timestamp = 0;
               first_packet_time_to_play = 0;
+              time_since_play_started = 0;
             } else {
               if (config.output->delay) {
                 dac_delay = config.output->delay();
@@ -1011,20 +1013,20 @@ static void *player_thread_func(void *arg) {
             
             // calculate the time elapsed since the play session started.
             
-            uint64_t time_since_play_started = local_time_now - first_packet_time_to_play;
-            if ((local_time_now) && (first_packet_time_to_play)) {
-              uint64_t t = tens_of_seconds;
-              tens_of_seconds = (time_since_play_started / 10)>>32;
-              // if (tens_of_seconds!=t)
-              //  debug(1,"%llu seconds of play have elapsed.",tens_of_seconds*10);           
-            }
-
             if (amount_to_stuff) {
-              uint32_t x = random() % 1000;
-              if (x > 352)
-                amount_to_stuff = 0;
-            }
+              if ((local_time_now) && (first_packet_time_to_play) && (local_time_now >= first_packet_time_to_play)) {
 
+                int64_t tp = (local_time_now - first_packet_time_to_play)>>32; // seconds
+                
+                if (tp<5)
+                  amount_to_stuff = 0; // wait at least five seconds
+                else if (tp<30) {
+                  if ((random() % 1000) > 352) // keep it to about 1:1000 for the first thirty seconds
+                    amount_to_stuff = 0;
+                }
+              }
+            }
+                        
             if ((amount_to_stuff == 0) && (fix_volume == 0x10000)) {
               // if no stuffing needed and no volume adjustment, then
               // don't send to stuff_buffer_* and don't copy to outbuf; just send directly to the
