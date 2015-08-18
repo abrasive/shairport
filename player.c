@@ -502,8 +502,7 @@ static abuf_t *buffer_get_frame(void) {
               // Here, calculate when we should start playing. We need to know when to allow the
               // packets to be sent to the player.
               // We will send packets of silence from now until that time and then we will send the
-              // first packet,
-              // which will be followed by the subsequent packets.
+              // first packet, which will be followed by the subsequent packets.
 
               // we will get a fix every second or so, which will be stored as a pair consisting of
               // the time when the packet with a particular timestamp should be played, neglecting
@@ -513,9 +512,8 @@ static abuf_t *buffer_get_frame(void) {
               // to do some calculations.
 
               // To calculate when the first packet will be played, we figure out the exact time the
-              // packet should
-              // be played according to its timestamp and the reference time. We then need to add
-              // the desired latency, typically 88200 frames.
+              // packet should be played according to its timestamp and the reference time.
+              // We then need to add the desired latency, typically 88200 frames.
 
               // Then we need to offset this by the backend latency offset. For example, if we knew
               // that the audio back end has a latency of 100 ms, we would
