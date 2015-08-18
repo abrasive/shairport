@@ -278,7 +278,7 @@
 
     <option>
     <p><opt>output_device=</opt><arg>"output_device"</arg><opt>;</opt></p>
-    <optdesc>Use the output device called <arg>output_device</arg>. The default is the device called "device".</optdesc>
+    <optdesc>Use the output device called <arg>output_device</arg>. The default is the device called "default".</optdesc>
     </option>
     <option>
     <option>
@@ -329,7 +329,7 @@
     <optdesc>
     Packets of audio frames are written to the pipe synchronously -- that is, they are written to at exactly the time they should be played.
     You can offset the time of initial audio output relative to its nominal time using this setting.
-    For example to send an audio stream to the pipe 100 milliseconds before it is due to be played, set this to -4410.</optdesc>
+    For example to send an audio stream to the pipe 100 milliseconds before it is due to be played, set this to -4410. Default setting is 0.</optdesc>
     </option>
     
     <option>
@@ -339,7 +339,7 @@
     For example, if you send the first packet of audio exactly when it is due and, using a <arg>audio_backend_buffer_desired_length</arg> setting of 44100,
     send subsequent packets of audio a second before they are due to be played, they will be buffered in the pipe reader's buffer, giving it a nominal buffer size of 44,100 frames.
     Note that if the pipe reader consumes audio faster or slower than they are supplied, the buffer will empty or overflow eventually --
-    Shairport Sync performs no stuffing or interpolation when writing to a pipe.
+    Shairport Sync performs no stuffing or interpolation when writing to a pipe. Default setting is 44,100.
     </optdesc>
     </option>
      
@@ -356,7 +356,7 @@
     <optdesc>
     Packets of audio frames are written to stdout synchronously -- that is, they are written at exactly the time they should be played.
     You can offset the time of initial audio output relative to its nominal time using this setting.
-    For example to send an audio stream to stdout 100 milliseconds before it is due to be played, set this to -4410.</optdesc>
+    For example to send an audio stream to stdout 100 milliseconds before it is due to be played, set this to -4410. Default setting is 0.</optdesc>
     </option>
     
     <option>
@@ -366,7 +366,7 @@
     For example, if you send the first packet of audio exactly when it is due and, using a <arg>audio_backend_buffer_desired_length</arg> setting of 44100,
     send subsequent packets of audio a second before they are due to be played, they will be buffered in the stdout reader's buffer, giving it a nominal buffer size of 44,100 frames.
     Note that if the stdout reader consumes audio faster or slower than they are supplied, the buffer will empty or overflow eventually --
-    Shairport Sync performs no stuffing or interpolation when writing to stdout.
+    Shairport Sync performs no stuffing or interpolation when writing to stdout. Default setting is 44,100.
     </optdesc>
     </option>
      

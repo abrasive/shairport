@@ -152,7 +152,7 @@ If a play session has been established and the source disappears without warning
 These settings are for the ALSA back end, used used to communicate with audio output devices in the ALSA system. (By the way, you can use tools such as \fBalsamixer\f1 or \fBaplay\f1 to discover what devices are available.) Use these settings to select the output device and the mixer control to be used to control the output volume. You can additionally set the desired size of the output buffer and you can adjust overall latency. Here are the \fBalsa\f1 group settings:
 .TP
 \fBoutput_device=\f1\fI"output_device"\f1\fB;\f1
-Use the output device called \fIoutput_device\f1. The default is the device called "device". 
+Use the output device called \fIoutput_device\f1. The default is the device called "default". 
 .TP
 .TP
 \fBmixer_control_name=\f1\fI"name"\f1\fB;\f1
@@ -181,10 +181,10 @@ These are the settings available within the \fBpipe\f1 group:
 Use this to specify the name and location of the pipe. The pipe will be created and opened when Shairport Sync starts up and will be closed upon shutdown. Frames of audio will be sent to the pipe in packets of 352 frames and will be discarded if the pipe has not have a reader attached. The sender will wait for up to five seconds for a packet to be written before discarding it. 
 .TP
 \fBaudio_backend_latency_offset=\f1\fIoffset_in_frames\f1\fB;\f1
-Packets of audio frames are written to the pipe synchronously -- that is, they are written to at exactly the time they should be played. You can offset the time of initial audio output relative to its nominal time using this setting. For example to send an audio stream to the pipe 100 milliseconds before it is due to be played, set this to -4410. 
+Packets of audio frames are written to the pipe synchronously -- that is, they are written to at exactly the time they should be played. You can offset the time of initial audio output relative to its nominal time using this setting. For example to send an audio stream to the pipe 100 milliseconds before it is due to be played, set this to -4410. Default setting is 0. 
 .TP
 \fBaudio_backend_buffer_desired_length=\f1\fIbuffer_length_in_frames\f1\fB;\f1
-Use this setting, in frames, to set the size of the output buffer. It works by determining how soon the second and subsequent packets of audio frames are sent to the pipe. For example, if you send the first packet of audio exactly when it is due and, using a \fIaudio_backend_buffer_desired_length\f1 setting of 44100, send subsequent packets of audio a second before they are due to be played, they will be buffered in the pipe reader's buffer, giving it a nominal buffer size of 44,100 frames. Note that if the pipe reader consumes audio faster or slower than they are supplied, the buffer will empty or overflow eventually -- Shairport Sync performs no stuffing or interpolation when writing to a pipe. 
+Use this setting, in frames, to set the size of the output buffer. It works by determining how soon the second and subsequent packets of audio frames are sent to the pipe. For example, if you send the first packet of audio exactly when it is due and, using a \fIaudio_backend_buffer_desired_length\f1 setting of 44100, send subsequent packets of audio a second before they are due to be played, they will be buffered in the pipe reader's buffer, giving it a nominal buffer size of 44,100 frames. Note that if the pipe reader consumes audio faster or slower than they are supplied, the buffer will empty or overflow eventually -- Shairport Sync performs no stuffing or interpolation when writing to a pipe. Default setting is 44,100. 
 .TP
 \fB"STDOUT" SETTINGS\f1
 These settings are for the STDOUT backend, used to route audio to standard output ("stdout"). The audio is in raw CD audio format: PCM 16 bit little endian, 44,100 samples per second, stereo.
@@ -194,10 +194,10 @@ There are two settings affecting timing that might be useful if the stdout reade
 These are the settings available within the \fBstdout\f1 group:
 .TP
 \fBaudio_backend_latency_offset=\f1\fIoffset_in_frames\f1\fB;\f1
-Packets of audio frames are written to stdout synchronously -- that is, they are written at exactly the time they should be played. You can offset the time of initial audio output relative to its nominal time using this setting. For example to send an audio stream to stdout 100 milliseconds before it is due to be played, set this to -4410. 
+Packets of audio frames are written to stdout synchronously -- that is, they are written at exactly the time they should be played. You can offset the time of initial audio output relative to its nominal time using this setting. For example to send an audio stream to stdout 100 milliseconds before it is due to be played, set this to -4410. Default setting is 0. 
 .TP
 \fBaudio_backend_buffer_desired_length=\f1\fIbuffer_length_in_frames\f1\fB;\f1
-Use this setting, in frames, to set the size of the output buffer. It works by determining how soon the second and subsequent packets of audio frames are sent to stdout. For example, if you send the first packet of audio exactly when it is due and, using a \fIaudio_backend_buffer_desired_length\f1 setting of 44100, send subsequent packets of audio a second before they are due to be played, they will be buffered in the stdout reader's buffer, giving it a nominal buffer size of 44,100 frames. Note that if the stdout reader consumes audio faster or slower than they are supplied, the buffer will empty or overflow eventually -- Shairport Sync performs no stuffing or interpolation when writing to stdout. 
+Use this setting, in frames, to set the size of the output buffer. It works by determining how soon the second and subsequent packets of audio frames are sent to stdout. For example, if you send the first packet of audio exactly when it is due and, using a \fIaudio_backend_buffer_desired_length\f1 setting of 44100, send subsequent packets of audio a second before they are due to be played, they will be buffered in the stdout reader's buffer, giving it a nominal buffer size of 44,100 frames. Note that if the stdout reader consumes audio faster or slower than they are supplied, the buffer will empty or overflow eventually -- Shairport Sync performs no stuffing or interpolation when writing to stdout. Default setting is 44,100. 
 .SH OPTIONS
 Many of the options take sensible default values, so you can normally ignore most of them. See the EXAMPLES section for typical usages.
 
