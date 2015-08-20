@@ -33,6 +33,8 @@
 #include <time.h>
 #include <unistd.h>
 #include <popt.h>
+#include <poll.h>
+#include <sys/types.h>
 #include <sys/wait.h>
 
 #include <assert.h>
@@ -472,7 +474,7 @@ double vol2attn(double vol, long max_db, long min_db) {
 
 uint64_t get_absolute_time_in_fp() {
   uint64_t time_now_fp;
-#ifdef COMPILE_FOR_LINUX
+#ifdef COMPILE_FOR_LINUX_AND_FREEBSD
   struct timespec tn;
   // can't use CLOCK_MONOTONIC_RAW as it's not implemented in OpenWrt
   clock_gettime(CLOCK_MONOTONIC, &tn);
@@ -509,3 +511,28 @@ uint64_t get_absolute_time_in_fp() {
 #endif
   return time_now_fp;
 }
+
+ssize_t non_blocking_write(int fd, const void *buf, size_t count) {
+  // debug(1,"writing %u to pipe...",count);
+  // we are assuming that the count is always smaller than the FIFO's buffer
+  struct pollfd ufds[1];
+  ssize_t reply;
+  do {
+    ufds[0].fd = fd;
+    ufds[0].events = POLLOUT;
+    int rv = poll(ufds, 1, 5000);
+    if (rv == -1)
+      debug(1, "error waiting for pipe to unblock...");
+    if (rv == 0)
+      debug(1, "timeout waiting for pipe to unblock");
+    reply = write(fd, buf, count);
+    if ((reply == -1) && ((errno == EAGAIN) || (errno == EWOULDBLOCK)))
+      debug(1, "writing to pipe will block...");
+    //    else
+    //      debug(1,"writing %u to pipe done...",reply);
+  } while ((reply == -1) && ((errno == EAGAIN) || (errno == EWOULDBLOCK)));
+  return reply;
+
+  //  return write(fd,buf,count);
+}
+

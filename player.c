@@ -130,7 +130,7 @@ static pthread_mutex_t ab_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t flush_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t flowcontrol;
 
-static int64_t first_packet_time_to_play; // nanoseconds
+static int64_t first_packet_time_to_play, time_since_play_started; // nanoseconds
 
 static audio_parameters audio_information;
 
@@ -441,6 +441,7 @@ static abuf_t *buffer_get_frame(void) {
       ab_resync();
       first_packet_timestamp = 0;
       first_packet_time_to_play = 0;
+      time_since_play_started = 0;
       flush_requested = 0;
     }
     pthread_mutex_unlock(&flush_mutex);
@@ -502,8 +503,7 @@ static abuf_t *buffer_get_frame(void) {
               // Here, calculate when we should start playing. We need to know when to allow the
               // packets to be sent to the player.
               // We will send packets of silence from now until that time and then we will send the
-              // first packet,
-              // which will be followed by the subsequent packets.
+              // first packet, which will be followed by the subsequent packets.
 
               // we will get a fix every second or so, which will be stored as a pair consisting of
               // the time when the packet with a particular timestamp should be played, neglecting
@@ -513,9 +513,8 @@ static abuf_t *buffer_get_frame(void) {
               // to do some calculations.
 
               // To calculate when the first packet will be played, we figure out the exact time the
-              // packet should
-              // be played according to its timestamp and the reference time. We then need to add
-              // the desired latency, typically 88200 frames.
+              // packet should be played according to its timestamp and the reference time.
+              // We then need to add the desired latency, typically 88200 frames.
 
               // Then we need to offset this by the backend latency offset. For example, if we knew
               // that the audio back end has a latency of 100 ms, we would
@@ -559,6 +558,7 @@ static abuf_t *buffer_get_frame(void) {
               ab_resync();
               first_packet_timestamp = 0;
               first_packet_time_to_play = 0;
+              time_since_play_started = 0;
             } else {
               if (config.output->delay) {
                 dac_delay = config.output->delay();
@@ -663,7 +663,7 @@ static abuf_t *buffer_get_frame(void) {
       time_to_wait_for_wakeup_fp *= 4 * 352; // four full 352-frame packets
       time_to_wait_for_wakeup_fp /= 3; // four thirds of a packet time
 
-#ifdef COMPILE_FOR_LINUX
+#ifdef COMPILE_FOR_LINUX_AND_FREEBSD
       uint64_t time_of_wakeup_fp = local_time_now + time_to_wait_for_wakeup_fp;
       uint64_t sec = time_of_wakeup_fp >> 32;
       uint64_t nsec = ((time_of_wakeup_fp & 0xffffffff) * 1000000000) >> 32;
@@ -902,8 +902,9 @@ static void *player_thread_func(void *arg) {
   missing_packets = late_packets = too_late_packets = resend_requests = 0;
   flush_rtp_timestamp = 0; // it seems this number has a special significance -- it seems to be used
                            // as a null operand, so we'll use it like that too
-  int sync_error_out_of_bounds =
-      0; // number of times in a row that there's been a serious sync error
+  int sync_error_out_of_bounds = 0; // number of times in a row that there's been a serious sync error
+
+  uint64_t tens_of_seconds = 0;
   while (!please_stop) {
     abuf_t *inframe = buffer_get_frame();
     if (inframe) {
@@ -1009,12 +1010,23 @@ static void *player_thread_func(void *arg) {
             }
 
             // try to keep the corrections definitely below 1 in 1000 audio frames
+            
+            // calculate the time elapsed since the play session started.
+            
             if (amount_to_stuff) {
-              uint32_t x = random() % 1000;
-              if (x > 352)
-                amount_to_stuff = 0;
-            }
+              if ((local_time_now) && (first_packet_time_to_play) && (local_time_now >= first_packet_time_to_play)) {
 
+                int64_t tp = (local_time_now - first_packet_time_to_play)>>32; // seconds
+                
+                if (tp<5)
+                  amount_to_stuff = 0; // wait at least five seconds
+                else if (tp<30) {
+                  if ((random() % 1000) > 352) // keep it to about 1:1000 for the first thirty seconds
+                    amount_to_stuff = 0;
+                }
+              }
+            }
+                        
             if ((amount_to_stuff == 0) && (fix_volume == 0x10000)) {
               // if no stuffing needed and no volume adjustment, then
               // don't send to stuff_buffer_* and don't copy to outbuf; just send directly to the
@@ -1268,7 +1280,7 @@ int player_play(stream_cfg *stream) {
 #endif
 
 // set the flowcontrol condition variable to wait on a monotonic clock
-#ifdef COMPILE_FOR_LINUX
+#ifdef COMPILE_FOR_LINUX_AND_FREEBSD
   pthread_condattr_t attr;
   pthread_condattr_init(&attr);
   pthread_condattr_setclock(&attr, CLOCK_MONOTONIC); // can't do this in OS X, and don't need it.
@@ -1280,7 +1292,7 @@ int player_play(stream_cfg *stream) {
   if (rc)
     debug(1, "Error initialising condition variable.");
   config.output->start(sampling_rate);
-  size_t size = (PTHREAD_STACK_MIN + 128 * 1024);
+  size_t size = (PTHREAD_STACK_MIN + 256 * 1024);
   pthread_attr_t tattr;
   pthread_attr_init(&tattr);
   rc = pthread_attr_setstacksize(&tattr, size);

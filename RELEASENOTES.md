@@ -1,3 +1,60 @@
+Version 2.3.12
+----
+**Note**
+* We're getting ready to release the development branch as the new, stable, master branch at 2.4. If you're packaging Shairport Sync, you might prefer to wait a short while as we add a little polish before the release.
+
+**Changes**
+* `update-rc.d` has been removed from the installation script for System V because it causes problems for package makers. It's now noted in the user installation instructions.
+* The `alsa` group `mixer_type` setting is deprecated and you should stop using it. Its functionality has been subsumed into `mixer_name` – when you specify a `mixer_name` it automatically chooses the `hardware` mixer type.
+
+
+**Enhancements**
+* Larger range of interpolation. Shairport Sync has previously constrained not to make interpolations ("corrections") of more than about 1 per 1000 real frames. This contraint has been relaxed, and it is now able to make corrections of up to 1 in 352 real frames. This might result in a faster and undesirably sudden correction early during a play session, so a number of further changes have been made. The full set of these changes is as follows:
+  * No corrections happen for the first five seconds.
+  * Corrections of up to about 1 in 1000 for the next 25 seconds.
+  * Corrections of up to 1 in 352 thereafter.
+
+**Documentation Update**
+* Nearly there with updates concerning the configuration file.
+
+Version 2.3.11
+----
+Documentation Update
+* Beginning to update the `man` document to include information about the configuration file. It's pretty sparse, but it's a start.
+
+Version 2.3.10
+----
+Bug fix
+* The "pipe" backend used output code that would block if the pipe didn't have a reader. This has been replaced by non-blocking code. Here are some implications:
+  * When the pipe is created, Shairport Sync will not block if a reader isn't present.
+  * If the pipe doesn't have a reader when Shairport Sync wants to output to it, the output will be discarded.
+  * If a reader disappears while writing is occuring, the write will time out after five seconds.
+  * Shairport Sync will only close the pipe on termination.
+
+Version 2.3.9
+----
+* Bug fix
+ * Specifying the configuration file using a *relative* file path now works properly.
+ * The debug verbosity requested with `-v`, `-vv`, etc. is now honoured before the configuration file is read. It is read and honoured from when the command line arguments are scanned the first time to get a possible configuration file path.
+
+Version 2.3.8
+----
+* Annoying changes you must make
+ * You probably need to change your `./configure` arguments. The flag `with-initscript` has changed to `with-systemv`. It was previously enabled by default; now you must enable it explicitly.
+
+* Changes
+ * Added limited support for installing into `systemd` and Fedora systems. For `systemd` support, use the configuration flag `--with-systemd` in place of `--with-systemv`. The installation does not do everything needed, such as defining special users and groups.
+ * Renamed `with-initscript` configuration flag to `with-systemv` to describe its role more accurately.
+ * A System V startup script is no longer installed by default; if you want it, ask for it with the `--with-systemv` configuration flag.
+ * Added limited support for FreeBSD. You must specify `LDFLAGS='-I/usr/local/lib'` and `CPPFLAGS='-L/usr/local/include'` before running `./configure --with-foo etc.`
+ * Removed the `-configfile` annotation from the version string because it's no longer optional; it's always there.
+ * Removed the `dummy`, `pipe` and `stdout` backends from the standard build – they are now optional and are no longer automatically included in the build.
+
+* Bug fixes
+ * Allow more stack space to prevent a segfault in certain configurations (thanks to https://github.com/joerg-krause).
+ * Add missing header files(thanks to https://github.com/joerg-krause).
+ * Removed some (hopefully) mostly silent bugs from the configure.ac file.
+ 
 Version 2.3.7
 ----
 * Changes
