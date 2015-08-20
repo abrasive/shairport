@@ -1,5 +1,5 @@
 Name:		shairport-sync
-Version:	2.3.7
+Version:	2.3.12
 Release:	1%{?dist}
 Summary:	AirTunes emulator. Shairport Sync adds multi-room capability with Audio Synchronisation
 
@@ -7,7 +7,6 @@ Group:		Applications/Multimedia
 License:	GPL
 URL:		https://github.com/mikebrady/shairport-sync
 Source0:	https://github.com/mikebrady/%{name}/archive/%{version}.tar.gz#/%{name}-%{version}.tar.gz
-Patch0:		shairport-sync-systemd.patch
 
 BuildRequires:	autoconf
 BuildRequires:	automake
@@ -33,11 +32,10 @@ Shairport Sync does not support AirPlay video or photo streaming.
 
 %prep
 %setup -q
-%patch0 -p1
 
 %build
 autoreconf -i -f
-%configure --with-avahi --with-alsa --with-ssl=openssl --with-soxr --without-initscript
+%configure --with-avahi --with-alsa --with-ssl=openssl --with-soxr --with-systemd
 make %{?_smp_mflags}
 
 
