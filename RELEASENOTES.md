@@ -1,18 +1,20 @@
 Version 2.3.12
 ----
-Annoying changes you probably need to do something about
+**Note**
+* We're getting ready to release the development branch as the new, stable, master branch at 2.4. If you're packaging Shairport Sync, you might prefer to wait a short while as we add a little polish before the release.
+
+**Changes**
+* `update-rc.d` has been removed from the installation script for System V because it causes problems for package makers. It's now noted in the user installation instructions.
 * The `alsa` group `mixer_type` setting is deprecated and you should stop using it. Its functionality has been subsumed into `mixer_name` – when you specify a `mixer_name` it automatically chooses the `hardware` mixer type.
 
-Changes
-* `update-rc.d` has been removed from the installation script for System V because it causes problems for package makers. It's now noted in the user installation instructions.
 
-Enhancements
+**Enhancements**
 * Larger range of interpolation. Shairport Sync has previously constrained not to make interpolations ("corrections") of more than about 1 per 1000 real frames. This contraint has been relaxed, and it is now able to make corrections of up to 1 in 352 real frames. This might result in a faster and undesirably sudden correction early during a play session, so a number of further changes have been made. The full set of these changes is as follows:
   * No corrections happen for the first five seconds.
   * Corrections of up to about 1 in 1000 for the next 25 seconds.
   * Corrections of up to 1 in 352 thereafter.
 
-Documentation Update
+**Documentation Update**
 * Nearly there with updates concerning the configuration file.
 
 Version 2.3.11
