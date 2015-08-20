@@ -109,7 +109,16 @@ Omit the `--with-soxr` if the libsoxr library is not available. For installation
 
 `$ make` 
 
-Run `$sudo make install` to install `shairport-sync` along with a default configuration file and a System V startup script, if chosen, to launch it automatically at system startup. The settings are the most basic defaults, so you will want to edit the configuration — the file is `/etc/shairport-sync.conf` — to give the service a name, use a specific sound card, use the hardware mixer and volume control, etc. — there are some examples in the sample configuration file.
+will build the application. Next, run:
+
+```
+`$sudo make install`
+`$sudo update-rc.d shairport-sync defaults 90 10`
+```
+
+to install `shairport-sync` along with a `man` page, a default configuration file and a System V startup script to launch it automatically at system startup.
+The settings are the most basic defaults, so you will want to edit the configuration — the file is `/etc/shairport-sync.conf` — to give the service a name,
+use a specific sound card and mixer control, etc. — there are some examples in the sample configuration file.
 
 *Man Page*
 
