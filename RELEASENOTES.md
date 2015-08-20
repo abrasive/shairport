@@ -1,3 +1,20 @@
+Version 2.3.12
+----
+Annoying changes you probably need to do something about
+* The `alsa` group `mixer_type` setting is deprecated and you should stop using it. Its functionality has been subsumed into `mixer_name` – when you specify a `mixer_name` it automatically chooses the `hardware` mixer type.
+
+Changes
+* `update-rc.d` has been removed from the installation script for System V because it causes problems for package makers. It's now noted in the user installation instructions.
+
+Enhancements
+* Larger range of interpolation. Shairport Sync has previously constrained not to make interpolations ("corrections") of more than about 1 per 1000 real frames. This contraint has been relaxed, and it is now able to make corrections of up to 1 in 352 real frames. This might result in a faster and undesirably sudden correction early during a play session, so a number of further changes have been made. The full set of these changes is as follows:
+  * No corrections happen for the first five seconds.
+  * Corrections of up to about 1 in 1000 for the next 25 seconds.
+  * Corrections of up to 1 in 352 thereafter.
+
+Documentation Update
+* Nearly there with updates concerning the configuration file.
+
 Version 2.3.11
 ----
 Documentation Update
@@ -5,8 +22,8 @@ Documentation Update
 
 Version 2.3.10
 ----
-* Bug fix
- * The "pipe" backend used output code that would block if the pipe didn't have a reader. This has been replaced by non-blocking code. Here are some implications:
+Bug fix
+* The "pipe" backend used output code that would block if the pipe didn't have a reader. This has been replaced by non-blocking code. Here are some implications:
   * When the pipe is created, Shairport Sync will not block if a reader isn't present.
   * If the pipe doesn't have a reader when Shairport Sync wants to output to it, the output will be discarded.
   * If a reader disappears while writing is occuring, the write will time out after five seconds.
