@@ -85,7 +85,6 @@ static int64_t accumulated_delay, accumulated_da_delay;
 
 static void help(void) {
   printf("    -d output-device    set the output device [default*|...]\n"
-         "    -t mixer-type       set the mixer type [software*|hardware]\n"
          "    -m mixer-device     set the mixer device ['output-device'*|...]\n"
          "    -c mixer-control    set the mixer control [Master*|...]\n"
          "    -i mixer-index      set the mixer index [0*|...]\n"
@@ -103,7 +102,7 @@ static int init(int argc, char **argv) {
   
   
 
-  // get settings from settings file first, allow them to be over-ridden by command line options
+  // get settings from settings file first, allow them to be overridden by command line options
 
   if (config.cfg != NULL) {
     /* Get the desired buffer size setting. */
@@ -131,15 +130,13 @@ static int init(int argc, char **argv) {
       alsa_out_dev = (char *)str;
     }
 
+
     /* Get the Mixer Type setting. */
+
     if (config_lookup_string(config.cfg, "alsa.mixer_type", &str)) {
-      if (strcasecmp(str, "software") == 0)
-        hardware_mixer = 0;
-      else if (strcasecmp(str, "hardware") == 0)
-        hardware_mixer = 1;
-      else
-        die("Invalid alsa mixer option choice \"%s\". It should be \"software\" or \"hardware\"");
+      inform("The alsa mixer_type setting is deprecated and has been ignored. FYI, using the \"mixer_control_name\" setting automatically chooses a hardware mixer.");
     }
+    
 
     /* Get the Mixer Device Name. */
     if (config_lookup_string(config.cfg, "alsa.mixer_device", &str)) {
@@ -149,6 +146,7 @@ static int init(int argc, char **argv) {
     /* Get the Mixer Control Name. */
     if (config_lookup_string(config.cfg, "alsa.mixer_control_name", &str)) {
       alsa_mix_ctrl = (char *)str;
+      hardware_mixer = 1;
     }
   }
 
@@ -162,15 +160,17 @@ static int init(int argc, char **argv) {
     case 'd':
       alsa_out_dev = optarg;
       break;
+
     case 't':
-      if (strcmp(optarg, "hardware") == 0)
-        hardware_mixer = 1;
+      inform("The alsa backend -t option is deprecated and has been ignored. FYI, using the -c option automatically chooses a hardware mixer.");
       break;
+
     case 'm':
       alsa_mix_dev = optarg;
       break;
     case 'c':
       alsa_mix_ctrl = optarg;
+      hardware_mixer = 1;
       break;
     case 'i':
       alsa_mix_index = strtol(optarg, NULL, 10);
