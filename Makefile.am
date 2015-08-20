@@ -59,7 +59,6 @@ endif
 if INSTALL_SYSTEMV
 	[ -e $(DESTDIR)/etc/init.d ] || mkdir -p $(DESTDIR)/etc/init.d
 	[ -f $(DESTDIR)/etc/init.d/shairport-sync ] || cp scripts/shairport-sync $(DESTDIR)/etc/init.d/
-	update-rc.d shairport-sync defaults 90 10
 endif
 if INSTALL_SYSTEMD
 	[ -e $(DESTDIR)/usr/lib/systemd/system ] || mkdir -p $(DESTDIR)/usr/lib/systemd/system
