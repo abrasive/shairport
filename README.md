@@ -9,7 +9,7 @@ This branch — "development" — is unstable. To access the stable branch, plea
 
 More Information
 ----------
-Shairport Sync works by using timing information and timestamps present in data coming from the audio source (e.g. an iPhone) to "play" audio at exactly the right time. It does this by monitoring and controlling the "latency" — the time between a sound frame is supposed to be played, as specified by its `timestamp`, and the time when it is actually played by the audio output device, usually a Digital to Audio Converter (DAC).  Timestamps are measured relative to the source computer's clocks, the `source clock`, but timing must be done relative to the clock of the computer running Shairport Sync, the `local clock`. The source and local clocks are synchronised, usually to within a fraction of a millisecond, using a variant of NTP synchronisation protocols.
+Shairport Sync works by using timing information and timestamps present in data coming from the audio source (e.g. an iPhone) to "play" audio at exactly the right time. It does this by monitoring and controlling the *latency* — the time between a sound frame is supposed to be played, as specified by its `timestamp`, and the time when it is actually played by the audio output device, usually a Digital to Audio Converter (DAC).  Timestamps are measured relative to the source computer's clocks, the `source clock`, but timing must be done relative to the clock of the computer running Shairport Sync, the `local clock`. The source and local clocks are synchronised, usually to within a fraction of a millisecond, using a variant of NTP synchronisation protocols.
 
 To maintain the exact latency required, if an output device is running slow relative to the source, Shairport Sync will delete frames of audio to allow the device to keep up. If the output device is running fast, Shairport Sync will insert frames to keep time. The number of frames inserted or deleted is so small as to be almost inaudible on normal audio material. Frames are inserted or deleted as necessary at pseudorandom intervals. Alternatively, with `libsoxr` support, Shairport Sync can resample the audio feed to ensure the output device can keep up. This is less obtrusive than insertion and deletion but requires a good deal of processing power — most embedded devices probably can't support it. The process of insertion/deletion or resampling is rather inelegantly called “stuffing”.
 
@@ -107,13 +107,15 @@ Here is an example, suitable for installations such as Ubuntu and Raspbian:
 
 Omit the `--with-soxr` if the libsoxr library is not available. For installation into a `systemd` system, replace the `--with-systemv` with `--with-systemd`.
 
+Enter:
+
 `$ make` 
 
-will build the application. Next, run:
+to build the application. Next, run:
 
 ```
-`$sudo make install`
-`$sudo update-rc.d shairport-sync defaults 90 10`
+$sudo make install
+$sudo update-rc.d shairport-sync defaults 90 10
 ```
 
 to install `shairport-sync` along with a `man` page, a default configuration file and a System V startup script to launch it automatically at system startup.
@@ -150,16 +152,14 @@ general =
 ```
 The `alsa` group is used to specify properties of the output device. The most obvious setting is the name of the output device which you can set using the `output_device` tag.
 
-The following `alsa` group settings are very important for maximum performance. If your audio device has a hardware mixer and volume control, then Shairport Sync can use them to give instant response to volume and mute commands and it can offload some work from the processor.
-* The `mixer_type` tag allows you to specify the type of audio mixer -- `software` (default) or `hardware`.
-* The `mixer_control_name` tag allows you to specify the name of the volume control on the hardware mixer.
-* The `mixer_device` tag allows you specify where the mixer is. By default, the mixer is to be found where you specify with the `output_device` tag, so you only need to use the `mixer_device` tag if the mixer is elsewhere. This can happen if you specify a *device* rather than a *card* with the `output_device` tag, because normally a mixer is associated with a *card* rather than a device. Suppose you wish to use the output device `5` of card `hw:0` and the mixer volume-control named `PCM`:
+The following `alsa` group settings are very important for maximum performance. If your audio device has a mixer that can be use to control the volume, then Shairport Sync can use it to give instant response to volume and mute commands and it can offload some work from the processor.
+* The `mixer_control_name` tag allows you to specify the name of the mixer volume control.
+* The `mixer_device` tag allows you specify where the mixer is. By default, the mixer is on the `output_device`, so you only need to use the `mixer_device` tag if the mixer is elsewhere. This can happen if you specify a *device* rather than a *card* with the `output_device` tag, because normally a mixer is associated with a *card* rather than a device. Suppose you wish to use the output device `5` of card `hw:0` and the mixer volume-control named `PCM`:
 
 ```
 alsa =
 {
   output_device = "hw:0,5";
-  mixer_type = "hardware";
   mixer_device = "hw:0";
   mixer_control_name = "PCM";
   // ... other alsa settings
@@ -211,7 +211,6 @@ general = {
 
 alsa = {
   output_device = "hw:0";
-  mixer_type = "hardware";
   mixer_control_name = "PCM";
 };
 ```
@@ -225,7 +224,6 @@ general = {
 
 alsa = {
   output_device = "hw:1";
-  mixer_type = "hardware";
   mixer_control_name = "PCM";
 };
 ```
@@ -238,7 +236,6 @@ general = {
 
 alsa = {
   output_device = "hw:1";
-  mixer_type = "hardware";
   mixer_control_name = "Speaker";
 };
 ```
@@ -251,7 +248,6 @@ general = {
 
 alsa = {
   output_device = "hw:1";
-  mixer_type = "hardware";
   mixer_control_name = "PCM";
 };
 ```
@@ -265,7 +261,6 @@ general = {
 };
 
 alsa = {
-  mixer_type = "hardware";
   mixer_control_name = "PCM";
 };
 ```
@@ -277,7 +272,6 @@ general = {
 };
 
 alsa = {
-  mixer_type = "hardware";
   mixer_control_name = "Speaker";
 };
 ```
