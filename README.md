@@ -92,6 +92,8 @@ $ autoreconf -i -f
 Choose the appropriate `--with-*` options:
 
 - `--with-alsa` for the ALSA audio back end. This is required.
+- `--with-stdout` include an optional backend module to enable raw audio to be output through standard output (stdout).
+- `--with-pipe` include an optional backend module to enable raw audio to be output through a unix pipe.
 - `--with-avahi` or `--with-tinysvcmdns` for mdns support. Avahi is a widely-used system-wide zero-configuration networking (zeroconf) service — it may already be in your system. If you don't have Avahi, or similar, then consider including tinysvcmdns, which is a tiny zeroconf service embedded inside the shairport-sync application itself. To enable multicast for `tinysvcmdns`, you may have to add a default route with the following command: `route add -net 224.0.0.0 netmask 224.0.0.0 eth0` (substitute the correct network port for `eth0`). You should not have more than one zeroconf service on the same system — bad things may happen, according to RFC 6762, §15.
 - `--with-ssl=openssl`  or `--with-ssl=polarssl` for encryption and related utilities using either OpenSSL or PolarSSL.
 - `--with-soxr` for libsoxr-based resampling.
