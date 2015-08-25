@@ -49,11 +49,25 @@ Note: Historically, Shairport Sync has taken its settings from command line argu
 
 Building And Installing
 ---------------------
+If you wish to install Shairport Sync on OpenWrt, Arch or Fedora platforms, please follow the appropriate instructions below. Otherwise follow the General Build Instructions. Then, when the progam has been installed, refer to the section on Configuring Shairport Sync that follows.
+
+**OpenWrt:**
 If you're interested in Shairport Sync for OpenWrt, there's an OpenWrt package at https://github.com/mikebrady/shairport-sync-for-openwrt. OpenWrt doesn't support the IQaudIO Pi-DAC.
 
+**Arch Linux:**
 An Arch Linux installation package is available (thanks!) at  [EliaCereda/shairport-sync-PKGBUILD](https://github.com/EliaCereda/shairport-sync-PKGBUILD).
 
-Otherwise, follow these instructions.
+**Fedora:**
+Download the tarball from the "releases" tab on github or use `wget` and then use `rpmbuild`. This example is for version 2.3.12:
+```
+% wget -O shairport-sync.2.3.12.tar.gz https://github.com/mikebrady/shairport-sync/archive/2.3.12.tar.gz
+% rpmbuild -ta shairport-sync-2.3.12.tar.gz
+```
+The `-ta` means "build all from this tarball". (Thanks to https://github.com/p3ck for the script.)
+
+**General Build Instructions**
+
+To build Shairport Sync from sources on Debian, Ubuntu, Raspian, etc. follow these instructions.
 
 The following libraries are required:
 * OpenSSL or PolarSSL
