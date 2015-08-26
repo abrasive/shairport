@@ -58,18 +58,27 @@ If you're interested in Shairport Sync for OpenWrt, there's an OpenWrt package a
 An Arch Linux installation package is available (thanks!) at  [EliaCereda/shairport-sync-PKGBUILD](https://github.com/EliaCereda/shairport-sync-PKGBUILD).
 
 **Fedora:**
-Install the pre-requisites, if necessary.
+Install the toolchain and pre-requisites, if necessary:
 ```
+% sudo yum install make automake gcc gcc-c++ kernel-devel
 % sudo yum install alsa-lib-devel autoconf automake avahi-devel libconfig-devel libdaemon-deve; openssl-devel popt-devel soxr-devel
 ```
-Download the tarball from the "releases" tab on github or use `wget` and then use `rpmbuild`. This example is for version 2.3.12:
+Download the tarball from the "releases" tab on github or use `wget` and then use `rpmbuild`. This example is for version 2.3.13.1:
 ```
-% sudo yum install alsa-lib-devel autoconf automake avahi-devel libconfig-devel libdaemon-deve; openssl-devel popt-devel soxr-devel
-
 % wget -O shairport-sync-2.3.13.1.tar.gz https://github.com/mikebrady/shairport-sync/archive/2.3.13.1.tar.gz
 % rpmbuild -ta shairport-sync-2.3.13.1.tar.gz
 ```
 The `-ta` means "build all from this tarball". (Thanks to https://github.com/p3ck for the script.)
+
+The RPM will be built in a directory and will have a pathname like, for example, `~/rpmbuild/RPMS/i686/shairport-sync-2.3.13.1-1.fc22.i686.rpm` You should then install it with (for this example):
+```
+%sudo rpm -i ~/rpmbuild/RPMS/i686/shairport-sync-2.3.13.1-1.fc22.i686.rpm
+```
+You may have to manually create the directory `/var/shairport-sync` for the installation to succeed. Having edited the configuration file `/etc/shairport-sync.conf` as appropriate (see below), start the service with:
+```
+%sudo systemctl start shairport-sync.service
+```
+
 
 **General Build Instructions**
 
