@@ -39,7 +39,7 @@ Shairport Sync runs well on the Raspberry Pi. It can drive the built-in sound ca
 
 At the time of writing, OpenWrt trunk does not support USB audio well on the Raspberry Pi.
 
-Shairport Sync runs on Ubuntu, Debian, Fedora and OpenWrt inside VMWare Fusion 7 on a Mac, but synchronisation does not work — possibly because the soundcard is being emulated.
+Shairport Sync runs on Ubuntu, OpenWrt, Debian, Arch Linux and Fedora inside VMWare Fusion 7 on a Mac, but synchronisation in inaccurate — possibly because the soundcard is being emulated.
 
 Shairport Sync will output to alsa cards, to standard output and to pipes using appropriate backends. You can try compiling additional backends in as you wish, but it definitely will not work properly with them. Maybe someday...
 
