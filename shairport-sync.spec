@@ -59,3 +59,5 @@ getent passwd %{name} &> /dev/null || useradd --system -c "%{name} User" \
 %changelog
 * Fri Jul 24 2015 Bill Peck <bill@pecknet.com> 2.3.7-1
 - Initial spec file
+* Wed Aug 26 2015 Mike Brady <mikebrady@eircom.net> 2.3.13-1
+- Harmonise release numbers
