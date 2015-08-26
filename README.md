@@ -61,7 +61,7 @@ An Arch Linux installation package is available (thanks!) at  [EliaCereda/shairp
 Install the toolchain and pre-requisites, if necessary:
 ```
 % sudo yum install make automake gcc gcc-c++ kernel-devel
-% sudo yum install alsa-lib-devel autoconf automake avahi-devel libconfig-devel libdaemon-deve; openssl-devel popt-devel soxr-devel
+% sudo yum install alsa-lib-devel autoconf automake avahi-devel libconfig-devel libdaemon-devel openssl-devel popt-devel soxr-devel
 ```
 Download the tarball from the "releases" tab on github or use `wget` and then use `rpmbuild`. This example is for version 2.3.13.1:
 ```
