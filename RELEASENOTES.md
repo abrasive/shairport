@@ -1,3 +1,11 @@
+Version 2.3.13
+----
+**Note**
+* We're getting ready to release the development branch as the new, stable, master branch at 2.4. If you're packaging Shairport Sync, you might prefer to wait a short while as we add a little polish before the release.
+
+**Changes**
+* Harmonise version numbers on the release and on the shairport.spec file used in Fedora.
+
 Version 2.3.12
 ----
 **Note**
