@@ -60,8 +60,8 @@ An Arch Linux installation package is available (thanks!) at  [EliaCereda/shairp
 **Fedora:**
 Download the tarball from the "releases" tab on github or use `wget` and then use `rpmbuild`. This example is for version 2.3.12:
 ```
-% wget -O shairport-sync-2.3.12.tar.gz https://github.com/mikebrady/shairport-sync/archive/2.3.12.tar.gz
-% rpmbuild -ta shairport-sync-2.3.12.tar.gz
+% wget -O shairport-sync-2.3.13.1.tar.gz https://github.com/mikebrady/shairport-sync/archive/2.3.13.1.tar.gz
+% rpmbuild -ta shairport-sync-2.3.13.1.tar.gz
 ```
 The `-ta` means "build all from this tarball". (Thanks to https://github.com/p3ck for the script.)
 
