@@ -58,8 +58,14 @@ If you're interested in Shairport Sync for OpenWrt, there's an OpenWrt package a
 An Arch Linux installation package is available (thanks!) at  [EliaCereda/shairport-sync-PKGBUILD](https://github.com/EliaCereda/shairport-sync-PKGBUILD).
 
 **Fedora:**
+Install the pre-requisites, if necessary.
+```
+% sudo yum install alsa-lib-devel autoconf automake avahi-devel libconfig-devel libdaemon-deve; openssl-devel popt-devel soxr-devel
+```
 Download the tarball from the "releases" tab on github or use `wget` and then use `rpmbuild`. This example is for version 2.3.12:
 ```
+% sudo yum install alsa-lib-devel autoconf automake avahi-devel libconfig-devel libdaemon-deve; openssl-devel popt-devel soxr-devel
+
 % wget -O shairport-sync-2.3.13.1.tar.gz https://github.com/mikebrady/shairport-sync/archive/2.3.13.1.tar.gz
 % rpmbuild -ta shairport-sync-2.3.13.1.tar.gz
 ```
