@@ -33,13 +33,13 @@ What else?
 
 Status
 ------
-Shairport Sync works on a wide variety of Linux devices. It works on standard Ubuntu laptops, on the Raspberry Pi with Raspian, Arch Linux and OpenWrt, and it runs on a Linksys NSLU2 and a TP-Link 710N using OpenWrt. It works with built-in audio and with a variety of USB-connected audio amplifiers and DACs, including a cheapo USB "3D Sound" dongle, a first generation iMic and a Topping TP30 amplifier with a USB DAC input.
+Shairport Sync works on a wide variety of Linux devices. It works on standard Ubuntu laptops, on the Raspberry Pi with Raspian, Arch Linux and OpenWrt, and it runs on a Linksys NSLU2 and a TP-Link 710N using OpenWrt. It works with built-in audio and with a variety of USB-connected audio amplifiers and DACs, including a cheapo USB "3D Sound" dongle, a first generation iMic and a Topping TP30 amplifier with a USB DAC input. It will not work properly – if at all – with a PulseAudio (pseudo-)output device.
 
 Shairport Sync runs well on the Raspberry Pi. It can drive the built-in sound card, though the audio out of the card is of poor quality. USB-connected sound cards work well on recent versions of Raspian; however older versions of Raspian appear to suffer from a problem — see http://www.raspberrypi.org/forums/viewtopic.php?t=23544, so it is wise to update. Shairport Sync works well with the IQAudIO Pi-DAC — see http://www.iqaudio.com.
 
 At the time of writing, OpenWrt trunk does not support USB audio well on the Raspberry Pi.
 
-Shairport Sync runs on Ubuntu and Debian inside VMWare Fusion 7 on a Mac, but synchronisation does not work — possibly because the soundcard is being emulated.
+Shairport Sync runs on Ubuntu, Debian, Fedora and OpenWrt inside VMWare Fusion 7 on a Mac, but synchronisation does not work — possibly because the soundcard is being emulated.
 
 Shairport Sync will output to alsa cards, to standard output and to pipes using appropriate backends. You can try compiling additional backends in as you wish, but it definitely will not work properly with them. Maybe someday...
 
@@ -74,7 +74,7 @@ The RPM will be built in a directory and will have a pathname like, for example,
 ```
 %sudo rpm -i ~/rpmbuild/RPMS/i686/shairport-sync-2.3.13.1-1.fc22.i686.rpm
 ```
-You may have to manually create the directory `/var/shairport-sync` for the installation to succeed. Having edited the configuration file `/etc/shairport-sync.conf` as appropriate (see below), start the service with:
+You may have to manually create the directory `/var/shairport-sync` for the installation to succeed. Having edited the configuration file `/etc/shairport-sync.conf` as appropriate (see "Configuring Shairport Sync" below), start the service with:
 ```
 %sudo systemctl start shairport-sync.service
 ```
