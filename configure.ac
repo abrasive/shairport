@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.50])
-AC_INIT([shairport-sync], [2.2.5], [mikebrady@eircom.net])
+AC_INIT([shairport-sync], [2.4], [mikebrady@eircom.net])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([shairport.c])
 AC_CONFIG_HEADERS([config.h])
@@ -11,7 +11,7 @@ AC_CONFIG_HEADERS([config.h])
 #
 # Specifying the OS type, defaulting to linux.
 #
-AC_ARG_WITH(os_type, AS_HELP_STRING([--with-os-type=OSType],[Specify the distribution to target: One of linux darwin]))
+AC_ARG_WITH(os_type, AS_HELP_STRING([--with-os-type=OSType],[Specify the distribution to target: One of linux freebsd or darwin]))
 if test "z$with_os_type" = "z"; then
   with_os_type="linux"
 fi
@@ -24,18 +24,67 @@ AC_PROG_INSTALL
 PKG_PROG_PKG_CONFIG([0.9.0])
 
 # Checks for libraries.
-if test "x${with_os_type}" = xlinux; then
+if test "x${with_os_type}" = xlinux -o "x${with_os_type}" = xfreebsd ; then
  AC_CHECK_LIB([rt],[clock_gettime], , AC_MSG_ERROR(librt needed))
 fi
+
+##### Some build systems are not fully using pkg-config, so we can use the flag ${with_pkg_config} on a case-by-case basis
+##### to control how to deal with them
+
+AC_ARG_WITH([pkg_config],
+[  --with-pkg-config = use pkg-config to find libraries], ,[with_pkg_config=yes])
 
 AC_CHECK_LIB([daemon],[daemon_log], , AC_MSG_ERROR(libdaemon needed))
 AC_CHECK_LIB([pthread],[pthread_create], , AC_MSG_ERROR(pthread library needed))
 AC_CHECK_LIB([m],[exp], , AC_MSG_ERROR(maths library needed))
-PKG_CHECK_MODULES(
-    [POPT], [popt],
-    [LIBS="${POPT_LIBS} ${LIBS}"
-     AC_DEFINE([HAVE_LIBPOPT],[1],[Define to 1 if you have popt])])
 
+AC_MSG_RESULT(>>Including libpopt)
+if  test "x${with_pkg_config}" = xyes ; then
+  PKG_CHECK_MODULES(
+      [POPT], [popt],
+      [LIBS="${POPT_LIBS} ${LIBS}"
+       AC_DEFINE([HAVE_LIBPOPT],[1],[Define to 1 if you have popt])])
+else
+  AC_CHECK_LIB([popt],[poptGetContext], , AC_MSG_ERROR(libpopt needed))
+  AC_DEFINE([HAVE_LIBPOPT],[1],[Define to 1 if you have popt])
+fi
+
+AC_ARG_WITH([dummy],[  --with-dummy = include the dummy audio back end ],[AC_MSG_RESULT(>>Including the dummy audio back end) AC_DEFINE([CONFIG_DUMMY], 1, [Needed by the compiler.]) ], )
+AM_CONDITIONAL([USE_DUMMY], [test "x$with_dummy" = "xyes" ])
+
+AC_ARG_WITH([stdout],[  --with-stdout = include the stdout audio back end ],[ AC_MSG_RESULT(>>Including the stdout audio back end)  AC_DEFINE([CONFIG_STDOUT], 1, [Needed by the compiler.]) ], )
+
+AM_CONDITIONAL([USE_STDOUT], [test "x$with_stdout" = "xyes" ])
+
+AC_ARG_WITH([pipe],[  --with-pipe = include the pipe audio back end ],[ AC_MSG_RESULT(>>Including the pipe audio back end)  AC_DEFINE([CONFIG_PIPE], 1, [Needed by the compiler.]) ], )
+AM_CONDITIONAL([USE_PIPE], [test "x$with_pipe" = "xyes" ])
+
+# Check to see if we should include the System V initscript
+
+AC_ARG_WITH([systemv],
+[  --with-systemv = install a System V startup script during a make install], , )
+AM_CONDITIONAL([INSTALL_SYSTEMV], [test "x$with_systemv" = "xyes"])
+
+# Check to see if we should include the systemd stuff to define it as a service
+
+AC_ARG_WITH([systemd],
+[  --with-systemd = install a systemd service description file during a make install], , )
+AM_CONDITIONAL([INSTALL_SYSTEMD], [test "x$with_systemd" = "xyes"])
+
+# Add the libconfig package
+if  test "x${with_pkg_config}" = xyes ; then
+  PKG_CHECK_MODULES(
+      [LIBCONFIG], [libconfig],
+      [LIBS="${LIBCONFIG_LIBS} ${LIBS}"])
+else
+  AC_CHECK_LIB([config],[config_init], , AC_MSG_ERROR([libconfig library needed]))
+fi
+
+AC_ARG_WITH([configfiles],
+[  --with-configfiles = install configuration files during a make install ], ,[with_configfiles=yes])
+AM_CONDITIONAL([INSTALL_CONFIG_FILES], [test "x$with_configfiles" = "xyes"])
+
+   
 # Look for piddir flag
 AC_ARG_WITH(piddir, [ --with-piddir=<pathname> Specify a pathname to a directory in which to write the PID file.], [
 	AC_MSG_CHECKING(--with-piddir argument)
@@ -57,11 +106,18 @@ AC_ARG_WITH(ssl, [ choose --with-ssl=openssl or --with-ssl=polarssl for encrypti
     AC_MSG_ERROR(choose either "openssl" or "polarssl" encryption)
   fi
   if test "x${with_ssl}" = xopenssl ; then
-    PKG_CHECK_MODULES(
-        [SSL], [libssl,libcrypto],
-        [LIBS="${SSL_LIBS} ${LIBS}"
-        AC_DEFINE([HAVE_LIBCRYPTO],[1],[Define to 1 if you have libcrypto])
-        AC_DEFINE([HAVE_LIBSSL],[1],[Define to 1 if you have libssl])])
+    if  test "x${with_pkg_config}" = x1 ; then
+      PKG_CHECK_MODULES(
+          [SSL], [libssl,libcrypto],
+          [LIBS="${SSL_LIBS} ${LIBS}"
+          AC_DEFINE([HAVE_LIBCRYPTO],[1],[Define to 1 if you have libcrypto])
+          AC_DEFINE([HAVE_LIBSSL],[1],[Define to 1 if you have libssl])])
+    else
+      AC_CHECK_LIB([crypto], [main], , AC_MSG_ERROR(libcrypto selected but the library cannot be found!))
+      AC_CHECK_LIB([ssl], [main], , AC_MSG_ERROR(libssl selected but the library cannot be found!))
+      AC_DEFINE([HAVE_LIBCRYPTO],[1],[Define to 1 if you have libcrypto])
+      AC_DEFINE([HAVE_LIBSSL],[1],[Define to 1 if you have libssl])
+    fi
   elif test "x${with_ssl}" = xpolarssl ; then
     AC_CHECK_LIB([polarssl],[ssl_init], , AC_MSG_ERROR(PolarSSL selected but the library cannot be found!))
   else
@@ -73,6 +129,12 @@ AC_ARG_WITH(ssl, [ choose --with-ssl=openssl or --with-ssl=polarssl for encrypti
 AC_ARG_WITH(soxr, [  --with-soxr = choose libsoxr for high-quality interpolation], [
   AC_MSG_RESULT(>>Including support for soxr-based interpolation)
   AC_CHECK_LIB([soxr],[soxr_create], , AC_MSG_ERROR(soxr support requested but libsoxr not found!))], )
+
+# Look for metadata flag -- set flag for conditional compilation
+AC_ARG_WITH(metadata, [  --with-metadata = include support for a metadata feed], [
+  AC_MSG_RESULT(>>Including metadata support)
+  AC_DEFINE([CONFIG_METADATA], 1, [Needed by the compiler.])], )
+AM_CONDITIONAL([USE_METADATA], [test "x$with_metadata" = "xyes"])
 
 # What follows is a bit messy, because if the relevant library is requested, a compiler flag is defined, a file is included in the compilation
 # and the relevant link files are added.
@@ -99,10 +161,15 @@ AC_ARG_WITH(alsa, [  --with-alsa = choose native ALSA API support (GNU/Linux onl
   HAS_ALSA=1
   AM_CONDITIONAL([USE_ALSA], [test 0])
   AC_DEFINE([CONFIG_ALSA], 1, [Needed by the compiler.])
-  PKG_CHECK_MODULES(
-    [ALSA], [alsa],
-    [LIBS="${ALSA_LIBS} ${LIBS}"
-     AC_DEFINE([HAVE_LIBASOUND],[1],[Define to 1 if you have ALSA])])])
+  if  test "x${with_pkg_config}" = x1 ; then
+    PKG_CHECK_MODULES(
+      [ALSA], [alsa],
+      [LIBS="${ALSA_LIBS} ${LIBS}"
+       AC_DEFINE([HAVE_LIBASOUND],[1],[Define to 1 if you have ALSA])])
+  else
+    AC_CHECK_LIB([asound], [snd_pcm_open], , AC_MSG_ERROR(ALSA support requires the asound library!))
+    AC_DEFINE([HAVE_LIBASOUND],[1],[Define to 1 if you have ALSA])
+  fi ])
 AM_CONDITIONAL([USE_ALSA], [test "x$HAS_ALSA" = "x1"])
 
 # Look for SNDIO flag
@@ -122,8 +189,8 @@ AC_ARG_WITH(ao, [  --with-ao = choose native AO (Audio Output?) API support -- p
 AM_CONDITIONAL([USE_AO], [test "x$HAS_AO" = "x1"])
 
 # Look for pulseaudio flag
-AC_ARG_WITH(pulseaudio, [  --with-pulseaudio = choose native PulseAudio API support -- probably broken], [
-  AC_MSG_RESULT(>>Including a PulseAudio back end --- N.B. this is probably broken!)
+AC_ARG_WITH(pulseaudio, [  --with-pulseaudio = choose native PulseAudio API support -- N.B. no synchronisation -- so underflow or overflow is inevitable!], [
+  AC_MSG_RESULT(>>Including a PulseAudio back end -- N.B. no synchronisation -- so underflow or overflow is inevitable!)
   HAS_PULSE=1
   AC_DEFINE([CONFIG_PULSE], 1, [Needed by the compiler.])
   AC_CHECK_LIB([pulse-simple], [pa_simple_new], , AC_MSG_ERROR(PulseAudio support requires the pulse-simple library!))
@@ -141,7 +208,7 @@ AM_CONDITIONAL([USE_DNS_SD], [test "x$HAS_DNS_SD" = "x1"])
 # Checks for header files.
 AC_HEADER_STDC
 AC_CHECK_HEADERS([getopt_long.h])
-AC_CHECK_HEADERS([arpa/inet.h fcntl.h mach/mach.h memory.h netdb.h netinet/in.h stdint.h stdlib.h string.h sys/ioctl.h sys/socket.h sys/time.h syslog.h unistd.h])
+AC_CHECK_HEADERS([arpa/inet.h fcntl.h limits.h mach/mach.h memory.h netdb.h netinet/in.h stdint.h stdlib.h string.h sys/ioctl.h sys/socket.h sys/time.h syslog.h unistd.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_INLINE
@@ -157,11 +224,12 @@ AC_TYPE_UINT64_T
 AC_TYPE_UINT8_T
 
 # Checks for library functions.
+AC_FUNC_ALLOCA
 AC_FUNC_ERROR_AT_LINE
 AC_FUNC_FORK
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
-AC_CHECK_FUNCS([clock_gettime gethostname gettimeofday inet_ntoa memchr memmove memset pow select socket stpcpy strcasecmp strchr strdup strerror strstr strtol strtoul])
+AC_CHECK_FUNCS([atexit clock_gettime gethostname inet_ntoa memchr memmove memset mkfifo pow select socket stpcpy strcasecmp strchr strdup strerror strstr strtol strtoul])
 
 AC_CONFIG_FILES([Makefile man/Makefile])
 AC_OUTPUT

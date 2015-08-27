@@ -1,6 +1,7 @@
 /shairport-sync
 /*.o
 /*~
+*.xml~
 /config.mk
 /config.h
 Makefile

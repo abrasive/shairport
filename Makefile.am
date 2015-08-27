@@ -1,7 +1,7 @@
 SUBDIRS = man
 
 bin_PROGRAMS = shairport-sync
-shairport_sync_SOURCES = shairport.c rtsp.c mdns.c mdns_external.c common.c rtp.c player.c alac.c audio.c audio_dummy.c audio_pipe.c
+shairport_sync_SOURCES = shairport.c rtsp.c mdns.c mdns_external.c common.c rtp.c player.c alac.c audio.c 
 
 AM_CFLAGS = -Wno-multichar
 
@@ -26,6 +26,18 @@ if USE_SNDIO
 shairport_sync_SOURCES += audio_sndio.c
 endif
 
+if USE_STDOUT
+shairport_sync_SOURCES += audio_stdout.c
+endif
+
+if USE_PIPE
+shairport_sync_SOURCES += audio_pipe.c
+endif
+
+if USE_DUMMY
+shairport_sync_SOURCES += audio_dummy.c
+endif
+
 if USE_AO
 shairport_sync_SOURCES += audio_ao.c
 endif
@@ -39,5 +51,16 @@ shairport_sync_SOURCES += mdns_dns_sd.c
 endif
 
 install-exec-hook:
-	[ -f /etc/init.d/shairport-sync ] || cp scripts/shairport-sync /etc/init.d/
-	update-rc.d shairport-sync defaults 90 10
+if INSTALL_CONFIG_FILES
+	[ -e $(DESTDIR)/etc ] || mkdir $(DESTDIR)/etc
+	cp scripts/shairport-sync.conf $(DESTDIR)/etc/shairport-sync.conf.sample
+	[ -f $(DESTDIR)/etc/shairport-sync.conf ] || cp scripts/shairport-sync.conf $(DESTDIR)/etc/shairport-sync.conf
+endif
+if INSTALL_SYSTEMV
+	[ -e $(DESTDIR)/etc/init.d ] || mkdir -p $(DESTDIR)/etc/init.d
+	[ -f $(DESTDIR)/etc/init.d/shairport-sync ] || cp scripts/shairport-sync $(DESTDIR)/etc/init.d/
+endif
+if INSTALL_SYSTEMD
+	[ -e $(DESTDIR)/usr/lib/systemd/system ] || mkdir -p $(DESTDIR)/usr/lib/systemd/system
+	cp scripts/shairport-sync.service $(DESTDIR)/usr/lib/systemd/system
+endif

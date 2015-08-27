@@ -24,7 +24,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-
 #include <memory.h>
 #include <string.h>
 #include <stdio.h>
@@ -47,78 +46,66 @@ extern mdns_backend mdns_tinysvcmdns;
 
 static mdns_backend *mdns_backends[] = {
 #ifdef CONFIG_AVAHI
-    &mdns_avahi,
-    &mdns_external_avahi,
+    &mdns_avahi,       &mdns_external_avahi,
 #endif
 #ifdef CONFIG_HAVE_DNS_SD_H
-    &mdns_dns_sd,
-    &mdns_external_dns_sd,
+    &mdns_dns_sd,      &mdns_external_dns_sd,
 #endif
 #ifdef CONFIG_TINYSVCMDNS
     &mdns_tinysvcmdns,
 #endif
-    NULL
-};
+    NULL};
 
 void mdns_register(void) {
-    char *mdns_apname = alloca(strlen(config.apname) + 14);
-    char *p = mdns_apname;
-    int i;
-    for (i=0; i<6; i++) {
-        sprintf(p, "%02X", config.hw_addr[i]);
-        p += 2;
-    }
-    *p++ = '@';
-    strcpy(p, config.apname);
+  char *mdns_apname = alloca(strlen(config.apname) + 14);
+  char *p = mdns_apname;
+  int i;
+  for (i = 0; i < 6; i++) {
+    sprintf(p, "%02X", config.hw_addr[i]);
+    p += 2;
+  }
+  *p++ = '@';
+  strcpy(p, config.apname);
 
-    mdns_backend **b = NULL;
-    
-    if (config.mdns_name != NULL)
-    {
-        for (b = mdns_backends; *b; b++)
-        {
-            if (strcmp((*b)->name, config.mdns_name) != 0) // Not the one we are looking for
-                continue;
-            int error = (*b)->mdns_register(mdns_apname, config.port);
-            if (error >= 0)
-            {
-                config.mdns = *b;
-            }
-            break;
-        }
+  mdns_backend **b = NULL;
 
-        if (*b == NULL)
-            warn("%s mDNS backend not found");
-    }
-    else
-    {
-        for (b = mdns_backends; *b; b++)
-        {
-            int error = (*b)->mdns_register(mdns_apname, config.port);
-            if (error >= 0)
-            {
-                config.mdns = *b;
-                break;
-            }
-        }
+  if (config.mdns_name != NULL) {
+    for (b = mdns_backends; *b; b++) {
+      if (strcmp((*b)->name, config.mdns_name) != 0) // Not the one we are looking for
+        continue;
+      int error = (*b)->mdns_register(mdns_apname, config.port);
+      if (error >= 0) {
+        config.mdns = *b;
+      }
+      break;
     }
 
-    if (config.mdns == NULL)
-        die("Could not establish mDNS advertisement!");
+    if (*b == NULL)
+      warn("%s mDNS backend not found");
+  } else {
+    for (b = mdns_backends; *b; b++) {
+      int error = (*b)->mdns_register(mdns_apname, config.port);
+      if (error >= 0) {
+        config.mdns = *b;
+        break;
+      }
+    }
+  }
+
+  if (config.mdns == NULL)
+    die("Could not establish mDNS advertisement!");
 }
 
 void mdns_unregister(void) {
-    if (config.mdns) {
-        config.mdns->mdns_unregister();
-    }
+  if (config.mdns) {
+    config.mdns->mdns_unregister();
+  }
 }
 
 void mdns_ls_backends(void) {
-    mdns_backend **b = NULL;
-    printf("Available mDNS backends: \n");
-    for (b = mdns_backends; *b; b++)
-    {
-        printf("    %s\n", (*b)->name);
-    }
+  mdns_backend **b = NULL;
+  printf("Available mDNS backends: \n");
+  for (b = mdns_backends; *b; b++) {
+    printf("    %s\n", (*b)->name);
+  }
 }
-
