@@ -131,7 +131,7 @@ Set the \fIchoice\f1 to "yes" to enable shairport-sync to look for cover art fro
 Specify the absolute path name of the pipe through which metadata should be sent The default is \fI/tmp/shairport-sync-metadata\f1". 
 .TP
 \fB"SESSIONCONTROL" SETTINGS\f1
-shairport-sync can run programs just before it starts to play an audio stream and just after it finishes. You specify them using the sessioncontrol group settings run_this_before_play_begins and run_this_after_play_ends. 
+shairport-sync can run programs just before it starts to play an audio stream and just after it finishes. You specify them using the settings \fBrun_this_before_play_begins\f1 and \fBrun_this_after_play_ends\f1. 
 .TP
 \fBrun_this_before_play_begins=\f1\fI"/path/to/application and args"\f1\fB;\f1
 Here you can specify a program and its arguments that will be run just before a play session begins. Be careful to include the full path to the application. The application must be marked as executable and, if it is a script, its first line must begin with the standard \fI#!/bin/...\f1 as appropriate. 
@@ -157,7 +157,7 @@ Use the output device called \fIoutput_device\f1. The default is the device call
 .TP
 \fBmixer_control_name=\f1\fI"name"\f1\fB;\f1
 Specify the \fIname\f1 of the mixer control to be used by shairport-sync to control the volume. The mixer control must be on the mixer device, which by default is the output device. If you do not specify a mixer control name, shairport-sync will adjust the volume in software. \fBmixer_type=\f1\fI"mixer_type"\f1\fB;\f1
-This setting is deprecated and will be removed soon. If you wish to use a mixer control to control the volume, then set \fImixer_type\f1 to "hardware". The default is "software". 
+This setting is deprecated and is ignored. For your information, its functionality has been automatically incorporated in the mixer_control_name setting -- if you specify a mixer name with the mixer_control_name setting, it is assumed that the mixer is implemented in hardware. 
 .TP
 \fBmixer_device=\f1\fI"mixer_device"\f1\fB;\f1
 By default, the mixer is assumed to be output_device. Use this setting to specify a device other than the output device. 
@@ -238,7 +238,7 @@ Use this \fIlatency\f1, in frames, for audio streamed from a forked-daapd based 
 \fB--get-coverart\f1
 This option requires the \fB--meta-dir\f1 option to be set, and enables shairport-sync to request cover art from the source and to transmit it through the metadata pipe.
 
-Please note that cover art data may be very large, and may place too great a burden on your network. Also, at the time of writing, there appears to be a serious bug in iTunes which stalls transmission of large cover art items, stalling and potentially crashing shairport-sync. 
+Please note that cover art data may be very large, and may place too great a burden on your network. 
 .TP
 \fB-h | --help\f1
 Print brief help message and exit. 

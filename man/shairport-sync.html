@@ -223,9 +223,8 @@
     
     <p><b>&quot;SESSIONCONTROL&quot; SETTINGS</b></p>
     <p>shairport-sync can run programs just before it starts to play an audio stream and just after it finishes.
-    You specify them using the sessioncontrol group settings run_this_before_play_begins and run_this_after_play_ends. </p>
-
-
+    You specify them using the settings <b>run_this_before_play_begins</b> and <b>run_this_after_play_ends</b>. </p>
+    
     
     <p><b>run_this_before_play_begins=</b><em>&quot;/path/to/application and args&quot;</em><b>;</b></p>
     Here you can specify a program and its arguments that will be run just before a play session begins. Be careful to include the full path to the application.
@@ -271,8 +270,8 @@
     If you do not specify a mixer control name, shairport-sync will adjust the volume in software.
     
     <p><b>mixer_type=</b><em>&quot;mixer_type&quot;</em><b>;</b></p>
-    This setting is deprecated and will be removed soon. If you wish to use a mixer control to control the volume, then set <em>mixer_type</em> to &quot;hardware&quot;.
-    The default is &quot;software&quot;.
+    This setting is deprecated and is ignored. For your information, its functionality has been automatically incorporated in the mixer_control_name setting
+  -- if you specify a mixer name with the mixer_control_name setting, it is assumed that the mixer is implemented in hardware.
     
     
     <p><b>mixer_device=</b><em>&quot;mixer_device&quot;</em><b>;</b></p>
@@ -464,9 +463,7 @@
 		shairport-sync to request cover art from the source and to transmit it through
 		the metadata pipe.</p>
 		<p>Please note that cover art data may be very large, and may place too great a
-		burden on your network. Also, at the time of writing, there appears to be a
-		serious bug in iTunes which stalls transmission of large cover art items,
-		stalling and potentially crashing shairport-sync.
+		burden on your network.
     </p>
 	  
 
