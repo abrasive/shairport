@@ -1,11 +1,11 @@
-Shairport Sync (Development Branch)
+Shairport Sync
 =============
 Shairport Sync emulates an AirPort Express for the purpose of streaming audio from iTunes, iPods, iPhones, iPads and AppleTVs.
 Audio played by a Shairport Sync-powered device stays synchronised with the source and hence with similar devices playing the same source. In this way, synchronised multi-room audio is possible without difficulty. (Hence the name Shairport Sync, BTW.)
 
 Shairport Sync does not support AirPlay video or photo streaming.
 
-This branch — "development" — is unstable. To access the stable branch, please switch to the "master" branch.
+This branch -- "master" -- is the stable branch of Shairport Sync. To access the development version, please switch to the "development" branch.
 
 More Information
 ----------
@@ -39,7 +39,7 @@ Shairport Sync runs well on the Raspberry Pi. It can drive the built-in sound ca
 
 At the time of writing, OpenWrt trunk does not support USB audio well on the Raspberry Pi.
 
-Shairport Sync runs on Ubuntu, OpenWrt, Debian, Arch Linux and Fedora inside VMWare Fusion 7 on a Mac, but synchronisation in inaccurate — possibly because the soundcard is being emulated.
+Shairport Sync runs on Ubuntu, OpenWrt, Debian, Arch Linux and Fedora inside VMWare Fusion on a Mac, but synchronisation in inaccurate — possibly because the soundcard is being emulated.
 
 Shairport Sync will output to alsa cards, to standard output and to pipes using appropriate backends. You can try compiling additional backends in as you wish, but it definitely will not work properly with them. Maybe someday...
 
@@ -55,7 +55,7 @@ If you wish to install Shairport Sync on OpenWrt, Arch or Fedora platforms, plea
 If you're interested in Shairport Sync for OpenWrt, there's an OpenWrt package at https://github.com/mikebrady/shairport-sync-for-openwrt. OpenWrt doesn't support the IQaudIO Pi-DAC.
 
 **Arch Linux:**
-An Arch Linux installation package is available (thanks!) at  [EliaCereda/shairport-sync-PKGBUILD](https://github.com/EliaCereda/shairport-sync-PKGBUILD).
+An Arch Linux installation package is available at  [EliaCereda/shairport-sync-PKGBUILD](https://github.com/EliaCereda/shairport-sync-PKGBUILD).
 
 **Fedora:**
 Install the toolchain and pre-requisites, if necessary:
@@ -63,23 +63,23 @@ Install the toolchain and pre-requisites, if necessary:
 % sudo yum install make automake gcc gcc-c++ kernel-devel
 % sudo yum install alsa-lib-devel autoconf automake avahi-devel libconfig-devel libdaemon-devel openssl-devel popt-devel soxr-devel
 ```
-Download the tarball from the "releases" tab on github or use `wget` and then use `rpmbuild`. This example is for version 2.3.13.1:
+Download the tarball from the "releases" tab on github or use `wget` and then use `rpmbuild`. This example is for version 2.4:
 ```
-% wget -O shairport-sync-2.3.13.1.tar.gz https://github.com/mikebrady/shairport-sync/archive/2.3.13.1.tar.gz
-% rpmbuild -ta shairport-sync-2.3.13.1.tar.gz
+% wget -O shairport-sync-2.4.tar.gz https://github.com/mikebrady/shairport-sync/archive/2.4.tar.gz
+% rpmbuild -ta shairport-sync-2.4.tar.gz
 ```
-The `-ta` means "build all from this tarball". (Thanks to https://github.com/p3ck for the script.)
+The `-ta` means "build all from this tarball".
 
-The RPM will be built in a directory and will have a pathname like, for example, `~/rpmbuild/RPMS/i686/shairport-sync-2.3.13.1-1.fc22.i686.rpm` You should then install it with (for this example):
+The RPM will be built in a directory and will have a pathname like, for example, `~/rpmbuild/RPMS/i686/shairport-sync-2.4-1.fc22.i686.rpm` You should then install it with (for this example):
 ```
-%sudo rpm -i ~/rpmbuild/RPMS/i686/shairport-sync-2.3.13.1-1.fc22.i686.rpm
+%sudo rpm -i ~/rpmbuild/RPMS/i686/shairport-sync-2.4-1.fc22.i686.rpm
 ```
 You may have to manually create the directory `/var/shairport-sync` for the installation to succeed. Having edited the configuration file `/etc/shairport-sync.conf` as appropriate (see "Configuring Shairport Sync" below), enable and start the service with:
 ```
 %sudo systemctl enable shairport-sync.service
 %sudo systemctl start shairport-sync.service
 ```
-
+Sincere thanks to all package contributors!
 
 **General Build Instructions**
 
@@ -115,7 +115,6 @@ Download Shairport Sync:
 Next, `cd` into the shairport-sync directory and execute the following commands:
 
 ```
-$ git checkout development #switch to the development branch of shairport-sync
 $ autoreconf -i -f
 ```
 
@@ -157,7 +156,7 @@ use a specific sound card and mixer control, etc. — there are some examples in
 
 *Man Page*
 
-You can view the man page here: http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/development/man/shairport-sync.html
+You can view the man page here: http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/master/man/shairport-sync.html
 
 
 Configuring Shairport Sync

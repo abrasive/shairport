@@ -1,10 +1,30 @@
+Version 2.4
+----
+**Stable release**
+
+This stable release is the culmination of the 2.3.X sequence of development releases.
+
+**Change Summary**
+
+Changes from the previous stable version -- 2.2.5 -- are summarised here:
+ * Settings are now read from a configuration file. Command-line settings are supported but discouraged.
+ * Metadata is now supported -- it can be delivered to a unix pipe for processing by a helper application. See https://github.com/mikebrady/shairport-sync-metadata-reader for a sample metadata reader.
+ * Raw PCM audio can be delivered to standard output ("stdout") or to a unix pipe. The internal architecture has changed considerably to support this.
+ * Support for compilation on OpenWrt back to Attitude Adjustment.
+ * Version 2.4 uses the libconfig library.
+ * Runs on a wider range of platforms, including Arch Linux and Fedora.
+ * Bug fixes.
+
+Please note that building instructions have changed slightly from the previous version.
+Also, the `-t hardware/software` option has been deprecated in the alsa back end. 
+
 Version 2.3.13
 ----
 **Note**
 * We're getting ready to release the development branch as the new, stable, master branch at 2.4. If you're packaging Shairport Sync, you might prefer to wait a short while as we add a little polish before the release.
 
 **Changes**
-* Harmonise version numbers on the release and on the shairport.spec file used in Fedora.
+* Harmonise version numbers on the release and on the `shairport.spec` file used in Fedora.
 
 Version 2.3.12
 ----
