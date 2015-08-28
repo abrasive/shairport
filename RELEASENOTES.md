@@ -11,7 +11,8 @@ Changes from the previous stable version -- 2.2.5 -- are summarised here:
  * Metadata is now supported -- it can be delivered to a unix pipe for processing by a helper application. See https://github.com/mikebrady/shairport-sync-metadata-reader for a sample metadata reader.
  * Raw PCM audio can be delivered to standard output ("stdout") or to a unix pipe. The internal architecture has changed considerably to support this.
  * Support for compilation on OpenWrt back to Attitude Adjustment.
- * Version 2.4 uses the libconfig library.
+ * Can play unencrypted audio streams -- complatible with, e.g. Whaale.
+ * Uses the libconfig library.
  * Runs on a wider range of platforms, including Arch Linux and Fedora.
  * Bug fixes.
 
