@@ -582,8 +582,27 @@ static void msg_write_response(int fd, rtsp_message *resp) {
 }
 
 static void handle_record(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
+  debug(1,"Handle Record");
   resp->respcode = 200;
   msg_add_header(resp, "Audio-Latency", "88200");
+  
+  char *p;
+  uint32_t rtptime = 0;
+  char *hdr = msg_get_header(req, "RTP-Info");
+
+  if (hdr) {
+    // debug(1,"FLUSH message received: \"%s\".",hdr);
+    // get the rtp timestamp
+    p = strstr(hdr, "rtptime=");
+    if (p) {
+      p = strchr(p, '=') + 1;
+      if (p)
+        rtptime = uatoi(p); // unsigned integer -- up to 2^32-1
+    }
+  }
+  rtptime--;
+  debug(1,"RTSP Flush Requested by handle_record: %u.",rtptime);
+  player_flush(rtptime);
 }
 
 static void handle_options(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
@@ -624,6 +643,7 @@ static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
 }
 
 static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
+  debug(1,"Handle Setup");
   int cport, tport;
   int lsport, lcport, ltport;
   uint32_t active_remote = 0;
