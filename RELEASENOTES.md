@@ -1,3 +1,13 @@
+Version 2.5.0.2
+----
+**Changes**
+Turn off unnecessary debug messages -- usable.
+
+Version 2.5.0.1
+----
+**Changes**
+Turn on lots of debugging -- unusable.
+
 Version 2.5.0
 ----
 **Changes**
