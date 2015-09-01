@@ -1,3 +1,11 @@
+Version 2.5.0
+----
+**Changes**
+Add flush request to handle_record, see if it helps in a rare situation.
+
+Versions 2.5.x is new development sequence.
+----
+
 Version 2.4
 ----
 **Stable release**
