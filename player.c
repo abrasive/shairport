@@ -548,10 +548,8 @@ static abuf_t *buffer_get_frame(void) {
 
             if (local_time_now >= first_packet_time_to_play) {
               // we've gone past the time...
-              // debug(1,"Run past the exact start time by %llu frames, with time now of %llx, fpttp
-              // of %llx and dac_delay of %d and %d packets;
-              // flush.",(((tn-first_packet_time_to_play)*44100)>>32)+dac_delay,tn,first_packet_time_to_play,dac_delay,seq_diff(ab_read,
-              // ab_write));
+               //debug(1,"Run past the exact start time by %llu frames, with time now of %llx, fpttp of %llx and dac_delay of %d and %d packets; flush.",
+               //(((tn-first_packet_time_to_play)*44100)>>32)+dac_delay,tn,first_packet_time_to_play,dac_delay,seq_diff(ab_read,ab_write));
 
               if (config.output->flush)
                 config.output->flush();
@@ -573,10 +571,10 @@ static abuf_t *buffer_get_frame(void) {
               int64_t exact_frame_gap = gross_frame_gap - dac_delay;
               if (exact_frame_gap <= 0) {
                 // we've gone past the time...
-                // debug(1,"Run a bit past the exact start time by %lld frames, with time now of
-                // %llx, fpttp of %llx and dac_delay of %d and %d packets;
-                // flush.",-exact_frame_gap,tn,first_packet_time_to_play,dac_delay,seq_diff(ab_read,
-                // ab_write));
+                 //debug(1,"Run a bit past the exact start time by %lld frames, with time now of
+                 //%llx, fpttp of %llx and dac_delay of %d and %d packets;
+                 //flush.",-exact_frame_gap,tn,first_packet_time_to_play,dac_delay,seq_diff(ab_read,
+                 //ab_write));
                 if (config.output->flush)
                   config.output->flush();
                 ab_resync();
@@ -597,8 +595,7 @@ static abuf_t *buffer_get_frame(void) {
                 signed short *silence;
                 silence = malloc(FRAME_BYTES(fs));
                 memset(silence, 0, FRAME_BYTES(fs));
-                // debug(1,"Exact frame gap is %llu; play %d frames of silence. Dac_delay is %d,
-                // with %d packets.",exact_frame_gap,fs,dac_delay,seq_diff(ab_read, ab_write));
+                 debug(1,"Exact frame gap is %llu; play %d frames of silence. Dac_delay is %d, with %d packets.",exact_frame_gap,fs,dac_delay,seq_diff(ab_read, ab_write));
                 config.output->play(silence, fs);
                 free(silence);
                 if (ab_buffering == 0) {
@@ -643,11 +640,11 @@ static abuf_t *buffer_get_frame(void) {
         if (net_offset >= 0) {
           net_offset_fp_sec = (net_offset << 32) / 44100;
           time_to_play += net_offset_fp_sec; // using the latency requested...
-          // debug(2,"Net Offset: %lld, adjusted: %lld.",net_offset,net_offset_fp_sec);
+           debug(2,"Net Offset: %lld, adjusted: %lld.",net_offset,net_offset_fp_sec);
         } else {
           net_offset_fp_sec = ((-net_offset) << 32) / 44100;
           time_to_play -= net_offset_fp_sec;
-          // debug(2,"Net Offset: %lld, adjusted: -%lld.",net_offset,net_offset_fp_sec);
+           debug(2,"Net Offset: %lld, adjusted: -%lld.",net_offset,net_offset_fp_sec);
         }
 
         if (local_time_now >= time_to_play) {
@@ -672,10 +669,10 @@ static abuf_t *buffer_get_frame(void) {
       time_of_wakeup.tv_sec = sec;
       time_of_wakeup.tv_nsec = nsec;
 
-      pthread_cond_timedwait(&flowcontrol, &ab_mutex, &time_of_wakeup);
-// int rc = pthread_cond_timedwait(&flowcontrol,&ab_mutex,&time_of_wakeup);
-// if (rc!=0)
-//  debug(1,"pthread_cond_timedwait returned error code %d.",rc);
+//      pthread_cond_timedwait(&flowcontrol, &ab_mutex, &time_of_wakeup);
+ int rc = pthread_cond_timedwait(&flowcontrol,&ab_mutex,&time_of_wakeup);
+ if (rc!=0)
+  debug(1,"pthread_cond_timedwait returned error code %d.",rc);
 #endif
 #ifdef COMPILE_FOR_OSX
       uint64_t sec = time_to_wait_for_wakeup_fp >> 32;
@@ -712,7 +709,7 @@ static abuf_t *buffer_get_frame(void) {
   }
 
   if (!curframe->ready) {
-    // debug(1, "    %d. Supplying a silent frame.", read);
+     debug(1, "    %d. Supplying a silent frame.", read);
     missing_packets++;
     memset(curframe->data, 0, FRAME_BYTES(frame_size));
     curframe->timestamp = 0;
@@ -913,7 +910,7 @@ static void *player_thread_func(void *arg) {
         play_number++;
         // if it's a supplied silent frame, let us know...
         if (inframe->timestamp == 0) {
-          // debug(1,"Player has a supplied silent frame.");
+           debug(1,"Player has a supplied silent frame.");
           last_seqno_read =
               (SUCCESSOR(last_seqno_read) & 0xffff); // manage the packet out of sequence minder
           config.output->play(inbuf, frame_size);
@@ -1072,9 +1069,8 @@ static void *player_thread_func(void *arg) {
             if ((inframe->timestamp != 0) && (!please_stop) && (config.resyncthreshold != 0) &&
                 (abs(sync_error) > config.resyncthreshold)) {
               sync_error_out_of_bounds++;
-              // debug(1,"Sync error out of bounds: Error: %lld; previous error: %lld; DAC: %lld;
-              // timestamp: %llx, time now
-              // %llx",sync_error,previous_sync_error,current_delay,inframe->timestamp,local_time_now);
+               debug(1,"Sync error out of bounds: Error: %lld; previous error: %lld; DAC: %lld; timestamp: %llx, time now %llx",
+               sync_error,previous_sync_error,current_delay,inframe->timestamp,local_time_now);
               if (sync_error_out_of_bounds > 3) {
                 debug(1, "Lost sync with source for %d consecutive packets -- flushing and "
                          "resyncing. Error: %lld.",
@@ -1099,7 +1095,7 @@ static void *player_thread_func(void *arg) {
           inframe->timestamp = 0;
           inframe->sequence_number = 0;
 
-          // debug(1,"Sync error %lld frames. Amount to stuff %d." ,sync_error,amount_to_stuff);
+           debug(1,"Sync error %lld frames. Amount to stuff %d." ,sync_error,amount_to_stuff);
 
           // new stats calculation. We want a running average of sync error, drift, adjustment,
           // number of additions+subtractions
