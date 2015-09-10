@@ -823,6 +823,11 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn, rtsp_message *r
 //    'mden' -- a sequence of metadata has ended
 //    'snam' -- A device -- e.g. "Joe's iPhone" -- has opened a play session. Specifically, it's the "X-Apple-Client-Name" string
 //    'snua' -- A "user agent" -- e.g. "iTunes/12..." -- has opened a play session. Specifically, it's the "User-Agent" string
+//    The next two two tokens are to facilitiate remote control of the source.
+//    There is some information at http://nto.github.io/AirPlay.html about remote control of the source.
+//
+//    'daid' -- this is the source's DACP-ID (if it has one -- it's not guaranteed), useful if you want to remotely control the source. Use this string to identify the source's remote control on the network.
+//    'acre' -- this is the source's Active-Remote token, necessary if you want to send commands to the source's remote control (if it has one).
 //
 // including a simple base64 encoder to minimise malloc/free activity
 
