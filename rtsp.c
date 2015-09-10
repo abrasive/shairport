@@ -1,6 +1,8 @@
 /*
  * RTSP protocol handler. This file is part of Shairport.
  * Copyright (c) James Laird 2013
+ * Modifications associated with audio synchronization, mutithreading and
+ * metadata handling copyright (c) Mike Brady 2014-2015
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
