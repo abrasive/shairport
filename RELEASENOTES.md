@@ -1,3 +1,9 @@
+HEAD
+----
+
+**Bug fixes**
+* Fix in the `shairport.c`: the USE_CUSTOM_LOCAL_STATE_DIR macro was still being used when it should have been USE_CUSTOM_PID_DIR.
+
 Version 2.5.0.2
 ----
 **Changes**
