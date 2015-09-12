@@ -1,3 +1,13 @@
+HEAD
+----
+These changes have been made in the HEAD, not yet part of a release.
+
+**Bug fixes**
+* Fix in the `shairport.c`: the USE_CUSTOM_LOCAL_STATE_DIR macro was still being used when it should have been USE_CUSTOM_PID_DIR.
+
+**Documentation Updates**
+* Various small documentation updates.
+
 Version 2.4
 ----
 **Stable release**
