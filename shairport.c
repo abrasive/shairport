@@ -680,8 +680,8 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-#if USE_CUSTOM_LOCAL_STATE_DIR
-  debug(1, "Locating localstatedir at \"%s\"", LOCALSTATEDIR);
+#if USE_CUSTOM_PID_DIR
+  debug(1, "Locating custom pid dir at \"%s\"", PIDDIR);
   /* Point to a function to help locate where the PID file will go */
   daemon_pid_file_proc = pid_file_proc;
 #endif
