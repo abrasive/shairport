@@ -118,7 +118,7 @@ static int mdns_tinysvcmdns_register(char *apname, int port) {
   char **txt;
 
 #ifdef CONFIG_METADATA
-  if (config.meta_dir)
+  if (config.metadata_enabled)
     txt = txtwithmetadata;
   else
 #endif
