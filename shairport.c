@@ -541,6 +541,13 @@ int parse_options(int argc, char **argv) {
   if (c < -1) {
     die("%s: %s", poptBadOption(optCon, POPT_BADOPTION_NOALIAS), poptStrerror(c));
   }
+  
+#ifdef CONFIG_METADATA
+  if ((config.metadata_enabled == 1) && (config.metadata_pipename == NULL))
+    config.metadata_pipename=strdup("/tmp/shairport-sync-metadata");
+#endif
+
+  
   if (tdebuglev!=0)
     debuglev = tdebuglev;
   return optind + 1;
@@ -649,8 +656,7 @@ int main(int argc, char **argv) {
   gethostname(hostname, 100);
   config.apname = malloc(20 + 100);
   snprintf(config.apname, 20 + 100, "Shairport Sync on %s", hostname);
-  set_requested_connection_state_to_output(
-      1); // we expect to be able to connect to the output device
+  set_requested_connection_state_to_output(1); // we expect to be able to connect to the output device
   config.audio_backend_buffer_desired_length = 6615; // 0.15 seconds.
   config.udp_port_base = 6001;
   config.udp_port_range = 100;
