@@ -193,6 +193,8 @@ static void *rtp_control_receiver(void *arg) {
 
         rtp_timestamp_less_latency = ntohl(*((uint32_t *)&packet[4]));
         sync_rtp_timestamp = ntohl(*((uint32_t *)&packet[16]));
+        
+        debug(1,"Latency is %u frames.",sync_rtp_timestamp-rtp_timestamp_less_latency);
 
         if (packet[0] & 0x10) {
           // if it's a packet right after a flush or resume
