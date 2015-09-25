@@ -1,8 +1,11 @@
-HEAD
+Version 2.5.0.6
 ----
+**New Feature**
+* Use Negotiated Latencies. The AirPlay protocol used by Shairport Sync allows the audio source to specify the exact delay or latency that should be applied to the audio stream. Until now, Shairport Sync ignored this information and used fixed preset latencies that were selected on the basis of the "User-Agent" setting. Using negotiated latencies means that Shairport Sync should be able adapt automatically to a wider range of sources. To enable it, there is a new setting in the configuration file "use_negoriated_latencies". Set this to "yes" to enable this behaviour. If it works reliably, it will become the default.
 
 **Bug fixes**
 * Fix in the `shairport.c`: the USE_CUSTOM_LOCAL_STATE_DIR macro was still being used when it should have been USE_CUSTOM_PID_DIR.
+* Fix a crashing bug -- if metadata was enabled but a pipename was not supplied, boom.
 
 Version 2.5.0.2
 ----
