@@ -582,7 +582,7 @@ static void msg_write_response(int fd, rtsp_message *resp) {
 }
 
 static void handle_record(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
-  debug(1,"Handle Record");
+  //debug(1,"Handle Record");
   resp->respcode = 200;
    // I think this is for telling the client what the asbsolute minimum latency actually is,
    // and when the client specifies a latency, it should be added to this figure.
@@ -590,7 +590,7 @@ static void handle_record(rtsp_conn_info *conn, rtsp_message *req, rtsp_message 
    // Thus, AirPlay's latency figure of 77175, when added to 11025 gives you exactly 88200
    // and iTunes' latency figure of 88553, when added to 11025 gives you 99578, pretty close to the 99400 we guessed.
    
-  msg_add_header(resp, "Audio-Latency", "88200");
+  msg_add_header(resp, "Audio-Latency", "11025");
   
   char *p;
   uint32_t rtptime = 0;
@@ -650,7 +650,7 @@ static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
 }
 
 static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
-  debug(1,"Handle Setup");
+  // debug(1,"Handle Setup");
   int cport, tport;
   int lsport, lcport, ltport;
   uint32_t active_remote = 0;

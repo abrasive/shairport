@@ -69,7 +69,7 @@ typedef struct {
   uint32_t AirPlayLatency; // supplied with --AirPlayLatency option
   uint32_t ForkedDaapdLatency; // supplied with --ForkedDaapdLatency option
   int daemonise;
-  int statistics_requested;
+  int statistics_requested,use_negotiated_latencies;
   char *cmd_start, *cmd_stop;
   int cmd_blocking;
   int tolerance; // allow this much drift before attempting to correct it

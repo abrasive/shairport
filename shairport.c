@@ -399,6 +399,16 @@ int parse_options(int argc, char **argv) {
           die("Invalid ignore_volume_control option choice \"%s\". It should be \"yes\" or \"no\"");
       }
 
+      /* Get the dynamic latencies setting. */
+      if (config_lookup_string(config.cfg, "latencies.use_negotiated_latencies", &str)) {
+        if (strcasecmp(str, "no") == 0)
+          config.use_negotiated_latencies = 0;
+        else if (strcasecmp(str, "yes") == 0)
+          config.use_negotiated_latencies = 1;
+        else
+          die("Invalid use_negotiated_latencies option choice \"%s\". It should be \"yes\" or \"no\"");
+      }
+
       /* Get the default latency. */
       if (config_lookup_int(config.cfg, "latencies.default", &value))
         config.latency = value;
@@ -850,6 +860,7 @@ int main(int argc, char **argv) {
   debug(2, "audio backend desired buffer length is %d.",
         config.audio_backend_buffer_desired_length);
   debug(2, "audio backend latency offset is %d.", config.audio_backend_latency_offset);
+  debug(2, "use_negotiated_latencies %d.", config.use_negotiated_latencies);
   
   char *realConfigPath = realpath(config.configfile,NULL);
   if (realConfigPath) {
