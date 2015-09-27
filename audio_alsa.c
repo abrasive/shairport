@@ -226,7 +226,7 @@ static int init(int argc, char **argv) {
       debug(1, "Hardware mixer has dB volume from %f to %f.", (1.0 * alsa_mix_mindb) / 100.0,
             (1.0 * alsa_mix_maxdb) / 100.0);
     } else {
-      debug(1, "Hardware mixer does not have dB volume -- not used.");
+      inform("note: the hardware mixer specified -- \"%s\" -- does not have dB volume, so it can not be used for volume control.",alsa_mix_ctrl);
     }
   }
   if (snd_mixer_selem_has_playback_switch(alsa_mix_elem)) {
@@ -304,7 +304,7 @@ static uint32_t delay() {
         current_delay = -1;
         debug(1, "Error -- ALSA delay(): bad state: %d.", snd_pcm_state(alsa_handle));
       }
-      if (derr = snd_pcm_prepare(alsa_handle)) {
+      if ((derr = snd_pcm_prepare(alsa_handle))) {
         ignore = snd_pcm_recover(alsa_handle, derr, 0);
         debug(1, "Error preparing after delay error: %s.", snd_strerror(derr));
         current_delay = -1;
@@ -336,7 +336,7 @@ static void play(short buf[], int samples) {
     } else {
       debug(1, "Error -- ALSA device in incorrect state (%d) for play.",
             snd_pcm_state(alsa_handle));
-      if (err = snd_pcm_prepare(alsa_handle)) {
+      if ((err = snd_pcm_prepare(alsa_handle))) {
         ignore = snd_pcm_recover(alsa_handle, err, 0);
         debug(1, "Error preparing after play error: %s.", snd_strerror(err));
       }
@@ -349,10 +349,10 @@ static void flush(void) {
   int derr;
   if (alsa_handle) {
     // debug(1,"Dropping frames for flush...");
-    if (derr = snd_pcm_drop(alsa_handle))
+    if ((derr = snd_pcm_drop(alsa_handle)))
       debug(1, "Error dropping frames: %s.", snd_strerror(derr));
     // debug(1,"Dropped frames ok. State is %d.",snd_pcm_state(alsa_handle));
-    if (derr = snd_pcm_prepare(alsa_handle))
+    if ((derr = snd_pcm_prepare(alsa_handle)))
       debug(1, "Error preparing after flush: %s.", snd_strerror(derr));
     // debug(1,"Frames successfully dropped.");
     /*

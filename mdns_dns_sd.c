@@ -39,7 +39,7 @@ static int mdns_dns_sd_register(char *apname, int port) {
 #endif
   char **record;
 #ifdef CONFIG_METADATA
-  if (config.meta_dir)
+  if (config.metadata_enabled)
     record = recordwithmetadata;
   else
 #endif

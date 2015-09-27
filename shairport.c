@@ -378,13 +378,14 @@ int parse_options(int argc, char **argv) {
         config.resyncthreshold = value;
 
       /* Get the verbosity setting. */
-      if (config_lookup_int(config.cfg, "general.log_verbosity", &value))
+      if (config_lookup_int(config.cfg, "general.log_verbosity", &value)) {
         if ((value >= 0) && (value <= 3))
           debuglev = value;
         else
           die("Invalid log verbosity setting option choice \"%d\". It should be between 0 and 3, "
               "inclusive.",
               value);
+      }
 
       /* Get the ignore_volume_control setting. */
       if (config_lookup_string(config.cfg, "general.ignore_volume_control", &str)) {
@@ -538,6 +539,13 @@ int parse_options(int argc, char **argv) {
   if (c < -1) {
     die("%s: %s", poptBadOption(optCon, POPT_BADOPTION_NOALIAS), poptStrerror(c));
   }
+  
+#ifdef CONFIG_METADATA
+  if ((config.metadata_enabled == 1) && (config.metadata_pipename == NULL))
+    config.metadata_pipename=strdup("/tmp/shairport-sync-metadata");
+#endif
+
+  
   if (tdebuglev!=0)
     debuglev = tdebuglev;
   return optind + 1;
@@ -627,7 +635,7 @@ int main(int argc, char **argv) {
   strcat(configuration_file_path, ".conf");
   config.configfile = configuration_file_path;
 
-  config.statistics_requested - 0; // don't print stats in the log
+  config.statistics_requested = 0; // don't print stats in the log
   config.latency = 88200;          // AirPlay. Is also reset in rtsp.c when play is about to start
   config.userSuppliedLatency = 0;  // zero means none supplied
   config.iTunesLatency = 99400;    // this seems to work pretty well for iTunes from Version 10 (?)
@@ -646,8 +654,7 @@ int main(int argc, char **argv) {
   gethostname(hostname, 100);
   config.apname = malloc(20 + 100);
   snprintf(config.apname, 20 + 100, "Shairport Sync on %s", hostname);
-  set_requested_connection_state_to_output(
-      1); // we expect to be able to connect to the output device
+  set_requested_connection_state_to_output(1); // we expect to be able to connect to the output device
   config.audio_backend_buffer_desired_length = 6615; // 0.15 seconds.
   config.udp_port_base = 6001;
   config.udp_port_range = 100;
@@ -678,8 +685,8 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-#if USE_CUSTOM_LOCAL_STATE_DIR
-  debug(1, "Locating localstatedir at \"%s\"", LOCALSTATEDIR);
+#if USE_CUSTOM_PID_DIR
+  debug(1, "Locating custom pid dir at \"%s\"", PIDDIR);
   /* Point to a function to help locate where the PID file will go */
   daemon_pid_file_proc = pid_file_proc;
 #endif

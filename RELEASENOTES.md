@@ -1,9 +1,16 @@
-HEAD
+Version 2.4.1
 ----
-These changes have been made in the HEAD, not yet part of a release.
 
-**Documentation Updates**
-* Various small documentation updates.
+This release has two small bug fixes and some small documentation updates.
+
+**Bug Fixes**
+Changes from the previous stable version -- 2.4 -- are summarised here:
+ * The USE_CUSTOM_LOCAL_STATE_DIR macro was still being used when it should have been USE_CUSTOM_PID_DIR. This could affect users using a custom location for the PID directory.
+ * A crash has been fixed that occured if metadata was enabled and a metadata pipename was not specified.
+ * If a mixer being used to control volume does not have a control denominated in dB, a warning is logged and the mixer is not used.
+ 
+**Small Changes**
+ * Slight revisions have been made to the configuration file `configure.ac` to make compilation on FreeBSD a little easier.
 
 Version 2.4
 ----

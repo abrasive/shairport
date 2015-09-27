@@ -549,7 +549,7 @@ shutdown:
     msg_free(msg); // which will free the content and everything else
   }
   // in case the message wasn't formed or wasn't fully initialised
-  if ((msg) && (msg->content == NULL) || (!msg))
+  if ((msg && (msg->content == NULL)) || (!msg))
     free(buf);
   *the_packet = NULL;
   return reply;
@@ -584,8 +584,27 @@ static void msg_write_response(int fd, rtsp_message *resp) {
 }
 
 static void handle_record(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
+  debug(1,"Handle Record");
   resp->respcode = 200;
   msg_add_header(resp, "Audio-Latency", "88200");
+  
+  char *p;
+  uint32_t rtptime = 0;
+  char *hdr = msg_get_header(req, "RTP-Info");
+
+  if (hdr) {
+    // debug(1,"FLUSH message received: \"%s\".",hdr);
+    // get the rtp timestamp
+    p = strstr(hdr, "rtptime=");
+    if (p) {
+      p = strchr(p, '=') + 1;
+      if (p)
+        rtptime = uatoi(p); // unsigned integer -- up to 2^32-1
+    }
+  }
+  rtptime--;
+  debug(1,"RTSP Flush Requested by handle_record: %u.",rtptime);
+  player_flush(rtptime);
 }
 
 static void handle_options(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
@@ -626,6 +645,7 @@ static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
 }
 
 static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
+  debug(1,"Handle Setup");
   int cport, tport;
   int lsport, lcport, ltport;
   uint32_t active_remote = 0;
@@ -960,7 +980,7 @@ void metadata_process(uint32_t type, uint32_t code, char *data, uint32_t length)
       if (towrite_count > 57)
         towrite_count = 57;
       size_t outbuf_size = 76; // size of output buffer on entry, length of result on exit
-      if (base64_encode_so(remaining_data, towrite_count, outbuf, &outbuf_size) == NULL)
+      if (base64_encode_so((unsigned char *)remaining_data, towrite_count, outbuf, &outbuf_size) == NULL)
         debug(1, "Error encoding base64 data.");
       // debug(1,"Remaining count: %d ret: %d, outbuf_size: %d.",remaining_count,ret,outbuf_size);
       ret = non_blocking_write(fd, outbuf, outbuf_size);
@@ -1377,7 +1397,7 @@ static int rtsp_auth(char **nonce, rtsp_message *req, rtsp_message *resp) {
   MD5_Update(&ctx, *nonce, strlen(*nonce));
   MD5_Update(&ctx, ":", 1);
   for (i = 0; i < 16; i++)
-    sprintf(buf + 2 * i, "%02X", digest_mu[i]);
+    sprintf((char *)buf + 2 * i, "%02X", digest_mu[i]);
   MD5_Update(&ctx, buf, 32);
   MD5_Final(digest_total, &ctx);
 #endif
