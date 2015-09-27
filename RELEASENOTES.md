@@ -1,13 +1,14 @@
 Version 2.4.1
 ----
-
-This release has two small bug fixes and some small documentation updates.
+This release has three small bug fixes and some small documentation updates.
 
 **Bug Fixes**
 Changes from the previous stable version -- 2.4 -- are summarised here:
  * The USE_CUSTOM_LOCAL_STATE_DIR macro was still being used when it should have been USE_CUSTOM_PID_DIR. This could affect users using a custom location for the PID directory.
+ * A compiler error has been fixed that occured if metadata was enabled and tinysvcmdns was included.
  * A crash has been fixed that occured if metadata was enabled and a metadata pipename was not specified.
  * If a mixer being used to control volume does not have a control denominated in dB, a warning is logged and the mixer is not used.
+(Thanks to the contributors who reported bugs.)
  
 **Small Changes**
  * Slight revisions have been made to the configuration file `configure.ac` to make compilation on FreeBSD a little easier.
