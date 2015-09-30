@@ -63,11 +63,11 @@ typedef struct {
   char *mdns_name;
   mdns_backend *mdns;
   int buffer_start_fill;
-  uint32_t latency;
-  uint32_t userSuppliedLatency; // overrides all other latencies -- use with caution
-  uint32_t iTunesLatency;       // supplied with --iTunesLatency option
-  uint32_t AirPlayLatency; // supplied with --AirPlayLatency option
-  uint32_t ForkedDaapdLatency; // supplied with --ForkedDaapdLatency option
+  int32_t latency;
+  int32_t userSuppliedLatency; // overrides all other latencies -- use with caution
+  int32_t iTunesLatency;       // supplied with --iTunesLatency option
+  int32_t AirPlayLatency; // supplied with --AirPlayLatency option
+  int32_t ForkedDaapdLatency; // supplied with --ForkedDaapdLatency option
   int daemonise;
   int statistics_requested,use_negotiated_latencies;
   char *cmd_start, *cmd_stop;
@@ -78,9 +78,9 @@ typedef struct {
   char *logfile;
   char *errfile;
   char *configfile;
-  uint32_t audio_backend_buffer_desired_length; // this will be the desired number of frames in the
+  int32_t audio_backend_buffer_desired_length; // this will be the desired number of frames in the
                                             // audio backend buffer -- the DAC buffer for ALSA
-  uint32_t audio_backend_latency_offset; // this will be the offset to compensate for any fixed latency
+  int32_t audio_backend_latency_offset; // this will be the offset to compensate for any fixed latency
                                      // there might be in the audio
 } shairport_cfg;
 

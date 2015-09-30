@@ -171,10 +171,10 @@ void usage(char *progname) {
   printf("    -a, --name=NAME         set advertised name\n");
   printf(
       "    -A, --AirPlayLatency=FRAMES set the latency for audio sent from an AirPlay device.\n");
-  printf("                            The default value is %u frames.\n", config.AirPlayLatency);
+  printf("                            The default value is %d frames.\n", config.AirPlayLatency);
   printf(
       "    -i, --iTunesLatency=FRAMES set the latency for audio sent from iTunes 10 or later.\n");
-  printf("                            The default value is %u frames.\n", config.iTunesLatency);
+  printf("                            The default value is %d frames.\n", config.iTunesLatency);
   printf("    -L, --latency=FRAMES    set the latency for audio sent from an unknown device\n");
   printf("                            or from an old version of iTunes. Default is %d frames.\n",
          config.latency);
