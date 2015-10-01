@@ -399,29 +399,19 @@ int parse_options(int argc, char **argv) {
           die("Invalid ignore_volume_control option choice \"%s\". It should be \"yes\" or \"no\"");
       }
 
-      /* Get the dynamic latencies setting. */
-      if (config_lookup_string(config.cfg, "latencies.use_negotiated_latencies", &str)) {
-        if (strcasecmp(str, "no") == 0)
-          config.use_negotiated_latencies = 0;
-        else if (strcasecmp(str, "yes") == 0)
-          config.use_negotiated_latencies = 1;
-        else
-          die("Invalid use_negotiated_latencies option choice \"%s\". It should be \"yes\" or \"no\"");
-      }
-
-      /* Get the default latency. */
+      /* Get the default latency. Deprecated! */
       if (config_lookup_int(config.cfg, "latencies.default", &value))
-        config.latency = value;
+        config.userSuppliedLatency = value;
 
-      /* Get the itunes latency. */
+      /* Get the itunes latency. Deprecated! */
       if (config_lookup_int(config.cfg, "latencies.itunes", &value))
         config.iTunesLatency = value;
 
-      /* Get the AirPlay latency. */
+      /* Get the AirPlay latency. Deprecated! */
       if (config_lookup_int(config.cfg, "latencies.airplay", &value))
         config.AirPlayLatency = value;
 
-      /* Get the forkedDaapd latency. */
+      /* Get the forkedDaapd latency. Deprecated! */
       if (config_lookup_int(config.cfg, "latencies.forkedDaapd", &value))
         config.ForkedDaapdLatency = value;
 
@@ -648,14 +638,14 @@ int main(int argc, char **argv) {
   config.configfile = configuration_file_path;
 
   config.statistics_requested = 0; // don't print stats in the log
-  config.latency = 88200;          // AirPlay. Is also reset in rtsp.c when play is about to start
+  config.latency = -1;             // -1 means not set. 88200 works well. This is also reset in rtsp.c when play is about to start
   config.userSuppliedLatency = 0;  // zero means none supplied
-  config.iTunesLatency = 99400;    // this seems to work pretty well for iTunes from Version 10 (?)
+  config.iTunesLatency = -1;       // -1 means not supplied. 99400 seems to work pretty well for iTunes from Version 10 (?)
                                    // upwards-- two left-ear headphones, one from the iMac jack, one
                                    // from an NSLU2 running a cheap "3D Sound" USB Soundcard
-  config.AirPlayLatency = 88200;   // this seems to work pretty well for AirPlay -- Syncs sound and
+  config.AirPlayLatency = -1;      // -1 means not set. 88200 seems to work well for AirPlay -- Syncs sound and
                                    // vision on AppleTV, but also used for iPhone/iPod/iPad sources
-  config.ForkedDaapdLatency = 99400; // Seems to be right
+  config.ForkedDaapdLatency = -1;  // -1 means not set. 99400 seems to be right
   config.resyncthreshold = 441 * 5;  // this number of frames is 50 ms
   config.timeout = 120; // this number of seconds to wait for [more] audio before switching to idle.
   config.tolerance = 88; // this number of frames of error before attempting to correct it.
@@ -832,6 +822,49 @@ int main(int argc, char **argv) {
   config.output->init(argc - audio_arg, argv + audio_arg);
 
   daemon_log(LOG_NOTICE, "startup");
+  
+  /* Mess around with the latency options */
+  // Basically, we used to rely on static latencies -- 99400 for iTunes 10 or later and forkedDaapd, 88200 for everything else
+  // Nowadays we allow the source to set the latency, which works out at 99651 for iTunes 10 and forkedDaapd and 88220 for everything else
+  // What we want to do here is allow the source to set the latency unless the user has specified an non-standard latency.
+  // If the user has specified a standard latency, we suggest to them to stop doing it.
+  // If they specify a non-standard latency, we suggest the user to use the audio_backend_latency_offset instead.
+  
+  if (config.AirPlayLatency!=-1) {
+    if (config.AirPlayLatency==88200) {
+      inform("It is not necessary to set the AirPlay latency to 88200 -- you should remove this setting or configuration option, as it is deprecated.");
+      config.AirPlayLatency= -1;
+    } else {
+      inform("The AirPlay latency setting is deprecated, as Shairport Sync can now get the correct latency from the source.");
+      inform("Please remove this setting and use the relevant audio_backend_latency_offset setting, if necessary, to compensate for delays elsewhere.");
+    }
+  }
+  
+  if (config.iTunesLatency!=-1) {
+    if (config.iTunesLatency==99400) {
+      inform("It is not necessary to set the iTunes latency to 99400 -- you should remove this setting or configuration option, as it is deprecated and ignored.");
+      config.iTunesLatency= -1;
+    } else {
+      inform("The iTunes latency setting is deprecated, as Shairport Sync can now get the correct latency from the source.");
+      inform("Please remove this setting and use the relevant audio_backend_latency_offset setting, if necessary, to compensate for delays elsewhere.");
+    }
+  }
+  
+  if (config.ForkedDaapdLatency!=-1) {
+    if (config.ForkedDaapdLatency==99400) {
+      inform("It is not necessary to set the forkedDaapd latency to 99400 -- you should remove this setting or configuration option, as it is deprecated and ignored.");
+      config.ForkedDaapdLatency= -1;
+    } else {
+      inform("The forkedDaapd latency setting is deprecated, as Shairport Sync can now get the correct latency from the source.");
+      inform("Please remove this setting and use the relevant audio_backend_latency_offset setting, if necessary, to compensate for delays elsewhere.");
+    }
+  }
+
+  if (config.userSuppliedLatency) {
+    inform("The default latency setting is deprecated, as Shairport Sync can now get the correct latency from the source.");
+    inform("Please remove this setting and use the relevant audio_backend_latency_offset setting, if necessary, to compensate for delays elsewhere.");
+  }
+  
   
   /* Print out options */
 

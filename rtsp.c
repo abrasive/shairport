@@ -674,13 +674,16 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
   }
 #endif
 
-  // select latency
+  // This latency-setting mechanism is deprecated and will be removed.
+  // If no non-standard latency is chosen, automatic negotiated latency setting is permitted.
+  
+  // Select a static latency
   // if iTunes V10 or later is detected, use the iTunes latency setting
   // if AirPlay is detected, use the AirPlay latency setting
   // for everything else, use the general latency setting, if given, or
   // else use the default latency setting
 
-  config.latency = 88200;
+  config.latency = -1;
 
   if (config.userSuppliedLatency)
     config.latency = config.userSuppliedLatency;
@@ -715,6 +718,12 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
     } else {
       debug(2, "Unrecognised User-Agent. Using latency of %d frames.", config.latency);
     }
+  }
+  
+  if (config.latency==-1) {
+    // this means that no static latency was set, so we'll allow it to be set dynamically
+    config.latency=88200; // to be sure, to be sure
+    config.use_negotiated_latencies = 1;
   }
   char *hdr = msg_get_header(req, "Transport");
   if (!hdr)
