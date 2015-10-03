@@ -492,6 +492,7 @@ static abuf_t *buffer_get_frame(void) {
 
       if (curframe->ready) {
         if (ab_buffering) { // if we are getting packets but not yet forwarding them to the player
+          int have_sent_prefiller_silence; // set true when we have send some silent frames to the DAC
           uint32_t reference_timestamp;
           uint64_t reference_timestamp_time,remote_reference_timestamp_time;
           get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time, &remote_reference_timestamp_time);
@@ -502,6 +503,7 @@ static abuf_t *buffer_get_frame(void) {
               // debug(1,"First frame seen with timestamp...");
               first_packet_timestamp = curframe->timestamp; // we will keep buffering until we are
                                                             // supposed to start playing this
+              have_sent_prefiller_silence = 0;
 
               // Here, calculate when we should start playing. We need to know when to allow the
               // packets to be sent to the player.
@@ -569,7 +571,7 @@ static abuf_t *buffer_get_frame(void) {
               first_packet_time_to_play = 0;
               time_since_play_started = 0;
             } else {
-              if (config.output->delay) {
+              if ((config.output->delay) && (have_sent_prefiller_silence != 0)) {
                 dac_delay = config.output->delay();
                 if (dac_delay == -1) {
                   debug(1, "Error getting dac_delay in buffer_get_frame.");
@@ -610,6 +612,7 @@ static abuf_t *buffer_get_frame(void) {
                 // with %d packets.",exact_frame_gap,fs,dac_delay,seq_diff(ab_read, ab_write));
                 config.output->play(silence, fs);
                 free(silence);
+                have_sent_prefiller_silence = 1;
                 if (ab_buffering == 0) {
                   uint64_t reference_timestamp_time; // don't need this...
                   get_reference_timestamp_stuff(&play_segment_reference_frame, &reference_timestamp_time, &play_segment_reference_frame_remote_time);
