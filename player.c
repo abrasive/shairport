@@ -1196,32 +1196,35 @@ void player_volume(double f) {
   // The volume ranges -144.0 (mute) or -30 -- 0. See
   // http://git.zx2c4.com/Airtunes2/about/#setting-volume
   // By examination, the -30 -- 0 range is linear on the slider; i.e. the slider is calibrated in 30
-  // equal increments
-  // So, we will pass this on without any weighting if we have a hardware mixer, as we expect the
-  // mixer to be calibrated in dB.
-
-  // Here, we ask for an attenuation we will apply in software. The dB range of a value from 1 to
-  // 65536 is about 48.1 dB (log10 of 65536 is 4.8164).
-  // Thus, we ask our vol2attn function for an appropriate dB between -48.1 and 0 dB and translate
+  // equal increments. Since the human ear's response is roughly logarithmic, we imagine these to
+  // be power dB, i.e. from -30dB to 0dB.
+  
+  // So, if we have a hardware mixer, we will pass this on to its dB volume settings.
+  
+  // Without a hardware mixer, we have to do attenuation in software, so
+  // here, we ask for an attenuation we will apply to the signal amplitude in software.
+  // The dB range of a value from 1 to 65536 is about 96.3 dB (log10 of 65536 is 4.8164).
+  // Since the levels correspond with amplitude, they correspond to voltage, hence voltage dB,
+  // or 20 times the log of the ratio. Then multiplied by 100 for convenience.
+  // Thus, we ask our vol2attn function for an appropriate dB between -96.3 and 0 dB and translate
   // it back to a number.
 
-  double scaled_volume = vol2attn(f, 0, -4810);
-  double linear_volume = pow(10, scaled_volume / 1000);
+  double scaled_volume = vol2attn(f, 0, -9630);
+  double linear_volume = pow(10, scaled_volume / 20*100);
 
   if (f == -144.0)
     linear_volume = 0.0;
 
   if (config.output->volume) {
     config.output->volume(f); // volume will be sent as metadata by the config.output device
-    linear_volume =
-        1.0; // no attenuation needed -- this value is used as a flag to avoid calculations
+    linear_volume = 1.0; // no attenuation needed -- this value is used as a flag to avoid calculations
   }
 
   if (config.output->parameters)
     config.output->parameters(&audio_information);
   else {
     audio_information.airplay_volume = f;
-    audio_information.minimum_volume_dB = -4810;
+    audio_information.minimum_volume_dB = -9630;
     audio_information.maximum_volume_dB = 0;
     audio_information.current_volume_dB = scaled_volume;
     audio_information.has_true_mute = 0;
@@ -1233,10 +1236,10 @@ void player_volume(double f) {
   fix_volume = 65536.0 * software_mixer_volume;
   pthread_mutex_unlock(&vol_mutex);
 #ifdef CONFIG_METADATA
-  char *dv = malloc(64); // will be freed in the metadata thread
+  char *dv = malloc(128); // will be freed in the metadata thread
   if (dv) {
-    memset(dv, 0, 64);
-    snprintf(dv, 63, "%.2f,%.2f,%.2f,%.2f", audio_information.airplay_volume,
+    memset(dv, 0, 128);
+    snprintf(dv, 127, "%.2f,%.2f,%.2f,%.2f", audio_information.airplay_volume,
              audio_information.current_volume_dB / 100.0,
              audio_information.minimum_volume_dB / 100.0,
              audio_information.maximum_volume_dB / 100.0);
