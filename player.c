@@ -492,12 +492,12 @@ static abuf_t *buffer_get_frame(void) {
 
       if (curframe->ready) {
         if (ab_buffering) { // if we are getting packets but not yet forwarding them to the player
+          uint32_t reference_timestamp;
+          uint64_t reference_timestamp_time,remote_reference_timestamp_time;
+          get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time, &remote_reference_timestamp_time);
           if (first_packet_timestamp == 0) { // if this is the very first packet
             // debug(1,"First frame seen, time %u, with %d
             // frames...",curframe->timestamp,seq_diff(ab_read, ab_write));
-            uint32_t reference_timestamp;
-            uint64_t reference_timestamp_time,remote_reference_timestamp_time;
-            get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time, &remote_reference_timestamp_time);
             if (reference_timestamp) { // if we have a reference time
               // debug(1,"First frame seen with timestamp...");
               first_packet_timestamp = curframe->timestamp; // we will keep buffering until we are
@@ -527,7 +527,6 @@ static abuf_t *buffer_get_frame(void) {
               // -4410 frames.
 
               int64_t delta = ((int64_t)first_packet_timestamp - (int64_t)reference_timestamp);
-
               first_packet_time_to_play =
                   reference_timestamp_time +
                   ((delta + (int64_t)config.latency + (int64_t)config.audio_backend_latency_offset)
@@ -544,6 +543,13 @@ static abuf_t *buffer_get_frame(void) {
           }
 
           if (first_packet_time_to_play != 0) {
+            // recalculate first_packet_time_to_play -- the latency might change
+            int64_t delta = ((int64_t)first_packet_timestamp - (int64_t)reference_timestamp);
+            first_packet_time_to_play =
+                reference_timestamp_time +
+                ((delta + (int64_t)config.latency + (int64_t)config.audio_backend_latency_offset)
+                 << 32) /
+                    44100;
 
             uint32_t filler_size = frame_size;
             uint32_t max_dac_delay = 4410;
@@ -1210,12 +1216,13 @@ void player_volume(double f) {
   // it back to a number.
 
   double scaled_volume = vol2attn(f, 0, -9630);
-  double linear_volume = pow(10, scaled_volume / 20*100);
+  double linear_volume = pow(10, scaled_volume / 2000);
 
   if (f == -144.0)
     linear_volume = 0.0;
 
   if (config.output->volume) {
+    // debug(1,"Set volume to %f.",f);
     config.output->volume(f); // volume will be sent as metadata by the config.output device
     linear_volume = 1.0; // no attenuation needed -- this value is used as a flag to avoid calculations
   }
@@ -1231,6 +1238,7 @@ void player_volume(double f) {
     audio_information.is_muted = 0;
   }
   audio_information.valid = 1;
+  // debug(1,"Software volume set to %f on scale with a %f dB",f,linear_volume);
   pthread_mutex_lock(&vol_mutex);
   software_mixer_volume = linear_volume;
   fix_volume = 65536.0 * software_mixer_volume;

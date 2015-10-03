@@ -236,7 +236,8 @@ static int init(int argc, char **argv) {
             (1.0 * alsa_mix_maxdb) / 100.0);
     } else {
       // use the linear scale and do the db conversion ourselves
-      debug(1, "note: the hardware mixer specified -- \"%s\" -- does not have dB volume -- using the [hopefully] linear settings.",alsa_mix_ctrl);
+      debug(1, "note: the hardware mixer specified -- \"%s\" -- does not have a dB volume scale, so it can't be used.",alsa_mix_ctrl);
+      /*
       debug(1, "Min and max volumes are %d and %d.",alsa_mix_minv,alsa_mix_maxv);
       alsa_mix_maxdb = 0;
       if ((alsa_mix_maxv!=0) && (alsa_mix_minv!=0))
@@ -246,6 +247,7 @@ static int init(int argc, char **argv) {
       audio_alsa.volume = &linear_volume; // insert the linear volume function
       audio_alsa.parameters = &parameters; // likewise the parameters stuff
       debug(1,"Max and min dB calculated are %d and %d.",alsa_mix_maxdb,alsa_mix_mindb);
+      */
      }
   }
   if (snd_mixer_selem_has_playback_switch(alsa_mix_elem)) {
@@ -409,6 +411,7 @@ static void parameters(audio_parameters *info) {
 }
 
 static void volume(double vol) {
+  // debug(1,"Volume called %f.",vol);
   set_volume = vol;
   double vol_setting = vol2attn(vol, alsa_mix_maxdb, alsa_mix_mindb);
   // debug(1,"Setting volume db to %f, for volume input of %f.",vol_setting/100,vol);
