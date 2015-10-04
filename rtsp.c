@@ -1106,6 +1106,12 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn, rtsp_message *re
 
 #endif
 
+static void handle_get_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
+  debug(1, "received GET_PARAMETER request.");
+  resp->respcode = 200;
+}
+
+
 static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
   // if (!req->contentlength)
   //    debug(1, "received empty SET_PARAMETER request.");
@@ -1247,7 +1253,7 @@ static struct method_handler {
                        {"FLUSH", handle_flush},
                        {"TEARDOWN", handle_teardown},
                        {"SETUP", handle_setup},
-                       {"GET_PARAMETER", handle_ignore},
+                       {"GET_PARAMETER", handle_get_parameter},
                        {"SET_PARAMETER", handle_set_parameter},
                        {"RECORD", handle_record},
                        {NULL, NULL}};
@@ -1470,16 +1476,20 @@ static void *rtsp_conversation_thread_func(void *pconn) {
         goto respond;
 
       struct method_handler *mh;
+      int method_selected = 0;
       for (mh = method_handlers; mh->method; mh++) {
         if (!strcmp(mh->method, req->method)) {
           //debug(1,"RTSP Packet received of type \"%s\":",mh->method),
           //msg_print_debug_headers(req);
+          method_selected = 1;
           mh->handler(conn, req, resp);
           //debug(1,"RTSP Response:");
           //msg_print_debug_headers(resp);
           break;
         }
       }
+    if (method_selected==0)
+      debug(1,"Unrecognised and unhandled rtsp request \"%s\".",req->method);
 
     respond:
       msg_write_response(conn->fd, resp);
