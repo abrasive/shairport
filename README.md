@@ -17,7 +17,7 @@ The exact latency to be used is specified by the source when it negotiates with 
 
 Shairport Sync is a pretty substantial rewrite of the fantastic work done in Shairport 1.0 by James Laird and others — please see https://github.com/abrasive/shairport/blob/master/README.md#contributors-to-version-1x for a list of the contributors to Shairport 1.x and Shairport 0.x. From a "heritage" point of view, Shairport Sync is a fork of Shairport 1.0.
 
-Shairport Sync is mainly designed for `alsa` and thus for Linux, though `alsa` has been ported to FreeBSD, so Shairport Sync runs in FreeBSD too. It must have direct access to the output device, which must be a real sound card capable of working with 44,100 samples per second interleaved PCM stereo (you'll get a message in the logfile if there's a problem).
+Shairport Sync is mainly designed for `alsa` and thus for Linux, although since `alsa` has been ported to FreeBSD, Shairport Sync runs in FreeBSD too. It must have direct access to the output device, which must be a real sound card capable of working with 44,100 samples per second interleaved PCM stereo (you'll get a message in the logfile if there's a problem).
 
 For more about the motivation behind Shairport Sync, please see the wiki at https://github.com/mikebrady/shairport-sync/wiki.
 
@@ -52,7 +52,7 @@ Building And Installing
 If you wish to install Shairport Sync on OpenWrt, Arch or Fedora platforms, please follow the appropriate instructions below. Otherwise follow the General Build Instructions. Then, when the progam has been installed, refer to the section on Configuring Shairport Sync that follows.
 
 **OpenWrt:**
-If you're interested in Shairport Sync for OpenWrt, there's an OpenWrt package at https://github.com/mikebrady/shairport-sync-for-openwrt. OpenWrt doesn't support the IQaudIO Pi-DAC.
+Thes is a Shairport Sync package in OpenWrt `trunk`. Also, there's an OpenWrt package at https://github.com/mikebrady/shairport-sync-for-openwrt, including one that builds back to `Attitude Adjustment`.
 
 **Arch Linux:**
 An Arch Linux installation package is available at  [EliaCereda/shairport-sync-PKGBUILD](https://github.com/EliaCereda/shairport-sync-PKGBUILD).
@@ -156,7 +156,7 @@ use a specific sound card and mixer control, etc. — there are some examples in
 
 *Man Page*
 
-You can view the man page here: http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/master/man/shairport-sync.html
+You can view the man page here: http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/development/man/shairport-sync.html
 
 
 Configuring Shairport Sync
@@ -312,9 +312,9 @@ Latency
 -------
 Latency is the exact time from a sound signal's original timestamp until that signal actually "appears" on the output of the audio output device, usually a Digital to Audio Converter (DAC), irrespective of any internal delays, processing times, etc. in the computer. 
 
-Shairport Sync uses latencies suplied by the source, typically either 88,200 or 99,577 frames. You shouldn't need to change them. (The `latencies` stanza in the configuration file and the various latency command-line options are deprecated.)
+Shairport Sync uses latencies supplied by the source, typically either 88,200 or 99,577 frames. You shouldn't need to change them. (The `latencies` stanza in the configuration file and the various latency command-line options are deprecated.)
 
-Problems can arise when you are trying to synchronise with speaker systems — typically surround-sound home theatre systems — that have their own inherent delays. You can compensate for an inherent delay using the `alsa` group `audio_backend_latency_offset`. Set this offset (in frames) to compensate for a fixed delay in the audio back end, for example, if the output device delays by 100 ms, set this to -4410.
+Problems can arise when you are trying to synchronise with speaker systems — typically surround-sound home theatre systems — that have their own inherent delays. You can compensate for an inherent delay using the appropriate backend  (typically `alsa`) `audio_backend_latency_offset`. Set this offset (in frames) to compensate for a fixed delay in the audio back end, for example, if the output device delays by 100 ms, set this to -4410.
 
 Resynchronisation
 -------------
@@ -324,7 +324,7 @@ If synchronisation is lost — say due to a busy source or a congested network �
 
 Tolerance
 ---------
-Playback synchronisation is allowed to wander a small amount before attempting to correct it. The default is 88 frames, i.e. 2 ms. The smaller the tolerance, the  more  likely it is that overcorrection  will  occur. Overcorrection is when more corrections (insertions and deletions) are made than are strictly necessary  to  keep the stream in sync. Use the statistics setting to monitor correction levels. Corrections should  not  greatly exceed net corrections.
+Playback synchronisation is allowed to wander, or to "drift") a small amount before attempting to correct it. The default is 88 frames, i.e. 2 ms. The smaller the tolerance, the  more  likely it is that overcorrection  will  occur. Overcorrection is when more corrections (insertions and deletions) are made than are strictly necessary  to  keep the stream in sync. Use the statistics setting to monitor correction levels. Corrections should  not  greatly exceed net corrections.
 * You can vary the tolerance with the `general` `drift` setting.
 
 Some Statistics
@@ -333,7 +333,7 @@ If you turn on the `general`  `statistics` setting, statistics like this will be
 
 `Sync error: -35.4 (frames); net correction: 24.2 (ppm); corrections: 24.2 (ppm); missing packets 0; late packets 5; too late packets 0; resend requests 6; min DAC queue size 4430.`
 
-"Sync error" is the average deviation from exact synchronisation. The example above indicates that the output is on average 35.4 frames ahead of exact synchronisation. Sync is allowed to wander by the tolerance — 88 frames (± 2 milliseconds) by default — before a correction will be made.
+"Sync error" is the average deviation from exact synchronisation. The example above indicates that the output is on average 35.4 frames ahead of exact synchronisation. Sync is allowed to drift by the `general` `drift` setting — 88 frames (± 2 milliseconds) by default — before a correction will be made.
 
 "Net correction" is actually the net sum of corrections — the number of frame insertions less the number of frame deletions — given as a moving average in parts per million. After an initial settling period, it represents the drift — the divergence between the rate at which frames are generated at the source and the rate at which the output device consumes them. The example above indicates that the output device is consuming frames 24.2 ppm faster than the source is generating them.
 
@@ -341,6 +341,6 @@ If you turn on the `general`  `statistics` setting, statistics like this will be
 
 For reference, a drift of one second per day is approximately 11.57 ppm. Left uncorrected, even a drift this small between two audio outputs will be audible after a short time. The above sample is from a second-generation iPod driving the Raspberry Pi which is connected over Ethernet.
 
-It's not unusual to have resend requests, late packets and even missing packets if some part of the connection to the Shairport Sync device is over WiFi. Sometimes late packets can be asked for and received multiple times. Sometimes late packets are sent and arrive too late, but have already been sent and received in time, so weren't needed anyway...
+It's not unusual to have resend requests, late packets and even missing packets if some part of the connection to the Shairport Sync device is over WiFi. Late packets can sometimes be asked for and received multiple times. Sometimes late packets are sent and arrive too late, but have already been sent and received in time, so weren't needed anyway...
 
 "Min DAC queue size" is the minimum size the queue of samples in the output device's hardware buffer was measured at. It is meant to stand at 0.15 seconds = 6,615 samples, and will go low if the processor is very busy. If it goes below about 2,000 then it's a sign that the processor can't really keep up.
