@@ -1,8 +1,19 @@
-HEAD
+Version 2.5.0.7
 ----
+**New Feature**
+* Source-specified Latencies. The AirPlay protocol used by Shairport Sync allows the audio source to specify the exact delay or latency that should be applied to the audio stream. Until now, Shairport Sync ignored this information and used fixed preset latencies that were selected on the basis of the "User-Agent" setting. Using source-specified latencies means that Shairport Sync should be able adapt automatically to a wider range of sources.
+Using source-specified latencies is now automatic unless non-standard static latencies have been specified in the configuration file or command line. Using non-standard latencies is usually done to compensate for delays in the back end of the system. For example, if the audio amplifier being driven by Shairport Sync has an inherent delay of its own -- as happens with many home theatre and surround sound systems -- then some users have reduced the latencies used by Shairport Sync to compensate. This usage is discouraged -- the `audio_backend_latency_offset` in the appropriate backend stanza (e.g. in the "alsa" stanza) should be used for this. Static latency settings are now deprecated, and will be removed in a future version of Shairport Sync.
 
 **Bug fixes**
 * Fix in the `shairport.c`: the USE_CUSTOM_LOCAL_STATE_DIR macro was still being used when it should have been USE_CUSTOM_PID_DIR.
+* Fix a crashing bug -- if metadata was enabled but a pipename was not supplied, boom.
+
+**Other Changes**
+* Volume ratios expressed in decibels are now consistently denominated in voltage decibels rather than power decibels. The rationale is that the levels refer to voltage levels, and power is proportional to the square of voltage.
+Thus a ratio of levels of 65535 to 1 is 96.3 dB rather than the 48.15 dB used before.
+* The latency figure returned to the source as part of the response to an rtsp request packet is 11,025, which may (?) be meant to indicate the minimum latency the device is capable of. 
+* An experimental handler for a GET_PARAMETER rtsp request has been added. It does nothing except log the occurence.
+* The RTSP request dispatcher now logs an event whenever an unrecognised rtsp has been made.
 
 Version 2.5.0.2
 ----

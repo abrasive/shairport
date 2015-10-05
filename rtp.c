@@ -193,7 +193,15 @@ static void *rtp_control_receiver(void *arg) {
 
         rtp_timestamp_less_latency = ntohl(*((uint32_t *)&packet[4]));
         sync_rtp_timestamp = ntohl(*((uint32_t *)&packet[16]));
-
+        
+        if (config.use_negotiated_latencies) {
+          uint32_t la = sync_rtp_timestamp-rtp_timestamp_less_latency+11025;
+          if (la!=config.latency) {
+            config.latency = la;
+            debug(1,"Using negotiated latency of %u frames.",config.latency);
+          }
+        }
+        
         if (packet[0] & 0x10) {
           // if it's a packet right after a flush or resume
           sync_rtp_timestamp += 352; // add frame_size -- can't see a reference to this anywhere,
