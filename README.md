@@ -137,11 +137,35 @@ Choose the appropriate `--with-*` options:
 - `--with-configfile` to install a configuration file and a separate sample file at the `make install` stage. Default is to install. An existing `/etc/shairport-sync.conf` will not be overwritten.
 - `--with-pkg-config` to use pkg-config to find libraries. Default is to use pkg-config — this option is for special purpose use.
 
+**System V and `systemd`**
+
+At the time of writing, there are two general systems for automatically starting programs automatically at startup: "System V" or `systemd`. To see if the `systemd` process is running on your system, enter the following command:
+
+`ps aux | grep systemd | grep -v grep`
+
+On a system using `systemd` (this is a Raspberry Pi running Raspbian Jessie) you'll get many lines containing `systemd`, for example:
+```
+pi@raspberrypi ~ $ ps aux | grep systemd | grep -v grep
+root        90  0.1  0.6   8088  2764 ?        Ss   08:00   0:01 /lib/systemd/systemd-journald
+root        93  0.0  0.6  11816  3004 ?        Ss   08:00   0:00 /lib/systemd/systemd-udevd
+root       502  0.0  0.5   3824  2436 ?        Ss   08:00   0:00 /lib/systemd/systemd-logind
+message+   528  0.0  0.7   5568  3172 ?        Ss   08:00   0:01 /usr/bin/dbus-daemon --system --address=systemd: --nofork --nopidfile --systemd-activation
+pi         983  0.0  0.7   4912  3256 ?        Ss   08:00   0:00 /lib/systemd/systemd --user
+pi@raspberrypi ~ $ 
+```
+whereas on a system without `systemd` -- presumably using System V --  (this is a Raspberry Pi running Raspbian Wheezy) , you'll get nothing:
+```
+pi@raspberrypi ~ $ ps aux | grep systemd | grep -v grep
+pi@raspberrypi ~ $ 
+```
+Choose `--with-systemd` or `--with-systemv` on the basis of the outcome.
+
 Here is an example, suitable for installations such as Ubuntu and Raspbian:
 
 `$ ./configure --with-alsa --with-avahi --with-ssl=openssl --with-metadata --with-soxr --with-systemv`
 
-Omit the `--with-soxr` if the libsoxr library is not available. For installation into a `systemd` system, replace the `--with-systemv` with `--with-systemd`.
+* Omit the `--with-soxr` if the libsoxr library is not available.
+* For installation into a `systemd` system, replace the `--with-systemv` with `--with-systemd`.
 
 Enter:
 
