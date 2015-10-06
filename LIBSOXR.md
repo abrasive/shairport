@@ -14,7 +14,7 @@ git clone git://git.code.sf.net/p/soxr/code libsoxr
 cd libsoxr
 ./go
 ```
-Be patient! This takes a long time on a Raspberry Pi -- it looks like it gets stuck at 47%, but it will finish if you let it.
+Be patient! This takes a long time on a Raspberry Pi -- it looks like it gets stuck around 40% or 50%, but it will finish if you let it.
 
 Having compiled `libsoxr`, it must now must be installed:
 ```
