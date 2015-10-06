@@ -112,6 +112,10 @@ Download Shairport Sync:
 
 `git clone https://github.com/mikebrady/shairport-sync.git`
 
+Select the `development` branch:
+
+`git checkout development`
+
 Next, `cd` into the shairport-sync directory and execute the following commands:
 
 ```
