@@ -911,6 +911,7 @@ static void *player_thread_func(void *arg) {
   silence = malloc(OUTFRAME_BYTES(frame_size));
   memset(silence, 0, OUTFRAME_BYTES(frame_size));
   late_packet_message_sent = 0;
+  first_packet_timestamp = 0;
   missing_packets = late_packets = too_late_packets = resend_requests = 0;
   flush_rtp_timestamp = 0; // it seems this number has a special significance -- it seems to be used
                            // as a null operand, so we'll use it like that too

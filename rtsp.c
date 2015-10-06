@@ -722,7 +722,7 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
   
   if (config.latency==-1) {
     // this means that no static latency was set, so we'll allow it to be set dynamically
-    config.latency=88200; // to be sure, to be sure
+    config.latency=88198; // to be sure, to be sure -- make it slighty different from the default to ensure we get a debug message when set to 88200
     config.use_negotiated_latencies = 1;
   }
   char *hdr = msg_get_header(req, "Transport");
