@@ -106,19 +106,16 @@ Assuming the usual build essentials and git, Debian, Ubuntu and Raspbian users c
 - `apt-get install avahi-daemon libavahi-client-dev` if you want to use Avahi (recommended).
 - `apt-get install libssl-dev` if you want to use OpenSSL and libcrypto, or use PolarSSL otherwise.
 - `apt-get install libpolarssl-dev` if you want to use PolarSSL, or use OpenSSL/libcrypto otherwise.
-- `apt-get install libsoxr-dev` if you want support for libsoxr-based resampling. This library is not yet part of  Raspbian; instructions for how to build it from source are available at [LIBSOXR.md](https://github.com/mikebrady/shairport-sync/blob/2.3/LIBSOXR.md).
+- `apt-get install libsoxr-dev` if you want support for libsoxr-based resampling. This library is not yet part of  Raspbian; instructions for how to build it from source are available at [LIBSOXR.md](https://github.com/mikebrady/shairport-sync/blob/development/LIBSOXR.md).
 
 Download Shairport Sync:
 
 `git clone https://github.com/mikebrady/shairport-sync.git`
 
-Select the `development` branch:
-
-`git checkout development`
-
 Next, `cd` into the shairport-sync directory and execute the following commands:
 
 ```
+$ git checkout development #select the development branch
 $ autoreconf -i -f
 ```
 
@@ -171,21 +168,45 @@ Enter:
 
 `$ make` 
 
-to build the application. Next, run:
+to build the application.
+
+**Installation to a System V system**
+If you are installing onto a System V system:
 
 ```
 $sudo make install
-$sudo update-rc.d shairport-sync defaults 90 10
 ```
 
 to install `shairport-sync` along with a `man` page, a default configuration file and a System V startup script to launch it automatically at system startup.
-The settings are the most basic defaults, so you will want to edit the configuration — the file is `/etc/shairport-sync.conf` — to give the service a name,
-use a specific sound card and mixer control, etc. — there are some examples in the sample configuration file.
 
-*Man Page*
+To complete the installation, enter:
+```
+$sudo update-rc.d shairport-sync defaults 90 10
+```
+
+**Installation to a `systemd` system**
+To complete the installation, you need to define a `shairport-sync` group and user. This is a security measure -- the user and group are relatively unprivileged, and the user does not have login priviliges. The user must be a member of the `audio` group to be able to access the audio hardware. The following commands define the group and user correctly if they do not already exist (note the use of `sudo` -- omit this if you already have superuser privileges:
+
+```
+$getent group shairport-sync &>/dev/null || sudo groupadd -r shairport-sync >/dev/null
+$getent passwd shairport-sync &> /dev/null || sudo useradd -r -M -g shairport-sync -s /usr/bin/nologin -G audio shairport-sync >/dev/null
+```
+
+Next, enter:
+
+```
+$sudo make install
+```
+
+to install `shairport-sync` along with a `man` page, a default configuration file and some `systemd` startup configuration files to launch it automatically at system startup.
+
+To enable Shairport Sync to start automatically at system startup, enter:
+
+`$sudo systemctl enable shairport-sync`
+
+**Man Page**
 
 You can view the man page here: http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/development/man/shairport-sync.html
-
 
 Configuring Shairport Sync
 --------
