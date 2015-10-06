@@ -1,3 +1,8 @@
+Version 2.5.0.8
+----
+**Bug fix**
+* Sometimes, especially when using Shairport Sync as a system output, it would not play the audio stream. This was caused by an improperly initialised variable. Fixed.
+
 Version 2.5.0.7
 ----
 **New Feature**
