@@ -399,7 +399,16 @@ int parse_options(int argc, char **argv) {
           die("Invalid ignore_volume_control option choice \"%s\". It should be \"yes\" or \"no\"");
       }
 
-      /* Get the default latency. Deprecated! */
+      /* Get the volume range, in dB, that should be used If not set, it means you just use the range set by the mixer. */
+      if (config_lookup_int(config.cfg, "general.volume_range", &value)) {
+        if ((value < 0) || (value > 200))
+          die("Invalid volume range  \"%sd\". It should be between 0 and 200. Zero means use the mixer's native range",
+              value);
+        else
+          config.volume_range_db = value;
+      }
+
+/* Get the default latency. Deprecated! */
       if (config_lookup_int(config.cfg, "latencies.default", &value))
         config.userSuppliedLatency = value;
 
@@ -893,7 +902,7 @@ int main(int argc, char **argv) {
   debug(2, "audio backend desired buffer length is %d.",
         config.audio_backend_buffer_desired_length);
   debug(2, "audio backend latency offset is %d.", config.audio_backend_latency_offset);
-  debug(2, "use_negotiated_latencies %d.", config.use_negotiated_latencies);
+  debug(2, "volume range in dB (zero means use the range specified by the mixer): %u.", config.volume_range_db);
   
   char *realConfigPath = realpath(config.configfile,NULL);
   if (realConfigPath) {

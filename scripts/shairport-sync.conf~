@@ -17,7 +17,6 @@ general =
 //	resync_threshold = 2205; // a synchronisation error greater than this will cause resynchronisation; 0 disables it
 //	log_verbosity = 0; // "0" means no debug verbosity, "3" is most verbose.
 //  ignore_volume_control = "no"; // set this to "yes" if you want the volume to be at 100% no matter what the source's volume control is set to.
-//  volume_range_db = 0; // set this to the range, in dB, you want between the maximum volume and the minimum volume. Zero means use the mixer's native range. Default is 0.
 };
 
 // How to deal with metadata, including artwork
