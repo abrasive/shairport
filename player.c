@@ -1219,11 +1219,7 @@ void player_volume(double f) {
   // Thus, we ask our vol2attn function for an appropriate dB between -96.3 and 0 dB and translate
   // it back to a number.
 
-  double scaled_volume = vol2attn(f, 0, -9630);
-  double linear_volume = pow(10, scaled_volume / 2000);
-
-  if (f == -144.0)
-    linear_volume = 0.0;
+  double linear_volume = 0.0;
 
   if (config.output->volume) {
     // debug(1,"Set volume to %f.",f);
@@ -1234,12 +1230,23 @@ void player_volume(double f) {
   if (config.output->parameters)
     config.output->parameters(&audio_information);
   else {
+    long mindb = -9630;
+    if (config.volume_range_db) {
+      long suggested_alsa_min_db = -(long)trunc(config.volume_range_db*100);
+      if (suggested_alsa_min_db > mindb)
+        mindb = suggested_alsa_min_db;
+      else
+        inform("The volume_range_db setting, %f is greater than the native range of the mixer %f, so it is ignored.",config.volume_range_db,mindb/100.0);
+    }
+    double scaled_volume = vol2attn(f, 0, mindb);
+    linear_volume = pow(10, scaled_volume / 2000);
     audio_information.airplay_volume = f;
-    audio_information.minimum_volume_dB = -9630;
+    audio_information.minimum_volume_dB = mindb;
     audio_information.maximum_volume_dB = 0;
     audio_information.current_volume_dB = scaled_volume;
     audio_information.has_true_mute = 0;
     audio_information.is_muted = 0;
+    // debug(1,"Minimum software volume set to %d centi-dB",f,mindb);
   }
   audio_information.valid = 1;
   // debug(1,"Software volume set to %f on scale with a %f dB",f,linear_volume);
