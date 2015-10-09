@@ -1,3 +1,8 @@
+Version 2.5.0.9
+----
+**New Feature**
+* Set Volume Range. This is a new setting that allows you to use just a portion of the full range of attenuation offered by a mixer. For example, if a mixer has a minimum volume of -80 dB and a maximum of +20 dB, you might wish to use only 60 dB of the 100 dB available. This might be because the sound becomes inaudible at the lowest setting and unbearably loud at the highest setting. Or it might be because the range specified by the mixer does not match the capabilities of the device. For example, the Raspberry Pi's DAC that feeds the built-in audio jack claims a range of 106 dB but has a useful range of only about 35dB. The new `general` setting `volume_range_db` allows you to specify the maximum range from highest to lowest. Many domestic Hi Fi systems have a range of 60 to 80 dB. The range suggested for the Raspberry Pi's built-in audio DAC, whcih feeds the headphone jack, is 35. Using it in this case gives the volume control a much more useful range of volumes.
+
 Version 2.5.0.8
 ----
 **Bug fix**
