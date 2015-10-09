@@ -234,6 +234,13 @@ static int init(int argc, char **argv) {
       }
       debug(1, "Hardware mixer has dB volume from %f to %f.", (1.0 * alsa_mix_mindb) / 100.0,
             (1.0 * alsa_mix_maxdb) / 100.0);
+      if (config.volume_range_db) {
+        long suggested_alsa_min_db = alsa_mix_maxdb - (long)trunc(config.volume_range_db*100);
+        if (suggested_alsa_min_db > alsa_mix_mindb)
+          alsa_mix_mindb = suggested_alsa_min_db;
+        else
+          inform("The volume_range_db setting, %f is greater than the native range of the mixer %f, so it is ignored.",config.volume_range_db,(alsa_mix_maxdb-alsa_mix_mindb)/100.0);
+      }
     } else {
       // use the linear scale and do the db conversion ourselves
       debug(1, "note: the hardware mixer specified -- \"%s\" -- does not have a dB volume scale, so it can't be used.",alsa_mix_ctrl);

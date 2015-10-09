@@ -81,6 +81,7 @@ typedef struct {
   int32_t audio_backend_buffer_desired_length; // this will be the desired number of frames in the
                                             // audio backend buffer -- the DAC buffer for ALSA
   int32_t audio_backend_latency_offset; // this will be the offset to compensate for any fixed latency
+  uint32_t volume_range_db; // the range, in dB, from max dB to min dB. Zero means use the mixer's native range.
                                      // there might be in the audio
 } shairport_cfg;
 
