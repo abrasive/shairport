@@ -5,7 +5,7 @@ Version 2.5.0.9
 Another possible reason might be because the range specified by the mixer does not match the capabilities of the device. For example, the Raspberry Pi's DAC that feeds the built-in audio jack claims a range of 106 dB but has a useful range of only about 35dB. The new `volume_range_db` setting in the `general` stanza allows you to specify the maximum range from highest to lowest. The range suggested for the Raspberry Pi's built-in audio DAC, which feeds the headphone jack, is 35. Using it in this case gives the volume control a much more useful range of settings.
 
 **Other Changes**
-* Initial timing accuracy improved. The estimate of when to play the starting frame of the audio sequence has improved significantly.
+* Initial timing accuracy improved. The estimate of when to play the starting frame of the audio sequence has improved significantly. This leads to fewer corrections being needed at the start.
 
 Version 2.5.0.8
 ----
