@@ -194,10 +194,14 @@
 
     <option>
     <p><opt>volume_range_db=</opt><arg>dBvalue</arg><opt>;</opt></p>
-    <optdesc>Set this <arg>dBvalue</arg> to use just a portion of the full range of attenuation offered by a mixer. For example, if a mixer has a minimum volume of -80 dB and a maximum of +20 dB, you might wish to use only 60 dB of the 100 dB available. This might be because the sound becomes inaudible at the lowest setting and unbearably loud at the highest setting. Or it might be because the range specified by the mixer does not match the capabilities of the device. For example, the Raspberry Pi's DAC that feeds the built-in audio jack claims a range of 106 dB but has a useful range of only about 35dB. The setting allows you to specify the maximum range from highest to lowest. Many domestic HiFi systems have a range of 60 to 80 dB. The range suggested for the Raspberry Pi's built-in audio DAC, which feeds the headphone jack, is 35. Using it in this case gives the volume control a much more useful range of settings. If you omit this setting, the full "native" range of the output device is used.</optdesc>
+    <optdesc>Set this <arg>dBvalue</arg> to use just a portion of the full range of attenuation offered by a mixer.
+For example, if a mixer has a minimum volume of -80 dB and a maximum of +20 dB, you might wish to use only 60 dB of the 100 dB available.
+This might be because the sound becomes inaudible at the lowest setting and unbearably loud at the highest setting -- indeed, many domestic HiFi systmes have a volume copntrol range of just 60 to 80dB.
+Another potential use might be where the range specified by the mixer does not match the capabilities of the device.
+For example, the Raspberry Pi's DAC that feeds the built-in audio jack claims a range of 106 dB but has a useful range of only about 35dB.
+The setting allows you to specify the maximum range from highest to lowest. The range suggested for the Raspberry Pi's built-in audio DAC, which feeds the headphone jack, is 35.
+Using it in this case gives the volume control a much more useful range of settings. If you omit this setting, the full "native" range of the mixer is used.</optdesc>
     </option>
-
-
     
     <option><p><opt>"ALSA" SETTINGS</opt></p></option>
     <p>These settings are for the ALSA back end, used to communicate with audio output devices in the ALSA system.
