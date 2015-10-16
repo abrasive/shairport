@@ -1,6 +1,6 @@
 Shairport Sync
 =============
-Shairport Sync emulates an AirPort Express for the purpose of streaming audio from iTunes, iPods, iPhones, iPads and AppleTVs.
+Shairport Sync is an AirPlay audio player -- it plays audio streamed from iTunes, iOS devices and third-party AirPlay sources such as ForkedDaapd and others.
 Audio played by a Shairport Sync-powered device stays synchronised with the source and hence with similar devices playing the same source. In this way, synchronised multi-room audio is possible without difficulty. (Hence the name Shairport Sync, BTW.)
 
 Shairport Sync does not support AirPlay video or photo streaming.
@@ -35,7 +35,7 @@ Status
 ------
 Shairport Sync works on a wide variety of Linux devices. It works on standard Ubuntu laptops, on the Raspberry Pi with Raspbian Wheezy and Jessie, Arch Linux and OpenWrt, and it runs on a Linksys NSLU2 and a TP-Link 710N using OpenWrt. It works with built-in audio and with a variety of USB-connected audio amplifiers and DACs, including a cheapo USB "3D Sound" dongle, a first generation iMic and a Topping TP30 amplifier with a USB DAC input. It will not work properly – if at all – with a PulseAudio (pseudo-)output device. Using a port of the `alsa` system, Shairport Sync runs rather well on FreeBSD.
 
-Shairport Sync runs well on the Raspberry Pi. It can drive the built-in sound card, though the audio out of the card is of poor quality. USB-connected sound cards work well on recent versions of Raspbian; however older versions of Raspbian appear to suffer from a problem — see http://www.raspberrypi.org/forums/viewtopic.php?t=23544, so it is wise to update. Shairport Sync works well with the IQAudIO Pi-DAC — see http://www.iqaudio.com.
+Shairport Sync runs well on the Raspberry Pi. It can drive the built-in sound card, though the audio out of the card is of poor quality (see the note below on configuring the Raspberry Pi to make best use of it). USB-connected sound cards work well on recent versions of Raspbian; however older versions of Raspbian appear to suffer from a problem — see http://www.raspberrypi.org/forums/viewtopic.php?t=23544, so it is wise to update. Shairport Sync works well with the IQAudIO Pi-DAC — see http://www.iqaudio.com.
 
 At the time of writing, OpenWrt trunk does not support USB audio well on the Raspberry Pi.
 
@@ -212,7 +212,7 @@ Configuring Shairport Sync
 --------
 There are two logically distinct parts to getting Shairport Sync to run properly on your machine — (1) starting and stopping it and (2) ensuring it has the right settings.
 
-Starting and stopping automatically is taken care of differently in different versions of Linux. In the example above, when you run `$sudo make install`, a System V startup script is placed at `/etc/init.d/shairport-sync`. This will not be appropriate in Linuxes that use `systemd` such as Arch Linux, so please look at the separate installation scripts for those.
+Starting and stopping automatically is taken care of differently in different versions of Linux -- see the previous section for an example of installing into a System V or a `systemd` based system.
 
 To get the best from Shairport Sync, you’ll need to (1) give Shairport Sync a service name by which it will be seen in iTunes etc., (2) specify the output device to use and (3) specify the name of the mixer volume control to use to control the output level. To get values for (2) and (3) you might need to explore the ALSA output devices with a program like `alsamixer` or similar.
 
@@ -251,6 +251,13 @@ Shairport Sync can run programs just before it starts to play an audio stream an
 
 Please note that the full path to the programs must be specified, and script files will not be executed unless they are marked as executable and have the standard `#!/bin/...` first line. (This behaviour may be different from other Shairports.)
 
+**Raspberry Pi**
+The Raspberry Pi has a built-in audio DAC that is connected to the device's headphone jack. This provides a low-quality output that is nevertheless useful for testing purposes and may indeed by quite adequate for [very] casual listening. It is not HiFi: it is noisy and can't play anything above about 15kHz. A further problem is that it declares itself to have a very large mixer volume control range -- all the way from -102.38dB up to +4dB, a range of 106.38 dB. In reality, only the top 35dB of it is in any way usable.
+
+Accordingly, Shairport Sync has a `volume_range_db` setting in the `general` stanza which allows you to tell Shairport Sync to use a subrange of the declared range. For example, if you set the `volume_range_db` figure to 35, the top 35 dB of the range will the used. With this setting on the Raspberry Pi, maximum volume will be +4dB and minimum volume will be -31dB, below which muting will occur.
+
+From a user's point of view, the effect of using this setting is to move the minimum usable volume all the way down to the bottom of the user's volume control, rather than have the minimum usable volume concentrated very close to the maximum volume.
+
 *Command Line Arguments*
 
 You can use command line arguments to provide settings to Shairport Sync as before. For full information, please read the Shairport Sync `man` page, also available at  http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/development/man/shairport-sync.html.
@@ -282,7 +289,7 @@ alsa = {
 
 This gives the service a particular name — "Joe's Stereo" and specifies that audio device hw:0 be used.
 
-For best results — including getting true mute and instant response to volume control and pause commands — you should access the hardware volume controls. Use `amixer` or `alsamixer` or similar to discover the name of the volume controller to be used after the `-c` option.
+For best results — including getting true mute and instant response to volume control and pause commands — you should access the hardware volume controls. Use `amixer` or `alsamixer` or similar to discover the name of the mixer control to be used as the `mixer_control_name`.
 
 Here is an example for for a Raspberry Pi using its internal soundcard — device hw:0 — that drives the headphone jack:
 ```
