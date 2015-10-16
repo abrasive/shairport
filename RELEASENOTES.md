@@ -9,8 +9,8 @@ Another possible reason might be because the range specified by the mixer does n
 
 Version 2.5.0.8
 ----
-**Bug fix**
-* Sometimes, especially when using Shairport Sync as a system output, it would not play the audio stream. This was caused by an improperly initialised variable. Fixed.
+**Important Bug fix**
+* Sometimes, especially when using Shairport Sync as a system output, it would not play the audio stream. This was caused by an improperly initialised variable. Fixed. It may also be implcated in the continuing issue with Synology devices being unable to play to Shairport Sync.
 
 Version 2.5.0.7
 ----
