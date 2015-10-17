@@ -299,6 +299,9 @@ void player_put_packet(seq_t seqno, uint32_t timestamp, uint8_t *data, int len) 
   time_of_last_audio_packet = get_absolute_time_in_fp();
   if (connection_state_to_output) { // if we are supposed to be processing these packets
 
+//    if (flush_rtp_timestamp != 0)
+//    	debug(1,"Flush_rtp_timestamp is %u",flush_rtp_timestamp);
+
     if ((flush_rtp_timestamp != 0) &&
         ((timestamp == flush_rtp_timestamp) || seq32_order(timestamp, flush_rtp_timestamp))) {
       debug(2, "Dropping flushed packet in player_put_packet, seqno %u, timestamp %u, flushing to "
@@ -489,16 +492,18 @@ static abuf_t *buffer_get_frame(void) {
 
       if (curframe->ready) {
         if (ab_buffering) { // if we are getting packets but not yet forwarding them to the player
+          int have_sent_prefiller_silence; // set true when we have send some silent frames to the DAC
+          uint32_t reference_timestamp;
+          uint64_t reference_timestamp_time,remote_reference_timestamp_time;
+          get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time, &remote_reference_timestamp_time);
           if (first_packet_timestamp == 0) { // if this is the very first packet
             // debug(1,"First frame seen, time %u, with %d
             // frames...",curframe->timestamp,seq_diff(ab_read, ab_write));
-            uint32_t reference_timestamp;
-            uint64_t reference_timestamp_time,remote_reference_timestamp_time;
-            get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time, &remote_reference_timestamp_time);
             if (reference_timestamp) { // if we have a reference time
               // debug(1,"First frame seen with timestamp...");
               first_packet_timestamp = curframe->timestamp; // we will keep buffering until we are
                                                             // supposed to start playing this
+              have_sent_prefiller_silence = 0;
 
               // Here, calculate when we should start playing. We need to know when to allow the
               // packets to be sent to the player.
@@ -524,7 +529,6 @@ static abuf_t *buffer_get_frame(void) {
               // -4410 frames.
 
               int64_t delta = ((int64_t)first_packet_timestamp - (int64_t)reference_timestamp);
-
               first_packet_time_to_play =
                   reference_timestamp_time +
                   ((delta + (int64_t)config.latency + (int64_t)config.audio_backend_latency_offset)
@@ -541,6 +545,13 @@ static abuf_t *buffer_get_frame(void) {
           }
 
           if (first_packet_time_to_play != 0) {
+            // recalculate first_packet_time_to_play -- the latency might change
+            int64_t delta = ((int64_t)first_packet_timestamp - (int64_t)reference_timestamp);
+            first_packet_time_to_play =
+                reference_timestamp_time +
+                ((delta + (int64_t)config.latency + (int64_t)config.audio_backend_latency_offset)
+                 << 32) /
+                    44100;
 
             uint32_t filler_size = frame_size;
             uint32_t max_dac_delay = 4410;
@@ -560,7 +571,7 @@ static abuf_t *buffer_get_frame(void) {
               first_packet_time_to_play = 0;
               time_since_play_started = 0;
             } else {
-              if (config.output->delay) {
+              if ((config.output->delay) && (have_sent_prefiller_silence != 0)) {
                 dac_delay = config.output->delay();
                 if (dac_delay == -1) {
                   debug(1, "Error getting dac_delay in buffer_get_frame.");
@@ -601,6 +612,7 @@ static abuf_t *buffer_get_frame(void) {
                 // with %d packets.",exact_frame_gap,fs,dac_delay,seq_diff(ab_read, ab_write));
                 config.output->play(silence, fs);
                 free(silence);
+                have_sent_prefiller_silence = 1;
                 if (ab_buffering == 0) {
                   uint64_t reference_timestamp_time; // don't need this...
                   get_reference_timestamp_stuff(&play_segment_reference_frame, &reference_timestamp_time, &play_segment_reference_frame_remote_time);
@@ -899,6 +911,7 @@ static void *player_thread_func(void *arg) {
   silence = malloc(OUTFRAME_BYTES(frame_size));
   memset(silence, 0, OUTFRAME_BYTES(frame_size));
   late_packet_message_sent = 0;
+  first_packet_timestamp = 0;
   missing_packets = late_packets = too_late_packets = resend_requests = 0;
   flush_rtp_timestamp = 0; // it seems this number has a special significance -- it seems to be used
                            // as a null operand, so we'll use it like that too
@@ -1193,47 +1206,59 @@ void player_volume(double f) {
   // The volume ranges -144.0 (mute) or -30 -- 0. See
   // http://git.zx2c4.com/Airtunes2/about/#setting-volume
   // By examination, the -30 -- 0 range is linear on the slider; i.e. the slider is calibrated in 30
-  // equal increments
-  // So, we will pass this on without any weighting if we have a hardware mixer, as we expect the
-  // mixer to be calibrated in dB.
-
-  // Here, we ask for an attenuation we will apply in software. The dB range of a value from 1 to
-  // 65536 is about 48.1 dB (log10 of 65536 is 4.8164).
-  // Thus, we ask our vol2attn function for an appropriate dB between -48.1 and 0 dB and translate
+  // equal increments. Since the human ear's response is roughly logarithmic, we imagine these to
+  // be power dB, i.e. from -30dB to 0dB.
+  
+  // So, if we have a hardware mixer, we will pass this on to its dB volume settings.
+  
+  // Without a hardware mixer, we have to do attenuation in software, so
+  // here, we ask for an attenuation we will apply to the signal amplitude in software.
+  // The dB range of a value from 1 to 65536 is about 96.3 dB (log10 of 65536 is 4.8164).
+  // Since the levels correspond with amplitude, they correspond to voltage, hence voltage dB,
+  // or 20 times the log of the ratio. Then multiplied by 100 for convenience.
+  // Thus, we ask our vol2attn function for an appropriate dB between -96.3 and 0 dB and translate
   // it back to a number.
 
-  double scaled_volume = vol2attn(f, 0, -4810);
-  double linear_volume = pow(10, scaled_volume / 1000);
-
-  if (f == -144.0)
-    linear_volume = 0.0;
+  double linear_volume = 0.0;
 
   if (config.output->volume) {
+    // debug(1,"Set volume to %f.",f);
     config.output->volume(f); // volume will be sent as metadata by the config.output device
-    linear_volume =
-        1.0; // no attenuation needed -- this value is used as a flag to avoid calculations
+    linear_volume = 1.0; // no attenuation needed -- this value is used as a flag to avoid calculations
   }
 
   if (config.output->parameters)
     config.output->parameters(&audio_information);
   else {
+    long mindb = -9630;
+    if (config.volume_range_db) {
+      long suggested_alsa_min_db = -(long)trunc(config.volume_range_db*100);
+      if (suggested_alsa_min_db > mindb)
+        mindb = suggested_alsa_min_db;
+      else
+        inform("The volume_range_db setting, %f is greater than the native range of the mixer %f, so it is ignored.",config.volume_range_db,mindb/100.0);
+    }
+    double scaled_volume = vol2attn(f, 0, mindb);
+    linear_volume = pow(10, scaled_volume / 2000);
     audio_information.airplay_volume = f;
-    audio_information.minimum_volume_dB = -4810;
+    audio_information.minimum_volume_dB = mindb;
     audio_information.maximum_volume_dB = 0;
     audio_information.current_volume_dB = scaled_volume;
     audio_information.has_true_mute = 0;
     audio_information.is_muted = 0;
+    // debug(1,"Minimum software volume set to %d centi-dB",f,mindb);
   }
   audio_information.valid = 1;
+  // debug(1,"Software volume set to %f on scale with a %f dB",f,linear_volume);
   pthread_mutex_lock(&vol_mutex);
   software_mixer_volume = linear_volume;
   fix_volume = 65536.0 * software_mixer_volume;
   pthread_mutex_unlock(&vol_mutex);
 #ifdef CONFIG_METADATA
-  char *dv = malloc(64); // will be freed in the metadata thread
+  char *dv = malloc(128); // will be freed in the metadata thread
   if (dv) {
-    memset(dv, 0, 64);
-    snprintf(dv, 63, "%.2f,%.2f,%.2f,%.2f", audio_information.airplay_volume,
+    memset(dv, 0, 128);
+    snprintf(dv, 127, "%.2f,%.2f,%.2f,%.2f", audio_information.airplay_volume,
              audio_information.current_volume_dB / 100.0,
              audio_information.minimum_volume_dB / 100.0,
              audio_information.maximum_volume_dB / 100.0);

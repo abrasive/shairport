@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <memory.h>
+#include <math.h>
 #include <pthread.h>
 #include <alsa/asoundlib.h>
 #include "common.h"
@@ -43,9 +44,9 @@ static void stop(void);
 static void flush(void);
 static uint32_t delay(void);
 static void volume(double vol);
+static void linear_volume(double vol);
 static void parameters(audio_parameters *info);
 static int has_mute = 0;
-static int has_db_vol = 0;
 static double set_volume;
 
 audio_output audio_alsa = {
@@ -183,6 +184,8 @@ static int init(int argc, char **argv) {
 
   if (optind < argc)
     die("Invalid audio argument: %s", argv[optind]);
+  
+  debug(1,"Output device name is \"%s\".",alsa_out_dev);
 
   if (!hardware_mixer)
     return 0;
@@ -191,13 +194,14 @@ static int init(int argc, char **argv) {
     alsa_mix_dev = alsa_out_dev;
 
   int ret = 0;
-
+  
   snd_mixer_selem_id_alloca(&alsa_mix_sid);
   snd_mixer_selem_id_set_index(alsa_mix_sid, alsa_mix_index);
   snd_mixer_selem_id_set_name(alsa_mix_sid, alsa_mix_ctrl);
 
   if ((snd_mixer_open(&alsa_mix_handle, 0)) < 0)
     die("Failed to open mixer");
+  debug(1,"Mixer device name is \"%s\".",alsa_mix_dev);
   if ((snd_mixer_attach(alsa_mix_handle, alsa_mix_dev)) < 0)
     die("Failed to attach mixer");
   if ((snd_mixer_selem_register(alsa_mix_handle, NULL, NULL)) < 0)
@@ -206,28 +210,52 @@ static int init(int argc, char **argv) {
   ret = snd_mixer_load(alsa_mix_handle);
   if (ret < 0)
     die("Failed to load mixer element");
-  alsa_mix_elem = snd_mixer_find_selem(alsa_mix_handle, alsa_mix_sid);
+  
+  debug(1,"Mixer Control name is \"%s\".",alsa_mix_ctrl);
+    
+  alsa_mix_elem = snd_mixer_find_selem(alsa_mix_handle, alsa_mix_sid);    
   if (!alsa_mix_elem)
     die("Failed to find mixer element");
+
+ 
   if (snd_mixer_selem_get_playback_volume_range(alsa_mix_elem, &alsa_mix_minv, &alsa_mix_maxv) < 0)
     debug(1, "Can't read mixer's [linear] min and max volumes.");
   else {
-    if ((snd_mixer_selem_ask_playback_vol_dB(alsa_mix_elem, alsa_mix_minv, &alsa_mix_mindb) == 0) &&
-        (snd_mixer_selem_ask_playback_vol_dB(alsa_mix_elem, alsa_mix_maxv, &alsa_mix_maxdb) == 0)) {
-      has_db_vol = 1;
+    if (snd_mixer_selem_get_playback_dB_range (alsa_mix_elem, &alsa_mix_mindb, &alsa_mix_maxdb) == 0) {
+
       audio_alsa.volume = &volume; // insert the volume function now we know it can do dB stuff
       audio_alsa.parameters = &parameters; // likewise the parameters stuff
-      if (alsa_mix_mindb == -9999999) {
-        // trying to say that the lowest vol is mute, maybe? Raspberry Pi does this
+      if (alsa_mix_mindb == SND_CTL_TLV_DB_GAIN_MUTE) {
+        // Raspberry Pi does this
+        debug(1, "Lowest dB value is a mute.");
         if (snd_mixer_selem_ask_playback_vol_dB(alsa_mix_elem, alsa_mix_minv + 1,
                                                 &alsa_mix_mindb) == 0)
           debug(1, "Can't get dB value corresponding to a \"volume\" of 1.");
       }
       debug(1, "Hardware mixer has dB volume from %f to %f.", (1.0 * alsa_mix_mindb) / 100.0,
             (1.0 * alsa_mix_maxdb) / 100.0);
+      if (config.volume_range_db) {
+        long suggested_alsa_min_db = alsa_mix_maxdb - (long)trunc(config.volume_range_db*100);
+        if (suggested_alsa_min_db > alsa_mix_mindb)
+          alsa_mix_mindb = suggested_alsa_min_db;
+        else
+          inform("The volume_range_db setting, %f is greater than the native range of the mixer %f, so it is ignored.",config.volume_range_db,(alsa_mix_maxdb-alsa_mix_mindb)/100.0);
+      }
     } else {
-      inform("note: the hardware mixer specified -- \"%s\" -- does not have dB volume, so it can not be used for volume control.",alsa_mix_ctrl);
-    }
+      // use the linear scale and do the db conversion ourselves
+      debug(1, "note: the hardware mixer specified -- \"%s\" -- does not have a dB volume scale, so it can't be used.",alsa_mix_ctrl);
+      /*
+      debug(1, "Min and max volumes are %d and %d.",alsa_mix_minv,alsa_mix_maxv);
+      alsa_mix_maxdb = 0;
+      if ((alsa_mix_maxv!=0) && (alsa_mix_minv!=0))
+        alsa_mix_mindb = -20*100*(log10(alsa_mix_maxv*1.0)-log10(alsa_mix_minv*1.0));
+      else if (alsa_mix_maxv!=0)
+        alsa_mix_mindb = -20*100*log10(alsa_mix_maxv*1.0);
+      audio_alsa.volume = &linear_volume; // insert the linear volume function
+      audio_alsa.parameters = &parameters; // likewise the parameters stuff
+      debug(1,"Max and min dB calculated are %d and %d.",alsa_mix_maxdb,alsa_mix_mindb);
+      */
+     }
   }
   if (snd_mixer_selem_has_playback_switch(alsa_mix_elem)) {
     has_mute = 1;
@@ -320,7 +348,7 @@ static void play(short buf[], int samples) {
   if (alsa_handle == NULL) {
     ret = open_alsa_device();
     if ((ret == 0) && (audio_alsa.volume))
-      volume(set_volume);
+      audio_alsa.volume(set_volume);
   }
   if (ret == 0) {
     pthread_mutex_lock(&alsa_mutex);
@@ -390,11 +418,26 @@ static void parameters(audio_parameters *info) {
 }
 
 static void volume(double vol) {
+  // debug(1,"Volume called %f.",vol);
   set_volume = vol;
   double vol_setting = vol2attn(vol, alsa_mix_maxdb, alsa_mix_mindb);
   // debug(1,"Setting volume db to %f, for volume input of %f.",vol_setting/100,vol);
   if (snd_mixer_selem_set_playback_dB_all(alsa_mix_elem, vol_setting, -1) != 0)
     die("Failed to set playback dB volume");
+  if (has_mute)
+    snd_mixer_selem_set_playback_switch_all(alsa_mix_elem, (vol != -144.0));
+}
+
+static void linear_volume(double vol) {
+  set_volume = vol;
+  double vol_setting = vol2attn(vol, 0, alsa_mix_mindb)/2000;
+  // debug(1,"Adjusted volume is %f.",vol_setting);
+  double linear_volume = pow(10, vol_setting);
+  // debug(1,"Linear volume is %f.",linear_volume);
+  long int_vol = alsa_mix_minv + (alsa_mix_maxv - alsa_mix_minv) * linear_volume;
+  // debug(1,"Setting volume to %ld, for volume input of %f.",int_vol,vol);
+  if (snd_mixer_selem_set_playback_volume_all(alsa_mix_elem, int_vol) != 0)
+    die("Failed to set playback volume");
   if (has_mute)
     snd_mixer_selem_set_playback_switch_all(alsa_mix_elem, (vol != -144.0));
 }

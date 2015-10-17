@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.50])
-AC_INIT([shairport-sync], [2.4.1], [mikebrady@eircom.net])
+AC_INIT([shairport-sync], [2.4.2], [mikebrady@eircom.net])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([shairport.c])
 AC_CONFIG_HEADERS([config.h])

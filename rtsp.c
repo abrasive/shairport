@@ -584,9 +584,15 @@ static void msg_write_response(int fd, rtsp_message *resp) {
 }
 
 static void handle_record(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
-  debug(1,"Handle Record");
+  //debug(1,"Handle Record");
   resp->respcode = 200;
-  msg_add_header(resp, "Audio-Latency", "88200");
+   // I think this is for telling the client what the absolute minimum latency actually is,
+   // and when the client specifies a latency, it should be added to this figure.
+   
+   // Thus, AirPlay's latency figure of 77175, when added to 11025 gives you exactly 88200
+   // and iTunes' latency figure of 88553, when added to 11025 gives you 99578, pretty close to the 99400 we guessed.
+   
+  msg_add_header(resp, "Audio-Latency", "11025");
   
   char *p;
   uint32_t rtptime = 0;
@@ -598,13 +604,14 @@ static void handle_record(rtsp_conn_info *conn, rtsp_message *req, rtsp_message 
     p = strstr(hdr, "rtptime=");
     if (p) {
       p = strchr(p, '=') + 1;
-      if (p)
+      if (p) {
         rtptime = uatoi(p); // unsigned integer -- up to 2^32-1
+				rtptime--;
+				// debug(1,"RTSP Flush Requested by handle_record: %u.",rtptime);
+				player_flush(rtptime);
+      }
     }
   }
-  rtptime--;
-  debug(1,"RTSP Flush Requested by handle_record: %u.",rtptime);
-  player_flush(rtptime);
 }
 
 static void handle_options(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
@@ -645,7 +652,7 @@ static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
 }
 
 static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
-  debug(1,"Handle Setup");
+  // debug(1,"Handle Setup");
   int cport, tport;
   int lsport, lcport, ltport;
   uint32_t active_remote = 0;
@@ -669,13 +676,16 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
   }
 #endif
 
-  // select latency
+  // This latency-setting mechanism is deprecated and will be removed.
+  // If no non-standard latency is chosen, automatic negotiated latency setting is permitted.
+  
+  // Select a static latency
   // if iTunes V10 or later is detected, use the iTunes latency setting
   // if AirPlay is detected, use the AirPlay latency setting
   // for everything else, use the general latency setting, if given, or
   // else use the default latency setting
 
-  config.latency = 88200;
+  config.latency = -1;
 
   if (config.userSuppliedLatency)
     config.latency = config.userSuppliedLatency;
@@ -710,6 +720,12 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
     } else {
       debug(2, "Unrecognised User-Agent. Using latency of %d frames.", config.latency);
     }
+  }
+  
+  if (config.latency==-1) {
+    // this means that no static latency was set, so we'll allow it to be set dynamically
+    config.latency=88198; // to be sure, to be sure -- make it slighty different from the default to ensure we get a debug message when set to 88200
+    config.use_negotiated_latencies = 1;
   }
   char *hdr = msg_get_header(req, "Transport");
   if (!hdr)
@@ -1097,6 +1113,12 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn, rtsp_message *re
 
 #endif
 
+static void handle_get_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
+  debug(1, "received GET_PARAMETER request.");
+  resp->respcode = 200;
+}
+
+
 static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
   // if (!req->contentlength)
   //    debug(1, "received empty SET_PARAMETER request.");
@@ -1238,7 +1260,7 @@ static struct method_handler {
                        {"FLUSH", handle_flush},
                        {"TEARDOWN", handle_teardown},
                        {"SETUP", handle_setup},
-                       {"GET_PARAMETER", handle_ignore},
+                       {"GET_PARAMETER", handle_get_parameter},
                        {"SET_PARAMETER", handle_set_parameter},
                        {"RECORD", handle_record},
                        {NULL, NULL}};
@@ -1461,16 +1483,20 @@ static void *rtsp_conversation_thread_func(void *pconn) {
         goto respond;
 
       struct method_handler *mh;
+      int method_selected = 0;
       for (mh = method_handlers; mh->method; mh++) {
         if (!strcmp(mh->method, req->method)) {
           //debug(1,"RTSP Packet received of type \"%s\":",mh->method),
           //msg_print_debug_headers(req);
+          method_selected = 1;
           mh->handler(conn, req, resp);
           //debug(1,"RTSP Response:");
           //msg_print_debug_headers(resp);
           break;
         }
       }
+    if (method_selected==0)
+      debug(1,"Unrecognised and unhandled rtsp request \"%s\".",req->method);
 
     respond:
       msg_write_response(conn->fd, resp);
