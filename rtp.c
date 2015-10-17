@@ -198,7 +198,7 @@ static void *rtp_control_receiver(void *arg) {
           uint32_t la = sync_rtp_timestamp-rtp_timestamp_less_latency+11025;
           if (la!=config.latency) {
             config.latency = la;
-            debug(1,"Using negotiated latency of %u frames.",config.latency);
+            // debug(1,"Using negotiated latency of %u frames.",config.latency);
           }
         }
         
