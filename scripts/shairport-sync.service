@@ -5,7 +5,7 @@ Requires=avahi-daemon.service
 After=avahi-daemon.service
 
 [Service]
-ExecStart=/usr/bin/shairport-sync
+ExecStart=/usr/local/bin/shairport-sync
 User=shairport-sync
 Group=shairport-sync
 
