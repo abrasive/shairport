@@ -198,9 +198,11 @@ Next, enter:
 $sudo make install
 ```
 
-to install `shairport-sync` along with a `man` page, a default configuration file and some `systemd` startup configuration files to launch it automatically at system startup.
+to install `shairport-sync` along with a `man` page, a default configuration file and a `systemd` configuration file called `shairport-sync.service` to launch it automatically at system startup.
 
-To enable Shairport Sync to start automatically at system startup, enter:
+Note: there is a small bug in `shairport-sync.service` which you should now fix: change the line `ExecStart=/usr/bin/shairport-sync` to `ExecStart=/usr/local/bin/shairport-sync`. This bug will be fixed in the next update.
+
+Next, having fixed that bug, to enable Shairport Sync to start automatically at system startup, enter:
 
 `$sudo systemctl enable shairport-sync`
 
