@@ -51,8 +51,11 @@ Building And Installing
 ---------------------
 If you wish to install Shairport Sync on OpenWrt, Arch or Fedora platforms, please follow the appropriate instructions below. Otherwise follow the General Build Instructions. Then, when the program has been installed, refer to the section on Configuring Shairport Sync that follows.
 
+**Note**
+The following procedures will install shairport-sync at `/usr/local/bin/shairport-sync`. Before continuing, you should check to see if shairport-sync is already installed on your system -- use `which shairport-sync` to find where it is located, if installed. If it is installed anywhere other than at `/usr/local/bin/shairport-sync`, you should delete it -- you may need to have superuser privileges.
+
 **OpenWrt:**
-Thes is a Shairport Sync package in OpenWrt `trunk`. Also, there's an OpenWrt package at https://github.com/mikebrady/shairport-sync-for-openwrt, including one that builds back to `Attitude Adjustment`.
+There is a Shairport Sync package in OpenWrt `trunk`. Also, there's an OpenWrt package at https://github.com/mikebrady/shairport-sync-for-openwrt, including one that builds back to `Attitude Adjustment`.
 
 **Arch Linux:**
 An Arch Linux installation package is available at  [EliaCereda/shairport-sync-PKGBUILD](https://github.com/EliaCereda/shairport-sync-PKGBUILD).
@@ -63,16 +66,16 @@ Install the toolchain and pre-requisites, if necessary:
 % sudo yum install make automake gcc gcc-c++ kernel-devel
 % sudo yum install alsa-lib-devel autoconf automake avahi-devel libconfig-devel libdaemon-devel openssl-devel popt-devel soxr-devel
 ```
-Download the tarball from the "releases" tab on github or use `wget` and then use `rpmbuild`. This example is for version 2.4:
+Download the tarball from the "releases" tab on github or use `wget` and then use `rpmbuild`. This example is for version 2.6:
 ```
-% wget -O shairport-sync-2.4.tar.gz https://github.com/mikebrady/shairport-sync/archive/2.4.tar.gz
-% rpmbuild -ta shairport-sync-2.4.tar.gz
+% wget -O shairport-sync-2.6.tar.gz https://github.com/mikebrady/shairport-sync/archive/2.6.tar.gz
+% rpmbuild -ta shairport-sync-2.6.tar.gz
 ```
 The `-ta` means "build all from this tarball".
 
-The RPM will be built in a directory and will have a pathname like, for example, `~/rpmbuild/RPMS/i686/shairport-sync-2.4-1.fc22.i686.rpm` You should then install it with (for this example):
+The RPM will be built in a directory and will have a pathname like, for example, `~/rpmbuild/RPMS/i686/shairport-sync-2.6-1.fc22.i686.rpm` You should then install it with (for this example):
 ```
-%sudo rpm -i ~/rpmbuild/RPMS/i686/shairport-sync-2.4-1.fc22.i686.rpm
+%sudo rpm -i ~/rpmbuild/RPMS/i686/shairport-sync-2.6-1.fc22.i686.rpm
 ```
 You may have to manually create the directory `/var/shairport-sync` for the installation to succeed. Having edited the configuration file `/etc/shairport-sync.conf` as appropriate (see "Configuring Shairport Sync" below), enable and start the service with:
 ```
@@ -200,9 +203,7 @@ $sudo make install
 
 to install `shairport-sync` along with a `man` page, a default configuration file and a `systemd` configuration file called `shairport-sync.service` to launch it automatically at system startup.
 
-Note: there is a small bug in `shairport-sync.service` which you should now fix. Edit the file `/usr/lib/systemd/system/shairport-sync.service` by changing the line `ExecStart=/usr/bin/shairport-sync` to `ExecStart=/usr/local/bin/shairport-sync`. You may need superuser privileges. This bug will be fixed in the next update.
-
-Next, having fixed that bug, to enable Shairport Sync to start automatically at system startup, enter:
+To enable Shairport Sync to start automatically at system startup, enter:
 
 `$sudo systemctl enable shairport-sync`
 
@@ -254,9 +255,7 @@ Shairport Sync can run programs just before it starts to play an audio stream an
 Please note that the full path to the programs must be specified, and script files will not be executed unless they are marked as executable and have the standard `#!/bin/...` first line. (This behaviour may be different from other Shairports.)
 
 **Raspberry Pi**
-The Raspberry Pi has a built-in audio DAC that is connected to the device's headphone jack. This provides a low-quality output that is nevertheless useful for testing purposes and may indeed by quite adequate for [very] casual listening. It is not HiFi: it is noisy and can't play anything above about 15kHz. A further problem is that it declares itself to have a very large mixer volume control range -- all the way from -102.38dB up to +4dB, a range of 106.38 dB. In reality, only the top 35dB of it is in any way usable.
-
-Accordingly, Shairport Sync has a `volume_range_db` setting in the `general` stanza which allows you to tell Shairport Sync to use a subrange of the declared range. For example, if you set the `volume_range_db` figure to 35, the top 35 dB of the range will the used. With this setting on the Raspberry Pi, maximum volume will be +4dB and minimum volume will be -31dB, below which muting will occur.
+The Raspberry Pi has a built-in audio DAC that is connected to the device's headphone jack. This provides a low-quality output that is nevertheless useful for testing purposes and may be adequate for [very] casual listening. It is not HiFi -- it is quite noisy and can't play anything above about 15kHz. A further problem is that it declares itself to have a very large mixer volume control range -- all the way from -102.38dB up to +4dB, a range of 106.38 dB. In reality, only the top 35dB of it is in any way usable. To help get the most from the DAC, consider using the `volume_range_db` setting in the `general` stanza to instruct Shairport Sync to use the top of the DAC mixer's declared range. For example, if you set the `volume_range_db` figure to 35, the top 35 dB of the range will the used. With this setting on the Raspberry Pi, maximum volume will be +4dB and minimum volume will be -31dB, below which muting will occur.
 
 From a user's point of view, the effect of using this setting is to move the minimum usable volume all the way down to the bottom of the user's volume control, rather than have the minimum usable volume concentrated very close to the maximum volume.
 
