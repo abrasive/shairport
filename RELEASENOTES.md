@@ -1,3 +1,12 @@
+Version 2.6
+----
+This is basically version 2.4.2 with two small fixes. It's been bumped to 2.6 because (1) the new features added between 2.4.1 and 2.4.2 deserve more than just a bug-fix increment and (2) the development versions (2.5.x) should have lower numbers than the release versions, so that releases are always seen as upgrades. For example: 2.5.0.9 --> 2.6 looks like an upgrade, whereas 2.5.0.9 --> 2.4.2 looks like a downgrade.
+
+**Fixes**
+* For `systemd` users, the `shairport-sync.service` file is updated to point to the correct location of the shairport-sync application.
+* For Fedora users, the `shairport-sync.spec` file is updated to refer to 2.6.
+
+
 Version 2.4.2
 ----
 This release has important enhancements, bug fixes and documentation updates. It also appears to bring compatiblity with Synology NAS devices.
