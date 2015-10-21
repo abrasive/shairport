@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.50])
-AC_INIT([shairport-sync], [2.5.0.9], [mikebrady@eircom.net])
+AC_INIT([shairport-sync], [2.6], [mikebrady@eircom.net])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([shairport.c])
 AC_CONFIG_HEADERS([config.h])
@@ -92,7 +92,7 @@ AC_ARG_WITH([configfiles],
 [  --with-configfiles = install configuration files during a make install ], ,[with_configfiles=yes])
 AM_CONDITIONAL([INSTALL_CONFIG_FILES], [test "x$with_configfiles" = "xyes"])
 
-   
+
 # Look for piddir flag
 AC_ARG_WITH(piddir, [ --with-piddir=<pathname> Specify a pathname to a directory in which to write the PID file.], [
 	AC_MSG_CHECKING(--with-piddir argument)
@@ -187,7 +187,7 @@ AC_ARG_WITH(sndio, [  --with-sndio = choose native SNDIO API support (FreeBSD) -
   AC_DEFINE([CONFIG_SNDIO], 1, [Needed by the compiler.])
   AC_CHECK_LIB([sndio], [sio_open], , AC_MSG_ERROR(SNDIO support requires the sndio library!))], )
 AM_CONDITIONAL([USE_SNDIO], [test "x$HAS_SNDIO" = "x1"])
-  
+
 # Look for AO flag
 AC_ARG_WITH(ao, [  --with-ao = choose native AO (Audio Output?) API support -- probably broken], [
   AC_MSG_RESULT(>>Including an AO back end --- N.B. this is probably broken!)
@@ -210,7 +210,7 @@ AC_ARG_WITH(dns_sd, [  --with-dns_sd = choose dns_sd mDNS support], [
   AC_MSG_RESULT(>>Including dns_sd for mDNS support)
   HAS_DNS_SD=1
   AC_DEFINE([CONFIG_HAVE_DNS_SD_H], 1, [Needed by the compiler.])
-  AC_CHECK_LIB([dns_sd], [DNSServiceRefDeallocate], , AC_MSG_ERROR(dns_sd support requires the dns_sd library!))], )
+  AC_SEARCH_LIBS([DNSServiceRefDeallocate], [dns_sd], , AC_MSG_ERROR(dns_sd support requires the dns_sd library!))], )
 AM_CONDITIONAL([USE_DNS_SD], [test "x$HAS_DNS_SD" = "x1"])
 
 # Checks for header files.

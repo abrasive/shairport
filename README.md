@@ -5,11 +5,11 @@ Audio played by a Shairport Sync-powered device stays synchronised with the sour
 
 Shairport Sync does not support AirPlay video or photo streaming.
 
-This branch -- "development" -- is likely to be unstable and may change frequently. To access the stable version, please switch to the "master" branch.
+This branch -- "master" -- is the stable branch of Shairport Sync. To access the development version, please switch to the "development" branch.
 
 More Information
 ----------
-Shairport Sync works by using timing information and timestamps present in data coming from the audio source (e.g. an iPhone) to "play" audio at exactly the right time. It does this by monitoring and controlling the *latency* — the time between a sound frame is supposed to be played, as specified by its `timestamp`, and the time when it is actually played by the audio output device, usually a Digital to Audio Converter (DAC).  Timestamps are measured relative to the source computer's clocks, the `source clock`, but timing must be done relative to the clock of the computer running Shairport Sync, the `local clock`. The source and local clocks are synchronised, usually to within a fraction of a millisecond, using a variant of NTP synchronisation protocols.
+Shairport Sync works by using timing information and timestamps present in data coming from the audio source (e.g. an iPhone) to "play" audio at exactly the right time. It does this by monitoring and controlling the *latency* — the time between a sound frame is supposed to be played, as specified by its `timestamp`, and the time when it is actually played by the audio output device, usually a Digital to Audio Converter (DAC).  Timestamps are measured relative to the source computer's clocks, the `source clock`, but timing must be done relative to the clock of the computer running Shairport Sync, the `local clock`. The source and local clocks are synchronised, usually to within a fraction of a millisecond, using a variant of NTP synchronisation protocols. 
 
 To maintain the exact latency required, if an output device is running slow relative to the source, Shairport Sync will delete frames of audio to allow the device to keep up. If the output device is running fast, Shairport Sync will insert frames to keep time. The number of frames inserted or deleted is so small as to be almost inaudible on normal audio material. Frames are inserted or deleted as necessary at pseudorandom intervals. Alternatively, with `libsoxr` support, Shairport Sync can resample the audio feed to ensure the output device can keep up. This is less obtrusive than insertion and deletion but requires a good deal of processing power — most embedded devices probably can't support it. The process of insertion/deletion or resampling is rather inelegantly called “stuffing”.
 
@@ -49,10 +49,13 @@ Note: Historically, Shairport Sync has taken its settings from command line argu
 
 Building And Installing
 ---------------------
-If you wish to install Shairport Sync on OpenWrt, Arch or Fedora platforms, please follow the appropriate instructions below. Otherwise follow the General Build Instructions. Then, when the progam has been installed, refer to the section on Configuring Shairport Sync that follows.
+If you wish to install Shairport Sync on OpenWrt, Arch or Fedora platforms, please follow the appropriate instructions below. Otherwise follow the General Build Instructions. Then, when the program has been installed, refer to the section on Configuring Shairport Sync that follows.
+
+**Note**
+The following procedures will install shairport-sync at `/usr/local/bin/shairport-sync`. Before continuing, you should check to see if shairport-sync is already installed on your system -- use `which shairport-sync` to find where it is located, if installed. If it is installed anywhere other than at `/usr/local/bin/shairport-sync`, you should delete it -- you may need to have superuser privileges.
 
 **OpenWrt:**
-Thes is a Shairport Sync package in OpenWrt `trunk`. Also, there's an OpenWrt package at https://github.com/mikebrady/shairport-sync-for-openwrt, including one that builds back to `Attitude Adjustment`.
+There is a Shairport Sync package in OpenWrt `trunk`. Also, there's an OpenWrt package at https://github.com/mikebrady/shairport-sync-for-openwrt, including one that builds back to `Attitude Adjustment`.
 
 **Arch Linux:**
 An Arch Linux installation package is available at  [EliaCereda/shairport-sync-PKGBUILD](https://github.com/EliaCereda/shairport-sync-PKGBUILD).
@@ -63,16 +66,16 @@ Install the toolchain and pre-requisites, if necessary:
 % sudo yum install make automake gcc gcc-c++ kernel-devel
 % sudo yum install alsa-lib-devel autoconf automake avahi-devel libconfig-devel libdaemon-devel openssl-devel popt-devel soxr-devel
 ```
-Download the tarball from the "releases" tab on github or use `wget` and then use `rpmbuild`. This example is for version 2.4:
+Download the tarball from the "releases" tab on github or use `wget` and then use `rpmbuild`. This example is for version 2.6:
 ```
-% wget -O shairport-sync-2.4.tar.gz https://github.com/mikebrady/shairport-sync/archive/2.4.tar.gz
-% rpmbuild -ta shairport-sync-2.4.tar.gz
+% wget -O shairport-sync-2.6.tar.gz https://github.com/mikebrady/shairport-sync/archive/2.6.tar.gz
+% rpmbuild -ta shairport-sync-2.6.tar.gz
 ```
 The `-ta` means "build all from this tarball".
 
-The RPM will be built in a directory and will have a pathname like, for example, `~/rpmbuild/RPMS/i686/shairport-sync-2.4-1.fc22.i686.rpm` You should then install it with (for this example):
+The RPM will be built in a directory and will have a pathname like, for example, `~/rpmbuild/RPMS/i686/shairport-sync-2.6-1.fc22.i686.rpm` You should then install it with (for this example):
 ```
-%sudo rpm -i ~/rpmbuild/RPMS/i686/shairport-sync-2.4-1.fc22.i686.rpm
+%sudo rpm -i ~/rpmbuild/RPMS/i686/shairport-sync-2.6-1.fc22.i686.rpm
 ```
 You may have to manually create the directory `/var/shairport-sync` for the installation to succeed. Having edited the configuration file `/etc/shairport-sync.conf` as appropriate (see "Configuring Shairport Sync" below), enable and start the service with:
 ```
@@ -198,7 +201,7 @@ Next, enter:
 $sudo make install
 ```
 
-to install `shairport-sync` along with a `man` page, a default configuration file and some `systemd` startup configuration files to launch it automatically at system startup.
+to install `shairport-sync` along with a `man` page, a default configuration file and a `systemd` configuration file called `shairport-sync.service` to launch it automatically at system startup.
 
 To enable Shairport Sync to start automatically at system startup, enter:
 
@@ -206,7 +209,7 @@ To enable Shairport Sync to start automatically at system startup, enter:
 
 **Man Page**
 
-You can view the man page here: http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/development/man/shairport-sync.html
+You can view the man page here: http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/master/man/shairport-sync.html
 
 Configuring Shairport Sync
 --------
@@ -252,15 +255,13 @@ Shairport Sync can run programs just before it starts to play an audio stream an
 Please note that the full path to the programs must be specified, and script files will not be executed unless they are marked as executable and have the standard `#!/bin/...` first line. (This behaviour may be different from other Shairports.)
 
 **Raspberry Pi**
-The Raspberry Pi has a built-in audio DAC that is connected to the device's headphone jack. This provides a low-quality output that is nevertheless useful for testing purposes and may indeed by quite adequate for [very] casual listening. It is not HiFi: it is noisy and can't play anything above about 15kHz. A further problem is that it declares itself to have a very large mixer volume control range -- all the way from -102.38dB up to +4dB, a range of 106.38 dB. In reality, only the top 35dB of it is in any way usable.
-
-Accordingly, Shairport Sync has a `volume_range_db` setting in the `general` stanza which allows you to tell Shairport Sync to use a subrange of the declared range. For example, if you set the `volume_range_db` figure to 35, the top 35 dB of the range will the used. With this setting on the Raspberry Pi, maximum volume will be +4dB and minimum volume will be -31dB, below which muting will occur.
+The Raspberry Pi has a built-in audio DAC that is connected to the device's headphone jack. This provides a low-quality output that is nevertheless useful for testing purposes and may be adequate for [very] casual listening. It is not HiFi -- it is quite noisy and can't play anything above about 15kHz. A further problem is that it declares itself to have a very large mixer volume control range -- all the way from -102.38dB up to +4dB, a range of 106.38 dB. In reality, only the top 35dB of it is in any way usable. To help get the most from the DAC, consider using the `volume_range_db` setting in the `general` stanza to instruct Shairport Sync to use the top of the DAC mixer's declared range. For example, if you set the `volume_range_db` figure to 35, the top 35 dB of the range will the used. With this setting on the Raspberry Pi, maximum volume will be +4dB and minimum volume will be -31dB, below which muting will occur.
 
 From a user's point of view, the effect of using this setting is to move the minimum usable volume all the way down to the bottom of the user's volume control, rather than have the minimum usable volume concentrated very close to the maximum volume.
 
 *Command Line Arguments*
 
-You can use command line arguments to provide settings to Shairport Sync as before. For full information, please read the Shairport Sync `man` page, also available at  http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/development/man/shairport-sync.html.
+You can use command line arguments to provide settings to Shairport Sync as before. For full information, please read the Shairport Sync `man` page, also available at  http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/master/man/shairport-sync.html.
 
 Apart from the following options, all command line options can be replaced by settings in the configuration file. Here is a brief description of command line options that are not replicated by settings in the settings file.
 

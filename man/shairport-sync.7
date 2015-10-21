@@ -111,7 +111,7 @@ Use the output device called \fIoutput_device\f1. The default is the device call
 .TP
 \fBmixer_control_name=\f1\fI"name"\f1\fB;\f1
 Specify the \fIname\f1 of the mixer control to be used by shairport-sync to control the volume. The mixer control must be on the mixer device, which by default is the output device. If you do not specify a mixer control name, shairport-sync will adjust the volume in software. \fBmixer_type=\f1\fI"mixer_type"\f1\fB;\f1
-This setting is deprecated and ignored and will be removed soon. 
+This setting is deprecated and is ignored. For your information, its functionality has been automatically incorporated in the mixer_control_name setting -- if you specify a mixer name with the mixer_control_name setting, it is assumed that the mixer is implemented in hardware. 
 .TP
 \fBmixer_device=\f1\fI"mixer_device"\f1\fB;\f1
 By default, the mixer is assumed to be output_device. Use this setting to specify a device other than the output device. 
@@ -249,7 +249,7 @@ Use this \fIlatency\f1, in frames, for audio streamed from a forked-daapd based 
 \fB--get-coverart\f1
 This option requires the \fB--meta-dir\f1 option to be set, and enables shairport-sync to request cover art from the source and to transmit it through the metadata pipe.
 
-Please note that cover art data may be very large, and may place too great a burden on your network. Also, at the time of writing, there appears to be a serious bug in iTunes which stalls transmission of large cover art items, stalling and potentially crashing shairport-sync. 
+Please note that cover art data may be very large, and may place too great a burden on your network. 
 .TP
 \fB-h | --help\f1
 Print brief help message and exit. 

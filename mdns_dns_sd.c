@@ -26,6 +26,7 @@
 
 #include <dns_sd.h>
 #include <string.h>
+#include <stdlib.h>
 #include "mdns.h"
 #include "common.h"
 

@@ -221,8 +221,6 @@ void usage(char *progname) {
 
 int parse_options(int argc, char **argv) {
   char *stuffing = NULL; /* used for picking up the stuffing option */
-  
-  
   signed char c;      /* used for argument parsing */
   int i = 0;          /* used for tracking options */
   poptContext optCon; /* context for parsing command-line options */
@@ -936,7 +934,6 @@ int main(int argc, char **argv) {
 #ifdef CONFIG_METADATA
   metadata_init(); // create the metadata pipe if necessary
 #endif
-
   rtsp_listen_loop();
 
   // should not reach this...

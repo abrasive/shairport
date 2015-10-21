@@ -1,51 +1,52 @@
-Version 2.5.0.9
+Version 2.6
 ----
-**New Feature**
-* Set Volume Range. This is a new setting that allows you to use just a portion of the full range of attenuation offered by a mixer. For example, if a mixer has a minimum volume of -80 dB and a maximum of +20 dB, you might wish to use only 60 dB of the 100 dB available.  This might be because the sound becomes inaudible at the lowest setting and unbearably loud at the highest setting. It is for this reason that many domestic HiFi systems have a volume control range of only 60 to 80 dB.
- Another possible reason might be because the range specified by the mixer does not match the capabilities of the device. For example, the Raspberry Pi's DAC that feeds the built-in audio jack claims a range of 106 dB but has a useful range of only about 35dB. The new `volume_range_db` setting in the `general` stanza allows you to specify the maximum range from highest to lowest. The range suggested for the Raspberry Pi's built-in audio DAC, which feeds the headphone jack, is 35. Using it in this case gives the volume control a much more useful range of settings.
+This is basically version 2.4.2 with two small fixes. It's been bumped to 2.6 because (1) the new features added between 2.4.1 and 2.4.2 deserve more than just a bug-fix increment and (2) the development versions (2.5.x) should have lower numbers than the release versions, so that releases are always seen as upgrades. For example: 2.5.0.9 --> 2.6 looks like an upgrade, whereas 2.5.0.9 --> 2.4.2 looks like a downgrade.
 
-**Other Changes**
-* Initial timing accuracy improved. The estimate of when to play the starting frame of the audio sequence has improved significantly. This leads to fewer corrections being needed at the start.
+**Fixes**
+* For `systemd` users, the `shairport-sync.service` file is updated to point to the correct location of the shairport-sync application.
+* For Fedora users, the `shairport-sync.spec` file is updated to refer to 2.6.
 
-Version 2.5.0.8
+
+Version 2.4.2
 ----
-**Important Bug fix**
-* Sometimes, especially when using Shairport Sync as a system output, it would not play the audio stream. This was caused by an improperly initialised variable. Fixed. It may also be implicated in the continuing issue with Synology devices being unable to play to Shairport Sync.
+This release has important enhancements, bug fixes and documentation updates. It also appears to bring compatiblity with Synology NAS devices.
 
-Version 2.5.0.7
-----
-**New Feature**
-* Source-specified Latencies. The AirPlay protocol used by Shairport Sync allows the audio source to specify the exact delay or latency that should be applied to the audio stream. Until now, Shairport Sync ignored this information and used fixed preset latencies that were selected on the basis of the "User-Agent" setting. Using source-specified latencies means that Shairport Sync should be able adapt automatically to a wider range of sources.
+
+**New Features**
+* Source-specified Latencies. Shairport Sync now uses the latencies specified by the audio source. Background: the AirPlay protocol used by Shairport Sync allows the audio source to specify the exact delay or latency that should be applied to the audio stream. Until now, Shairport Sync ignored this information and used fixed preset latencies that were selected on the basis of the "User-Agent" setting. Using source-specified latencies means that Shairport Sync is able adapt automatically to different sources.
 Using source-specified latencies is now automatic unless non-standard static latencies have been specified in the configuration file or command line. Using non-standard latencies is usually done to compensate for delays in the back end of the system. For example, if the audio amplifier being driven by Shairport Sync has an inherent delay of its own -- as happens with many home theatre and surround sound systems -- then some users have reduced the latencies used by Shairport Sync to compensate. This usage is discouraged -- the `audio_backend_latency_offset` in the appropriate backend stanza (e.g. in the "alsa" stanza) should be used for this. Static latency settings are now deprecated, and will be removed in a future version of Shairport Sync.
+* Set Volume Range. This is a new setting that allows you to use just a portion of the full range of attenuation offered by a mixer. For example, if a mixer has a minimum volume of -80 dB and a maximum of +20 dB, you might wish to use only 60 dB of the 100 dB available.  This might be because the sound becomes inaudible at the lowest setting and unbearably loud at the highest setting. It is for this reason that many domestic HiFi systems have a volume control range of only 60 to 80 dB.
+ Another possible reason to use this setting might be because the range specified by the mixer does not match the actual capabilities of the device. For example, the Raspberry Pi's DAC that feeds the built-in audio jack claims a range of 106 dB but has a useful range of only about 35dB. The new `volume_range_db` setting in the `general` stanza allows you to specify the maximum range from highest to lowest. The range suggested for the Raspberry Pi's built-in audio DAC, which feeds the headphone jack, is 35. Using it in this case gives the volume control a much more useful range of settings.
 
 **Bug fixes**
+* Sometimes, especially when using Shairport Sync as a system output, it would not play the audio stream. This was caused by an improperly initialised variable. Fixed. Synology NAS devices now seem to be working with Shairport Sync.
 * Fix in the `shairport.c`: the USE_CUSTOM_LOCAL_STATE_DIR macro was still being used when it should have been USE_CUSTOM_PID_DIR.
 * Fix a crashing bug -- if metadata was enabled but a pipename was not supplied, boom.
 
 **Other Changes**
+* Initial timing accuracy improved. The estimate of when to play the starting frame of the audio sequence has improved significantly. This leads to fewer corrections being needed at the start.
 * Volume ratios expressed in decibels are now consistently denominated in voltage decibels rather than power decibels. The rationale is that the levels refer to voltage levels, and power is proportional to the square of voltage.
 Thus a ratio of levels of 65535 to 1 is 96.3 dB rather than the 48.15 dB used before.
 * The latency figure returned to the source as part of the response to an rtsp request packet is 11,025, which may (?) be meant to indicate the minimum latency the device is capable of. 
 * An experimental handler for a GET_PARAMETER rtsp request has been added. It does nothing except log the occurence.
 * The RTSP request dispatcher now logs an event whenever an unrecognised rtsp has been made.
 
-Version 2.5.0.2
-----
-**Changes**
-Turn off unnecessary debug messages -- usable.
 
-Version 2.5.0.1
+Version 2.4.1
 ----
-**Changes**
-Turn on lots of debugging -- unusable.
+This release has three small bug fixes and some small documentation updates.
 
-Version 2.5.0
-----
-**Changes**
-Add flush request to handle_record, see if it helps in a rare situation.
+**Bug Fixes**
 
-Versions 2.5.x is new development sequence.
-----
+Changes from the previous stable version -- 2.4 -- are summarised here:
+ * The USE_CUSTOM_LOCAL_STATE_DIR macro was still being used when it should have been USE_CUSTOM_PID_DIR. This could affect users using a custom location for the PID directory.
+ * A compiler error has been fixed that occured if metadata was enabled and tinysvcmdns was included.
+ * A crash has been fixed that occured if metadata was enabled and a metadata pipename was not specified.
+(Thanks to the contributors who reported bugs.)
+ 
+**Small Changes**
+ * If a mixer being used to control volume does not have a control denominated in dB, a warning is logged and the mixer is not used.
+ * Slight revisions have been made to the configuration file `configure.ac` to make compilation on FreeBSD a little easier.
 
 Version 2.4
 ----
@@ -60,7 +61,8 @@ Changes from the previous stable version -- 2.2.5 -- are summarised here:
  * Metadata is now supported -- it can be delivered to a unix pipe for processing by a helper application. See https://github.com/mikebrady/shairport-sync-metadata-reader for a sample metadata reader.
  * Raw PCM audio can be delivered to standard output ("stdout") or to a unix pipe. The internal architecture has changed considerably to support this.
  * Support for compilation on OpenWrt back to Attitude Adjustment.
- * Version 2.4 uses the libconfig library.
+ * Can play unencrypted audio streams -- complatible with, e.g. Whaale.
+ * Uses the libconfig library.
  * Runs on a wider range of platforms, including Arch Linux and Fedora.
  * Bug fixes.
 
@@ -202,7 +204,7 @@ If you are using metadata, please note that the option has changed somewhat. The
  The (obvious) fix for this is to separate the setting of the two parameters, and this is now done in the configuration file `/etc/shairport-sync.conf` -- please see the settings `allow_session_interruption` and `session_timeout`. The behaviour of the `-t` and `--timeout` command-line options is unchanged but deprecated.
  * New Option -- "Ignore Volume Control" ('ignore_volume_control'). If you set this to "yes", the output from Shairport Sync is always set at 100%. This is useful when you want to set the volume locally. Available via the settings file only.
  * Statistics option correctly reports when no frames are received in a sampling interval and when output is not being synchronised.
- * A new, supported audio back end called `stdio` provides raw 16-bit 44.1kHz stereo PCM output. To activate, set  `output_backend = "stdout"` in the general section of the configuration file. Output is provided synchronously with the source feed. No stuffing or stripping is done. If you are feeding it to an output device that runs slower or faster, you'll eventually get buffer overflow or underflow in that device. To include support for this back end, use the configuration option `--with-stdout`.
+ * A new, supported audio back end called `stdout` provides raw 16-bit 44.1kHz stereo PCM output. To activate, set  `output_backend = "stdout"` in the general section of the configuration file. Output is provided synchronously with the source feed. No stuffing or stripping is done. If you are feeding it to an output device that runs slower or faster, you'll eventually get buffer overflow or underflow in that device. To include support for this back end, use the configuration option `--with-stdout`.
  * Support for the `pipe` back end has been enhanced to provide raw 16-bit 44.1kHz stereo PCM output to a named pipe. To activate, set `output_backend = "pipe"` in the general section of the configuration and give the fully-specified pathname to the pipe in the pipe section of the configuration file -- see `etc/shairport-sync.conf.sample` for an example. No stuffing or stripping is done. If you are feeding it to an output device that runs slower or faster, you'll eventually get buffer overflow or underflow in that device.  To include support for this back end, use the configuration option `--with-pipe`.
  * Support for the `dummy` audio backend device continues. To activate, set  `output_backend = "dummy"` in  in the general section of the configuration. To include support for this back end, use the configuration option `--with-dummy`.
  * Limited support for the PulseAudio audio backend continues. To activate, set  `output_backend = "pulse"` in  in the general section of the configuration. You must still enter its settings via the command line, after the `--` as before. Note that no stuffing or stripping is done: if the PulseAudio sink runs slower or faster, you'll eventually get buffer overflow or underflow.
@@ -222,6 +224,25 @@ Beware: there appears to be a serious bug in iTunes before 12.1.2, such that it 
  * Modify the init script to start after all services are ready. Add in a commented-out sleep command if users find it necessary (thanks to https://github.com/BNoiZe).
  * Two memory leaks fixed (thanks to https://github.com/pdgendt).
  * An error handling time specifications for flushes was causing an audible glitch when pausing and resuming some tracks. This has been fixed (thanks to https://github.com/Hamster128).
+
+Version 2.2.5
+-----
+* Bugfixes
+ * Fix a segfault error that can occur in certain cases (thanks again to https://github.com/joerg-krause).
+ * Include header files in common.c (thanks again to https://github.com/joerg-krause).
+
+Version 2.2.4
+-----
+* Bugfixes
+ * Fix an out-of-stack-space error that can occur in certain cases (thanks to https://github.com/joerg-krause).
+ * Fix a couple of compiler warnings (thanks to https://github.com/joerg-krause).
+
+Version 2.2.3
+-----
+* NOTE: all the metadata stuff has been moved to the "development" branch. This will become the stable branch henceforward, with just bug fixes or minor enhancements. Apologies for the inconvenience.
+* Bugfixes
+ * Fix a bug when compiling for Arch Linux on Raspberry Pi 2 (thanks to https://github.com/joaodriessen).
+ * Fix a compiler warning (thanks to https://github.com/sdigit).
 
 Version 2.2.2
 -----
