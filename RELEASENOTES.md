@@ -1,4 +1,9 @@
-Version 2.6
+Version 2.7 -- Development Version
+----
+Add a check to see if compilation is for a CYGWIN platform.
+
+
+Version 2.6 -- Stable Version
 ----
 This is basically version 2.4.2 with two small fixes. It's been bumped to 2.6 because (1) the new features added between 2.4.1 and 2.4.2 deserve more than just a bug-fix increment and (2) the development versions (2.5.x) should have lower numbers than the release versions, so that releases are always seen as upgrades. For example: 2.5.0.9 --> 2.6 looks like an upgrade, whereas 2.5.0.9 --> 2.4.2 looks like a downgrade.
 
