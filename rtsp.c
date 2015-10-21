@@ -603,9 +603,9 @@ static void handle_record(rtsp_conn_info *conn, rtsp_message *req, rtsp_message 
     // get the rtp timestamp
     p = strstr(hdr, "rtptime=");
     if (p) {
-      p = strchr(p, '=') + 1;
+      p = strchr(p, '=');
       if (p) {
-        rtptime = uatoi(p); // unsigned integer -- up to 2^32-1
+        rtptime = uatoi(p+1); // unsigned integer -- up to 2^32-1
 				rtptime--;
 				// debug(1,"RTSP Flush Requested by handle_record: %u.",rtptime);
 				player_flush(rtptime);
@@ -641,9 +641,9 @@ static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
     // get the rtp timestamp
     p = strstr(hdr, "rtptime=");
     if (p) {
-      p = strchr(p, '=') + 1;
+      p = strchr(p, '=');
       if (p)
-        rtptime = uatoi(p); // unsigned integer -- up to 2^32-1
+        rtptime = uatoi(p+1); // unsigned integer -- up to 2^32-1
     }
   }
   // debug(1,"RTSP Flush Requested: %u.",rtptime);
@@ -1083,11 +1083,6 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn, rtsp_message *re
 
   unsigned int off = 8;
 
-  // inform the listener that a set of metadata is starting
-  // this doesn't include the cover art though...
-
-  send_metadata('ssnc', 'mdst', NULL, 0, NULL, 1);
-
   while (off < cl) {
     // pick up the metadata tag as an unsigned longint
     uint32_t itag = ntohl(*(uint32_t *)(cp + off));
@@ -1106,9 +1101,6 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn, rtsp_message *re
     // move on to the next item
     off += vl;
   }
-
-  // inform the listener that a set of metadata is ending
-  send_metadata('ssnc', 'mden', NULL, 0, NULL, 1);
 }
 
 #endif
@@ -1122,28 +1114,59 @@ static void handle_get_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_m
 static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
   // if (!req->contentlength)
   //    debug(1, "received empty SET_PARAMETER request.");
+  
+  msg_print_debug_headers(req);
 
   char *ct = msg_get_header(req, "Content-Type");
 
   if (ct) {
     debug(2, "SET_PARAMETER Content-Type:\"%s\".", ct);
+
 #ifdef CONFIG_METADATA
+    // It seems that the rtptime of the message is used as a kind of an ID that can be used
+    // to link items of metadata, including pictures, that refer to the same entity.
+    // If they refer to the same item, they have the same rtptime.
+    // So we send the rtptime before and after both the metadata items and the picture item
+     // get the rtptime    
+    char *p = NULL;
+    char *hdr = msg_get_header(req, "RTP-Info");
+
+    if (hdr) {
+      p = strstr(hdr, "rtptime=");
+      if (p) {
+        p = strchr(p, '=');
+      }
+    } else {
+      debug(1,"Missing RTP-Info item in SET_PARAMETER");
+    }
+
+
     if (!strncmp(ct, "application/x-dmap-tagged", 25)) {
       debug(2, "received metadata tags in SET_PARAMETER request.");
+      if (p)
+        send_metadata('ssnc', 'mdst', p+1, strlen(p+1), req, 1); // metadata starting   
       handle_set_parameter_metadata(conn, req, resp);
+      if (p)
+        send_metadata('ssnc', 'mden', p+1, strlen(p+1), req, 1); // metadata ending
+
+      
     } else if (!strncmp(ct, "image", 5)) {
       // debug(1, "received image in SET_PARAMETER request.");
       // note: the image/type tag isn't reliable, so it's not being sent
       // -- best look at the first few bytes of the image
+      if (p)
+        send_metadata('ssnc', 'mdst', p+1, strlen(p+1), req, 1); // metadata starting   
       send_metadata('ssnc', 'PICT', req->content, req->contentlength, req, 1);
+      if (p)
+        send_metadata('ssnc', 'mden', p+1, strlen(p+1), req, 1); // metadata ending
     } else
 #endif
         if (!strncmp(ct, "text/parameters", 15)) {
       debug(2, "received parameters in SET_PARAMETER request.");
-      handle_set_parameter_parameter(conn, req, resp);
+      handle_set_parameter_parameter(conn, req, resp); // this could be volume or progress
     } else {
       debug(1, "received unknown Content-Type \"%s\" in SET_PARAMETER request.", ct);
-    }
+    }  
   } else {
     debug(1, "missing Content-Type header in SET_PARAMETER request.");
   }
