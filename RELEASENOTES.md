@@ -1,6 +1,8 @@
 Version 2.7 -- Development Version
 ----
-Add a check to see if compilation is for a CYGWIN platform.
+**New Features**
+* Add a check to see if compilation is for a CYGWIN platform.
+* Add `rtptime` tags to metadata and picture information. Background: it seems that metadata and picture information for the same item, e.g. a track, are tagged with a timestamp called the `rtptime` -- if they refer to the same item, they will have the same `rtptime` tags. The update here is to add the `rtptime` value as data to the `mdst` and `mden` metadata items, which are  sent before ("MetaData STart") and after ("MetaData ENd") a metadata sequence. In addition, the same tags are now sent before and after a picture. By the way, the progress metadata (`prgr` for "PRoGRess"), which is sent just when a track starts, contains the same `rtptime` as its middle element.
 
 
 Version 2.6 -- Stable Version
