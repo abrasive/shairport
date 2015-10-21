@@ -5,7 +5,7 @@ Audio played by a Shairport Sync-powered device stays synchronised with the sour
 
 Shairport Sync does not support AirPlay video or photo streaming.
 
-This branch -- "master" -- is the stable branch of Shairport Sync. To access the development version, please switch to the "development" branch.
+This branch -- "development" -- is unstable and may change quickly. To access the stable version, please switch to the "master" branch.
 
 More Information
 ----------
@@ -211,7 +211,7 @@ To enable Shairport Sync to start automatically at system startup, enter:
 
 **Man Page**
 
-You can view the man page here: http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/master/man/shairport-sync.html
+You can view the man page here: http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/development/man/shairport-sync.html
 
 Configuring Shairport Sync
 --------
@@ -263,7 +263,7 @@ From a user's point of view, the effect of using this setting is to move the min
 
 *Command Line Arguments*
 
-You can use command line arguments to provide settings to Shairport Sync as before. For full information, please read the Shairport Sync `man` page, also available at  http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/master/man/shairport-sync.html.
+You can use command line arguments to provide settings to Shairport Sync as before. For full information, please read the Shairport Sync `man` page, also available at  http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/development/man/shairport-sync.html.
 
 Apart from the following options, all command line options can be replaced by settings in the configuration file. Here is a brief description of command line options that are not replicated by settings in the settings file.
 
