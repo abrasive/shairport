@@ -857,8 +857,10 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn, rtsp_message *r
 //    'prgr' -- progress -- this is metadata from AirPlay consisting of RTP timestamps for the start
 //    of the current play sequence, the current play point and the end of the play sequence.
 //              I guess the timestamps wrap at 2^32.
-//    'mdst' -- a sequence of metadata is about to start
-//    'mden' -- a sequence of metadata has ended
+//    'mdst' -- a sequence of metadata is about to start; will have, as data, the rtptime associated with the metadata, if available
+//    'mden' -- a sequence of metadata has ended; will have, as data, the rtptime associated with the metadata, if available
+//    'pcst' -- a picture is about to be sent; will have, as data, the rtptime associated with the picture, if available
+//    'pcen' -- a picture has been sent; will have, as data, the rtptime associated with the metadata, if available
 //    'snam' -- A device -- e.g. "Joe's iPhone" -- has opened a play session. Specifically, it's the "X-Apple-Client-Name" string
 //    'snua' -- A "user agent" -- e.g. "iTunes/12..." -- has opened a play session. Specifically, it's the "User-Agent" string
 //    The next two two tokens are to facilitiate remote control of the source.
@@ -1145,10 +1147,16 @@ static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_m
       if (p=NULL)
         debug(1,"Missing RTP-Time info for metadata");
       if (p)
-        send_metadata('ssnc', 'mdst', p+1, strlen(p+1), req, 1); // metadata starting   
+        send_metadata('ssnc', 'mdst', p+1, strlen(p+1), req, 1); // metadata starting
+      else
+        send_metadata('ssnc', 'mdst', NULL, 0, NULL, 0); // metadata starting, if rtptime is not available
+          
       handle_set_parameter_metadata(conn, req, resp);
+
       if (p)
         send_metadata('ssnc', 'mden', p+1, strlen(p+1), req, 1); // metadata ending
+      else
+        send_metadata('ssnc', 'mden', NULL, 0, NULL, 0); // metadata starting, if rtptime is not available
 
       
     } else if (!strncmp(ct, "image", 5)) {
@@ -1158,10 +1166,17 @@ static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_m
       if (p=NULL)
         debug(1,"Missing RTP-Time info for picture item");
       if (p)
-        send_metadata('ssnc', 'mdst', p+1, strlen(p+1), req, 1); // metadata starting   
+        send_metadata('ssnc', 'pcst', p+1, strlen(p+1), req, 1); // picture starting   
+            else
+        send_metadata('ssnc', 'pcst', NULL, 0, NULL, 0); // picture starting, if rtptime is not available
+
       send_metadata('ssnc', 'PICT', req->content, req->contentlength, req, 1);
+
       if (p)
-        send_metadata('ssnc', 'mden', p+1, strlen(p+1), req, 1); // metadata ending
+        send_metadata('ssnc', 'pcen', p+1, strlen(p+1), req, 1); // picture ending
+      else
+        send_metadata('ssnc', 'pcen', NULL, 0, NULL, 0); // picture ending, if rtptime is not available
+
     } else
 #endif
         if (!strncmp(ct, "text/parameters", 15)) {
