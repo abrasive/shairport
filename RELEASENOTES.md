@@ -1,6 +1,9 @@
 Version 2.7 -- Development Version
 ----
 **New Features**
+* Add extra debug messages to the alsa back end to diagnose strange DACs.
+* Add configuration file for the libao back end -- to change the buffer size and the latency offset, same is for stdout.
+* Add shairport-sync.exe to .gitignore.
 * Add a check to see if compilation is for a CYGWIN platform.
 * Add `rtptime` tags to metadata and picture information and add two new metadata items to precede and follow the transmission of a picture. Background: it seems that metadata and picture information for the same item, e.g. a track, are normally tagged with a timestamp called the `rtptime`; if they refer to the same item, they will have the same `rtptime` tags. The update here is to add the `rtptime` value, if available, as data to the `mdst` and `mden` metadata items, which are  sent before ("MetaData STart") and after ("MetaData ENd") a metadata sequence.
 In addition, similar tags -- `pcst` ("PiCture STart") and `pcen` ("PiCture ENd") are now sent before and after a picture with the `rtptime` value, if available, sent as data.
