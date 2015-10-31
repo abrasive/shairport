@@ -272,11 +272,11 @@ static void deinit(void) {
 }
 
 int open_alsa_device(void) {
-
+  const snd_pcm_uframes_t buffer_headroom = 352*3; // the hardware buffer must be this much bigger than the desired buffer length
   int ret, dir = 0;
   unsigned int my_sample_rate = desired_sample_rate;
-  snd_pcm_uframes_t frames = 441 * 10;
-  snd_pcm_uframes_t buffer_size = frames * 4;
+  //snd_pcm_uframes_t frames = 441 * 10;
+  snd_pcm_uframes_t buffer_size, actual_buffer_length;
   ret = snd_pcm_open(&alsa_handle, alsa_out_dev, SND_PCM_STREAM_PLAYBACK, 0);
   if (ret < 0)
     return (ret);
@@ -319,6 +319,21 @@ int open_alsa_device(void) {
   
   if (my_sample_rate != desired_sample_rate) {
     die("Can't set the D/A converter to %d.", desired_sample_rate);
+  }
+  
+  ret = snd_pcm_hw_params_get_buffer_size(alsa_params,&actual_buffer_length);
+   if (ret < 0) {
+    die("audio_alsa: Unable to get hw buffer length for %s: %s.", alsa_out_dev, snd_strerror(ret));
+  }
+  
+  if (actual_buffer_length < config.audio_backend_buffer_desired_length+buffer_headroom) {
+    // the dac buffer is too small, so let's try to set it
+    buffer_size = config.audio_backend_buffer_desired_length+buffer_headroom;
+    ret =  snd_pcm_hw_params_set_buffer_size_near(alsa_handle, alsa_params, &buffer_size);
+    if (ret < 0)
+      die("audio_alsa: Unable to set hw buffer size to %lu for %s: %s.", config.audio_backend_buffer_desired_length+buffer_headroom, alsa_out_dev, snd_strerror(ret));
+    if (config.audio_backend_buffer_desired_length+buffer_headroom > buffer_size)
+      die("audio_alsa: Can't set hw buffer size to %lu for %s: %s.", config.audio_backend_buffer_desired_length+buffer_headroom, alsa_out_dev, snd_strerror(ret));
   }
   
   return (0);
