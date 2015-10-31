@@ -283,21 +283,44 @@ int open_alsa_device(void) {
   // die("Alsa initialization failed: unable to open pcm device: %s.", snd_strerror(ret));
 
   snd_pcm_hw_params_alloca(&alsa_params);
-  snd_pcm_hw_params_any(alsa_handle, alsa_params);
-  snd_pcm_hw_params_set_access(alsa_handle, alsa_params, SND_PCM_ACCESS_RW_INTERLEAVED);
-  snd_pcm_hw_params_set_format(alsa_handle, alsa_params, SND_PCM_FORMAT_S16);
-  snd_pcm_hw_params_set_channels(alsa_handle, alsa_params, 2);
-  snd_pcm_hw_params_set_rate_near(alsa_handle, alsa_params, &my_sample_rate, &dir);
+
+  ret = snd_pcm_hw_params_any(alsa_handle, alsa_params);
+  if (ret < 0) {
+    die("audio_alsa: Broken configuration for %s: no configurations available", alsa_out_dev);
+  }
+  
+  ret = snd_pcm_hw_params_set_access(alsa_handle, alsa_params, SND_PCM_ACCESS_RW_INTERLEAVED);
+  if (ret < 0) {
+    die("audio_alsa: Access type not available for %s: %s", alsa_out_dev, snd_strerror(ret));
+  }
+  
+  ret = snd_pcm_hw_params_set_format(alsa_handle, alsa_params, SND_PCM_FORMAT_S16);
+  if (ret < 0) {
+    die("audio_alsa: Sample format not available for %s: %s", alsa_out_dev, snd_strerror(ret));
+  }  
+  
+  ret = snd_pcm_hw_params_set_channels(alsa_handle, alsa_params, 2);
+  if (ret < 0) {
+    die("audio_alsa: Channels count (2) not available for %s: %s", alsa_out_dev, snd_strerror(ret));
+  }  
+
+  ret = snd_pcm_hw_params_set_rate_near(alsa_handle, alsa_params, &my_sample_rate, &dir);
+  if (ret < 0) {
+    die("audio_alsa: Rate %iHz not available for playback: %s", desired_sample_rate, snd_strerror(ret));
+  }  
+ 
   // snd_pcm_hw_params_set_period_size_near(alsa_handle, alsa_params, &frames, &dir);
   // snd_pcm_hw_params_set_buffer_size_near(alsa_handle, alsa_params, &buffer_size);
+  
   ret = snd_pcm_hw_params(alsa_handle, alsa_params);
   if (ret < 0) {
-    die("unable to set hw parameters: %s.", snd_strerror(ret));
+    die("audio_alsa: Unable to set hw parameters for %s: %s.", alsa_out_dev, snd_strerror(ret));
   }
+  
   if (my_sample_rate != desired_sample_rate) {
-    die("Can't set the D/A converter to %d -- set to %d instead./n", desired_sample_rate,
-        my_sample_rate);
+    die("Can't set the D/A converter to %d.", desired_sample_rate);
   }
+  
   return (0);
 }
 
