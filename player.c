@@ -95,7 +95,6 @@ static uint64_t packet_count = 0;
 static int32_t last_seqno_read;
 
 // interthread variables
-static double software_mixer_volume = 1.0;
 static int fix_volume = 0x10000;
 static pthread_mutex_t vol_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -452,7 +451,7 @@ static abuf_t *buffer_get_frame(void) {
     if (ab_synced) {
       do {
         curframe = audio_buffer + BUFIDX(ab_read);
-        if (curframe->ready) {
+        if ((ab_read!=ab_write) && (curframe->ready)) { // it could be synced and empty, under exceptional circumstances, with the frame unused, thus apparently ready
 
           if (curframe->sequence_number != ab_read) {
             // some kind of sync problem has occurred.
@@ -838,7 +837,7 @@ static int stuff_buffer_soxr(short *inptr, short *outptr, int stuff) {
     }
 
     // finally, adjust the volume, if necessary
-    if (software_mixer_volume != 1.0) {
+    if (fix_volume != 65536.0) {
       // pthread_mutex_lock(&vol_mutex);
       op = outptr;
       for (i = 0; i < frame_size + stuff; i++) {
@@ -1171,7 +1170,7 @@ static void *player_thread_func(void *arg) {
 								inform("Sync error: %.1f (frames); net correction: %.1f (ppm); corrections: %.1f "
 											 "(ppm); missing packets %llu; late packets %llu; too late packets %llu; "
 											 "resend requests %llu; min DAC queue size %lli, min and max buffer occupancy "
-											 "%u and %u.",
+											 "%d and %d.",
 											 moving_average_sync_error, moving_average_correction * 1000000 / 352,
 											 moving_average_insertions_plus_deletions * 1000000 / 352, missing_packets,
 											 late_packets, too_late_packets, resend_requests, minimum_dac_queue_size,
@@ -1179,7 +1178,7 @@ static void *player_thread_func(void *arg) {
               else
 								inform("Synchronisation disabled. Missing packets %llu; late packets %llu; too late packets %llu; "
 											 "resend requests %llu; min and max buffer occupancy "
-											 "%u and %u.",
+											 "%d and %d.",
 											 missing_packets,
 											 late_packets, too_late_packets, resend_requests,
 											 minimum_buffer_occupancy, maximum_buffer_occupancy);            
@@ -1201,7 +1200,7 @@ static void *player_thread_func(void *arg) {
 }
 
 // takes the volume as specified by the airplay protocol
-void player_volume(double f) {
+void player_volume(double airplay_volume) {
 
   // The volume ranges -144.0 (mute) or -30 -- 0. See
   // http://git.zx2c4.com/Airtunes2/about/#setting-volume
@@ -1218,50 +1217,71 @@ void player_volume(double f) {
   // or 20 times the log of the ratio. Then multiplied by 100 for convenience.
   // Thus, we ask our vol2attn function for an appropriate dB between -96.3 and 0 dB and translate
   // it back to a number.
-
-  double linear_volume = 0.0;
-
-  if (config.output->volume) {
-    // debug(1,"Set volume to %f.",f);
-    config.output->volume(f); // volume will be sent as metadata by the config.output device
-    linear_volume = 1.0; // no attenuation needed -- this value is used as a flag to avoid calculations
-  }
-
-  if (config.output->parameters)
+  
+  
+  // get the audio parameters
+  
+  int32_t min,max;
+  
+  if (config.output->parameters) {
     config.output->parameters(&audio_information);
-  else {
-    long mindb = -9630;
-    if (config.volume_range_db) {
-      long suggested_alsa_min_db = -(long)trunc(config.volume_range_db*100);
-      if (suggested_alsa_min_db > mindb)
-        mindb = suggested_alsa_min_db;
-      else
-        inform("The volume_range_db setting, %f is greater than the native range of the mixer %f, so it is ignored.",config.volume_range_db,mindb/100.0);
-    }
-    double scaled_volume = vol2attn(f, 0, mindb);
-    linear_volume = pow(10, scaled_volume / 2000);
-    audio_information.airplay_volume = f;
-    audio_information.minimum_volume_dB = mindb;
-    audio_information.maximum_volume_dB = 0;
-    audio_information.current_volume_dB = scaled_volume;
-    audio_information.has_true_mute = 0;
-    audio_information.is_muted = 0;
-    // debug(1,"Minimum software volume set to %d centi-dB",f,mindb);
+    max = audio_information.maximum_volume_dB;
+    min = audio_information.minimum_volume_dB;
+  } else {
+  	max = 0;
+  	min = -9630;
   }
-  audio_information.valid = 1;
-  // debug(1,"Software volume set to %f on scale with a %f dB",f,linear_volume);
+  
+	double temp_fix_volume = 65536.0;
+	double scaled_volume;
+	
+  if (airplay_volume==-144.0) { // if we are muting
+  	scaled_volume = min; // this is just for the metadata
+  	if (config.output->mute)
+  		config.output->mute(1); // use real mute if it's there
+  	else if (config.output->volume) {
+  		config.output_.volume(min); // otherwise set the output to the lowest value
+  		temp_fix_volume = 0; // and set the software multiplier to 0.
+  	}
+  } else { // not muting
+
+		if (config.volume_range_db) {
+			int32_t possible_min = max - (int)trunc(config.volume_range_db*100);
+		if (possible_min > min)
+			min = possible_min;
+		}
+	
+		// now we have the true desired range, get the volume that is being set
+		scaled_volume = vol2attn(airplay_volume, max, min);	
+		double software_volume = 0; dB or attenuation
+		
+		if (config.output->volume) {
+			if (scaled_volume>=min) {
+				config.output->volume(scaled_volume);
+			} else {
+				config.output->volume(min);
+				software_volume = scaled_volume-min;  // this is the attenuation in dB needed in software
+			}
+		} else {
+			software_volume = scaled_volume;
+		}
+		if (config.output->mute) // if there is hardware mute...
+			config.output->mute(0); // turn it off
+		temp_fix_volume = 65536.0 * pow(10, software_volume / 2000);
+  }
+  // debug(1,"Software volume set to %f on scale with a %f dB",airplay_volume,pow(10, software_volume / 2000));
   pthread_mutex_lock(&vol_mutex);
-  software_mixer_volume = linear_volume;
-  fix_volume = 65536.0 * software_mixer_volume;
+  fix_volume = temp_fix_volume;
   pthread_mutex_unlock(&vol_mutex);
+
 #ifdef CONFIG_METADATA
   char *dv = malloc(128); // will be freed in the metadata thread
   if (dv) {
     memset(dv, 0, 128);
-    snprintf(dv, 127, "%.2f,%.2f,%.2f,%.2f", audio_information.airplay_volume,
-             audio_information.current_volume_dB / 100.0,
-             audio_information.minimum_volume_dB / 100.0,
-             audio_information.maximum_volume_dB / 100.0);
+    snprintf(dv, 127, "%.2f,%.2f,%.2f,%.2f", airplay_volume,
+             scaled_volume / 100.0,
+             min / 100.0,
+             max / 100.0);
     send_ssnc_metadata('pvol', dv, strlen(dv), 1);
   }
 #endif

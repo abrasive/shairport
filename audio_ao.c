@@ -153,4 +153,5 @@ audio_output audio_ao = {.name = "ao",
                          .delay = NULL,
                          .play = &play,
                          .volume = NULL,
-                         .parameters = NULL};
+                         .parameters = NULL,
+                         .mute = NULL};
