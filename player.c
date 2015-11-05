@@ -887,7 +887,6 @@ static void *player_thread_func(void *arg) {
   int32_t minimum_buffer_occupancy = BUFFER_FRAMES;
   int32_t maximum_buffer_occupancy = 0;
 
-  audio_information.valid = 0;
   buffer_occupancy = 0;
 
   int play_samples;
@@ -1240,8 +1239,9 @@ void player_volume(double airplay_volume) {
   	if (config.output->mute)
   		config.output->mute(1); // use real mute if it's there
   	else if (config.output->volume) {
-  		config.output_.volume(min); // otherwise set the output to the lowest value
+  		config.output->volume(min); // otherwise set the output to the lowest value
   		temp_fix_volume = 0; // and set the software multiplier to 0.
+  		debug(1,"Software mute: mixer volume set to minimum: %d and software volume will be set to 0.",min);
   	}
   } else { // not muting
 
@@ -1253,15 +1253,17 @@ void player_volume(double airplay_volume) {
 	
 		// now we have the true desired range, get the volume that is being set
 		scaled_volume = vol2attn(airplay_volume, max, min);	
-		double software_volume = 0; dB or attenuation
+		double software_volume = 0; // dB of attenuation
 		
 		if (config.output->volume) {
 			if (scaled_volume>=min) {
 				config.output->volume(scaled_volume);
+				debug(1,"Set Volume, no split: mixer volume set to: %f",scaled_volume);
 			} else {
 				config.output->volume(min);
 				software_volume = scaled_volume-min;  // this is the attenuation in dB needed in software
-			}
+				debug(1,"Set Volume, split: mixer volume set to: %f, software volume set to: %f.",min,software_volume);
+		}
 		} else {
 			software_volume = scaled_volume;
 		}
@@ -1269,7 +1271,7 @@ void player_volume(double airplay_volume) {
 			config.output->mute(0); // turn it off
 		temp_fix_volume = 65536.0 * pow(10, software_volume / 2000);
   }
-  // debug(1,"Software volume set to %f on scale with a %f dB",airplay_volume,pow(10, software_volume / 2000));
+   debug(1,"Software linear volume set to %f ",temp_fix_volume);
   pthread_mutex_lock(&vol_mutex);
   fix_volume = temp_fix_volume;
   pthread_mutex_unlock(&vol_mutex);
