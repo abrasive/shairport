@@ -1207,17 +1207,136 @@ void player_volume(double airplay_volume) {
   // equal increments. Since the human ear's response is roughly logarithmic, we imagine these to
   // be power dB, i.e. from -30dB to 0dB.
   
-  // So, if we have a hardware mixer, we will pass this on to its dB volume settings.
   
-  // Without a hardware mixer, we have to do attenuation in software, so
-  // here, we ask for an attenuation we will apply to the signal amplitude in software.
+  // We may have a hardware mixer, and if so, we will give it priority.
+  // If a desired volume range is given, then we will try to accommodate it from
+  // the top of the hardware mixer's range downwards.
+  
+  // If not desired volume range is given, we will use the native resolution of the hardware mixer, if any,
+  // or failing that, the software mixer. The software mixer has a range of from -96.3 dB up to 0 dB,
+  // corresponding to a multiplier of 1 to 65535.
+ 
+  // Otherwise, we will accommodate the desired volume range in the combination of the software and hardware mixer
+  // Intuitively (!), it seems best to give the hardware mixer as big a role as possible, so
+  // we will use it's full range and then accommodate the rest of the attenuation in software.
+  // A problem is that we don't know whether the lowest hardware volume actually mutes the output
+  // so we must assume that it does, so that the colume control goes at the "bottom" of the adjustment range
+    
   // The dB range of a value from 1 to 65536 is about 96.3 dB (log10 of 65536 is 4.8164).
   // Since the levels correspond with amplitude, they correspond to voltage, hence voltage dB,
   // or 20 times the log of the ratio. Then multiplied by 100 for convenience.
   // Thus, we ask our vol2attn function for an appropriate dB between -96.3 and 0 dB and translate
   // it back to a number.
   
+  int32_t hw_min_db, hw_max_db, hw_range_db, range_to_use, min_db, max_db; // hw_range_db is a flag; if - means no mixer
   
+  int32_t sw_min_db = -9630;
+  int32_t sw_max_db = 0;
+  int32_t sw_range_db = sw_max_db - sw_min_db;
+  int32_t desired_range_db; // this is used as a flag
+  
+  if (config.volume_range_db)
+    desired_range_db = (int32_t)trunc(config.volume_range_db*100);
+  else
+    desired_range_db = 0;
+  
+  if (config.output->parameters) {
+    // have a hardware mixer
+    config.output->parameters(&audio_information);
+    hw_max_db = audio_information.maximum_volume_dB;
+    hw_min_db = audio_information.minimum_volume_dB;
+    hw_range_db = hw_max_db-hw_min_db;
+  } else {
+    // don't have a hardware mixer
+    hw_max_db = hw_min_db = hw_range_db = 0;
+  }
+  
+  if (desired_range_db) {
+    debug(1,"An attenuation range of %d is requested.",desired_range_db);
+    // we have a desired volume range.
+    if (hw_range_db) {
+    // we have a hardware mixer
+      if (hw_range_db>=desired_range_db) {
+        // the hardware mixer can accommodate the desired range
+        max_db = hw_max_db;
+        min_db = max_db - desired_range_db;
+      } else {
+        if ((hw_range_db+sw_range_db)<desired_range_db) {
+          inform("The volume attenuation range %f is greater than can be accommodated by the hardware and software -- set to %f.",config.volume_range_db,hw_range_db+sw_range_db);
+          desired_range_db=hw_range_db+sw_range_db;
+        }
+        min_db = hw_min_db;
+        max_db = min_db + desired_range_db;
+      }
+    } else {
+      // we have a desired volume range and no hardware mixer
+      if (sw_range_db<desired_range_db) {
+        inform("The volume attenuation range %f is greater than can be accommodated by the software -- set to %f.",config.volume_range_db,sw_range_db);
+        desired_range_db=sw_range_db;      
+      }
+      max_db = sw_max_db;
+      min_db = max_db - desired_range_db;
+    }
+  } else {
+    // we do not have a desired volume range, so use the mixer's volume range, if there is one.
+    debug(1,"No attenuation range requested.");
+    if (hw_range_db) {
+      min_db = hw_min_db;
+      max_db = hw_max_db;
+    } else {
+      min_db = sw_min_db;
+      max_db = sw_max_db;
+    }
+  }
+  
+  double hardware_attenuation, software_attenuation;
+  double scaled_attenuation = hw_min_db+sw_min_db;
+  
+  debug(1, "Hardware range, max and min: %d,%d,%d. Software range, max and min: %d,%d,%d. Min and Max %d,%d.",hw_range_db,hw_max_db,hw_min_db,sw_range_db,sw_max_db,sw_min_db,min_db,max_db);
+  
+  // now, we can map the input to the desired output volume
+  if (airplay_volume==-144.0) {    
+    // do a mute    
+  	if (config.output->mute) {
+  		config.output->mute(1); // use real mute if it's there
+  	} else {
+  	  hardware_attenuation = hw_min_db;
+  	  software_attenuation = sw_min_db;
+  		debug(1,"Software mute.");
+  	}    
+    
+  } else {
+  	if (config.output->mute)
+  		config.output->mute(0); // unmute mute if it's there  
+    scaled_attenuation = vol2attn(airplay_volume, max_db, min_db);
+    if (hw_range_db) {
+      // if there is a hardware mixer
+      if (scaled_attenuation<=hw_max_db) {
+        // the attenuation is so low that's it's in the hardware mixer's range
+        debug(1,"Attenuation all taken care of by the hardware mixer.");
+        hardware_attenuation = scaled_attenuation;
+        software_attenuation = sw_max_db - (max_db-hw_max_db); // e.g. if the hw_max_db  is +4 and the max is +40, this will be -36 (all by 100, of course)
+      } else {
+        debug(1,"Attenuation taken care of by hardware and software mixer.");
+        hardware_attenuation = hw_max_db; // the hardware mixer is turned up full
+        software_attenuation = sw_max_db - (max_db-scaled_attenuation);
+      }
+    } else {
+      // if there is no hardware mixer, the scaled_volume is the software volume
+      debug(1,"Attenuation all taken care of by the software mixer.");
+      software_attenuation = scaled_attenuation;
+    }
+  }
+  
+  if ((config.output->volume) && (hw_range_db)) {
+	  config.output->volume(hardware_attenuation); // otherwise set the output to the lowest value
+	  debug(1,"Hardware attenuation set to %f for airplay volume of %f.",hardware_attenuation,airplay_volume);
+  }
+  double temp_fix_volume = 65536.0 * pow(10, software_attenuation / 2000);
+ 	debug(1,"Software attenuation set to %f, i.e %f out of 65,536, for airplay volume of %f",software_attenuation,temp_fix_volume,airplay_volume);
+ 
+  
+  /*
   // get the audio parameters
   
   int32_t min,max;
@@ -1272,6 +1391,8 @@ void player_volume(double airplay_volume) {
 		temp_fix_volume = 65536.0 * pow(10, software_volume / 2000);
   }
    debug(1,"Software linear volume set to %f ",temp_fix_volume);
+  */
+  
   pthread_mutex_lock(&vol_mutex);
   fix_volume = temp_fix_volume;
   pthread_mutex_unlock(&vol_mutex);
@@ -1281,9 +1402,9 @@ void player_volume(double airplay_volume) {
   if (dv) {
     memset(dv, 0, 128);
     snprintf(dv, 127, "%.2f,%.2f,%.2f,%.2f", airplay_volume,
-             scaled_volume / 100.0,
-             min / 100.0,
-             max / 100.0);
+             scaled_attenuation / 100.0,
+             min_db / 100.0,
+             max_db / 100.0);
     send_ssnc_metadata('pvol', dv, strlen(dv), 1);
   }
 #endif
