@@ -47,7 +47,6 @@ static void volume(double vol);
 static void linear_volume(double vol);
 static void parameters(audio_parameters *info);
 static void mute(int do_mute);
-static int has_mute = 0;
 static double set_volume;
 
 audio_output audio_alsa = {
@@ -60,6 +59,7 @@ audio_output audio_alsa = {
     .flush = &flush,
     .delay = &delay,
     .play = &play,
+    .mute = NULL, // to be set later on...
     .volume = NULL,    // to be set later on...
     .parameters = NULL // to be set later on...
 };
@@ -252,7 +252,7 @@ static int init(int argc, char **argv) {
      }
   }
   if (snd_mixer_selem_has_playback_switch(alsa_mix_elem)) {
-    has_mute = 1;
+    audio_alsa.mute = &mute; // insert the mute function now we know it can do muting stuff
     debug(1, "Has mute ability.");
   }
   return 0;
@@ -461,10 +461,11 @@ static void linear_volume(double vol) {
 }
 
 static void mute(int do_mute) {
-  if (has_mute) {
-  	if (do_mute)
-    	snd_mixer_selem_set_playback_switch_all(alsa_mix_elem, 0);
-    else
-    	snd_mixer_selem_set_playback_switch_all(alsa_mix_elem, 1);    
-  }		
+ if (do_mute) {
+  // debug(1,"Mute");
+  snd_mixer_selem_set_playback_switch_all(alsa_mix_elem, 0);
+ } else {
+  // debug(1,"Unmute");
+  snd_mixer_selem_set_playback_switch_all(alsa_mix_elem, 1); 
+ }   
 }
