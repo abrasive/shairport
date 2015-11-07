@@ -1206,21 +1206,20 @@ void player_volume(double airplay_volume) {
   // By examination, the -30 -- 0 range is linear on the slider; i.e. the slider is calibrated in 30
   // equal increments. Since the human ear's response is roughly logarithmic, we imagine these to
   // be power dB, i.e. from -30dB to 0dB.
-  
-  
+    
   // We may have a hardware mixer, and if so, we will give it priority.
   // If a desired volume range is given, then we will try to accommodate it from
   // the top of the hardware mixer's range downwards.
   
-  // If not desired volume range is given, we will use the native resolution of the hardware mixer, if any,
+  // If no desired volume range is given, we will use the native resolution of the hardware mixer, if any,
   // or failing that, the software mixer. The software mixer has a range of from -96.3 dB up to 0 dB,
   // corresponding to a multiplier of 1 to 65535.
  
   // Otherwise, we will accommodate the desired volume range in the combination of the software and hardware mixer
   // Intuitively (!), it seems best to give the hardware mixer as big a role as possible, so
-  // we will use it's full range and then accommodate the rest of the attenuation in software.
+  // we will use its full range and then accommodate the rest of the attenuation in software.
   // A problem is that we don't know whether the lowest hardware volume actually mutes the output
-  // so we must assume that it does, so that the colume control goes at the "bottom" of the adjustment range
+  // so we must assume that it does, and for this reason, the volume control goes at the "bottom" of the adjustment range
     
   // The dB range of a value from 1 to 65536 is about 96.3 dB (log10 of 65536 is 4.8164).
   // Since the levels correspond with amplitude, they correspond to voltage, hence voltage dB,
@@ -1228,12 +1227,12 @@ void player_volume(double airplay_volume) {
   // Thus, we ask our vol2attn function for an appropriate dB between -96.3 and 0 dB and translate
   // it back to a number.
   
-  int32_t hw_min_db, hw_max_db, hw_range_db, range_to_use, min_db, max_db; // hw_range_db is a flag; if - means no mixer
+  int32_t hw_min_db, hw_max_db, hw_range_db, range_to_use, min_db, max_db; // hw_range_db is a flag; if 0 means no mixer
   
   int32_t sw_min_db = -9630;
   int32_t sw_max_db = 0;
   int32_t sw_range_db = sw_max_db - sw_min_db;
-  int32_t desired_range_db; // this is used as a flag
+  int32_t desired_range_db; // this is used as a flag; if 0 means no desired range
   
   if (config.volume_range_db)
     desired_range_db = (int32_t)trunc(config.volume_range_db*100);
@@ -1252,7 +1251,7 @@ void player_volume(double airplay_volume) {
   }
   
   if (desired_range_db) {
-    debug(1,"An attenuation range of %d is requested.",desired_range_db);
+    // debug(1,"An attenuation range of %d is requested.",desired_range_db);
     // we have a desired volume range.
     if (hw_range_db) {
     // we have a hardware mixer
@@ -1279,7 +1278,7 @@ void player_volume(double airplay_volume) {
     }
   } else {
     // we do not have a desired volume range, so use the mixer's volume range, if there is one.
-    debug(1,"No attenuation range requested.");
+    // debug(1,"No attenuation range requested.");
     if (hw_range_db) {
       min_db = hw_min_db;
       max_db = hw_max_db;
@@ -1291,18 +1290,17 @@ void player_volume(double airplay_volume) {
   
   double hardware_attenuation, software_attenuation;
   double scaled_attenuation = hw_min_db+sw_min_db;
-  
-  debug(1, "Hardware range, max and min: %d,%d,%d. Software range, max and min: %d,%d,%d. Min and Max %d,%d.",hw_range_db,hw_max_db,hw_min_db,sw_range_db,sw_max_db,sw_min_db,min_db,max_db);
-  
+    
   // now, we can map the input to the desired output volume
   if (airplay_volume==-144.0) {    
     // do a mute    
   	if (config.output->mute) {
   		config.output->mute(1); // use real mute if it's there
+  	  software_attenuation = sw_min_db; // needed for when sound is unmuted; otherwise it might be very loud.
   	} else {
   	  hardware_attenuation = hw_min_db;
   	  software_attenuation = sw_min_db;
-  		debug(1,"Software mute.");
+  		// debug(1,"Software mute.");
   	}    
     
   } else {
@@ -1313,85 +1311,27 @@ void player_volume(double airplay_volume) {
       // if there is a hardware mixer
       if (scaled_attenuation<=hw_max_db) {
         // the attenuation is so low that's it's in the hardware mixer's range
-        debug(1,"Attenuation all taken care of by the hardware mixer.");
+        // debug(1,"Attenuation all taken care of by the hardware mixer.");
         hardware_attenuation = scaled_attenuation;
         software_attenuation = sw_max_db - (max_db-hw_max_db); // e.g. if the hw_max_db  is +4 and the max is +40, this will be -36 (all by 100, of course)
       } else {
-        debug(1,"Attenuation taken care of by hardware and software mixer.");
+        // debug(1,"Attenuation taken care of by hardware and software mixer.");
         hardware_attenuation = hw_max_db; // the hardware mixer is turned up full
         software_attenuation = sw_max_db - (max_db-scaled_attenuation);
       }
     } else {
       // if there is no hardware mixer, the scaled_volume is the software volume
-      debug(1,"Attenuation all taken care of by the software mixer.");
+      // debug(1,"Attenuation all taken care of by the software mixer.");
       software_attenuation = scaled_attenuation;
     }
   }
   
   if ((config.output->volume) && (hw_range_db)) {
 	  config.output->volume(hardware_attenuation); // otherwise set the output to the lowest value
-	  debug(1,"Hardware attenuation set to %f for airplay volume of %f.",hardware_attenuation,airplay_volume);
+	  //debug(1,"Hardware attenuation set to %f for airplay volume of %f.",hardware_attenuation,airplay_volume);
   }
   double temp_fix_volume = 65536.0 * pow(10, software_attenuation / 2000);
- 	debug(1,"Software attenuation set to %f, i.e %f out of 65,536, for airplay volume of %f",software_attenuation,temp_fix_volume,airplay_volume);
- 
-  
-  /*
-  // get the audio parameters
-  
-  int32_t min,max;
-  
-  if (config.output->parameters) {
-    config.output->parameters(&audio_information);
-    max = audio_information.maximum_volume_dB;
-    min = audio_information.minimum_volume_dB;
-  } else {
-  	max = 0;
-  	min = -9630;
-  }
-  
-	double temp_fix_volume = 65536.0;
-	double scaled_volume;
-	
-  if (airplay_volume==-144.0) { // if we are muting
-  	scaled_volume = min; // this is just for the metadata
-  	if (config.output->mute)
-  		config.output->mute(1); // use real mute if it's there
-  	else if (config.output->volume) {
-  		config.output->volume(min); // otherwise set the output to the lowest value
-  		temp_fix_volume = 0; // and set the software multiplier to 0.
-  		debug(1,"Software mute: mixer volume set to minimum: %d and software volume will be set to 0.",min);
-  	}
-  } else { // not muting
-
-		if (config.volume_range_db) {
-			int32_t possible_min = max - (int)trunc(config.volume_range_db*100);
-		if (possible_min > min)
-			min = possible_min;
-		}
-	
-		// now we have the true desired range, get the volume that is being set
-		scaled_volume = vol2attn(airplay_volume, max, min);	
-		double software_volume = 0; // dB of attenuation
-		
-		if (config.output->volume) {
-			if (scaled_volume>=min) {
-				config.output->volume(scaled_volume);
-				debug(1,"Set Volume, no split: mixer volume set to: %f",scaled_volume);
-			} else {
-				config.output->volume(min);
-				software_volume = scaled_volume-min;  // this is the attenuation in dB needed in software
-				debug(1,"Set Volume, split: mixer volume set to: %f, software volume set to: %f.",min,software_volume);
-		}
-		} else {
-			software_volume = scaled_volume;
-		}
-		if (config.output->mute) // if there is hardware mute...
-			config.output->mute(0); // turn it off
-		temp_fix_volume = 65536.0 * pow(10, software_volume / 2000);
-  }
-   debug(1,"Software linear volume set to %f ",temp_fix_volume);
-  */
+ 	// debug(1,"Software attenuation set to %f, i.e %f out of 65,536, for airplay volume of %f",software_attenuation,temp_fix_volume,airplay_volume);
   
   pthread_mutex_lock(&vol_mutex);
   fix_volume = temp_fix_volume;
