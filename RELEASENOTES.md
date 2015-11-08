@@ -1,6 +1,7 @@
 Version 2.7 -- Development Version
 ----
 **New Features**
+* Extend the volume range for some DACs. Background: some of the cheaper DACS have a very small volume range (that is, the ratio of the highest to the lowest volume, expressed in decibels). In some really cheap DACs it's only around 30 dB. That means that the difference betweeen the lowest and highest volume settings isn't large enough. With the new feature, if you set the `general` `volume_range_db` to more than the hardware mixer's range, Shairport Sync will combine the hardware mixer's range with a software attenuator to give the desired range. For example, suppose you want a volume range of 70 dB and the hardware mixer offers only 30 dB, then Shairport Sync will make up ther other 40 dB with a software attenuator. The drawbacks are that, when the volume is being changed, there may be a slight delay (0.15 seconds by default) as the audio, whose volume may have been adjusted in software, propagetes through the system. The other slight possible drawback is a slightly heavier load on the processor.
 * Add extra debug messages to the alsa back end to diagnose strange DACs.
 * Add configuration file for the libao back end -- to change the buffer size and the latency offset, same is for stdout.
 * Add shairport-sync.exe to .gitignore.
