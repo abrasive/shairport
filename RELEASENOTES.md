@@ -102,7 +102,7 @@ Version 2.3.12
 
 
 **Enhancements**
-* Larger range of interpolation. Shairport Sync has previously constrained not to make interpolations ("corrections") of more than about 1 per 1000 real frames. This contraint has been relaxed, and it is now able to make corrections of up to 1 in 352 real frames. This might result in a faster and undesirably sudden correction early during a play session, so a number of further changes have been made. The full set of these changes is as follows:
+* Larger range of interpolation. Shairport Sync was previously constrained not to make interpolations ("corrections") of more than about 1 per 1000 frames. This contraint has been relaxed, and it is now able to make corrections of up to 1 in 352 frames. This might result in a faster and undesirably sudden correction early during a play session, so a number of further changes have been made. The full set of these changes is as follows:
   * No corrections happen for the first five seconds.
   * Corrections of up to about 1 in 1000 for the next 25 seconds.
   * Corrections of up to 1 in 352 thereafter.
