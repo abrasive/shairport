@@ -1,12 +1,12 @@
 Version 2.7 -- Development Version
 ----
 **New Features**
-* Extend the volume range for some DACs. Background: some of the cheaper DACS have a very small volume range (that is, the ratio of the highest to the lowest volume, expressed in decibels). In some really cheap DACs it's only around 30 dB. That means that the difference betweeen the lowest and highest volume settings isn't large enough. With the new feature, if you set the `general` `volume_range_db` to more than the hardware mixer's range, Shairport Sync will combine the hardware mixer's range with a software attenuator to give the desired range. For example, suppose you want a volume range of 70 dB and the hardware mixer offers only 30 dB, then Shairport Sync will make up the other 40 dB with a software attenuator. The drawbacks are that, when the volume is being changed, there may be a slight delay (0.15 seconds by default) as the audio, whose volume may have been adjusted in software, propagetes through the system. The other slight possible drawback is a slightly heavier load on the processor.
+* Extend the volume range for some DACs. Background: some of the cheaper DACS have a very small volume range (that is, the ratio of the highest to the lowest volume, expressed in decibels). In some really cheap DACs it's only around 30 dB. That means that the difference betweeen the lowest and highest volume settings isn't large enough. With the new feature, if you set the `general` `volume_range_db` to more than the hardware mixer's range, Shairport Sync will combine the hardware mixer's range with a software attenuator to give the desired range. For example, suppose you want a volume range of 70 dB and the hardware mixer offers only 30 dB, then Shairport Sync will make up the other 40 dB with a software attenuator. One drawback is that, when the volume is being changed, there may be a slight delay (0.15 seconds by default) as the audio, whose volume may have been adjusted in software, propagates through the system. Another slight possible drawback is a slightly heavier load on the processor.
 * Check for underflow a little better when buffer aliasing occurs on very bad connections...
 * Add extra debug messages to the alsa back end to diagnose strange DACs.
-* Add configuration file for the libao back end -- to change the buffer size and the latency offset, same is for stdout.
-* Add shairport-sync.exe to .gitignore.
-* Add a check to see if compilation is for a CYGWIN platform.
+* Add configuration file for the `libao` back end -- to change the buffer size and the latency offset, same as for stdout.
+* Add `shairport-sync.exe` to `.gitignore`.
+* Add a check to support compilation on a CYGWIN platform.
 * Add `rtptime` tags to metadata and picture information and add two new metadata items to precede and follow the transmission of a picture. Background: it seems that metadata and picture information for the same item, e.g. a track, are normally tagged with a timestamp called the `rtptime`; if they refer to the same item, they will have the same `rtptime` tags. The update here is to add the `rtptime` value, if available, as data to the `mdst` and `mden` metadata items, which are  sent before ("MetaData STart") and after ("MetaData ENd") a metadata sequence.
 In addition, similar tags -- `pcst` ("PiCture STart") and `pcen` ("PiCture ENd") are now sent before and after a picture with the `rtptime` value, if available, sent as data.
 By the way, the progress metadata (`prgr` for "PRoGRess"), which is sent just when a track starts, contains the same `rtptime` as its middle element.
@@ -102,7 +102,7 @@ Version 2.3.12
 
 
 **Enhancements**
-* Larger range of interpolation. Shairport Sync has previously constrained not to make interpolations ("corrections") of more than about 1 per 1000 real frames. This contraint has been relaxed, and it is now able to make corrections of up to 1 in 352 real frames. This might result in a faster and undesirably sudden correction early during a play session, so a number of further changes have been made. The full set of these changes is as follows:
+* Larger range of interpolation. Shairport Sync was previously constrained not to make interpolations ("corrections") of more than about 1 per 1000 frames. This contraint has been relaxed, and it is now able to make corrections of up to 1 in 352 frames. This might result in a faster and undesirably sudden correction early during a play session, so a number of further changes have been made. The full set of these changes is as follows:
   * No corrections happen for the first five seconds.
   * Corrections of up to about 1 in 1000 for the next 25 seconds.
   * Corrections of up to 1 in 352 thereafter.
