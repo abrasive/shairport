@@ -16,3 +16,7 @@ install-sh
 missing
 stamp-h1
 .deps
+
+# Some eclipse project files
+.cproject
+.project
