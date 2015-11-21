@@ -17,3 +17,5 @@ install-sh
 missing
 stamp-h1
 .deps
+man/Makefile
+man/Makefile.in
