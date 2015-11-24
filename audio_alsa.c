@@ -280,22 +280,22 @@ int open_alsa_device(void) {
 
   ret = snd_pcm_hw_params_any(alsa_handle, alsa_params);
   if (ret < 0) {
-    die("audio_alsa: Broken configuration for %s: no configurations available", alsa_out_dev);
+    die("audio_alsa: Broken configuration for device \"%s\": no configurations available", alsa_out_dev);
   }
   
   ret = snd_pcm_hw_params_set_access(alsa_handle, alsa_params, SND_PCM_ACCESS_RW_INTERLEAVED);
   if (ret < 0) {
-    die("audio_alsa: Access type not available for %s: %s", alsa_out_dev, snd_strerror(ret));
+    die("audio_alsa: Access type not available for device \"%s\": %s", alsa_out_dev, snd_strerror(ret));
   }
   
   ret = snd_pcm_hw_params_set_format(alsa_handle, alsa_params, SND_PCM_FORMAT_S16);
   if (ret < 0) {
-    die("audio_alsa: Sample format not available for %s: %s", alsa_out_dev, snd_strerror(ret));
+    die("audio_alsa: Sample format not available for device \"%s\": %s", alsa_out_dev, snd_strerror(ret));
   }  
   
   ret = snd_pcm_hw_params_set_channels(alsa_handle, alsa_params, 2);
   if (ret < 0) {
-    die("audio_alsa: Channels count (2) not available for %s: %s", alsa_out_dev, snd_strerror(ret));
+    die("audio_alsa: Channels count (2) not available for device \"%s\": %s", alsa_out_dev, snd_strerror(ret));
   }  
 
   ret = snd_pcm_hw_params_set_rate_near(alsa_handle, alsa_params, &my_sample_rate, &dir);
@@ -308,7 +308,7 @@ int open_alsa_device(void) {
   
   ret = snd_pcm_hw_params(alsa_handle, alsa_params);
   if (ret < 0) {
-    die("audio_alsa: Unable to set hw parameters for %s: %s.", alsa_out_dev, snd_strerror(ret));
+    die("audio_alsa: Unable to set hw parameters for device \"%s\": %s.", alsa_out_dev, snd_strerror(ret));
   }
   
   if (my_sample_rate != desired_sample_rate) {
@@ -317,7 +317,7 @@ int open_alsa_device(void) {
   
   ret = snd_pcm_hw_params_get_buffer_size(alsa_params,&actual_buffer_length);
    if (ret < 0) {
-    die("audio_alsa: Unable to get hw buffer length for %s: %s.", alsa_out_dev, snd_strerror(ret));
+    die("audio_alsa: Unable to get hw buffer length for device \"%s\": %s.", alsa_out_dev, snd_strerror(ret));
   }
   
   if (actual_buffer_length < config.audio_backend_buffer_desired_length+buffer_headroom) {
@@ -325,9 +325,9 @@ int open_alsa_device(void) {
     buffer_size = config.audio_backend_buffer_desired_length+buffer_headroom;
     ret =  snd_pcm_hw_params_set_buffer_size_near(alsa_handle, alsa_params, &buffer_size);
     if (ret < 0)
-      die("audio_alsa: Unable to set hw buffer size to %lu for %s: %s.", config.audio_backend_buffer_desired_length+buffer_headroom, alsa_out_dev, snd_strerror(ret));
+      die("audio_alsa: Unable to set hw buffer size to %lu for device \"%s\": %s.", config.audio_backend_buffer_desired_length+buffer_headroom, alsa_out_dev, snd_strerror(ret));
     if (config.audio_backend_buffer_desired_length+buffer_headroom > buffer_size)
-      die("audio_alsa: Can't set hw buffer size to %lu for %s: %s.", config.audio_backend_buffer_desired_length+buffer_headroom, alsa_out_dev, snd_strerror(ret));
+      die("audio_alsa: Can't set hw buffer size to %lu for device \"%s\": %s.", config.audio_backend_buffer_desired_length+buffer_headroom, alsa_out_dev, snd_strerror(ret));
   }
   
   return (0);
@@ -335,7 +335,7 @@ int open_alsa_device(void) {
 
 static void start(int sample_rate) {
   if (sample_rate != 44100)
-    die("Unexpected sample rate %d -- only 44,100 supported!", sample_rate);
+	  die("Unexpected sample rate %d -- only 44,100 supported!", sample_rate);
   desired_sample_rate = sample_rate; // must be a variable
 }
 
