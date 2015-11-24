@@ -2,8 +2,9 @@ Version 2.7.2 -- Development Version
 ----
 **Bug Fix**
 * Fix a bug that suppressed output of the `rtptime` associated with metadata and with picture information coming from the audio source and passed on via the metadata pipe.
+
 **Other Changes**
-* Added some more information to the log outputs whenever problems are detected with the output alsa device. 
+* Added some more information to the log whenever problems are detected with the proposed alsa device. 
 
 Version 2.7.1 -- Development Version
 ----
