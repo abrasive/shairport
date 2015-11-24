@@ -1144,7 +1144,7 @@ static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_m
 
     if (!strncmp(ct, "application/x-dmap-tagged", 25)) {
       debug(2, "received metadata tags in SET_PARAMETER request.");
-      if (p=NULL)
+      if (p==NULL)
         debug(1,"Missing RTP-Time info for metadata");
       if (p)
         send_metadata('ssnc', 'mdst', p+1, strlen(p+1), req, 1); // metadata starting
@@ -1163,7 +1163,7 @@ static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_m
       // debug(1, "received image in SET_PARAMETER request.");
       // note: the image/type tag isn't reliable, so it's not being sent
       // -- best look at the first few bytes of the image
-      if (p=NULL)
+      if (p==NULL)
         debug(1,"Missing RTP-Time info for picture item");
       if (p)
         send_metadata('ssnc', 'pcst', p+1, strlen(p+1), req, 1); // picture starting   
