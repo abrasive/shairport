@@ -373,18 +373,68 @@ void player_put_packet(seq_t seqno, uint32_t timestamp, uint8_t *data, int len) 
   pthread_mutex_unlock(&ab_mutex);
 }
 
+int32_t rand_in_range(int32_t exclusive_range_limit) {
+  static uint32_t lcg_prev = 12345;
+	// returns a pseudo random integer in the range 0 to (exclusive_range_limit-1) inclusive
+	int64_t sp = lcg_prev;
+	int64_t rl = exclusive_range_limit;
+	lcg_prev = lcg_prev * 69069 + 3; // crappy psrg
+	sp = sp*rl; // 64 bit calculation. INtersting part if above the 32 rightmost bits;
+	return sp >> 32;  
+}
+
+static inline short dithered_vol(short sample) {
+  int32_t out;
+
+  out = (int32_t)sample * fix_volume;
+  if (fix_volume < 0x10000) {
+  
+  	// add a TPDF dither -- see http://www.users.qwest.net/%7Evolt42/cadenzarecording/DitherExplained.pdf
+  	// and the discussion around https://www.hydrogenaud.io/forums/index.php?showtopic=16963&st=25
+  	
+  	// I think, for a 32 --> 16 bits, the range of
+  	// random numbers needs to be from -2^16 to 2^16, i.e. from -65536 to 65536 inclusive, not from -32768 to +32767
+  	
+  	// See the original paper at http://www.ece.rochester.edu/courses/ECE472/resources/Papers/Lipshitz_1992.pdf
+  	// by Lipshitz, Wannamaker and Vanderkooy, 1992.
+  	
+  	int32_t tpdf = rand_in_range(65536+1) - rand_in_range(65536+1);
+  	// Check there's no clipping -- if there is, 
+  	if (tpdf>=0) {
+  		if (LONG_MAX-tpdf>=out)
+    		out += tpdf;
+    	else
+    		out = LONG_MAX;
+    } else {
+    	if (LONG_MIN-tpdf<=out)
+    		out += tpdf;
+    	else
+    		out = LONG_MIN;
+    }
+  }
+  return out >> 16;
+}
+
+
+/*
 static inline short lcg_rand(void) {
   static unsigned long lcg_prev = 12345;
   lcg_prev = lcg_prev * 69069 + 3;
   return lcg_prev & 0xffff;
 }
 
+
 static inline short dithered_vol(short sample) {
-  short rand_a, rand_b;
+  static short rand_a;
+  short rand_b;
   long out;
 
   out = (long)sample * fix_volume;
   if (fix_volume < 0x10000) {
+  	// add a TPDF dither -- see http://www.users.qwest.net/%7Evolt42/cadenzarecording/DitherExplained.pdf
+  	// and the discussion around https://www.hydrogenaud.io/forums/index.php?showtopic=16963&st=25
+  	// I think it's wrong. I think, for a 32 --> 16 bits, the range of
+  	// random numbers needs to be from 0 to 2^16, i.e. from 0 to 65536, not from -32768bto +32767
     rand_b = rand_a;
     rand_a = lcg_rand();
     out += rand_a;
@@ -392,6 +442,7 @@ static inline short dithered_vol(short sample) {
   }
   return out >> 16;
 }
+*/
 
 // get the next frame, when available. return 0 if underrun/stream reset.
 static abuf_t *buffer_get_frame(void) {
