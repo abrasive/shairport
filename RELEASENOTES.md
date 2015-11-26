@@ -1,3 +1,16 @@
+Version 2.7.2 -- Development Version
+----
+**Bug Fix**
+* Fix a bug that suppressed output of the `rtptime` associated with metadata and with picture information coming from the audio source and passed on via the metadata pipe.
+
+**Other Changes**
+* Added some more information to the log whenever problems are detected with the proposed alsa device. 
+
+Version 2.7.1 -- Development Version
+----
+**Bug Fix**
+* The new volume-extension code was not correctly setting the volume after a pause / resume. Fixed.
+
 Version 2.7 -- Development Version
 ----
 **New Features**
