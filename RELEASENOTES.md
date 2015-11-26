@@ -1,3 +1,8 @@
+Version 2.7.3 -- Development Version
+----
+**Bug Fix**
+* The dither algorithm was broken (by me) and also less than ideal anyway. Fixed and improved. More later...
+
 Version 2.7.2 -- Development Version
 ----
 **Bug Fix**
