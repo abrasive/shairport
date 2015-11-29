@@ -2,6 +2,7 @@
 #define _COMMON_H
 
 #include <stdint.h>
+#include <endian.h>
 #include <sys/socket.h>
 #include <libconfig.h>
 
@@ -116,6 +117,7 @@ uint64_t get_absolute_time_in_fp(void);
 
 // this is for reading an unsigned 32 bit number, such as an RTP timestamp
 
+long endianness;
 uint32_t uatoi(const char *nptr);
 
 shairport_cfg config;

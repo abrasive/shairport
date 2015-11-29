@@ -641,6 +641,27 @@ int main(int argc, char **argv) {
   free(basec);
 
   // set defaults
+  
+  
+  // get thje endianness
+  union {
+   uint32_t u32;
+   uint8_t arr[4];
+  } xn;
+
+  xn.arr[0] = 0x44;     /* Lowest-address byte */
+  xn.arr[1] = 0x33;
+  xn.arr[2] = 0x22;
+  xn.arr[3] = 0x11;     /* Highest-address byte */
+  
+  if (xn.u32==0x11223344)
+    endianness = __LITTLE_ENDIAN;
+  else if (xn.u32==0x33441122)
+    endianness = __PDP_ENDIAN;
+  else if (xn.u32==0x44332211)
+    endianness = __BIG_ENDIAN;
+  else die("Can not recognise the endianness of the processor.");
+  
   strcpy(configuration_file_path, "/etc/");
   strcat(configuration_file_path, appName);
   strcat(configuration_file_path, ".conf");
@@ -831,6 +852,18 @@ int main(int argc, char **argv) {
   config.output->init(argc - audio_arg, argv + audio_arg);
 
   daemon_log(LOG_NOTICE, "startup");
+  
+  switch (endianness) {
+    case __LITTLE_ENDIAN:
+      debug(2,"The processor is running little-endian.");
+      break;
+    case __BIG_ENDIAN:
+      debug(2,"The processor is running big-endian.");
+      break;
+    case __PDP_ENDIAN:
+      debug(2,"The processor is running pdp-endian.");
+      break; 
+  }
   
   /* Mess around with the latency options */
   // Basically, we used to rely on static latencies -- 99400 for iTunes 10 or later and forkedDaapd, 88200 for everything else
