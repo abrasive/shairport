@@ -1085,13 +1085,16 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn, rtsp_message *re
 
   unsigned int off = 8;
 
+  uint32_t itag, vl;
   while (off < cl) {
     // pick up the metadata tag as an unsigned longint
-    uint32_t itag = ntohl(*(uint32_t *)(cp + off));
+    memcpy(&itag, (uint32_t *)(cp + off), sizeof(uint32_t)); /* can be misaligned, thus memcpy */
+    itag = ntohl(itag);
     off += sizeof(uint32_t);
 
     // pick up the length of the data
-    uint32_t vl = ntohl(*(uint32_t *)(cp + off));
+    memcpy(&vl, (uint32_t *)(cp + off), sizeof(uint32_t)); /* can be misaligned, thus memcpy */
+    vl = ntohl(vl);
     off += sizeof(uint32_t);
 
     // pass the data over
