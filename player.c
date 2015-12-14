@@ -242,7 +242,13 @@ static void alac_decode(short *dest, uint8_t *buf, int len) {
   } else {
     alac_decode_frame(decoder_info, buf, dest, &outsize);
   }
-
+  if (outsize!=FRAME_BYTES(frame_size)) {
+    if(outsize<FRAME_BYTES(frame_size)) {
+      debug(1,"Output from alac_decode is smaller than expected. Encrypted = %d.",encrypted);
+    } else {
+      debug(1,"OUtput from alac_decode larger than expected -- truncated, but buffer overflow possible! Encrypted = %d.",encrypted);
+    }
+  }
   assert(outsize == FRAME_BYTES(frame_size));
 }
 
@@ -786,14 +792,14 @@ static int stuff_buffer_basic(short *inptr, short *outptr, int stuff) {
   };
   if (stuff) {
     if (stuff == 1) {
-      debug(3, "+++++++++");
+      // debug(3, "+++++++++");
       // interpolate one sample
       //*outptr++ = dithered_vol(((long)inptr[-2] + (long)inptr[0]) >> 1);
       //*outptr++ = dithered_vol(((long)inptr[-1] + (long)inptr[1]) >> 1);
       *outptr++ = dithered_vol(shortmean(inptr[-2], inptr[0]));
       *outptr++ = dithered_vol(shortmean(inptr[-1], inptr[1]));
     } else if (stuff == -1) {
-      debug(3, "---------");
+      // debug(3, "---------");
       inptr++;
       inptr++;
     }
