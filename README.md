@@ -98,6 +98,7 @@ The following libraries are required:
 * ALSA
 * libdaemon
 * autoconf
+* automake
 * libtool
 * libpopt
 * libconfig
@@ -109,11 +110,11 @@ Many Linux distributions have Avahi and OpenSSL already in place, so normally it
 
 Assuming the usual build essentials and git, Debian, Ubuntu and Raspbian users can get the basics with:
 
-- `apt-get install autoconf libtool libdaemon-dev libasound2-dev libpopt-dev libconfig-dev`
+- `apt-get install autoconf automake libtool libdaemon-dev libasound2-dev libpopt-dev libconfig-dev`
 - `apt-get install avahi-daemon libavahi-client-dev` if you want to use Avahi (recommended).
 - `apt-get install libssl-dev` if you want to use OpenSSL and libcrypto, or use PolarSSL otherwise.
 - `apt-get install libpolarssl-dev` if you want to use PolarSSL, or use OpenSSL/libcrypto otherwise.
-- `apt-get install libsoxr-dev` if you want support for libsoxr-based resampling. This library is not yet part of  Raspbian; instructions for how to build it from source are available at [LIBSOXR.md](https://github.com/mikebrady/shairport-sync/blob/development/LIBSOXR.md).
+- `apt-get install libsoxr-dev` if you want support for libsoxr-based resampling. This library is not yet part of every distribution; instructions for how to build it from source for Raspian/Debian Wheezy are available at [LIBSOXR.md](https://github.com/mikebrady/shairport-sync/blob/development/LIBSOXR.md).
 
 Download Shairport Sync:
 
