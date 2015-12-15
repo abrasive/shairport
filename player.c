@@ -249,7 +249,6 @@ static void alac_decode(short *dest, uint8_t *buf, int len) {
       debug(1,"OUtput from alac_decode larger than expected -- truncated, but buffer overflow possible! Encrypted = %d.",encrypted);
     }
   }
-  assert(outsize == FRAME_BYTES(frame_size));
 }
 
 static int init_decoder(int32_t fmtp[12]) {
