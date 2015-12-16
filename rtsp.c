@@ -1162,23 +1162,29 @@ static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_m
         send_metadata('ssnc', 'mden', NULL, 0, NULL, 0); // metadata starting, if rtptime is not available
 
     } else if (!strncmp(ct, "image", 5)) {
-      // debug(1, "received image in SET_PARAMETER request.");
-      // note: the image/type tag isn't reliable, so it's not being sent
-      // -- best look at the first few bytes of the image
-      if (p==NULL)
-        debug(1,"Missing RTP-Time info for picture item");
-      if (p)
-        send_metadata('ssnc', 'pcst', p+1, strlen(p+1), req, 1); // picture starting
-      else
-        send_metadata('ssnc', 'pcst', NULL, 0, NULL, 0); // picture starting, if rtptime is not available
+      // Some server simply ignore the md field from the TXT record. If The
+      // config says 'please, do not include any cover art', we are polite and
+      // do not write them to the pipe.
+      if (config.get_coverart) {
+        // debug(1, "received image in SET_PARAMETER request.");
+        // note: the image/type tag isn't reliable, so it's not being sent
+        // -- best look at the first few bytes of the image
+        if (p==NULL)
+          debug(1,"Missing RTP-Time info for picture item");
+        if (p)
+          send_metadata('ssnc', 'pcst', p+1, strlen(p+1), req, 1); // picture starting
+        else
+          send_metadata('ssnc', 'pcst', NULL, 0, NULL, 0); // picture starting, if rtptime is not available
 
-      send_metadata('ssnc', 'PICT', req->content, req->contentlength, req, 1);
+        send_metadata('ssnc', 'PICT', req->content, req->contentlength, req, 1);
 
-      if (p)
-        send_metadata('ssnc', 'pcen', p+1, strlen(p+1), req, 1); // picture ending
-      else
-        send_metadata('ssnc', 'pcen', NULL, 0, NULL, 0); // picture ending, if rtptime is not available
-
+        if (p)
+          send_metadata('ssnc', 'pcen', p+1, strlen(p+1), req, 1); // picture ending
+        else
+          send_metadata('ssnc', 'pcen', NULL, 0, NULL, 0); // picture ending, if rtptime is not available
+      } else {
+        debug(1, "Ignore received picture item (include_cover_art = no).");
+      }
     } else
 #endif
     if (!strncmp(ct, "text/parameters", 15)) {
