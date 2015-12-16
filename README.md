@@ -127,6 +127,7 @@ Next, `cd` into the shairport-sync directory and execute the following commands:
 $ git checkout development #select the development branch
 $ autoreconf -i -f
 ```
+(Note that the `autoreconf...` step may take some time on less powerful machines.)
 
 Choose the appropriate `--with-*` options:
 
