@@ -588,12 +588,12 @@ static void handle_record(rtsp_conn_info *conn, rtsp_message *req, rtsp_message 
   resp->respcode = 200;
    // I think this is for telling the client what the absolute minimum latency actually is,
    // and when the client specifies a latency, it should be added to this figure.
-   
+
    // Thus, AirPlay's latency figure of 77175, when added to 11025 gives you exactly 88200
    // and iTunes' latency figure of 88553, when added to 11025 gives you 99578, pretty close to the 99400 we guessed.
-   
+
   msg_add_header(resp, "Audio-Latency", "11025");
-  
+
   char *p;
   uint32_t rtptime = 0;
   char *hdr = msg_get_header(req, "RTP-Info");
@@ -678,7 +678,7 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
 
   // This latency-setting mechanism is deprecated and will be removed.
   // If no non-standard latency is chosen, automatic negotiated latency setting is permitted.
-  
+
   // Select a static latency
   // if iTunes V10 or later is detected, use the iTunes latency setting
   // if AirPlay is detected, use the AirPlay latency setting
@@ -721,7 +721,7 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
       debug(2, "Unrecognised User-Agent. Using latency of %d frames.", config.latency);
     }
   }
-  
+
   if (config.latency==-1) {
     // this means that no static latency was set, so we'll allow it to be set dynamically
     config.latency=88198; // to be sure, to be sure -- make it slighty different from the default to ensure we get a debug message when set to 88200
@@ -1050,7 +1050,7 @@ int send_metadata(uint32_t type, uint32_t code, char *data, uint32_t length, rts
   // the rtsp_message is sent for 'core' messages, because it contains the data and must not be
   // freed until the data has been read. So, it is passed to send_metadata to be retained,
   // sent to the thread where metadata is processed and released (and probably freed).
-  
+
   // The rtsp_message is also sent for certain non-'core' messages.
 
   // The reading of the parameters is a bit complex
@@ -1119,7 +1119,7 @@ static void handle_get_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_m
 static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
   // if (!req->contentlength)
   //    debug(1, "received empty SET_PARAMETER request.");
-  
+
   // msg_print_debug_headers(req);
 
   char *ct = msg_get_header(req, "Content-Type");
@@ -1132,7 +1132,7 @@ static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_m
     // to link items of metadata, including pictures, that refer to the same entity.
     // If they refer to the same item, they have the same rtptime.
     // So we send the rtptime before and after both the metadata items and the picture item
-     // get the rtptime    
+     // get the rtptime
     char *p = NULL;
     char *hdr = msg_get_header(req, "RTP-Info");
 
@@ -1153,7 +1153,7 @@ static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_m
         send_metadata('ssnc', 'mdst', p+1, strlen(p+1), req, 1); // metadata starting
       else
         send_metadata('ssnc', 'mdst', NULL, 0, NULL, 0); // metadata starting, if rtptime is not available
-          
+
       handle_set_parameter_metadata(conn, req, resp);
 
       if (p)
@@ -1161,33 +1161,38 @@ static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_m
       else
         send_metadata('ssnc', 'mden', NULL, 0, NULL, 0); // metadata starting, if rtptime is not available
 
-      
     } else if (!strncmp(ct, "image", 5)) {
-      // debug(1, "received image in SET_PARAMETER request.");
-      // note: the image/type tag isn't reliable, so it's not being sent
-      // -- best look at the first few bytes of the image
-      if (p==NULL)
-        debug(1,"Missing RTP-Time info for picture item");
-      if (p)
-        send_metadata('ssnc', 'pcst', p+1, strlen(p+1), req, 1); // picture starting   
-            else
-        send_metadata('ssnc', 'pcst', NULL, 0, NULL, 0); // picture starting, if rtptime is not available
+      // Some server simply ignore the md field from the TXT record. If The
+      // config says 'please, do not include any cover art', we are polite and
+      // do not write them to the pipe.
+      if (config.get_coverart) {
+        // debug(1, "received image in SET_PARAMETER request.");
+        // note: the image/type tag isn't reliable, so it's not being sent
+        // -- best look at the first few bytes of the image
+        if (p==NULL)
+          debug(1,"Missing RTP-Time info for picture item");
+        if (p)
+          send_metadata('ssnc', 'pcst', p+1, strlen(p+1), req, 1); // picture starting
+        else
+          send_metadata('ssnc', 'pcst', NULL, 0, NULL, 0); // picture starting, if rtptime is not available
 
-      send_metadata('ssnc', 'PICT', req->content, req->contentlength, req, 1);
+        send_metadata('ssnc', 'PICT', req->content, req->contentlength, req, 1);
 
-      if (p)
-        send_metadata('ssnc', 'pcen', p+1, strlen(p+1), req, 1); // picture ending
-      else
-        send_metadata('ssnc', 'pcen', NULL, 0, NULL, 0); // picture ending, if rtptime is not available
-
+        if (p)
+          send_metadata('ssnc', 'pcen', p+1, strlen(p+1), req, 1); // picture ending
+        else
+          send_metadata('ssnc', 'pcen', NULL, 0, NULL, 0); // picture ending, if rtptime is not available
+      } else {
+        debug(1, "Ignore received picture item (include_cover_art = no).");
+      }
     } else
 #endif
-        if (!strncmp(ct, "text/parameters", 15)) {
+    if (!strncmp(ct, "text/parameters", 15)) {
       debug(2, "received parameters in SET_PARAMETER request.");
       handle_set_parameter_parameter(conn, req, resp); // this could be volume or progress
     } else {
       debug(1, "received unknown Content-Type \"%s\" in SET_PARAMETER request.", ct);
-    }  
+    }
   } else {
     debug(1, "missing Content-Type header in SET_PARAMETER request.");
   }
@@ -1220,7 +1225,7 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
 
       cp = next;
     }
-    
+
     if ((paesiv==NULL) && (prsaaeskey==NULL)) {
       //debug(1,"Unencrypted session requested?");
       conn->stream.encrypted = 0;
@@ -1228,7 +1233,7 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
       conn->stream.encrypted = 1;
       //debug(1,"Encrypted session requested");
     }
-    
+
     if (!pfmtp) {
       warn("FMTP params missing from the following ANNOUNCE message:");
       // print each line of the request content
@@ -1243,7 +1248,7 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
       }
       goto out;
     }
-    
+
     if (conn->stream.encrypted) {
       int len, keylen;
       uint8_t *aesiv = base64_dec(paesiv, &len);
