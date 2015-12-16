@@ -108,8 +108,9 @@ Optional:
 
 Many Linux distributions have Avahi and OpenSSL already in place, so normally it probably makes sense to choose those options rather than tinysvcmdns or PolarSSL. Libsoxr is available in recent Linux distributions, but it requires lots of processor power — chances are an embedded processor won't be able to keep up.
 
-Assuming the usual build essentials and git, Debian, Ubuntu and Raspbian users can get the basics with:
+Debian, Ubuntu and Raspbian users can get the basics with:
 
+- `apt-get install build-essential git` – these may already be installed.
 - `apt-get install autoconf automake libtool libdaemon-dev libasound2-dev libpopt-dev libconfig-dev`
 - `apt-get install avahi-daemon libavahi-client-dev` if you want to use Avahi (recommended).
 - `apt-get install libssl-dev` if you want to use OpenSSL and libcrypto, or use PolarSSL otherwise.
