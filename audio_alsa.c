@@ -94,7 +94,8 @@ static void help(void) {
 }
 
 static int init(int argc, char **argv) {
-  const char *str;
+	// debug(1,"audio_alsa init called.");
+	const char *str;
   int value;
 
   int hardware_mixer = 0;
@@ -108,9 +109,9 @@ static int init(int argc, char **argv) {
 
   if (config.cfg != NULL) {
     /* Get the desired buffer size setting. */
-    if (config_lookup_int(config.cfg, "alsa.audio_backend_buffer_desired_length_software", &value)) {
+    if (config_lookup_int(config.cfg, "alsa.audio_backend_buffer_desired_length", &value)) {
       if ((value < 0) || (value > 66150))
-        die("Invalid alsa audio backend buffer desired length (software) \"%d\". It should be between 0 and "
+        die("Invalid alsa audio backend buffer desired length \"%d\". It should be between 0 and "
             "66150, default is 6615",
             value);
       else {
