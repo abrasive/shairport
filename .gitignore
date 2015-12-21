@@ -19,3 +19,4 @@ stamp-h1
 .deps
 man/Makefile
 man/Makefile.in
+scripts/shairport-sync.service
