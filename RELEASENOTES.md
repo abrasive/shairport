@@ -1,6 +1,8 @@
 Version 2.7.4 -- Development Version
 ----
 **Enhancements**
+* Use the correct method for finding the `systemd` unit path, as recomended by debain maintainers and
+http://www.freedesktop.org/software/systemd/man/daemon.html#Installing%20Systemd%20Service%20Files. Thanks to [dantheperson](https://github.com/dantheperson).
 * Rather than hardwire the path `/usr/local/bin` as the path to the shairport-sync executable, the value of `$PREFIX` is now used during configuration. Thanks to [Nick Steel](https://github.com/kingosticks).
 * Add some extra diagnostic messages if the hardware buffer in the DAC is smaller than desired.
 * If metadata has been enabled, but if picture sending has not been requested and the source sends pictures anyway, omit them from the metadata feed. Thanks to [Jörg Krause](https://github.com/joerg-krause).
