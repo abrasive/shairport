@@ -267,8 +267,8 @@ static void deinit(void) {
 }
 
 int open_alsa_device(void) {
-  const snd_pcm_uframes_t buffer_headroom = 352*3; // the hardware buffer must be this much bigger than the desired buffer length
-  int ret, dir = 0;
+  const snd_pcm_uframes_t minimal_buffer_headroom = 352*2; // we accept this much headroom in the hardware buffer, but we'll accept less
+  const snd_pcm_uframes_t requested_buffer_headroom = minimal_buffer_headroom+2048; // we ask for this much headroom in the hardware buffer, but we'll accept less
   unsigned int my_sample_rate = desired_sample_rate;
   //snd_pcm_uframes_t frames = 441 * 10;
   snd_pcm_uframes_t buffer_size, actual_buffer_length;
@@ -321,14 +321,16 @@ int open_alsa_device(void) {
     die("audio_alsa: Unable to get hw buffer length for device \"%s\": %s.", alsa_out_dev, snd_strerror(ret));
   }
   
-  if (actual_buffer_length < config.audio_backend_buffer_desired_length+buffer_headroom) {
+  if (actual_buffer_length < config.audio_backend_buffer_desired_length+minimal_buffer_headroom) {
     // the dac buffer is too small, so let's try to set it
-    buffer_size = config.audio_backend_buffer_desired_length+buffer_headroom;
+    buffer_size = config.audio_backend_buffer_desired_length+requested_buffer_headroom;
     ret =  snd_pcm_hw_params_set_buffer_size_near(alsa_handle, alsa_params, &buffer_size);
     if (ret < 0)
-      die("audio_alsa: Unable to set hw buffer size to %lu for device \"%s\": %s.", config.audio_backend_buffer_desired_length+buffer_headroom, alsa_out_dev, snd_strerror(ret));
-    if (config.audio_backend_buffer_desired_length+buffer_headroom > buffer_size)
-      die("audio_alsa: Can't set hw buffer size to %lu for device \"%s\": %s.", config.audio_backend_buffer_desired_length+buffer_headroom, alsa_out_dev, snd_strerror(ret));
+      die("audio_alsa: Unable to set hw buffer size to %lu for device \"%s\": %s.", config.audio_backend_buffer_desired_length+requested_buffer_headroom, alsa_out_dev, snd_strerror(ret));
+    if (config.audio_backend_buffer_desired_length+minimal_buffer_headroom > buffer_size) {
+      die("audio_alsa: Can't set hw buffer size to %lu or more for device \"%s\". Requested size: %lu, granted size: %lu.", config.audio_backend_buffer_desired_length+minimal_buffer_headroom,
+      	alsa_out_dev,config.audio_backend_buffer_desired_length+requested_buffer_headroom,buffer_size);
+    }
   }
   
   return (0);
