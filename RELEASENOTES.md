@@ -1,3 +1,8 @@
+Version 2.7.4 -- Development Version
+----
+**Enhancements**
+* Rather than hardwire the path `/usr/local/bin` as the path to the shairport-sync executable, the value of `$PREFIX` is now used.
+
 Version 2.7.3 -- Development Version
 ----
 **Bug Fix**
