@@ -1,7 +1,14 @@
 Version 2.7.4 -- Development Version
 ----
 **Enhancements**
-* Rather than hardwire the path `/usr/local/bin` as the path to the shairport-sync executable, the value of `$PREFIX` is now used.
+* Rather than hardwire the path `/usr/local/bin` as the path to the shairport-sync executable, the value of `$PREFIX` is now used during configuration. Thanks to [Nick Steel](https://github.com/kingosticks).
+* Add some extra diagnostic messages if the hardware buffer in the DAC is smaller than desired.
+* If metadata has been enabled, but if picture sending has not been requested and the source sends pictures anyway, omit them from the metadata feed. Thanks to [Jörg Krause](https://github.com/joerg-krause).
+
+**Bug Fixes**
+* Fixed a data alignment issue in the handling of metadata on some processors. Thanks to [Jörg Krause](https://github.com/joerg-krause).
+* Removed an `assert` which would terminate the program if a malformed packet of data was received.
+* Look for the correct tag name for desired alsa buffer length: `audio_backend_buffer_desired_length` rather than `audio_backend_buffer_desired_length_software`.
 
 Version 2.7.3 -- Development Version
 ----
