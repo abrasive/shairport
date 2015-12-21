@@ -269,9 +269,11 @@ static void deinit(void) {
 int open_alsa_device(void) {
   const snd_pcm_uframes_t minimal_buffer_headroom = 352*2; // we accept this much headroom in the hardware buffer, but we'll accept less
   const snd_pcm_uframes_t requested_buffer_headroom = minimal_buffer_headroom+2048; // we ask for this much headroom in the hardware buffer, but we'll accept less
+  int ret, dir = 0;
   unsigned int my_sample_rate = desired_sample_rate;
   //snd_pcm_uframes_t frames = 441 * 10;
   snd_pcm_uframes_t buffer_size, actual_buffer_length;
+  
   ret = snd_pcm_open(&alsa_handle, alsa_out_dev, SND_PCM_STREAM_PLAYBACK, 0);
   if (ret < 0)
     return (ret);
