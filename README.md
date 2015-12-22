@@ -29,7 +29,7 @@ What else?
 * Hardware Mute — Shairport Sync will mute properly if the hardware supports it.
 * Fast Response — With hardware volume control, response is instantaneous; otherwise the response time is 0.15 seconds.
 * Non-Interruptible — Shairport Sync sends back a "busy" signal if it's already playing audio from another source, so other sources can't disrupt an existing Shairport Sync session. (If a source disappears without warning, the session automatically terminates after two minutes and the device becomes available again.)
-* Metadata — Shairport Sync can be configured to deliver metadata supplied by the source, such as Album Name, Artist Name, Cover Art, etc. through a pipe to a recipient application program — see https://github.com/mikebrady/shairport-sync-metadata-reader for a sample recipient. Sources that supply metadata include iTunes among others but the Music app in iOS 9 only supplies volume control metadata.
+* Metadata — Shairport Sync can be configured to deliver metadata supplied by the source, such as Album Name, Artist Name, Cover Art, etc. through a pipe to a recipient application program — see https://github.com/mikebrady/shairport-sync-metadata-reader for a sample recipient. Sources that supply metadata include iTunes and the Music app in iOS.
 * Raw Audio — Shairport Sync can deliver raw PCM audio to standard output or to a pipe. This output is delivered synchronously with the source after the appropriate latency and is not interpolated or "stuffed" on its way through Shairport Sync.
 * Autotools and Libtool Support — One important difference between Shairport Sync and other versions of Shairport is that the Shairport Sync build process uses GNU autotools and libtool to examine and configure the build environment — very important for cross compilation. Previous versions of Shairport looked at the current system to determine which packages were available, instead of looking at the target system for what packages were available.
 
@@ -37,7 +37,7 @@ Status
 ------
 Shairport Sync works on a wide variety of Linux devices. It works on standard Ubuntu laptops, on the Raspberry Pi with Raspbian Wheezy and Jessie, Arch Linux and OpenWrt, and it runs on a Linksys NSLU2 and a TP-Link 710N using OpenWrt. It works with built-in audio and with a variety of USB-connected audio amplifiers and DACs, including a cheapo USB "3D Sound" dongle, a first generation iMic and a Topping TP30 amplifier with a USB DAC input. It will not work properly – if at all – with a PulseAudio (pseudo-)output device. Using a port of the `alsa` system, Shairport Sync runs rather well on FreeBSD.
 
-Shairport Sync runs well on the Raspberry Pi. It can drive the built-in sound card, though the audio out of the card is of poor quality (see the note below on configuring the Raspberry Pi to make best use of it). USB-connected sound cards work well on recent versions of Raspbian; however older versions of Raspbian appear to suffer from a problem — see http://www.raspberrypi.org/forums/viewtopic.php?t=23544, so it is wise to update. Shairport Sync works well with the IQAudIO Pi-DAC — see http://www.iqaudio.com.
+Shairport Sync runs well on the Raspberry Pi. It can drive the built-in sound card, though the audio out of the card is of poor quality (see the note below on configuring the Raspberry Pi to make best use of it). USB-connected sound cards work well, though [very] old versions of Raspbian appear to suffer from a problem — see http://www.raspberrypi.org/forums/viewtopic.php?t=23544, so it is wise to update. Shairport Sync works well with the IQAudIO Pi-DAC — see http://www.iqaudio.com.
 
 At the time of writing, OpenWrt trunk does not support USB audio well on the Raspberry Pi.
 
@@ -146,11 +146,11 @@ Choose the appropriate `--with-*` options:
 
 **System V and `systemd`**
 
-At the time of writing, there are two general systems for automatically starting programs automatically at startup: "System V" or `systemd`. To see if the `systemd` process is running on your system, enter the following command:
+At the time of writing, there are two widely-used systems for automatically starting programs automatically at startup: "System V" and `systemd`. (There are others, but they are not considered here.) To see if the `systemd` process is running on your system, enter the following command:
 
 `ps aux | grep systemd | grep -v grep`
 
-On a system using `systemd` (this is a Raspberry Pi running Raspbian Jessie) you'll get many lines containing `systemd`, for example:
+On a system using `systemd` (this is from a Raspberry Pi running Raspbian Jessie) you'll get many lines containing `systemd`, for example:
 ```
 pi@raspberrypi ~ $ ps aux | grep systemd | grep -v grep
 root        90  0.1  0.6   8088  2764 ?        Ss   08:00   0:01 /lib/systemd/systemd-journald
@@ -160,14 +160,14 @@ message+   528  0.0  0.7   5568  3172 ?        Ss   08:00   0:01 /usr/bin/dbus-d
 pi         983  0.0  0.7   4912  3256 ?        Ss   08:00   0:00 /lib/systemd/systemd --user
 pi@raspberrypi ~ $ 
 ```
-whereas on a system without `systemd` -- presumably using System V --  (this is a Raspberry Pi running Raspbian Wheezy) , you'll get nothing:
+whereas on a system without `systemd` -- presumably using System V --  (this is a from a Raspberry Pi running Raspbian Wheezy) , you'll get nothing:
 ```
 pi@raspberrypi ~ $ ps aux | grep systemd | grep -v grep
 pi@raspberrypi ~ $ 
 ```
 Choose `--with-systemd` or `--with-systemv` on the basis of the outcome.
 
-Here is an example, suitable for installations such as Ubuntu and Raspbian:
+Here is an example, suitable for installations such as Ubuntu and Raspbian Wheezy:
 
 `$ ./configure --with-alsa --with-avahi --with-ssl=openssl --with-metadata --with-soxr --with-systemv`
 
@@ -226,9 +226,7 @@ Starting and stopping automatically is taken care of differently in different ve
 
 To get the best from Shairport Sync, you’ll need to (1) give Shairport Sync a service name by which it will be seen in iTunes etc., (2) specify the output device to use and (3) specify the name of the mixer volume control to use to control the output level. To get values for (2) and (3) you might need to explore the ALSA output devices with a program like `alsamixer` or similar.
 
-Shairport Sync reads settings from a configuration file at `/etc/shairport-sync.conf`. While it can also take configuration settings from command line options, it is recommended that you use the configuration file method. When you run `$sudo make install`,  a default configuration is installed at `/etc/shairport-sync.conf` (it won't replace an existing one) which should work in almost any system with a sound card.
-
-A sample configuration file is installed (or updated) at `/etc/shairport-sync.conf.sample`. This contains all the setting groups and all the settings available, but they all are commented out (comments begin with `//`) so that default values are used. The file contains explanations of the settings, useful hints and suggestions.
+Shairport Sync reads settings from a configuration file at `/etc/shairport-sync.conf`. When you run `$sudo make install`, a sample configuration file is installed (or updated) at `/etc/shairport-sync.conf.sample`. This contains all the setting groups and all the settings available, but they all are commented out (comments begin with `//`) so that default values are used. The file contains explanations of the settings, useful hints and suggestions. In addition, if the file doesn't already exist, a default configuration is installed at `/etc/shairport-sync.conf`, which should work in almost any system with a sound card.
 
 Settings in the configuration file are grouped. For instance, there is a `general` group within which you can use the `name` tag to set the service name. Suppose you wanted to set the name of the service to `Front Room`, give the service the password `secret` and used `libsoxr` interpolation, then you should do the following:
 
@@ -241,6 +239,8 @@ general =
 	// ... other general settings
 };
 ```
+(Remember, anything preceded by `//` is a comment and will have no effect on the setting of Shairport Sync.)
+
 The `alsa` group is used to specify properties of the output device. The most obvious setting is the name of the output device which you can set using the `output_device` tag.
 
 The following `alsa` group settings are very important for maximum performance. If your audio device has a mixer that can be use to control the volume, then Shairport Sync can use it to give instant response to volume and mute commands and it can offload some work from the processor.
@@ -261,14 +261,18 @@ Shairport Sync can run programs just before it starts to play an audio stream an
 
 Please note that the full path to the programs must be specified, and script files will not be executed unless they are marked as executable and have the standard `#!/bin/...` first line. (This behaviour may be different from other Shairports.)
 
+Note: Shairport Sync can take configuration settings from command line options. This is mainly for backward compatability, but sometimes still useful. For normal use, it is strongly recommended that you use the configuration file method.
+
 **Raspberry Pi**
-The Raspberry Pi has a built-in audio DAC that is connected to the device's headphone jack. This provides a low-quality output that is nevertheless useful for testing purposes and may be adequate for [very] casual listening. It is not HiFi -- it is quite noisy and can't play anything above about 15kHz. A further problem is that it declares itself to have a very large mixer volume control range -- all the way from -102.38dB up to +4dB, a range of 106.38 dB. In reality, only the top 35dB of it is in any way usable. To help get the most from the DAC, consider using the `volume_range_db` setting in the `general` stanza to instruct Shairport Sync to use the top of the DAC mixer's declared range. For example, if you set the `volume_range_db` figure to 35, the top 35 dB of the range will the used. With this setting on the Raspberry Pi, maximum volume will be +4dB and minimum volume will be -31dB, below which muting will occur.
+The Raspberry Pi has a built-in audio DAC that is connected to the device's headphone jack. This provides a low-quality output that is nevertheless useful for testing purposes and may be adequate for [very] casual listening. It is not HiFi -- it is quite noisy and can't play anything above about 15kHz. A further problem is that it declares itself to have a very large mixer volume control range -- all the way from -102.38dB up to +4dB, a range of 106.38 dB. In reality, only the top 30dB of it is in any way usable. To help get the most from the DAC, consider using the `volume_range_db` setting in the `general` stanza to instruct Shairport Sync to use the top of the DAC mixer's declared range. For example, if you set the `volume_range_db` figure to 30, the top 30 dB of the range will the used. With this setting on the Raspberry Pi, maximum volume will be +4dB and minimum volume will be -26dB, below which muting will occur.
 
 From a user's point of view, the effect of using this setting is to move the minimum usable volume all the way down to the bottom of the user's volume control, rather than have the minimum usable volume concentrated very close to the maximum volume.
 
+Another setting to consider is the `general` `drift` setting: you should set it to a larger number, such as 352, to reduce the amount of overcorrection that seems to occur when using the Raspberry Pi's built-in DAC. 
+
 *Command Line Arguments*
 
-You can use command line arguments to provide settings to Shairport Sync as before. For full information, please read the Shairport Sync `man` page, also available at  http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/development/man/shairport-sync.html.
+As previously mentioned, you can use command line arguments to provide settings to Shairport Sync as before, though newer settings will only be available via the configuration file. For full information, please read the Shairport Sync `man` page, also available at  http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/development/man/shairport-sync.html.
 
 Apart from the following options, all command line options can be replaced by settings in the configuration file. Here is a brief description of command line options that are not replicated by settings in the settings file.
 
@@ -376,9 +380,9 @@ Latency
 -------
 Latency is the exact time from a sound signal's original timestamp until that signal actually "appears" on the output of the audio output device, usually a Digital to Audio Converter (DAC), irrespective of any internal delays, processing times, etc. in the computer. 
 
-Shairport Sync uses latencies supplied by the source, typically either 88,200 or 99,577 frames. You shouldn't need to change them. (The `latencies` stanza in the configuration file and the various latency command-line options are deprecated.)
+Shairport Sync uses latencies supplied by the source, typically either 88,200 or 99,577 frames. You shouldn't need to change them. (The `latencies` stanza in the configuration file and the various latency command-line options are now obselete and are deprecated.)
 
-Problems can arise when you are trying to synchronise with speaker systems — typically surround-sound home theatre systems — that have their own inherent delays. You can compensate for an inherent delay using the appropriate backend  (typically `alsa`) `audio_backend_latency_offset`. Set this offset (in frames) to compensate for a fixed delay in the audio back end, for example, if the output device delays by 100 ms, set this to -4410.
+Problems can arise when you are trying to synchronise with speaker systems — typically surround-sound home theatre systems — that have their own inherent delays. You can compensate for an inherent delay using the appropriate backend (typically `alsa`) `audio_backend_latency_offset`. Set this offset (in frames) to compensate for a fixed delay in the audio back end; for example, if the output device delays by 100 ms, set this to -4410.
 
 Resynchronisation
 -------------
@@ -388,7 +392,7 @@ If synchronisation is lost — say due to a busy source or a congested network �
 
 Tolerance
 ---------
-Playback synchronisation is allowed to wander, or to "drift") a small amount before attempting to correct it. The default is 88 frames, i.e. 2 ms. The smaller the tolerance, the  more  likely it is that overcorrection  will  occur. Overcorrection is when more corrections (insertions and deletions) are made than are strictly necessary  to  keep the stream in sync. Use the statistics setting to monitor correction levels. Corrections should  not  greatly exceed net corrections.
+Playback synchronisation is allowed to wander — to "drift" — a small amount before attempting to correct it. The default is 88 frames, i.e. 2 ms. The smaller the tolerance, the  more  likely it is that overcorrection will occur. Overcorrection is when more corrections (insertions and deletions) are made than are strictly necessary to keep the stream in sync. Use the `statistics` setting to monitor correction levels. Corrections should not greatly exceed net corrections.
 * You can vary the tolerance with the `general` `drift` setting.
 
 Some Statistics
