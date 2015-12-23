@@ -58,6 +58,9 @@ If you wish to install Shairport Sync on OpenWrt, Arch or Fedora platforms, plea
 The following procedures will install the shairport-sync application into your system. Before continuing, you should check to see if shairport-sync is already installed -- you can use `which shairport-sync` to find where it is located, if installed. If it is installed you should delete it -- you may need to have superuser privileges. After deleting, check again in case further copies are installed elsewhere.
 (If the existing installation of shairport-sync is where the new copy will be installed into, it will be overwritten;  sometimes, however, the installation is to another location, so it is safer, initially, to delete previous versions manually.) 
 
+**Ubuntu**
+Personal Package Archives for Shairport Sync master and development branches are available at https://launchpad.net/~dantheperson.
+
 **OpenWrt:**
 There is a Shairport Sync package in OpenWrt `trunk`. Also, there's an OpenWrt package at https://github.com/mikebrady/shairport-sync-for-openwrt, including one that builds back to `Attitude Adjustment`.
 
