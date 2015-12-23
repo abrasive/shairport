@@ -1,5 +1,8 @@
 Version 2.7.5 -- Development Version
 ----
+**New Features**
+* Ubuntu PPA files now available at https://launchpad.net/~dantheperson.
+
 **Enhancements**
 * Broaden the use of the value `$PREFIX` instead of the path `/usr/local/bin` during configuration. Thanks to [dantheperson](https://github.com/dantheperson).
 
