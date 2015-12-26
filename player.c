@@ -579,9 +579,8 @@ static abuf_t *buffer_get_frame(void) {
                  << 32) /
                     44100;
 
-            uint32_t filler_size = frame_size;
             uint32_t max_dac_delay = 4410;
-            filler_size = 4410; // 0.1 second -- the maximum we'll add to the DAC
+            uint32_t filler_size = max_dac_delay; // 0.1 second -- the maximum we'll add to the DAC
 
             if (local_time_now >= first_packet_time_to_play) {
               // we've gone past the time...

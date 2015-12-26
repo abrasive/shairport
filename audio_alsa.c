@@ -453,8 +453,12 @@ static void parameters(audio_parameters *info) {
 static void volume(double vol) {
   // debug(1,"Setting volume db to %f, for volume input of %f.",vol_setting/100,vol);
   set_volume = vol;
-  if (snd_mixer_selem_set_playback_dB_all(alsa_mix_elem, vol, -1) != 0)
-    die("Failed to set playback dB volume");
+  if (snd_mixer_selem_set_playback_dB_all(alsa_mix_elem, vol, 0) != 0) {
+    debug(1,"Can't set playback volume accurately to %f dB.",vol);
+    if (snd_mixer_selem_set_playback_dB_all(alsa_mix_elem, vol, -1) != 0)
+      if (snd_mixer_selem_set_playback_dB_all(alsa_mix_elem, vol, 1) != 0)
+        die("Failed to set playback dB volume");
+  }
 }
 
 static void linear_volume(double vol) {
