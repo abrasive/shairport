@@ -229,6 +229,13 @@ AS_IF([test "x$with_systemdsystemunitdir" != "xno"],
       [AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])])
 AM_CONDITIONAL([HAVE_SYSTEMD], [test "x$with_systemdsystemunitdir" != "xno"])
 
+# Look for xmltoman
+AC_CHECK_PROGS([XMLTOMAN], [xmltoman])
+if test -z "$XMLTOMAN"; then
+  AC_MSG_WARN([>>xmltoman not found - not rebuilding man pages])
+fi
+AM_CONDITIONAL([HAVE_XMLTOMAN], [test -n "$XMLTOMAN"])
+
 # Checks for header files.
 AC_HEADER_STDC
 AC_CHECK_HEADERS([getopt_long.h])

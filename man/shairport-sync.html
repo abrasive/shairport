@@ -88,7 +88,7 @@
 	  
 	  <p>A sample configuration file with all possible settings, but with all of them commented out, is installed at <em>/etc/shairport-sync.conf.sample</em>.</p>
 	  
-	  <p>To retain backwards compatability with previous versions of shairport-sync
+	  <p>To retain backwards compatibility with previous versions of shairport-sync
 	  you can use still use command line options, but any new features, etc. will
 	  be available only via configuration file settings.</p>
 
@@ -277,7 +277,7 @@
     You can offset the time of initial audio output relative to its nominal time using this setting.
     For example to send an audio stream to stdout 100 milliseconds before it is due to be played, set this to -4410. Default setting is 0.
     
-    
+
     
     <p><b>audio_backend_buffer_desired_length=</b><em>buffer_length_in_frames</em><b>;</b></p>
         
@@ -288,7 +288,34 @@
     shairport-sync performs no stuffing or interpolation when writing to stdout. Default setting is 44,100 frames.
     
     
- 
+    
+    <p><b>&quot;AO&quot; SETTINGS</b></p>
+    <p>These settings are for the AO backend, used for the libao audio library.</p>
+    <p>There are two settings affecting timing. The <em>audio_backend_latency_offset</em> affects precisely when the first audio packet is sent
+    and the <em>audio_backend_buffer_desired_length</em> setting affects the nominal output buffer size.</p>
+    <p>These are the settings available within the <b>ao</b> group:</p>
+
+
+    
+    <p><b>audio_backend_latency_offset=</b><em>offset_in_frames</em><b>;</b></p>
+    
+    Packets of audio frames are written to the libao system synchronously -- that is, they are written at exactly the time they should be played.
+    You can offset the time of initial audio output relative to its nominal time using this setting.
+    For example to send an audio stream to stdout 100 milliseconds before it is due to be played, set this to -4410. Default setting is 0.
+    
+    
+    
+    <p><b>audio_backend_buffer_desired_length=</b><em>buffer_length_in_frames</em><b>;</b></p>
+        
+    Use this setting, in frames, to set the size of the output buffer. It works by determining how soon the second and subsequent packets of
+    audio frames are sent to to the libao system.
+    For example, if you send the first packet of audio exactly when it is due and, using a <em>audio_backend_buffer_desired_length</em> setting of 44100,
+    send subsequent packets of audio a second before they are due to be played, they will be buffered in the stdout reader's buffer, giving it a nominal buffer size of 44,100 frames.
+    Note that if the libao system consumes audio packets faster or slower than they are supplied, the buffer will eventually empty or overflow --
+    shairport-sync performs no stuffing or interpolation when writing to libao. Default setting is 44,100 frames.
+    
+    
+    
     <p><b>&quot;METADATA&quot; SETTINGS</b></p>
     <p>shairport-sync can process metadata provided by the source, such as Track Number, Album Name, cover art, etc. and can provide additional metadata such as volume level,
     pause/resume, etc. It sends the metadata to a pipe, by default <em>/tmp/shairport-sync-metadata</em>.
@@ -390,7 +417,7 @@
 
     <p>Note: if you are setting up Shairport Sync for the first time or are updating an existing installation,
     you are encouraged to use the configuration file settings described above. Most of the options described below
-    simply replicate the configuration settings and are retained to provide backward compatability with older installations of Shairport Sync.</p>
+    simply replicate the configuration settings and are retained to provide backward compatibility with older installations of Shairport Sync.</p>
     
     <p>Many  of  the options take sensible default values, so you can normally
     ignore most of them. See the EXAMPLES section for typical usages.</p>

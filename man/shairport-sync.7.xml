@@ -106,7 +106,7 @@
 	  
 	  <p>A sample configuration file with all possible settings, but with all of them commented out, is installed at <file>/etc/shairport-sync.conf.sample</file>.</p>
 	  
-	  <p>To retain backwards compatability with previous versions of shairport-sync
+	  <p>To retain backwards compatibility with previous versions of shairport-sync
 	  you can use still use command line options, but any new features, etc. will
 	  be available only via configuration file settings.</p>
 
@@ -433,7 +433,7 @@
 
     <p>Note: if you are setting up Shairport Sync for the first time or are updating an existing installation,
     you are encouraged to use the configuration file settings described above. Most of the options described below
-    simply replicate the configuration settings and are retained to provide backward compatability with older installations of Shairport Sync.</p>
+    simply replicate the configuration settings and are retained to provide backward compatibility with older installations of Shairport Sync.</p>
     
     <p>Many  of  the options take sensible default values, so you can normally
     ignore most of them. See the EXAMPLES section for typical usages.</p>
