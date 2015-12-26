@@ -53,7 +53,7 @@ Most settings have sensible default values, so -- as in the example above -- use
 
 A sample configuration file with all possible settings, but with all of them commented out, is installed at \fI/etc/shairport-sync.conf.sample\f1.
 
-To retain backwards compatability with previous versions of shairport-sync you can use still use command line options, but any new features, etc. will be available only via configuration file settings.
+To retain backwards compatibility with previous versions of shairport-sync you can use still use command line options, but any new features, etc. will be available only via configuration file settings.
 
 The configuration file is processed using the \fIlibconfig\f1 library -- see \fBhttp://www.hyperrealm.com/libconfig/libconfig_manual.html\f1.
 .TP
@@ -153,6 +153,19 @@ Packets of audio frames are written to stdout synchronously -- that is, they are
 \fBaudio_backend_buffer_desired_length=\f1\fIbuffer_length_in_frames\f1\fB;\f1
 Use this setting, in frames, to set the size of the output buffer. It works by determining how soon the second and subsequent packets of audio frames are sent to stdout. For example, if you send the first packet of audio exactly when it is due and, using a \fIaudio_backend_buffer_desired_length\f1 setting of 44100, send subsequent packets of audio a second before they are due to be played, they will be buffered in the stdout reader's buffer, giving it a nominal buffer size of 44,100 frames. Note that if the stdout reader consumes audio packets faster or slower than they are supplied, the buffer will eventually empty or overflow -- shairport-sync performs no stuffing or interpolation when writing to stdout. Default setting is 44,100 frames. 
 .TP
+\fB"AO" SETTINGS\f1
+These settings are for the AO backend, used for the libao audio library.
+
+There are two settings affecting timing. The \fIaudio_backend_latency_offset\f1 affects precisely when the first audio packet is sent and the \fIaudio_backend_buffer_desired_length\f1 setting affects the nominal output buffer size.
+
+These are the settings available within the \fBao\f1 group:
+.TP
+\fBaudio_backend_latency_offset=\f1\fIoffset_in_frames\f1\fB;\f1
+Packets of audio frames are written to the libao system synchronously -- that is, they are written at exactly the time they should be played. You can offset the time of initial audio output relative to its nominal time using this setting. For example to send an audio stream to stdout 100 milliseconds before it is due to be played, set this to -4410. Default setting is 0. 
+.TP
+\fBaudio_backend_buffer_desired_length=\f1\fIbuffer_length_in_frames\f1\fB;\f1
+Use this setting, in frames, to set the size of the output buffer. It works by determining how soon the second and subsequent packets of audio frames are sent to to the libao system. For example, if you send the first packet of audio exactly when it is due and, using a \fIaudio_backend_buffer_desired_length\f1 setting of 44100, send subsequent packets of audio a second before they are due to be played, they will be buffered in the stdout reader's buffer, giving it a nominal buffer size of 44,100 frames. Note that if the libao system consumes audio packets faster or slower than they are supplied, the buffer will eventually empty or overflow -- shairport-sync performs no stuffing or interpolation when writing to libao. Default setting is 44,100 frames. 
+.TP
 \fB"METADATA" SETTINGS\f1
 shairport-sync can process metadata provided by the source, such as Track Number, Album Name, cover art, etc. and can provide additional metadata such as volume level, pause/resume, etc. It sends the metadata to a pipe, by default \fI/tmp/shairport-sync-metadata\f1. To process metadata, shairport-sync must have been compiled with metadata support included. You can check that this is so by running \fBshairport-sync -V\f1; the identification string will contain the word \fBmetadata\f1.
 
@@ -210,7 +223,7 @@ This is the \fIlatency\f1, in frames, used for forkedDaapd sources. Default is 9
 \fBdefault=\f1\fIlatency\f1\fB;\f1
 This is the \fIlatency\f1, in frames, used when the source is unrecognised. Default is 88,200. 
 .SH OPTIONS
-Note: if you are setting up Shairport Sync for the first time or are updating an existing installation, you are encouraged to use the configuration file settings described above. Most of the options described below simply replicate the configuration settings and are retained to provide backward compatability with older installations of Shairport Sync.
+Note: if you are setting up Shairport Sync for the first time or are updating an existing installation, you are encouraged to use the configuration file settings described above. Most of the options described below simply replicate the configuration settings and are retained to provide backward compatibility with older installations of Shairport Sync.
 
 Many of the options take sensible default values, so you can normally ignore most of them. See the EXAMPLES section for typical usages.
 
