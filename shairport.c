@@ -655,11 +655,11 @@ int main(int argc, char **argv) {
   xn.arr[3] = 0x11;     /* Highest-address byte */
   
   if (xn.u32==0x11223344)
-    endianness = __LITTLE_ENDIAN;
+    endianness = SS_LITTLE_ENDIAN;
   else if (xn.u32==0x33441122)
-    endianness = __PDP_ENDIAN;
+    endianness = SS_PDP_ENDIAN;
   else if (xn.u32==0x44332211)
-    endianness = __BIG_ENDIAN;
+    endianness = SS_BIG_ENDIAN;
   else die("Can not recognise the endianness of the processor.");
   
   strcpy(configuration_file_path, "/etc/");
@@ -854,13 +854,13 @@ int main(int argc, char **argv) {
   daemon_log(LOG_NOTICE, "startup");
   
   switch (endianness) {
-    case __LITTLE_ENDIAN:
+    case SS_LITTLE_ENDIAN:
       debug(2,"The processor is running little-endian.");
       break;
-    case __BIG_ENDIAN:
+    case SS_BIG_ENDIAN:
       debug(2,"The processor is running big-endian.");
       break;
-    case __PDP_ENDIAN:
+    case SS_PDP_ENDIAN:
       debug(2,"The processor is running pdp-endian.");
       break; 
   }

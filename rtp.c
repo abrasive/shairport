@@ -41,7 +41,7 @@
 #include "player.h"
 #include "rtp.h"
 
-#ifdef COMPILE_FOR_LINUX_AND_FREEBSD_AND_CYGWIN
+#if defined(__linux__)
 #include <linux/in6.h>
 #endif
 
@@ -529,7 +529,7 @@ static int bind_port(SOCKADDR *remote, int *sock) {
 
     *sock = socket(remote->SAFAMILY, SOCK_DGRAM, IPPROTO_UDP);
     
-    #ifdef COMPILE_FOR_LINUX_AND_FREEBSD_AND_CYGWIN
+    #if defined(__linux__)
     #ifdef AF_INET6
     // now, if we are on IPv6, prefer a public ipv6 address
     if (remote->SAFAMILY==AF_INET6) {
