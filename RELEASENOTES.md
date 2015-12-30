@@ -5,7 +5,7 @@ Version 2.7.6 -- Development Version
 * Fix a few FreeBSD compilation bugs.
 
 **Enhancements**
-* Favour the use of "public" IPv6 addresses as source adresses when connecting to a distant IPv6 port.
+* Favour the use of "public" IPv6 addresses as source addresses when connecting to a distant IPv6 port.
 
 Version 2.7.5 -- Development Version
 ----
