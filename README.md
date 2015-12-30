@@ -1,6 +1,6 @@
 Shairport Sync
 =============
-Shairport Sync is an AirPlay audio player -- it plays audio streamed from iTunes, iOS devices and other AirPlay sources such as Quicktime Player, ForkedDaapd among others.
+Shairport Sync is an AirPlay audio player — it plays audio streamed from iTunes, iOS devices and other AirPlay sources such as Quicktime Player, ForkedDaapd among others.
 Audio played by a Shairport Sync-powered device stays synchronised with the source and hence with similar devices playing the same source. In this way, synchronised multi-room audio is possible without difficulty. (Hence the name Shairport Sync, BTW.)
 
 Shairport Sync does not support AirPlay video or photo streaming.
@@ -35,7 +35,7 @@ What else?
 
 Status
 ------
-Shairport Sync works on a wide variety of Linux devices. It works on standard Ubuntu laptops, on the Raspberry Pi with Raspbian Wheezy and Jessie, Arch Linux and OpenWrt, and it runs on a Linksys NSLU2 and a TP-Link 710N using OpenWrt. It works with built-in audio and with a variety of USB-connected audio amplifiers and DACs, including a cheapo USB "3D Sound" dongle, a first generation iMic and a Topping TP30 amplifier with a USB DAC input. It will not work properly – if at all – with a PulseAudio (pseudo-)output device. Using a port of the `alsa` system, Shairport Sync runs rather well on FreeBSD.
+Shairport Sync works on a wide variety of Linux devices. It works on standard Ubuntu laptops, on the Raspberry Pi with Raspbian Wheezy and Jessie, Arch Linux and OpenWrt, and it runs on a Linksys NSLU2 and a TP-Link 710N using OpenWrt. It works with built-in audio and with a variety of USB-connected audio amplifiers and DACs, including a cheapo USB "3D Sound" dongle, a first generation iMic and a Topping TP30 amplifier with a USB DAC input. It will not work properly — if at all — with a PulseAudio (pseudo-)output device. Using a port of the `alsa` system, Shairport Sync runs rather well on FreeBSD.
 
 Shairport Sync runs well on the Raspberry Pi. It can drive the built-in sound card, though the audio out of the card is of poor quality (see the note below on configuring the Raspberry Pi to make best use of it). USB-connected sound cards work well, though [very] old versions of Raspbian appear to suffer from a problem — see http://www.raspberrypi.org/forums/viewtopic.php?t=23544, so it is wise to update. Shairport Sync works well with the IQAudIO Pi-DAC — see http://www.iqaudio.com.
 
@@ -55,7 +55,7 @@ If you wish to install Shairport Sync on OpenWrt, Arch or Fedora platforms, plea
 
 **Note**
 
-The following procedures will install the shairport-sync application into your system. Before continuing, you should check to see if shairport-sync is already installed -- you can use `which shairport-sync` to find where it is located, if installed. If it is installed you should delete it -- you may need to have superuser privileges. After deleting, check again in case further copies are installed elsewhere.
+The following procedures will install the shairport-sync application into your system. Before continuing, you should check to see if shairport-sync is already installed – you can use `which shairport-sync` to find where it is located, if installed. If it is installed you should delete it – you may need superuser privileges. After deleting, check again in case further copies are installed elsewhere.
 (If the existing installation of shairport-sync is where the new copy will be installed into, it will be overwritten;  sometimes, however, the installation is to another location, so it is safer, initially, to delete previous versions manually.)
 
 **Mac OS X**
@@ -152,7 +152,7 @@ Choose the appropriate `--with-*` options:
 
 **System V and `systemd`**
 
-At the time of writing, there are two widely-used systems for automatically starting programs automatically at startup: "System V" and `systemd`. (There are others, but they are not considered here.) To see if the `systemd` process is running on your system, enter the following command:
+At the time of writing, there are two widely-used systems for automatically starting programs automatically at startup: `systemd` and "System V" . (There are others, but they are not considered here.) To see if the `systemd` process is running on your system, enter the following command:
 
 `ps aux | grep systemd | grep -v grep`
 
@@ -166,19 +166,19 @@ message+   528  0.0  0.7   5568  3172 ?        Ss   08:00   0:01 /usr/bin/dbus-d
 pi         983  0.0  0.7   4912  3256 ?        Ss   08:00   0:00 /lib/systemd/systemd --user
 pi@raspberrypi ~ $ 
 ```
-whereas on a system without `systemd` -- presumably using System V --  (this is a from a Raspberry Pi running Raspbian Wheezy) , you'll get nothing:
+whereas on a system without `systemd` – presumably using System V – (this is a from a Raspberry Pi running Raspbian Wheezy) , you'll get nothing:
 ```
 pi@raspberrypi ~ $ ps aux | grep systemd | grep -v grep
 pi@raspberrypi ~ $ 
 ```
 Choose `--with-systemd` or `--with-systemv` on the basis of the outcome.
 
-Here is an example, suitable for installations such as Ubuntu and Raspbian Wheezy:
+Here is an example, suitable for installations such as Ubuntu 15.10 and Raspbian Jessie that use `systemd`:
 
-`$ ./configure --with-alsa --with-avahi --with-ssl=openssl --with-metadata --with-soxr --with-systemv`
+`$ ./configure --with-alsa --with-avahi --with-ssl=openssl --with-metadata --with-soxr --with-systemd`
 
 * Omit the `--with-soxr` if the libsoxr library is not available.
-* For installation into a `systemd` system, replace the `--with-systemv` with `--with-systemd`.
+* For installation into a `systemv` system, replace the `--with-systemd` with `--with-systemv`.
 
 Enter:
 
@@ -186,22 +186,8 @@ Enter:
 
 to build the application.
 
-**Installation to a System V system**
-If you are installing onto a System V system:
-
-```
-$sudo make install
-```
-
-to install `shairport-sync` along with a `man` page, a default configuration file and a System V startup script to launch it automatically at system startup.
-
-To complete the installation, enter:
-```
-$sudo update-rc.d shairport-sync defaults 90 10
-```
-
 **Installation to a `systemd` system**
-To complete the installation, you need to define a `shairport-sync` group and user. This is a security measure -- the user and group are relatively unprivileged, and the user does not have login priviliges. The user must be a member of the `audio` group to be able to access the audio hardware. The following commands define the group and user correctly if they do not already exist (note the use of `sudo` -- omit this if you already have superuser privileges:
+To complete the installation, you need to define a `shairport-sync` group and user. This is a security measure – the user and group are relatively unprivileged, and the user does not have login priviliges. The user must be a member of the `audio` group to be able to access the audio hardware. The following commands define the group and user correctly if they do not already exist (note the use of `sudo` – omit this if you already have superuser privileges:
 
 ```
 $getent group shairport-sync &>/dev/null || sudo groupadd -r shairport-sync >/dev/null
@@ -220,6 +206,20 @@ To enable Shairport Sync to start automatically at system startup, enter:
 
 `$sudo systemctl enable shairport-sync`
 
+**Installation to a System V system**
+If you are installing onto a System V system:
+
+```
+$sudo make install
+```
+
+to install `shairport-sync` along with a `man` page, a default configuration file and a System V startup script to launch it automatically at system startup.
+
+To complete the installation, enter:
+```
+$sudo update-rc.d shairport-sync defaults 90 10
+```
+
 **Man Page**
 
 You can view the man page here: http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/development/man/shairport-sync.html
@@ -228,7 +228,7 @@ Configuring Shairport Sync
 --------
 There are two logically distinct parts to getting Shairport Sync to run properly on your machine — (1) starting and stopping it and (2) ensuring it has the right settings.
 
-Starting and stopping automatically is taken care of differently in different versions of Linux -- see the previous section for an example of installing into a System V or a `systemd` based system.
+Starting and stopping automatically is taken care of differently in different versions of Linux – see the previous section for an example of installing into a System V or a `systemd` based system.
 
 To get the best from Shairport Sync, you’ll need to (1) give Shairport Sync a service name by which it will be seen in iTunes etc., (2) specify the output device to use and (3) specify the name of the mixer volume control to use to control the output level. To get values for (2) and (3) you might need to explore the ALSA output devices with a program like `alsamixer` or similar.
 
