@@ -11,7 +11,7 @@ More Information
 ----------
 Shairport Sync works by using timing information and timestamps present in data coming from the audio source (e.g. an iPhone) to "play" audio at exactly the right time. It does this by monitoring and controlling the *latency* — the time between a sound frame is supposed to be played, as specified by its `timestamp`, and the time when it is actually played by the audio output device, usually a Digital to Audio Converter (DAC).
 
-The latency to be used is specified by the source when it negotiates with Shairport Sync. Most sources set a latency of 88,200 frames -- exactly two seconds. Recent versions of iTunes and forkedDaapd use a latency of 99,577 frames.
+The latency to be used is specified by the source when it negotiates with Shairport Sync. Most sources set a latency of 88,200 frames — exactly two seconds. Recent versions of iTunes and forkedDaapd use a latency of 99,577 frames.
 
 Timestamps are measured relative to the source computer's clocks, the `source clock`, but timing must be done relative to the clock of the computer running Shairport Sync, the `local clock`. The source and local clocks are synchronised, usually to within a fraction of a millisecond, using a variant of NTP synchronisation protocols. 
 
