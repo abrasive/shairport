@@ -164,7 +164,7 @@ AC_ARG_WITH(tinysvcmdns, [  --with-tinysvcmdns = choose tinysvcmdns-based mDNS s
 AM_CONDITIONAL([USE_TINYSVCMDNS], [test "x$HAS_TINYSVCMDNS" = "x1"])
 
 # Look for ALSA flag
-AC_ARG_WITH(alsa, [  --with-alsa = choose native ALSA API support (GNU/Linux only)],
+AC_ARG_WITH(alsa, [  --with-alsa = choose ALSA API support (GNU/Linux only)],
   [AC_MSG_RESULT(>>Including an ALSA back end)
   HAS_ALSA=1
   AM_CONDITIONAL([USE_ALSA], [test 0])
@@ -181,24 +181,24 @@ AC_ARG_WITH(alsa, [  --with-alsa = choose native ALSA API support (GNU/Linux onl
 AM_CONDITIONAL([USE_ALSA], [test "x$HAS_ALSA" = "x1"])
 
 # Look for SNDIO flag
-AC_ARG_WITH(sndio, [  --with-sndio = choose native SNDIO API support (FreeBSD) -- probably broken], [
-  AC_MSG_RESULT(>>Including a SNDIO back end --- N.B. this is probably broken!)
+AC_ARG_WITH(sndio, [  --with-sndio = choose SNDIO API support (FreeBSD) -- probably broken], [
+  AC_MSG_RESULT(>>Including a SNDIO back end -- N.B. this is probably broken!)
   HAS_SNDIO=1
   AC_DEFINE([CONFIG_SNDIO], 1, [Needed by the compiler.])
   AC_CHECK_LIB([sndio], [sio_open], , AC_MSG_ERROR(SNDIO support requires the sndio library!))], )
 AM_CONDITIONAL([USE_SNDIO], [test "x$HAS_SNDIO" = "x1"])
 
 # Look for AO flag
-AC_ARG_WITH(ao, [  --with-ao = choose native AO (Audio Output?) API support -- probably broken], [
-  AC_MSG_RESULT(>>Including an AO back end --- N.B. this is probably broken!)
+AC_ARG_WITH(ao, [  --with-ao = choose AO (Audio Output?) API support. N.B. no synchronisation -- so underflow or overflow is inevitable!], [
+  AC_MSG_RESULT(>>Including an AO back end. N.B. no synchronisation -- so underflow or overflow is inevitable!)
   HAS_AO=1
   AC_DEFINE([CONFIG_AO], 1, [Needed by the compiler.])
   AC_CHECK_LIB([ao], [ao_initialize], , AC_MSG_ERROR(AO support requires the ao library!))], )
 AM_CONDITIONAL([USE_AO], [test "x$HAS_AO" = "x1"])
 
 # Look for pulseaudio flag
-AC_ARG_WITH(pulseaudio, [  --with-pulseaudio = choose native PulseAudio API support -- N.B. no synchronisation -- so underflow or overflow is inevitable!], [
-  AC_MSG_RESULT(>>Including a PulseAudio back end -- N.B. no synchronisation -- so underflow or overflow is inevitable!)
+AC_ARG_WITH(pulseaudio, [  --with-pulseaudio = choose PulseAudio API support. N.B. no synchronisation -- so underflow or overflow is inevitable!], [
+  AC_MSG_RESULT(>>Including a PulseAudio back end. N.B. no synchronisation -- so underflow or overflow is inevitable!)
   HAS_PULSE=1
   AC_DEFINE([CONFIG_PULSE], 1, [Needed by the compiler.])
   AC_CHECK_LIB([pulse-simple], [pa_simple_new], , AC_MSG_ERROR(PulseAudio support requires the pulse-simple library, possibly in the package libpulse-dev!))
