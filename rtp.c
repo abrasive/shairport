@@ -41,10 +41,12 @@
 #include "player.h"
 #include "rtp.h"
 
+/*
+// this does not compile properly with OpenWrt Barrier Breaker...
 #if defined(__linux__)
 #include <linux/in6.h>
 #endif
-
+*/
 typedef struct {
   uint32_t seconds;
   uint32_t fraction;
@@ -529,6 +531,8 @@ static int bind_port(SOCKADDR *remote, int *sock) {
 
     *sock = socket(remote->SAFAMILY, SOCK_DGRAM, IPPROTO_UDP);
     
+/*
+  // this doesn't compile properly with OpenWrt Barrier Breaker.
     #if defined(__linux__)
     #ifdef AF_INET6
     // now, if we are on IPv6, prefer a public ipv6 address
@@ -540,7 +544,7 @@ static int bind_port(SOCKADDR *remote, int *sock) {
     }
     #endif
     #endif
-
+*/
     ret = bind(*sock, info->ai_addr, info->ai_addrlen);
 
     freeaddrinfo(info);
