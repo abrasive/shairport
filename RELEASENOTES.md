@@ -3,8 +3,11 @@ Version 2.7.6 -- Development Version
 **Bug Fixes**
 * Look for the correct tag name for desired `ao` buffer length: `audio_backend_buffer_desired_length` rather than `audio_backend_buffer_desired_length_software`.
 * Fix a few FreeBSD compilation bugs.
+* Fix a few documentation issues and typos. Thanks to [Chris Boot](https://github.com/bootc).
 
 **Enhancements**
+* Add note about installing to Mac OS X. Thanks to [Serg Podtynnyi](https://github.com/shtirlic).
+* Add automatic rebuild of manapage and html doc when xmltoman and friends are available. Thanks to [Chris Boot](https://github.com/bootc).
 * Favour the use of "public" IPv6 addresses as source addresses when connecting to a distant IPv6 port.
 
 Version 2.7.5 -- Development Version
