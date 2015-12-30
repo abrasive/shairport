@@ -54,7 +54,7 @@ static int init(int argc, char **argv) {
 
   if (config.cfg != NULL) {
     /* Get the desired buffer size setting. */
-    if (config_lookup_int(config.cfg, "ao.audio_backend_buffer_desired_length_software", &value)) {
+    if (config_lookup_int(config.cfg, "ao.audio_backend_buffer_desired_length", &value)) {
       if ((value < 0) || (value > 66150))
         die("Invalid a0 audio backend buffer desired length \"%d\". It should be between 0 and "
             "66150, default is 44100",
