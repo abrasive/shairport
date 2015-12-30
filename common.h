@@ -2,7 +2,6 @@
 #define _COMMON_H
 
 #include <stdint.h>
-#include <endian.h>
 #include <sys/socket.h>
 #include <libconfig.h>
 
@@ -32,6 +31,12 @@
 #define SOCKADDR struct sockaddr
 #define SAFAMILY sa_family
 #endif
+
+enum endian_type {
+  SS_LITTLE_ENDIAN = 0,
+  SS_PDP_ENDIAN,
+  SS_BIG_ENDIAN,
+} endian_type;
 
 enum stuffing_type {
   ST_basic = 0,

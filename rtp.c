@@ -41,6 +41,10 @@
 #include "player.h"
 #include "rtp.h"
 
+#if defined(__linux__)
+#include <linux/in6.h>
+#endif
+
 typedef struct {
   uint32_t seconds;
   uint32_t fraction;
@@ -524,6 +528,19 @@ static int bind_port(SOCKADDR *remote, int *sock) {
       die("failed to get usable addrinfo?! %s.", gai_strerror(ret));
 
     *sock = socket(remote->SAFAMILY, SOCK_DGRAM, IPPROTO_UDP);
+    
+    #if defined(__linux__)
+    #ifdef AF_INET6
+    // now, if we are on IPv6, prefer a public ipv6 address
+    if (remote->SAFAMILY==AF_INET6) {
+      int value = IPV6_PREFER_SRC_PUBLIC;
+      ret = setsockopt(*sock, IPPROTO_IPV6, IPV6_ADDR_PREFERENCES, &value, sizeof(value));
+      if (ret<0)
+        die("error: could not select a preference for public IPv6 address");
+    }
+    #endif
+    #endif
+
     ret = bind(*sock, info->ai_addr, info->ai_addrlen);
 
     freeaddrinfo(info);
