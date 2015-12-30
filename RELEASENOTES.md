@@ -1,3 +1,12 @@
+Version 2.7.6 -- Development Version
+----
+**Bug Fixes**
+* Look for the correct tag name for desired `ao` buffer length: `audio_backend_buffer_desired_length` rather than `audio_backend_buffer_desired_length_software`.
+* Fix a few FreeBSD compilation bugs.
+
+**Enhancements**
+* Favour the use of "public" IPv6 addresses as source adresses when connecting to a distant IPv6 port.
+
 Version 2.7.5 -- Development Version
 ----
 **New Features**
