@@ -58,7 +58,7 @@ If you wish to install Shairport Sync on OpenWrt, Arch or Fedora platforms, plea
 The following procedures will install the shairport-sync application into your system. Before continuing, you should check to see if shairport-sync is already installed – you can use `which shairport-sync` to find where it is located, if installed. If it is installed you should delete it – you may need superuser privileges. After deleting, check again in case further copies are installed elsewhere.
 (If the existing installation of shairport-sync is where the new copy will be installed into, it will be overwritten;  sometimes, however, the installation is to another location, so it is safer, initially, to delete previous versions manually.)
 
-**Ubuntu**
+**Ubuntu:**
 Personal Package Archives for Shairport Sync master and development branches are available at https://launchpad.net/~dantheperson.
 
 **OpenWrt:**
@@ -67,7 +67,7 @@ There is a Shairport Sync package in OpenWrt `trunk`. Also, there's an OpenWrt p
 **Arch Linux:**
 An Arch Linux installation package is available at  [EliaCereda/shairport-sync-PKGBUILD](https://github.com/EliaCereda/shairport-sync-PKGBUILD).
 
-**Mac OS X**
+**Mac OS X:**
 A [HomeBrew](http://brew.sh) package exists for Shairport Sync. With HomeBrew installed, Shairport Sync can be installed using the command `$brew install shairport-sync`. Note that the installation uses the `libao` library and so synchronisation is not available — playback glitches will occur occasionally, when the buffers overflow or underflow.
 
 **Fedora:**
@@ -173,12 +173,12 @@ pi@raspberrypi ~ $
 ```
 Choose `--with-systemd` or `--with-systemv` on the basis of the outcome.
 
-Here is an example, suitable for installations such as Ubuntu 15.10 and Raspbian Jessie that use `systemd`:
+Here is an example, suitable for installations that use `systemd`, such as Ubuntu 15.10 and Raspbian Jessie:
 
 `$ ./configure --with-alsa --with-avahi --with-ssl=openssl --with-metadata --with-soxr --with-systemd`
 
 * Omit the `--with-soxr` if the libsoxr library is not available.
-* For installation into a `systemv` system, replace the `--with-systemd` with `--with-systemv`.
+* For installation into a System V system, replace the `--with-systemd` with `--with-systemv`.
 
 Enter:
 
