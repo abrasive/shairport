@@ -53,6 +53,7 @@ Perl modules (install from CPAN if needed e.g. `perl -MCPAN -e 'install X'`):
 
   * install XCode
   * install [Homebrew](https://github.com/mxcl/homebrew) or [MacPorts](http://www.macports.org/)
+  * install [Net::SDP](https://github.com/njh/perl-net-sdp)
   * type:
 
         $ export ARCHFLAGS="-arch x86_64" # (replace x86_64 by your arch)
