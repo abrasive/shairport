@@ -1,3 +1,11 @@
+Head
+----
+**Enhancements**
+* Add note about the Arch Linux Community repository package `shairport-sync`. Thanks to [Anatol Pomozov](https://github.com/anatol).
+
+**Bug Fixes**
+* Remove code favouring the use of "public" IPv6 addresses as source addresses when connecting to a distant IPv6 port – Neither OpenWrt nor FreeBSD can use it at present. Also, it's not clear if any problems are being caused by not favouring public IPv6 addresses.
+
 Version 2.7.6 -- Development Version
 ----
 **Bug Fixes**
