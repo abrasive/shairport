@@ -913,6 +913,8 @@ static void *player_thread_func(void *arg) {
   int32_t minimum_buffer_occupancy = BUFFER_FRAMES;
   int32_t maximum_buffer_occupancy = 0;
 
+  time_t playstart = time(NULL);
+
   buffer_occupancy = 0;
 
   int play_samples;
@@ -1220,6 +1222,13 @@ static void *player_thread_func(void *arg) {
       }
     }
   }
+
+  int rawSeconds = (int) difftime( time( NULL ), playstart );
+  int elapsedHours = rawSeconds / 3600;
+  int elapsedMin = (rawSeconds / 60) % 60;
+  int elapsedSec = rawSeconds % 60;
+  inform( "Playback Stopped. Total playing time %02d:%02d:%02d\n", elapsedHours, elapsedMin, elapsedSec );
+
   free(outbuf);
   free(silence);
   return 0;
