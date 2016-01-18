@@ -7,11 +7,9 @@ branches:
     - development
 before_install:
   - sudo apt-get -qq update
-  - sudo apt-get install -y libdaemon-dev
-  - sudo apt-get install -y libpopt-dev
+  - sudo apt-get install -y libdaemon-dev libpopt-dev
   - sudo apt-get install -y avahi-daemon
-  - sudo apt-get install -y libavahi-client-dev
-  - sudo apt-get install -y libconfig-dev
+  - sudo apt-get install -y libavahi-client-dev libconfig-dev
   - sudo apt-get install -y libssl-dev
   
 addons:
@@ -19,3 +17,4 @@ addons:
     packages:
     - libasound2-dev
     - libsoxr-dev
+    - libpopt-dev
