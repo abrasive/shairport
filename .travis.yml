@@ -3,3 +3,10 @@ script: autoreconf -fi && ./configure --with-alsa --with-avahi --with-ssl=openss
 branches:
   only:
     - development
+addons:
+  apt:
+    packages:
+    - libdaemon-dev
+    - libasound2-dev
+    - libpopt-dev
+    - libconfig-dev
