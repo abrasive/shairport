@@ -12,3 +12,7 @@ addons:
     - libasound2-dev
     - libpopt-dev
     - libconfig-dev
+    - libsoxr-dev
+    - avahi-daemon
+    - libavahi-client-dev
+    - libssl-dev
