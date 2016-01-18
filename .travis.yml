@@ -1,5 +1,5 @@
 language: c
-script: autoreconf -fi && --with-alsa --with-avahi --with-ssl=openssl --with-metadata --with-soxr --with-systemv && make
+script: autoreconf -fi && ./configure --with-alsa --with-avahi --with-ssl=openssl --with-metadata --with-soxr --with-systemv && make
 branches:
   only:
     - development
