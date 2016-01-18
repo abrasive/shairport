@@ -3,10 +3,12 @@ script: autoreconf -fi && ./configure --with-alsa --with-avahi --with-ssl=openss
 branches:
   only:
     - development
+before_install:
+  - sudo apt-get -qq update
+  - sudo apt-get install -y libdaemon-dev
 addons:
   apt:
     packages:
-    - libdaemon
     - libasound2-dev
     - libpopt-dev
     - libconfig-dev
