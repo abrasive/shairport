@@ -5,12 +5,11 @@ branches:
     - development
 before_install:
   - sudo apt-get -qq update
-  - sudo apt-get install -y libdaemon-dev
+  - sudo apt-get install -y libdaemon-dev libpopt-dev
 addons:
   apt:
     packages:
     - libasound2-dev
-    - libpopt-dev
     - libconfig-dev
     - libsoxr-dev
     - avahi-daemon
