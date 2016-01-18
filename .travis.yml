@@ -9,10 +9,11 @@ before_install:
   - sudo apt-get install -y libpopt-dev
   - sudo apt-get install -y avahi-daemon
   - sudo apt-get install -y libavahi-client-dev
+  - sudo apt-get install -y libconfig-dev
 addons:
   apt:
     packages:
     - libasound2-dev
     - libconfig-dev
     - libsoxr-dev
-    - libpolarssl-dev
+    - libssl-dev
