@@ -10,7 +10,7 @@ before_install:
   - sudo apt-get install -y avahi-daemon
   - sudo apt-get install -y libavahi-client-dev
   - sudo apt-get install -y libconfig-dev
-  - sudo apt-get install -y libsoxr-dev
+  - sudo apt-get install -y libssl-dev
   
 addons:
   apt:
