@@ -15,4 +15,4 @@ addons:
     - libasound2-dev
     - libconfig-dev
     - libsoxr-dev
-    - libssl-dev
+    - libpolarssl-dev
