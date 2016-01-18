@@ -1,10 +1,15 @@
 language: c
 sudo: required
 dist: trusty
-script: autoreconf -fi && ./configure --with-alsa --with-avahi --with-ssl=openssl --with-soxr --with-metadata --with-systemv && make
+script:
+  - autoreconf -fi 
+  - ./configure --with-alsa --with-avahi --with-ssl=openssl --with-soxr --with-metadata --with-systemv
+  - make
+
 branches:
   only:
     - development
+
 before_install:
   - sudo apt-get -qq update
   - sudo apt-get install -y libdaemon-dev avahi-daemon libavahi-client-dev
