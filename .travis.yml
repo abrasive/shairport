@@ -6,7 +6,7 @@ branches:
 addons:
   apt:
     packages:
-    - libdaemon-dev
+    - libdaemon
     - libasound2-dev
     - libpopt-dev
     - libconfig-dev
