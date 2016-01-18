@@ -1,5 +1,5 @@
 language: c
-script: autoreconf -fi && ./configure --with-alsa --with-avahi --with-ssl=openssl --with-metadata --with-soxr --with-systemv && make
+script: autoreconf -fi && ./configure --with-alsa --with-avahi --with-ssl=openssl --with-metadata --with-systemv && make
 branches:
   only:
     - development
@@ -16,6 +16,3 @@ addons:
   apt:
     packages:
     - libasound2-dev
-    - libconfig-dev
-    - libsoxr-dev
-    - libssl-dev
