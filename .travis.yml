@@ -1,7 +1,7 @@
 language: c
 sudo: required
 dist: trusty
-script: autoreconf -fi && ./configure --with-alsa --with-avahi --with-ssl=openssl --with-metadata --with-systemv && make
+script: autoreconf -fi && ./configure --with-alsa --with-avahi --with-ssl=openssl --with-soxr --with-metadata --with-systemv && make
 branches:
   only:
     - development
@@ -18,3 +18,4 @@ addons:
   apt:
     packages:
     - libasound2-dev
+    - libsoxr-dev
