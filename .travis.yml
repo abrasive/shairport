@@ -13,6 +13,20 @@ env:
     - CFG="--with-stdio --with-avahi --with-ssl=polarssl --with-metadata --with-systemd"
     - CFG="--with-pipe --with-avahi --with-ssl=openssl --with-metadata --with-systemd"
     - CFG="--with-pipe --with-avahi --with-ssl=polarssl --with-metadata --with-systemd"
+    - CFG="--with-ao --with-avahi --with-ssl=openssl --with-metadata --with-systemd"
+    - CFG="--with-ao --with-avahi --with-ssl=polarssl --with-metadata --with-systemd"
+    - CFG="--with-alsa --with-tinysvcmdns --with-ssl=openssl --with-soxr --with-metadata --with-systemv"
+    - CFG="--with-alsa --with-tinysvcmdns --with-ssl=polarssl --with-soxr --with-metadata --with-systemv"
+    - CFG="--with-alsa --with-tinysvcmdns --with-ssl=openssl --with-soxr --with-metadata --with-systemd"
+    - CFG="--with-alsa --with-tinysvcmdns --with-ssl=polarssl --with-soxr --with-metadata --with-systemd"
+    - CFG="--with-alsa --with-tinysvcmdns --with-ssl=polarssl --with-soxr --with-metadata --with-systemd"
+    - CFG="--with-alsa --with-tinysvcmdns --with-ssl=openssl --with-soxr --with-metadata --with-systemd"
+    - CFG="--with-stdio --with-tinysvcmdns --with-ssl=openssl --with-metadata --with-systemd"
+    - CFG="--with-stdio --with-tinysvcmdns --with-ssl=polarssl --with-metadata --with-systemd"
+    - CFG="--with-pipe --with-tinysvcmdns --with-ssl=openssl --with-metadata --with-systemd"
+    - CFG="--with-pipe --with-tinysvcmdns --with-ssl=polarssl --with-metadata --with-systemd"
+    - CFG="--with-ao --with-tinysvcmdns --with-ssl=openssl --with-metadata --with-systemd"
+    - CFG="--with-ao --with-tinysvcmdns --with-ssl=polarssl --with-metadata --with-systemd"
 
 script:
   - autoreconf -fi 
@@ -36,3 +50,4 @@ addons:
     - libssl-dev
     - libpolarssl-dev
     - libconfig-dev
+    - xmltoman
