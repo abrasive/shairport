@@ -3,7 +3,7 @@ sudo: required
 dist: trusty
 env:
   matrix:
-    - CFG="--with-alsa --with-avahi --with-ssl=openssl --with-soxr --with-metadata --with-systemv"
+    - CFG=--with-alsa --with-avahi --with-ssl=openssl --with-soxr --with-metadata --with-systemv
 
 script:
   - autoreconf -fi 
