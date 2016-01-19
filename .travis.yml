@@ -1,17 +1,14 @@
 language: c
 sudo: required
 dist: trusty
+env:
+  matrix:
+    - CFG="--with-alsa --with-avahi --with-ssl=openssl --with-soxr --with-metadata --with-systemv"
+
 script:
   - autoreconf -fi 
-  - ./configure --with-alsa --with-avahi --with-ssl=openssl --with-soxr --with-metadata --with-systemv
+  - ./configure $CFG
   - make
-  - ./configure --with-alsa --with-avahi --with-ssl=polarssl --with-soxr --with-metadata --with-systemd
-  - make
-  - ./configure --with-alsa --with-tinysvcmdns --with-ssl=polarssl --with-soxr --with-metadata --with-systemv --with-stdout --with-pipe
-  - make
-  - ./configure --with-alsa --with-tinysvcmdns --with-ssl=polarssl --with-soxr --with-metadata --with-systemd --with-stdout --with-pipe --without-pkgconfig
-  - make
-
 
 branches:
   only:
