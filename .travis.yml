@@ -3,7 +3,16 @@ sudo: required
 dist: trusty
 env:
   matrix:
-    - CFG=--with-alsa --with-avahi --with-ssl=openssl --with-soxr --with-metadata --with-systemv
+    - CFG="--with-alsa --with-avahi --with-ssl=openssl --with-soxr --with-metadata --with-systemv"
+    - CFG="--with-alsa --with-avahi --with-ssl=polarssl --with-soxr --with-metadata --with-systemv"
+    - CFG="--with-alsa --with-avahi --with-ssl=openssl --with-soxr --with-metadata --with-systemd"
+    - CFG="--with-alsa --with-avahi --with-ssl=polarssl --with-soxr --with-metadata --with-systemd"
+    - CFG="--with-alsa --with-avahi --with-ssl=polarssl --with-soxr --with-metadata --with-systemd"
+    - CFG="--with-alsa --with-avahi --with-ssl=openssl --with-soxr --with-metadata --with-systemd"
+    - CFG="--with-stdio --with-avahi --with-ssl=openssl --with-metadata --with-systemd"
+    - CFG="--with-stdio --with-avahi --with-ssl=polarssl --with-metadata --with-systemd"
+    - CFG="--with-pipe --with-avahi --with-ssl=openssl --with-metadata --with-systemd"
+    - CFG="--with-pipe --with-avahi --with-ssl=polarssl --with-metadata --with-systemd"
 
 script:
   - autoreconf -fi 
