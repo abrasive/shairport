@@ -51,3 +51,4 @@ addons:
     - libpolarssl-dev
     - libconfig-dev
     - xmltoman
+    - libao-dev
