@@ -92,6 +92,7 @@ typedef struct {
   SOCKADDR remote;
   int running;
   pthread_t thread;
+  pthread_t player_thread;
 } rtsp_conn_info;
 
 #ifdef CONFIG_METADATA
@@ -426,7 +427,7 @@ static int msg_handle_line(rtsp_message **pmsg, char *line) {
     *p = 0;
     p += 2;
     msg_add_header(msg, line, p);
-    debug(2, "    %s: %s.", line, p);
+    // debug(2, "    %s: %s.", line, p);
     return -1;
   } else {
     char *cl = msg_get_header(msg, "Content-Length");
@@ -568,7 +569,7 @@ static void msg_write_response(int fd, rtsp_message *resp) {
   p += n;
 
   for (i = 0; i < resp->nheaders; i++) {
-    debug(2, "    %s: %s.", resp->name[i], resp->value[i]);
+//    debug(3, "    %s: %s.", resp->name[i], resp->value[i]);
     n = snprintf(p, pktfree, "%s: %s\r\n", resp->name[i], resp->value[i]);
     pktfree -= n;
     p += n;
@@ -764,7 +765,7 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
       strcat(hdr, q); // should unsplice the timing port entry
   }
 
-  player_play(&conn->stream);
+  player_play(&conn->stream,&conn->player_thread); // the tread better be null
 
   char *resphdr = alloca(200);
   *resphdr = 0;
@@ -1535,12 +1536,12 @@ static void *rtsp_conversation_thread_func(void *pconn) {
       int method_selected = 0;
       for (mh = method_handlers; mh->method; mh++) {
         if (!strcmp(mh->method, req->method)) {
-          //debug(1,"RTSP Packet received of type \"%s\":",mh->method),
-          //msg_print_debug_headers(req);
+          // debug(1,"RTSP Packet received of type \"%s\":",mh->method),
+          // msg_print_debug_headers(req);
           method_selected = 1;
           mh->handler(conn, req, resp);
-          //debug(1,"RTSP Response:");
-          //msg_print_debug_headers(resp);
+          // debug(1,"RTSP Response:");
+          // msg_print_debug_headers(resp);
           break;
         }
       }
@@ -1557,20 +1558,20 @@ static void *rtsp_conversation_thread_func(void *pconn) {
     }
   } while (reply != rtsp_read_request_response_shutdown_requested);
 
-  debug(1, "closing RTSP connection.");
+  debug(1, "Now closing RTSP connection.");
   if (conn->fd > 0)
     close(conn->fd);
   if (rtsp_playing()) {
+    player_stop(&conn->player_thread); // might be less noisy doing this first
     rtp_shutdown();
-    player_stop();
     pthread_mutex_unlock(&play_lock);
-    please_shutdown = 0;
     pthread_mutex_unlock(&playing_mutex);
   }
   if (auth_nonce)
     free(auth_nonce);
   conn->running = 0;
-  debug(2, "terminating RTSP thread.");
+  debug(2, "Now terminating RTSP conversation thread.");
+  please_shutdown = 0;
   return NULL;
 }
 
@@ -1699,7 +1700,7 @@ void rtsp_listen_loop(void) {
     memset(conn, 0, sizeof(rtsp_conn_info));
     socklen_t slen = sizeof(conn->remote);
 
-    debug(1, "new RTSP connection.");
+    debug(1, "New RTSP connection on port %d",config.port);
     conn->fd = accept(acceptfd, (struct sockaddr *)&conn->remote, &slen);
     if (conn->fd < 0) {
       perror("failed to accept connection");

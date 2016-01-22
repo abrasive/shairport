@@ -61,7 +61,6 @@ typedef struct time_ping_record {
 
 // only one RTP session can be active at a time.
 static int running = 0;
-static int please_shutdown;
 
 static char client_ip_string[INET6_ADDRSTRLEN]; // the ip string pointing to the client
 static short client_ip_family;                  // AF_INET / AF_INET6
@@ -72,7 +71,7 @@ static SOCKADDR rtp_client_timing_socket;  // a socket pointing to the timing po
 static int audio_socket;                   // our local [server] audio socket
 static int control_socket;                 // our local [server] control socket
 static int timing_socket;                  // local timing socket
-static pthread_t rtp_audio_thread, rtp_control_thread, rtp_timing_thread;
+//static pthread_t rtp_audio_thread, rtp_control_thread, rtp_timing_thread;
 
 static uint32_t reference_timestamp;
 static uint64_t reference_timestamp_time;
@@ -96,16 +95,16 @@ static pthread_mutex_t reference_time_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 uint64_t static local_to_remote_time_difference; // used to switch between local and remote clocks
 
-static void *rtp_audio_receiver(void *arg) {
+void *rtp_audio_receiver(void *arg) {
   // we inherit the signal mask (SIGUSR1)
+
+	int *stop = arg; // when set to 1, we should stop
 
   int32_t last_seqno = -1;
   uint8_t packet[2048], *pktp;
 
   ssize_t nread;
-  while (1) {
-    if (please_shutdown)
-      break;
+  while (*stop==0) {
     nread = recv(audio_socket, packet, sizeof(packet), 0);
     if (nread < 0)
       break;
@@ -158,17 +157,18 @@ static void *rtp_audio_receiver(void *arg) {
   return NULL;
 }
 
-static void *rtp_control_receiver(void *arg) {
+void *rtp_control_receiver(void *arg) {
   // we inherit the signal mask (SIGUSR1)
+
+	int *stop = arg; // when set to 1, we should stop
+
   reference_timestamp = 0; // nothing valid received yet
   uint8_t packet[2048], *pktp;
   struct timespec tn;
   uint64_t remote_time_of_sync, local_time_now, remote_time_now;
   uint32_t sync_rtp_timestamp, rtp_timestamp_less_latency;
   ssize_t nread;
-  while (1) {
-    if (please_shutdown)
-      break;
+  while (*stop==0) {
     nread = recv(control_socket, packet, sizeof(packet), 0);
     local_time_now = get_absolute_time_in_fp();
     //        clock_gettime(CLOCK_MONOTONIC,&tn);
@@ -259,7 +259,8 @@ static void *rtp_control_receiver(void *arg) {
   return NULL;
 }
 
-static void *rtp_timing_sender(void *arg) {
+void *rtp_timing_sender(void *arg) {
+	int *stop = arg; // the parameter points to this request to stop thing
   struct timing_request {
     char leader;
     char type;
@@ -280,9 +281,8 @@ static void *rtp_timing_sender(void *arg) {
   time_ping_count = 0;
 
   // we inherit the signal mask (SIGUSR1)
-  while (1) {
-    if (please_shutdown)
-      break;
+  while (*stop==0) {
+  	// debug(1,"Send a timing request");
 
     if (!running)
       die("rtp_timing_sender called without active stream!");
@@ -314,12 +314,16 @@ static void *rtp_timing_sender(void *arg) {
   return NULL;
 }
 
-static void *rtp_timing_receiver(void *arg) {
+void *rtp_timing_receiver(void *arg) {
   // we inherit the signal mask (SIGUSR1)
+
+	int *stop = arg; // when set to 1, we should stop
+
   uint8_t packet[2048], *pktp;
   ssize_t nread;
+  int request_stop = 0;
   pthread_t timer_requester;
-  pthread_create(&timer_requester, NULL, &rtp_timing_sender, NULL);
+  pthread_create(&timer_requester, NULL, &rtp_timing_sender, (void *)&request_stop);
   //    struct timespec att;
   uint64_t distant_receive_time, distant_transmit_time, arrival_time, return_time, transit_time,
       processing_time;
@@ -331,9 +335,7 @@ static void *rtp_timing_receiver(void *arg) {
   uint64_t first_local_to_remote_time_difference = 0;
   uint64_t first_local_to_remote_time_difference_time;
   uint64_t l2rtd = 0;
-  while (1) {
-    if (please_shutdown)
-      break;
+  while (*stop==0) {
     nread = recv(timing_socket, packet, sizeof(packet), 0);
     arrival_time = get_absolute_time_in_fp();
     //      clock_gettime(CLOCK_MONOTONIC,&att);
@@ -497,7 +499,8 @@ static void *rtp_timing_receiver(void *arg) {
     }
   }
 
-  debug(1, "Timing RTP thread interrupted. terminating.");
+  debug(1, "Timing thread interrupted. terminating.");
+  request_stop = 1;
   void *retval;
   pthread_kill(timer_requester, SIGUSR1);
   pthread_join(timer_requester, &retval);
@@ -655,11 +658,10 @@ void rtp_setup(SOCKADDR *remote, int cport, int tport, uint32_t active_remote, i
   debug(2, "listening for audio, control and timing on ports %d, %d, %d.", *lsport, *lcport,
         *ltport);
 
-  please_shutdown = 0;
   reference_timestamp = 0;
-  pthread_create(&rtp_audio_thread, NULL, &rtp_audio_receiver, NULL);
-  pthread_create(&rtp_control_thread, NULL, &rtp_control_receiver, NULL);
-  pthread_create(&rtp_timing_thread, NULL, &rtp_timing_receiver, NULL);
+  //pthread_create(&rtp_audio_thread, NULL, &rtp_audio_receiver, NULL);
+  //pthread_create(&rtp_control_thread, NULL, &rtp_control_receiver, NULL);
+  //pthread_create(&rtp_timing_thread, NULL, &rtp_timing_receiver, NULL);
 
   running = 1;
   request_sent = 0;
@@ -682,18 +684,18 @@ void clear_reference_timestamp(void) {
 
 void rtp_shutdown(void) {
   if (!running)
-    die("rtp_shutdown called without active stream!");
+    debug(1,"rtp_shutdown called without active stream!");
 
   debug(2, "shutting down RTP thread");
-  please_shutdown = 1;
-  void *retval;
-  reference_timestamp = 0;
-  pthread_kill(rtp_audio_thread, SIGUSR1);
-  pthread_join(rtp_audio_thread, &retval);
-  pthread_kill(rtp_control_thread, SIGUSR1);
-  pthread_join(rtp_control_thread, &retval);
-  pthread_kill(rtp_timing_thread, SIGUSR1);
-  pthread_join(rtp_timing_thread, &retval);
+  clear_reference_timestamp();
+//  debug(1,"Shut down audio, control and timing threads");
+//  usleep(3000000); // hack
+//  pthread_kill(rtp_audio_thread, SIGUSR1);
+//  pthread_kill(rtp_control_thread, SIGUSR1);
+//  pthread_kill(rtp_timing_thread, SIGUSR1);
+//  pthread_join(rtp_audio_thread, &retval);
+//  pthread_join(rtp_control_thread, &retval);
+//  pthread_join(rtp_timing_thread, &retval);
   running = 0;
 }
 

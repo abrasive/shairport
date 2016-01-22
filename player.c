@@ -81,7 +81,7 @@ static int sampling_rate, frame_size;
 static aes_context dctx;
 #endif
 
-static pthread_t player_thread;
+//static pthread_t player_thread = NULL;
 static int please_stop;
 static int encrypted; // Normally the audio is encrypted, but it may not be
 
@@ -893,6 +893,13 @@ typedef struct stats { // statistics for running averages
 } stats_t;
 
 static void *player_thread_func(void *arg) {
+	int threads_stop = 0;
+	// create and start the timing, control and audio receiver threads
+	pthread_t rtp_audio_thread, rtp_control_thread, rtp_timing_thread;
+	pthread_create(&rtp_audio_thread, NULL, &rtp_audio_receiver, (void *)&threads_stop);
+  pthread_create(&rtp_control_thread, NULL, &rtp_control_receiver, (void *)&threads_stop);
+  pthread_create(&rtp_timing_thread, NULL, &rtp_timing_receiver, (void *)&threads_stop);
+
 		session_corrections = 0;
 		play_segment_reference_frame = 0; // zero signals that we are not in a play segment
 	// check that there are enough buffers to accommodate the desired latency and the latency offset
@@ -1219,8 +1226,22 @@ static void *player_thread_func(void *arg) {
       }
     }
   }
+  if (config.output->stop)
+  	config.output->stop();
   free(outbuf);
   free(silence);
+  debug(1,"Shut down audio, control and timing threads");
+  
+  pthread_kill(rtp_audio_thread, SIGUSR1);
+  pthread_kill(rtp_control_thread, SIGUSR1);
+  pthread_kill(rtp_timing_thread, SIGUSR1);
+  pthread_join(rtp_timing_thread, NULL);
+  debug(1,"timing thread joined");
+  pthread_join(rtp_audio_thread, NULL);
+  debug(1,"audio thread joined");
+  pthread_join(rtp_control_thread, NULL);
+  debug(1,"control thread joined");
+  debug(1,"Player thread exit");
   return 0;
 }
 
@@ -1389,7 +1410,9 @@ void player_flush(uint32_t timestamp) {
 #endif
 }
 
-int player_play(stream_cfg *stream) {
+int player_play(stream_cfg *stream, pthread_t *player_thread) {
+	//if (*player_thread!=NULL)
+	//	die("Trying to create a second player thread for this RTSP session");
   packet_count = 0;
   encrypted = stream->encrypted;
   if (config.buffer_start_fill > BUFFER_FRAMES)
@@ -1434,23 +1457,26 @@ int player_play(stream_cfg *stream) {
   rc = pthread_attr_setstacksize(&tattr, size);
   if (rc)
     debug(1, "Error setting stack size for player_thread: %s", strerror(errno));
-  pthread_create(&player_thread, &tattr, player_thread_func, NULL);
+  pthread_create(player_thread, &tattr, player_thread_func, NULL);
   pthread_attr_destroy(&tattr);
   return 0;
 }
 
-void player_stop(void) {
-  please_stop = 1;
-  pthread_cond_signal(&flowcontrol); // tell it to give up
-  pthread_join(player_thread, NULL);
-#ifdef CONFIG_METADATA
-  send_ssnc_metadata('pend', NULL, 0, 1);
-#endif
-  config.output->stop();
-  command_stop();
-  free_buffer();
-  free_decoder();
-  int rc = pthread_cond_destroy(&flowcontrol);
-  if (rc)
-    debug(1, "Error destroying condition variable.");
+void player_stop(pthread_t *player_thread) {
+	//if (*thread==NULL)
+	//	debug(1,"Trying to stop a non-existent player thread");
+	// else {
+		please_stop = 1;
+		pthread_cond_signal(&flowcontrol); // tell it to give up
+		pthread_join(*player_thread, NULL);
+	#ifdef CONFIG_METADATA
+		send_ssnc_metadata('pend', NULL, 0, 1);
+	#endif
+		command_stop();
+		free_buffer();
+		free_decoder();
+		int rc = pthread_cond_destroy(&flowcontrol);
+		if (rc)
+			debug(1, "Error destroying condition variable.");
+	//	}
 }

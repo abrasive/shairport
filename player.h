@@ -14,8 +14,8 @@ typedef uint16_t seq_t;
 // wrapped number between two seq_t.
 int32_t seq_diff(seq_t a, seq_t b);
 
-int player_play(stream_cfg *cfg);
-void player_stop(void);
+int player_play(stream_cfg *cfg, pthread_t *thread);
+void player_stop(pthread_t *thread);
 
 void player_volume(double f);
 void player_flush(uint32_t timestamp);
