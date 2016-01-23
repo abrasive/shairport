@@ -1231,7 +1231,7 @@ static void *player_thread_func(void *arg) {
   free(outbuf);
   free(silence);
   debug(1,"Shut down audio, control and timing threads");
-  
+  // usleep(1000000);
   pthread_kill(rtp_audio_thread, SIGUSR1);
   pthread_kill(rtp_control_thread, SIGUSR1);
   pthread_kill(rtp_timing_thread, SIGUSR1);

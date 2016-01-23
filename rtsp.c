@@ -83,13 +83,14 @@ static pthread_mutex_t reference_counter_lock = PTHREAD_MUTEX_INITIALIZER;
 // only one thread is allowed to use the player at once.
 // it monitors the request variable (at least when interrupted)
 static pthread_mutex_t playing_mutex = PTHREAD_MUTEX_INITIALIZER;
-static int please_shutdown = 0;
+//static int please_shutdown = 0;
 static pthread_t playing_thread = 0;
 
 typedef struct {
   int fd;
   stream_cfg stream;
   SOCKADDR remote;
+  int stop;
   int running;
   pthread_t thread;
   pthread_t player_thread;
@@ -133,6 +134,8 @@ typedef struct {
   uint32_t length;
   rtsp_message *carrier;
 } metadata_package;
+
+void ask_other_rtsp_conversation_threads_to_stop(pthread_t except_this_thread);
 
 void pc_queue_init(pc_queue *the_queue, char *items, size_t item_size, uint32_t number_of_items) {
   the_queue->item_size = item_size;
@@ -240,8 +243,7 @@ static inline int rtsp_playing(void) {
 }
 
 void rtsp_request_shutdown_stream(void) {
-  please_shutdown = 1;
-  pthread_kill(playing_thread, SIGUSR1);
+  ask_other_rtsp_conversation_threads_to_stop(0); // i.e. ask all playing threads to stop
 }
 
 static void rtsp_take_player(void) {
@@ -249,10 +251,8 @@ static void rtsp_take_player(void) {
     return;
 
   if (pthread_mutex_trylock(&playing_mutex)) {
-    debug(1, "shutting down playing thread.");
-    // XXX minor race condition between please_shutdown and signal delivery
-    please_shutdown = 1;
-    pthread_kill(playing_thread, SIGUSR1);
+    debug(1, "asking all other playing threads to stop.");   
+    ask_other_rtsp_conversation_threads_to_stop(pthread_self()); // all threads apart from self
     pthread_mutex_lock(&playing_mutex);
   }
   playing_thread = pthread_self(); // make us the currently-playing thread (why?)
@@ -289,6 +289,21 @@ static void cleanup_threads(void) {
     }
   }
 }
+
+// ask all rtsp_conversation threads to stop -- there should be at most one, but ya never know.
+
+void ask_other_rtsp_conversation_threads_to_stop(pthread_t except_this_thread) {
+  int i;
+  debug(2, "asking playing threads to stop");
+  for (i = 0; i < nconns;i++) {
+    if (((except_this_thread==0) || (pthread_equal(conns[i]->thread,except_this_thread)==0)) && (conns[i]->running != 0)) {
+      conns[i]->stop = 1;
+      pthread_kill(conns[i]->thread,SIGUSR1);
+    }
+  }
+}
+
+
 
 // park a null at the line ending, and return the next line pointer
 // accept \r, \n, or \r\n
@@ -443,7 +458,7 @@ fail:
   return 0;
 }
 
-static enum rtsp_read_request_response rtsp_read_request(int fd, rtsp_message **the_packet) {
+static enum rtsp_read_request_response rtsp_read_request(rtsp_conn_info *conn, rtsp_message **the_packet) {
   enum rtsp_read_request_response reply = rtsp_read_request_response_ok;
   ssize_t buflen = 512;
   char *buf = malloc(buflen + 1);
@@ -455,12 +470,12 @@ static enum rtsp_read_request_response rtsp_read_request(int fd, rtsp_message **
   int msg_size = -1;
 
   while (msg_size < 0) {
-    if (please_shutdown) {
+    if (conn->stop!=0) {
       debug(1, "RTSP shutdown requested.");
       reply = rtsp_read_request_response_shutdown_requested;
       goto shutdown;
     }
-    nread = read(fd, buf + inbuf, buflen - inbuf);
+    nread = read(conn->fd, buf + inbuf, buflen - inbuf);
     if (!nread) {
       debug(1, "RTSP connection closed.");
       reply = rtsp_read_request_response_shutdown_requested;
@@ -525,7 +540,7 @@ static enum rtsp_read_request_response rtsp_read_request(int fd, rtsp_message **
     ssize_t read_chunk = msg_size - inbuf;
     if (read_chunk > max_read_chunk)
       read_chunk = max_read_chunk;
-    nread = read(fd, buf + inbuf, read_chunk);
+    nread = read(conn->fd, buf + inbuf, read_chunk);
     if (!nread) {
       reply = rtsp_read_request_response_error;
       goto shutdown;
@@ -627,7 +642,7 @@ static void handle_teardown(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
     return;
   resp->respcode = 200;
   msg_add_header(resp, "Connection", "close");
-  please_shutdown = 1;
+  conn->stop = 1;
 }
 
 static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
@@ -765,7 +780,7 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
       strcat(hdr, q); // should unsplice the timing port entry
   }
 
-  player_play(&conn->stream,&conn->player_thread); // the tread better be null
+  player_play(&conn->stream,&conn->player_thread); // the thread better be 0
 
   char *resphdr = alloca(200);
   *resphdr = 0;
@@ -1518,7 +1533,7 @@ static void *rtsp_conversation_thread_func(void *pconn) {
   enum rtsp_read_request_response reply;
 
   do {
-    reply = rtsp_read_request(conn->fd, &req);
+    reply = rtsp_read_request(conn, &req);
     if (reply == rtsp_read_request_response_ok) {
       resp = msg_init();
       resp->respcode = 400;
@@ -1571,7 +1586,7 @@ static void *rtsp_conversation_thread_func(void *pconn) {
     free(auth_nonce);
   conn->running = 0;
   debug(2, "Now terminating RTSP conversation thread.");
-  please_shutdown = 0;
+//  please_shutdown = 0;
   return NULL;
 }
 
@@ -1712,6 +1727,7 @@ void rtsp_listen_loop(void) {
         die("Failed to create RTSP receiver thread!");
 
       conn->thread = rtsp_conversation_thread;
+      conn -> stop = 0;
       conn->running = 1;
       track_thread(conn);
     }
