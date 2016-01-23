@@ -308,7 +308,7 @@ void player_put_packet(seq_t seqno, uint32_t timestamp, uint8_t *data, int len) 
 
     if ((flush_rtp_timestamp != 0) &&
         ((timestamp == flush_rtp_timestamp) || seq32_order(timestamp, flush_rtp_timestamp))) {
-      debug(2, "Dropping flushed packet in player_put_packet, seqno %u, timestamp %u, flushing to "
+      debug(3, "Dropping flushed packet in player_put_packet, seqno %u, timestamp %u, flushing to "
                "timestamp: %u.",
             seqno, timestamp, flush_rtp_timestamp);
     } else {
@@ -332,7 +332,7 @@ void player_put_packet(seq_t seqno, uint32_t timestamp, uint8_t *data, int len) 
         // if (ORDINATE(seqno)>(BUFFER_FRAMES*7)/8)
         // debug(1,"An interval of %u frames has opened, with ab_read: %u, ab_write: %u and seqno:
         // %u.",seq_diff(ab_read,seqno),ab_read,ab_write,seqno);
-        int32_t gap = seq_diff(ab_write, PREDECESSOR(seqno)) + 1;
+        int32_t gap = seq_diff(ab_write, (seqno);
         if (gap <= 0)
           debug(1, "Unexpected gap size: %d.", gap);
         int i;
@@ -1398,7 +1398,7 @@ void player_volume(double airplay_volume) {
 }
 
 void player_flush(uint32_t timestamp) {
-  // debug(1,"Flush requested up to %u. It seems as if 0 is special.",timestamp);
+  debug(3,"Flush requested up to %u. It seems as if 0 is special.",timestamp);
   pthread_mutex_lock(&flush_mutex);
   flush_requested = 1;
   // if (timestamp!=0)
