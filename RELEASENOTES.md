@@ -15,7 +15,7 @@ Version 2.7.6 -- Development Version
 
 **Enhancements**
 * Add note about installing to Mac OS X. Thanks to [Serg Podtynnyi](https://github.com/shtirlic).
-* Add automatic rebuild of manapage and html doc when xmltoman and friends are available. Thanks to [Chris Boot](https://github.com/bootc).
+* Add automatic rebuild of manpage and html documentation when `xmltoman` and friends are available. Thanks to [Chris Boot](https://github.com/bootc).
 * Favour the use of "public" IPv6 addresses as source addresses when connecting to a distant IPv6 port.
 
 Version 2.7.5 -- Development Version
