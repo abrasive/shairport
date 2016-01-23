@@ -332,7 +332,7 @@ void player_put_packet(seq_t seqno, uint32_t timestamp, uint8_t *data, int len) 
         // if (ORDINATE(seqno)>(BUFFER_FRAMES*7)/8)
         // debug(1,"An interval of %u frames has opened, with ab_read: %u, ab_write: %u and seqno:
         // %u.",seq_diff(ab_read,seqno),ab_read,ab_write,seqno);
-        int32_t gap = seq_diff(ab_write, (seqno);
+        int32_t gap = seq_diff(ab_write, seqno);
         if (gap <= 0)
           debug(1, "Unexpected gap size: %d.", gap);
         int i;
