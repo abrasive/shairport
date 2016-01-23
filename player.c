@@ -344,8 +344,8 @@ void player_put_packet(seq_t seqno, uint32_t timestamp, uint8_t *data, int len) 
         }
         // debug(1,"N %d s %u.",seq_diff(ab_write,PREDECESSOR(seqno))+1,ab_write);
         abuf = audio_buffer + BUFIDX(seqno);
-        rtp_request_resend(ab_write, gap);
-        resend_requests++;
+//        rtp_request_resend(ab_write, gap);
+//        resend_requests++;
         ab_write = SUCCESSOR(seqno);
       } else if (seq_order(ab_read, seqno)) { // late but not yet played
         late_packets++;
