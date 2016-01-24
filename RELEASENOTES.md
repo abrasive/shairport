@@ -1,4 +1,4 @@
-Version 2.7.7
+Version 2.7.7 -- Development Version
 ----
 **Enhancements**
 * Add note about the Arch Linux Community repository package `shairport-sync`. Thanks to [Anatol Pomozov](https://github.com/anatol).
