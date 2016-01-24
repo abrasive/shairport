@@ -1,10 +1,12 @@
-Head
+Version 2.7.7
 ----
 **Enhancements**
 * Add note about the Arch Linux Community repository package `shairport-sync`. Thanks to [Anatol Pomozov](https://github.com/anatol).
 
 **Bug Fixes**
+* Improve Shairport Sync's behavious when it's asked to stop a play session and immediately start another. The signalling system used to stop threads was sometimes stopping threads belonging to the new session. This affected iOS 9.2 users going to the next track -- sometimes the player be unavailable for an instant and disconnect the session. The problem is must less now, but still happens occasionally.
 * Remove code favouring the use of "public" IPv6 addresses as source addresses when connecting to a distant IPv6 port – Neither OpenWrt nor FreeBSD can use it at present. Also, it's not clear if any problems are being caused by not favouring public IPv6 addresses.
+* Shairport Sync doesn't ask for packets to be resent quite so quickly -- it waits aboout half a second now.
 
 Version 2.7.6 -- Development Version
 ----
