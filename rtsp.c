@@ -243,6 +243,7 @@ static inline int rtsp_playing(void) {
 }
 
 void rtsp_request_shutdown_stream(void) {
+  debug(1,"Request to shut down all rtsp conversation threads");
   ask_other_rtsp_conversation_threads_to_stop(0); // i.e. ask all playing threads to stop
 }
 
@@ -251,7 +252,7 @@ static void rtsp_take_player(void) {
     return;
 
   if (pthread_mutex_trylock(&playing_mutex)) {
-    debug(1, "asking all other playing threads to stop.");   
+    debug(1, "Request to all other playing threads to stop.");   
     ask_other_rtsp_conversation_threads_to_stop(pthread_self()); // all threads apart from self
     pthread_mutex_lock(&playing_mutex);
   }
@@ -639,7 +640,7 @@ static void handle_options(rtsp_conn_info *conn, rtsp_message *req, rtsp_message
 
 static void handle_teardown(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
   if (!rtsp_playing())
-    return;
+    debug(1,"This RTSP conversation thread doesn't think it's playing, but it's sending a response to teardown anyway");
   resp->respcode = 200;
   msg_add_header(resp, "Connection", "close");
   conn->stop = 1;
@@ -647,7 +648,7 @@ static void handle_teardown(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
 
 static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
   if (!rtsp_playing())
-    return;
+        debug(1,"This RTSP conversation thread doesn't think it's playing, but it's sending a response to flush anyway");
   char *p;
   uint32_t rtptime = 0;
   char *hdr = msg_get_header(req, "RTP-Info");
@@ -1581,6 +1582,8 @@ static void *rtsp_conversation_thread_func(void *pconn) {
     rtp_shutdown();
     pthread_mutex_unlock(&play_lock);
     pthread_mutex_unlock(&playing_mutex);
+  } else {
+      debug(1,"This RTSP conversation thread doesn't think it's playing for a close RTSP connection.");
   }
   if (auth_nonce)
     free(auth_nonce);
@@ -1654,6 +1657,7 @@ void rtsp_listen_loop(void) {
 
     // one of the address families will fail on some systems that
     // report its availability. do not complain.
+   
     if (ret) {
       debug(1, "Failed to bind to address %s.", format_address(p->ai_addr));
       continue;

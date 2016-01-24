@@ -701,10 +701,10 @@ void rtp_shutdown(void) {
 
 void rtp_request_resend(seq_t first, uint32_t count) {
   if (running) {
-    if (!request_sent) {
+    //if (!request_sent) {
       debug(2, "requesting resend of %d packets starting at %u.", count, first);
-      request_sent = 1;
-    }
+    //  request_sent = 1;
+    //}
 
     char req[8]; // *not* a standard RTCP NACK
     req[0] = 0x80;
@@ -723,10 +723,10 @@ void rtp_request_resend(seq_t first, uint32_t count) {
       perror("Error sendto-ing to audio socket");
     }
   } else {
-    if (!request_sent) {
+    //if (!request_sent) {
       debug(2, "rtp_request_resend called without active stream!");
-      request_sent = 1;
-    }
+    //  request_sent = 1;
+    //}
   }
 }
 
