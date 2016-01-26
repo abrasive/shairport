@@ -1,6 +1,6 @@
 Version 2.7.8 -- Development Version
 ----
-**Bug Fixes**
+**Bug Fix**
 * Fixed an issue whereby Shairport Sync did not reset the hardware mixer volume level before resuming playing. The issue was caused by not releasing and later reaquiring the mixer when pausing and resuming. Thanks to [Tim Curtis](https://github.com/moodeaudio) for reporting the issue.
 
 Version 2.7.7 -- Development Version
