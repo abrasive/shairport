@@ -81,6 +81,8 @@ static char *alsa_out_dev = "default";
 static char *alsa_mix_dev = NULL;
 static char *alsa_mix_ctrl = "Master";
 static int alsa_mix_index = 0;
+static int hardware_mixer = 0;
+
 
 static int play_number;
 static int64_t accumulated_delay, accumulated_da_delay;
@@ -94,35 +96,35 @@ static void help(void) {
 }
 
 int open_mixer() {
-  debug(3, "Open Mixer");
-  int ret = 0;
-  snd_mixer_selem_id_alloca(&alsa_mix_sid);
-  snd_mixer_selem_id_set_index(alsa_mix_sid, alsa_mix_index);
-  snd_mixer_selem_id_set_name(alsa_mix_sid, alsa_mix_ctrl);
+  if (hardware_mixer) {
+    debug(3, "Open Mixer");
+    int ret = 0;
+    snd_mixer_selem_id_alloca(&alsa_mix_sid);
+    snd_mixer_selem_id_set_index(alsa_mix_sid, alsa_mix_index);
+    snd_mixer_selem_id_set_name(alsa_mix_sid, alsa_mix_ctrl);
 
-  if ((snd_mixer_open(&alsa_mix_handle, 0)) < 0)
-    die("Failed to open mixer");
-  debug(3, "Mixer device name is \"%s\".", alsa_mix_dev);
-  if ((snd_mixer_attach(alsa_mix_handle, alsa_mix_dev)) < 0)
-    die("Failed to attach mixer");
-  if ((snd_mixer_selem_register(alsa_mix_handle, NULL, NULL)) < 0)
-    die("Failed to register mixer element");
+    if ((snd_mixer_open(&alsa_mix_handle, 0)) < 0)
+      die("Failed to open mixer");
+    debug(3, "Mixer device name is \"%s\".", alsa_mix_dev);
+    if ((snd_mixer_attach(alsa_mix_handle, alsa_mix_dev)) < 0)
+      die("Failed to attach mixer");
+    if ((snd_mixer_selem_register(alsa_mix_handle, NULL, NULL)) < 0)
+      die("Failed to register mixer element");
 
-  ret = snd_mixer_load(alsa_mix_handle);
-  if (ret < 0)
-    die("Failed to load mixer element");
-  debug(3, "Mixer Control name is \"%s\".", alsa_mix_ctrl);
-  alsa_mix_elem = snd_mixer_find_selem(alsa_mix_handle, alsa_mix_sid);
-  if (!alsa_mix_elem)
-    die("Failed to find mixer element");
+    ret = snd_mixer_load(alsa_mix_handle);
+    if (ret < 0)
+      die("Failed to load mixer element");
+    debug(3, "Mixer Control name is \"%s\".", alsa_mix_ctrl);
+    alsa_mix_elem = snd_mixer_find_selem(alsa_mix_handle, alsa_mix_sid);
+    if (!alsa_mix_elem)
+      die("Failed to find mixer element");
+  }
 }
 
 static int init(int argc, char **argv) {
   // debug(1,"audio_alsa init called.");
   const char *str;
   int value;
-
-  int hardware_mixer = 0;
 
   config.audio_backend_latency_offset = 0; // this is the default for ALSA
   config.audio_backend_buffer_desired_length =
