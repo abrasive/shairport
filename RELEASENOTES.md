@@ -1,3 +1,8 @@
+Version 2.7.9 -- Development Version
+----
+**Bug Fix**
+* Oops – brown-bag update. Fixed a crashing bug introduced in the last release, caused by not checking for a hardware mixer before trying to access it, duh.
+
 Version 2.7.8 -- Development Version
 ----
 **Bug Fix**
