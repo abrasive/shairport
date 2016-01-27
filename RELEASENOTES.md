@@ -1,3 +1,8 @@
+Version 2.7.10 -- Development Version
+----
+**New Feature**
+* If the `ignore_volume_control` setting was `yes`, Shairport Sync really did ignore volume control settings and did not send any volume metadata (i.e. `pvol` coded metadata). Now, while continuing to ignore volume control settings, it sends a `pvol` token where the first number is the AirPlay volume, as before, but the remaining three parameters are set to zero.
+
 Version 2.7.9 -- Development Version
 ----
 **Bug Fix**
