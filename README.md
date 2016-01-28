@@ -62,7 +62,7 @@ The following procedures will install the shairport-sync application into your s
 Personal Package Archives for Shairport Sync master and development branches are available at https://launchpad.net/~dantheperson.
 
 **OpenWrt:**
-There is a Shairport Sync package in OpenWrt `trunk`. Also, there's an OpenWrt package at https://github.com/mikebrady/shairport-sync-for-openwrt, including one that builds back to `Attitude Adjustment`.
+There is a Shairport Sync package in OpenWrt `trunk`. Also, there's an OpenWrt package at https://github.com/mikebrady/shairport-sync-for-openwrt, including one that builds back to `Barrier Breaker`.
 
 **Arch Linux:**
 Shairport Sync is available for `x86_64` and `i686` platforms in the Arch Linux Community Repository -- search for `shairport-sync`. See also https://www.archlinux.org/packages/.
