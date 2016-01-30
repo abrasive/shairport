@@ -44,7 +44,6 @@
 #include <poll.h>
 #include <sys/stat.h>
 
-
 #include "config.h"
 
 #ifdef HAVE_LIBSSL
@@ -83,15 +82,17 @@ static pthread_mutex_t reference_counter_lock = PTHREAD_MUTEX_INITIALIZER;
 // only one thread is allowed to use the player at once.
 // it monitors the request variable (at least when interrupted)
 static pthread_mutex_t playing_mutex = PTHREAD_MUTEX_INITIALIZER;
-static int please_shutdown = 0;
+// static int please_shutdown = 0;
 static pthread_t playing_thread = 0;
 
 typedef struct {
   int fd;
   stream_cfg stream;
   SOCKADDR remote;
+  int stop;
   int running;
   pthread_t thread;
+  pthread_t player_thread;
 } rtsp_conn_info;
 
 #ifdef CONFIG_METADATA
@@ -133,7 +134,10 @@ typedef struct {
   rtsp_message *carrier;
 } metadata_package;
 
-void pc_queue_init(pc_queue *the_queue, char *items, size_t item_size, uint32_t number_of_items) {
+void ask_other_rtsp_conversation_threads_to_stop(pthread_t except_this_thread);
+
+void pc_queue_init(pc_queue *the_queue, char *items, size_t item_size,
+                   uint32_t number_of_items) {
   the_queue->item_size = item_size;
   the_queue->items = items;
   the_queue->count = 0;
@@ -142,8 +146,8 @@ void pc_queue_init(pc_queue *the_queue, char *items, size_t item_size, uint32_t 
   the_queue->eoq = 0;
 }
 
-int send_metadata(uint32_t type, uint32_t code, char *data, uint32_t length, rtsp_message *carrier,
-                  int block);
+int send_metadata(uint32_t type, uint32_t code, char *data, uint32_t length,
+                  rtsp_message *carrier, int block);
 
 int send_ssnc_metadata(uint32_t code, char *data, uint32_t length, int block) {
   return send_metadata('ssnc', code, data, length, NULL, block);
@@ -161,7 +165,8 @@ int pc_queue_add_item(pc_queue *the_queue, const void *the_stuff, int block) {
     if (rc)
       debug(1, "Error locking for pc_queue_add_item");
     while (the_queue->count == the_queue->capacity) {
-      rc = pthread_cond_wait(&the_queue->pc_queue_item_removed_signal, &the_queue->pc_queue_lock);
+      rc = pthread_cond_wait(&the_queue->pc_queue_item_removed_signal,
+                             &the_queue->pc_queue_lock);
       if (rc)
         debug(1, "Error waiting for item to be removed");
     }
@@ -198,7 +203,8 @@ int pc_queue_get_item(pc_queue *the_queue, void *the_stuff) {
     if (rc)
       debug(1, "Error locking for pc_queue_get_item");
     while (the_queue->count == 0) {
-      rc = pthread_cond_wait(&the_queue->pc_queue_item_added_signal, &the_queue->pc_queue_lock);
+      rc = pthread_cond_wait(&the_queue->pc_queue_item_added_signal,
+                             &the_queue->pc_queue_lock);
       if (rc)
         debug(1, "Error waiting for item to be added");
     }
@@ -239,8 +245,9 @@ static inline int rtsp_playing(void) {
 }
 
 void rtsp_request_shutdown_stream(void) {
-  please_shutdown = 1;
-  pthread_kill(playing_thread, SIGUSR1);
+  debug(1, "Request to shut down all rtsp conversation threads");
+  ask_other_rtsp_conversation_threads_to_stop(
+      0); // i.e. ask all playing threads to stop
 }
 
 static void rtsp_take_player(void) {
@@ -248,13 +255,13 @@ static void rtsp_take_player(void) {
     return;
 
   if (pthread_mutex_trylock(&playing_mutex)) {
-    debug(1, "shutting down playing thread.");
-    // XXX minor race condition between please_shutdown and signal delivery
-    please_shutdown = 1;
-    pthread_kill(playing_thread, SIGUSR1);
+    debug(1, "Request to all other playing threads to stop.");
+    ask_other_rtsp_conversation_threads_to_stop(
+        pthread_self()); // all threads apart from self
     pthread_mutex_lock(&playing_mutex);
   }
-  playing_thread = pthread_self(); // make us the currently-playing thread (why?)
+  playing_thread =
+      pthread_self(); // make us the currently-playing thread (why?)
 }
 
 void rtsp_shutdown_stream(void) {
@@ -285,6 +292,22 @@ static void cleanup_threads(void) {
         conns[i] = conns[nconns];
     } else {
       i++;
+    }
+  }
+}
+
+// ask all rtsp_conversation threads to stop -- there should be at most one, but
+// ya never know.
+
+void ask_other_rtsp_conversation_threads_to_stop(pthread_t except_this_thread) {
+  int i;
+  debug(2, "asking playing threads to stop");
+  for (i = 0; i < nconns; i++) {
+    if (((except_this_thread == 0) ||
+         (pthread_equal(conns[i]->thread, except_this_thread) == 0)) &&
+        (conns[i]->running != 0)) {
+      conns[i]->stop = 1;
+      pthread_kill(conns[i]->thread, SIGUSR1);
     }
   }
 }
@@ -329,7 +352,8 @@ static void msg_retain(rtsp_message *msg) {
 static rtsp_message *msg_init(void) {
   rtsp_message *msg = malloc(sizeof(rtsp_message));
   memset(msg, 0, sizeof(rtsp_message));
-  msg->referenceCount = 1; // from now on, any access to this must be protected with the lock
+  msg->referenceCount =
+      1; // from now on, any access to this must be protected with the lock
   return msg;
 }
 
@@ -370,7 +394,8 @@ static void msg_free(rtsp_message *msg) {
     msg->referenceCount--;
     rc = pthread_mutex_unlock(&reference_counter_lock);
     if (rc)
-      debug(1, "Error %d unlocking reference counter lock during msg_free()", rc);
+      debug(1, "Error %d unlocking reference counter lock during msg_free()",
+            rc);
     if (msg->referenceCount == 0) {
       int i;
       for (i = 0; i < msg->nheaders; i++) {
@@ -381,7 +406,8 @@ static void msg_free(rtsp_message *msg) {
         free(msg->content);
       free(msg);
     } // else {
-      // debug(1,"rtsp_message reference count non-zero: %d!",msg->referenceCount);
+      // debug(1,"rtsp_message reference count non-zero:
+      // %d!",msg->referenceCount);
       //}
   } else {
     debug(1, "null rtsp_message pointer passed to msg_free()");
@@ -426,7 +452,7 @@ static int msg_handle_line(rtsp_message **pmsg, char *line) {
     *p = 0;
     p += 2;
     msg_add_header(msg, line, p);
-    debug(2, "    %s: %s.", line, p);
+    debug(3, "    %s: %s.", line, p);
     return -1;
   } else {
     char *cl = msg_get_header(msg, "Content-Length");
@@ -442,7 +468,8 @@ fail:
   return 0;
 }
 
-static enum rtsp_read_request_response rtsp_read_request(int fd, rtsp_message **the_packet) {
+static enum rtsp_read_request_response
+rtsp_read_request(rtsp_conn_info *conn, rtsp_message **the_packet) {
   enum rtsp_read_request_response reply = rtsp_read_request_response_ok;
   ssize_t buflen = 512;
   char *buf = malloc(buflen + 1);
@@ -454,12 +481,12 @@ static enum rtsp_read_request_response rtsp_read_request(int fd, rtsp_message **
   int msg_size = -1;
 
   while (msg_size < 0) {
-    if (please_shutdown) {
+    if (conn->stop != 0) {
       debug(1, "RTSP shutdown requested.");
       reply = rtsp_read_request_response_shutdown_requested;
       goto shutdown;
     }
-    nread = read(fd, buf + inbuf, buflen - inbuf);
+    nread = read(conn->fd, buf + inbuf, buflen - inbuf);
     if (!nread) {
       debug(1, "RTSP connection closed.");
       reply = rtsp_read_request_response_shutdown_requested;
@@ -500,21 +527,24 @@ static enum rtsp_read_request_response rtsp_read_request(int fd, rtsp_message **
     buflen = msg_size;
   }
 
-  uint64_t threshold_time =
-      get_absolute_time_in_fp() + ((uint64_t)5 << 32); // i.e. five seconds from now
+  uint64_t threshold_time = get_absolute_time_in_fp() +
+                            ((uint64_t)5 << 32); // i.e. five seconds from now
   int warning_message_sent = 0;
 
   const size_t max_read_chunk = 50000;
   while (inbuf < msg_size) {
 
-    // we are going to read the stream in chunks and time how long it takes to do so.
-    // If it's taking too long, (and we find out about it), we will send an error message as
+    // we are going to read the stream in chunks and time how long it takes to
+    // do so.
+    // If it's taking too long, (and we find out about it), we will send an
+    // error message as
     // metadata
 
     if (warning_message_sent == 0) {
       uint64_t time_now = get_absolute_time_in_fp();
       if (time_now > threshold_time) { // it's taking too long
-        debug(1, "Error receiving metadata from source -- transmission seems to be stalled.");
+        debug(1, "Error receiving metadata from source -- transmission seems "
+                 "to be stalled.");
 #ifdef CONFIG_METADATA
         send_ssnc_metadata('stal', NULL, 0, 1);
 #endif
@@ -524,7 +554,7 @@ static enum rtsp_read_request_response rtsp_read_request(int fd, rtsp_message **
     ssize_t read_chunk = msg_size - inbuf;
     if (read_chunk > max_read_chunk)
       read_chunk = max_read_chunk;
-    nread = read(fd, buf + inbuf, read_chunk);
+    nread = read(conn->fd, buf + inbuf, read_chunk);
     if (!nread) {
       reply = rtsp_read_request_response_error;
       goto shutdown;
@@ -568,7 +598,7 @@ static void msg_write_response(int fd, rtsp_message *resp) {
   p += n;
 
   for (i = 0; i < resp->nheaders; i++) {
-    debug(2, "    %s: %s.", resp->name[i], resp->value[i]);
+    //    debug(3, "    %s: %s.", resp->name[i], resp->value[i]);
     n = snprintf(p, pktfree, "%s: %s\r\n", resp->name[i], resp->value[i]);
     pktfree -= n;
     p += n;
@@ -583,17 +613,21 @@ static void msg_write_response(int fd, rtsp_message *resp) {
   int ignore = write(fd, pkt, p - pkt + 2);
 }
 
-static void handle_record(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
-  //debug(1,"Handle Record");
+static void handle_record(rtsp_conn_info *conn, rtsp_message *req,
+                          rtsp_message *resp) {
+  // debug(1,"Handle Record");
   resp->respcode = 200;
-   // I think this is for telling the client what the absolute minimum latency actually is,
-   // and when the client specifies a latency, it should be added to this figure.
-   
-   // Thus, AirPlay's latency figure of 77175, when added to 11025 gives you exactly 88200
-   // and iTunes' latency figure of 88553, when added to 11025 gives you 99578, pretty close to the 99400 we guessed.
-   
+  // I think this is for telling the client what the absolute minimum latency
+  // actually is,
+  // and when the client specifies a latency, it should be added to this figure.
+
+  // Thus, AirPlay's latency figure of 77175, when added to 11025 gives you
+  // exactly 88200
+  // and iTunes' latency figure of 88553, when added to 11025 gives you 99578,
+  // pretty close to the 99400 we guessed.
+
   msg_add_header(resp, "Audio-Latency", "11025");
-  
+
   char *p;
   uint32_t rtptime = 0;
   char *hdr = msg_get_header(req, "RTP-Info");
@@ -603,35 +637,40 @@ static void handle_record(rtsp_conn_info *conn, rtsp_message *req, rtsp_message 
     // get the rtp timestamp
     p = strstr(hdr, "rtptime=");
     if (p) {
-      p = strchr(p, '=') + 1;
+      p = strchr(p, '=');
       if (p) {
-        rtptime = uatoi(p); // unsigned integer -- up to 2^32-1
-				rtptime--;
-				// debug(1,"RTSP Flush Requested by handle_record: %u.",rtptime);
-				player_flush(rtptime);
+        rtptime = uatoi(p + 1); // unsigned integer -- up to 2^32-1
+        rtptime--;
+        // debug(1,"RTSP Flush Requested by handle_record: %u.",rtptime);
+        player_flush(rtptime);
       }
     }
   }
 }
 
-static void handle_options(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
+static void handle_options(rtsp_conn_info *conn, rtsp_message *req,
+                           rtsp_message *resp) {
   resp->respcode = 200;
   msg_add_header(resp, "Public", "ANNOUNCE, SETUP, RECORD, "
                                  "PAUSE, FLUSH, TEARDOWN, "
                                  "OPTIONS, GET_PARAMETER, SET_PARAMETER");
 }
 
-static void handle_teardown(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
+static void handle_teardown(rtsp_conn_info *conn, rtsp_message *req,
+                            rtsp_message *resp) {
   if (!rtsp_playing())
-    return;
+    debug(1, "This RTSP conversation thread doesn't think it's playing, but "
+             "it's sending a response to teardown anyway");
   resp->respcode = 200;
   msg_add_header(resp, "Connection", "close");
-  please_shutdown = 1;
+  conn->stop = 1;
 }
 
-static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
+static void handle_flush(rtsp_conn_info *conn, rtsp_message *req,
+                         rtsp_message *resp) {
   if (!rtsp_playing())
-    return;
+    debug(1, "This RTSP conversation thread doesn't think it's playing, but "
+             "it's sending a response to flush anyway");
   char *p;
   uint32_t rtptime = 0;
   char *hdr = msg_get_header(req, "RTP-Info");
@@ -641,9 +680,9 @@ static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
     // get the rtp timestamp
     p = strstr(hdr, "rtptime=");
     if (p) {
-      p = strchr(p, '=') + 1;
+      p = strchr(p, '=');
       if (p)
-        rtptime = uatoi(p); // unsigned integer -- up to 2^32-1
+        rtptime = uatoi(p + 1); // unsigned integer -- up to 2^32-1
     }
   }
   // debug(1,"RTSP Flush Requested: %u.",rtptime);
@@ -651,7 +690,8 @@ static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
   resp->respcode = 200;
 }
 
-static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
+static void handle_setup(rtsp_conn_info *conn, rtsp_message *req,
+                         rtsp_message *resp) {
   // debug(1,"Handle Setup");
   int cport, tport;
   int lsport, lcport, ltport;
@@ -659,26 +699,27 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
 
   char *ar = msg_get_header(req, "Active-Remote");
   if (ar) {
-    debug(1,"Active-Remote string seen: \"%s\".",ar);
+    debug(1, "Active-Remote string seen: \"%s\".", ar);
     // get the active remote
     char *p;
     active_remote = strtoul(ar, &p, 10);
 #ifdef CONFIG_METADATA
-    send_metadata('ssnc','acre',ar,strlen(ar),req,1);
+    send_metadata('ssnc', 'acre', ar, strlen(ar), req, 1);
 #endif
   }
 
 #ifdef CONFIG_METADATA
   ar = msg_get_header(req, "DACP-ID");
   if (ar) {
-    debug(1,"DACP-ID string seen: \"%s\".",ar);
-    send_metadata('ssnc','daid',ar,strlen(ar),req,1);
+    debug(1, "DACP-ID string seen: \"%s\".", ar);
+    send_metadata('ssnc', 'daid', ar, strlen(ar), req, 1);
   }
 #endif
 
   // This latency-setting mechanism is deprecated and will be removed.
-  // If no non-standard latency is chosen, automatic negotiated latency setting is permitted.
-  
+  // If no non-standard latency is chosen, automatic negotiated latency setting
+  // is permitted.
+
   // Select a static latency
   // if iTunes V10 or later is detected, use the iTunes latency setting
   // if AirPlay is detected, use the AirPlay latency setting
@@ -692,7 +733,8 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
 
   char *ua = msg_get_header(req, "User-Agent");
   if (ua == 0) {
-    debug(1, "No User-Agent string found in the SETUP message. Using latency of %d frames.",
+    debug(1, "No User-Agent string found in the SETUP message. Using latency "
+             "of %d frames.",
           config.latency);
   } else {
     if (strstr(ua, "iTunes") == ua) {
@@ -704,27 +746,35 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
       else
         debug(2, "iTunes Version Number not found.");
       if (iTunesVersion >= 10) {
-        debug(2, "User-Agent is iTunes 10 or better, (actual version is %d); selecting the iTunes "
+        debug(2, "User-Agent is iTunes 10 or better, (actual version is %d); "
+                 "selecting the iTunes "
                  "latency of %d frames.",
               iTunesVersion, config.iTunesLatency);
         config.latency = config.iTunesLatency;
       }
     } else if (strstr(ua, "AirPlay") == ua) {
-      debug(2, "User-Agent is AirPlay; selecting the AirPlay latency of %d frames.",
-            config.AirPlayLatency);
+      debug(
+          2,
+          "User-Agent is AirPlay; selecting the AirPlay latency of %d frames.",
+          config.AirPlayLatency);
       config.latency = config.AirPlayLatency;
     } else if (strstr(ua, "forked-daapd") == ua) {
-      debug(2, "User-Agent is forked-daapd; selecting the forked-daapd latency of %d frames.",
+      debug(2, "User-Agent is forked-daapd; selecting the forked-daapd latency "
+               "of %d frames.",
             config.ForkedDaapdLatency);
       config.latency = config.ForkedDaapdLatency;
     } else {
-      debug(2, "Unrecognised User-Agent. Using latency of %d frames.", config.latency);
+      debug(2, "Unrecognised User-Agent. Using latency of %d frames.",
+            config.latency);
     }
   }
-  
-  if (config.latency==-1) {
-    // this means that no static latency was set, so we'll allow it to be set dynamically
-    config.latency=88198; // to be sure, to be sure -- make it slighty different from the default to ensure we get a debug message when set to 88200
+
+  if (config.latency == -1) {
+    // this means that no static latency was set, so we'll allow it to be set
+    // dynamically
+    config.latency = 88198; // to be sure, to be sure -- make it slighty
+                            // different from the default to ensure we get a
+                            // debug message when set to 88200
     config.use_negotiated_latencies = 1;
   }
   char *hdr = msg_get_header(req, "Transport");
@@ -745,7 +795,8 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
   tport = atoi(p);
 
   rtsp_take_player();
-  rtp_setup(&conn->remote, cport, tport, active_remote, &lsport, &lcport, &ltport);
+  rtp_setup(&conn->remote, cport, tport, active_remote, &lsport, &lcport,
+            &ltport);
   if (!lsport)
     goto error;
   char *q;
@@ -764,12 +815,13 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
       strcat(hdr, q); // should unsplice the timing port entry
   }
 
-  player_play(&conn->stream);
+  player_play(&conn->stream, &conn->player_thread); // the thread better be 0
 
   char *resphdr = alloca(200);
   *resphdr = 0;
   sprintf(resphdr, "RTP/AVP/"
-                   "UDP;unicast;interleaved=0-1;mode=record;control_port=%d;timing_port=%d;server_"
+                   "UDP;unicast;interleaved=0-1;mode=record;control_port=%d;"
+                   "timing_port=%d;server_"
                    "port=%d",
           lcport, ltport, lsport);
 
@@ -786,11 +838,13 @@ error:
   resp->respcode = 451; // invalid arguments
 }
 
-static void handle_ignore(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
+static void handle_ignore(rtsp_conn_info *conn, rtsp_message *req,
+                          rtsp_message *resp) {
   resp->respcode = 200;
 }
 
-static void handle_set_parameter_parameter(rtsp_conn_info *conn, rtsp_message *req,
+static void handle_set_parameter_parameter(rtsp_conn_info *conn,
+                                           rtsp_message *req,
                                            rtsp_message *resp) {
   char *cp = req->content;
   int cp_left = req->contentlength;
@@ -800,11 +854,21 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn, rtsp_message *r
     cp_left -= next - cp;
 
     if (!strncmp(cp, "volume: ", 8)) {
+      float volume = atof(cp + 8);
       if (config.ignore_volume_control == 0) {
-        float volume = atof(cp + 8);
         debug(2, "volume: %f\n", volume);
         player_volume(volume);
       }
+#ifdef CONFIG_METADATA
+      else {                    // if ignore volume is on...
+        char *dv = malloc(128); // will be freed in the metadata thread
+        if (dv) {
+          memset(dv, 0, 128);
+          snprintf(dv, 127, "%.2f,%.2f,%.2f,%.2f", volume, 0.0, 0.0, 0.0);
+          send_ssnc_metadata('pvol', dv, strlen(dv), 1);
+        }
+      }
+#endif
     } else
 #ifdef CONFIG_METADATA
         if (!strncmp(cp, "progress: ", 10)) {
@@ -823,49 +887,71 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn, rtsp_message *r
 
 #ifdef CONFIG_METADATA
 // Metadata is not used by shairport-sync.
-// Instead we send all metadata to a fifo pipe, so that other apps can listen to the pipe and use
+// Instead we send all metadata to a fifo pipe, so that other apps can listen to
+// the pipe and use
 // the metadata.
 
-// We use two 4-character codes to identify each piece of data and we send the data itself, if any,
+// We use two 4-character codes to identify each piece of data and we send the
+// data itself, if any,
 // in base64 form.
 
 // The first 4-character code, called the "type", is either:
 //    'core' for all the regular metadadata coming from iTunes, etc., or
-//    'ssnc' (for 'shairport-sync') for all metadata coming from Shairport Sync itself, such as
+//    'ssnc' (for 'shairport-sync') for all metadata coming from Shairport Sync
+//    itself, such as
 //    start/end delimiters, etc.
 
-// For 'core' metadata, the second 4-character code is the 4-character metadata code coming from
+// For 'core' metadata, the second 4-character code is the 4-character metadata
+// code coming from
 // iTunes etc.
-// For 'ssnc' metadata, the second 4-character code is used to distinguish the messages.
+// For 'ssnc' metadata, the second 4-character code is used to distinguish the
+// messages.
 
-// Cover art is not tagged in the same way as other metadata, it seems, so is sent as an 'ssnc' type
+// Cover art is not tagged in the same way as other metadata, it seems, so is
+// sent as an 'ssnc' type
 // metadata message with the code 'PICT'
 // Here are the 'ssnc' codes defined so far:
-//    'PICT' -- the payload is a picture, either a JPEG or a PNG. Check the first few bytes to see
+//    'PICT' -- the payload is a picture, either a JPEG or a PNG. Check the
+//    first few bytes to see
 //    which.
 //    'pbeg' -- play stream begin. No arguments
 //    'pend' -- play stream end. No arguments
 //    'pfls' -- play stream flush. No arguments
 //    'prsm' -- play stream resume. No arguments
 //    'pvol' -- play volume. The volume is sent as a string --
-//    "airplay_volume,volume,lowest_volume,highest_volume,has_true_mute,is_muted"
-//              volume, lowest_volume and highest_volume are given in dB
-//              is_muted is 1 if [true] mute is enabled, 0 otherwise.
-//              The "airplay_volume" is what's sent to the player, and is from 0.00 down to -30.00,
+//    "airplay_volume,volume,lowest_volume,highest_volume"
+//              volume, lowest_volume and highest_volume are given in dB.
+//              The "airplay_volume" is what's sent to the player, and is from
+//              0.00 down to -30.00,
 //              with -144.00 meaning mute.
-//              This is linear on the volume control slider of iTunes or iOS AirPLay
-//    'prgr' -- progress -- this is metadata from AirPlay consisting of RTP timestamps for the start
-//    of the current play sequence, the current play point and the end of the play sequence.
+//              This is linear on the volume control slider of iTunes or iOS
+//              AirPlay.
+//    'prgr' -- progress -- this is metadata from AirPlay consisting of RTP
+//    timestamps for the start
+//    of the current play sequence, the current play point and the end of the
+//    play sequence.
 //              I guess the timestamps wrap at 2^32.
-//    'mdst' -- a sequence of metadata is about to start
-//    'mden' -- a sequence of metadata has ended
-//    'snam' -- A device -- e.g. "Joe's iPhone" -- has opened a play session. Specifically, it's the "X-Apple-Client-Name" string
-//    'snua' -- A "user agent" -- e.g. "iTunes/12..." -- has opened a play session. Specifically, it's the "User-Agent" string
+//    'mdst' -- a sequence of metadata is about to start; will have, as data,
+//    the rtptime associated with the metadata, if available
+//    'mden' -- a sequence of metadata has ended; will have, as data, the
+//    rtptime associated with the metadata, if available
+//    'pcst' -- a picture is about to be sent; will have, as data, the rtptime
+//    associated with the picture, if available
+//    'pcen' -- a picture has been sent; will have, as data, the rtptime
+//    associated with the metadata, if available
+//    'snam' -- A device -- e.g. "Joe's iPhone" -- has opened a play session.
+//    Specifically, it's the "X-Apple-Client-Name" string
+//    'snua' -- A "user agent" -- e.g. "iTunes/12..." -- has opened a play
+//    session. Specifically, it's the "User-Agent" string
 //    The next two two tokens are to facilitiate remote control of the source.
-//    There is some information at http://nto.github.io/AirPlay.html about remote control of the source.
+//    There is some information at http://nto.github.io/AirPlay.html about
+//    remote control of the source.
 //
-//    'daid' -- this is the source's DACP-ID (if it has one -- it's not guaranteed), useful if you want to remotely control the source. Use this string to identify the source's remote control on the network.
-//    'acre' -- this is the source's Active-Remote token, necessary if you want to send commands to the source's remote control (if it has one).
+//    'daid' -- this is the source's DACP-ID (if it has one -- it's not
+//    guaranteed), useful if you want to remotely control the source. Use this
+//    string to identify the source's remote control on the network.
+//    'acre' -- this is the source's Active-Remote token, necessary if you want
+//    to send commands to the source's remote control (if it has one).
 //
 // including a simple base64 encoder to minimise malloc/free activity
 
@@ -877,20 +963,22 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn, rtsp_message *r
 
 // add _so to end of name to avoid confusion with polarssl's implementation
 
-static char encoding_table[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
-                                'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-                                'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
-                                'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
-                                '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '/'};
+static char encoding_table[] = {
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+    'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+    'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '/'};
 
 static int mod_table[] = {0, 2, 1};
 
-// pass in a pointer to the data, its length, a pointer to the output buffer and a pointer to an int
+// pass in a pointer to the data, its length, a pointer to the output buffer and
+// a pointer to an int
 // containing its maximum length
 // the actual length will be returned.
 
-char *base64_encode_so(const unsigned char *data, size_t input_length, char *encoded_data,
-                       size_t *output_length) {
+char *base64_encode_so(const unsigned char *data, size_t input_length,
+                       char *encoded_data, size_t *output_length) {
 
   size_t calculated_output_length = 4 * ((input_length + 2) / 3);
   if (calculated_output_length > *output_length)
@@ -955,7 +1043,8 @@ void metadata_open(void) {
 
   fd = open(path, O_WRONLY | O_NONBLOCK);
   // if (fd < 0)
-  //    debug(1, "Could not open metadata FIFO %s. Will try again later.", path);
+  //    debug(1, "Could not open metadata FIFO %s. Will try again later.",
+  //    path);
 
   free(path);
 }
@@ -965,8 +1054,10 @@ static void metadata_close(void) {
   fd = -1;
 }
 
-void metadata_process(uint32_t type, uint32_t code, char *data, uint32_t length) {
-  debug(2, "Process metadata with type %x, code %x and length %u.", type, code, length);
+void metadata_process(uint32_t type, uint32_t code, char *data,
+                      uint32_t length) {
+  debug(2, "Process metadata with type %x, code %x and length %u.", type, code,
+        length);
   int ret;
   // readers may go away and come back
   if (fd < 0)
@@ -974,8 +1065,9 @@ void metadata_process(uint32_t type, uint32_t code, char *data, uint32_t length)
   if (fd < 0)
     return;
   char thestring[1024];
-  snprintf(thestring, 1024, "<item><type>%x</type><code>%x</code><length>%u</length>", type, code,
-           length);
+  snprintf(thestring, 1024,
+           "<item><type>%x</type><code>%x</code><length>%u</length>", type,
+           code, length);
   ret = non_blocking_write(fd, thestring, strlen(thestring));
   if (ret < 1)
     return;
@@ -985,7 +1077,8 @@ void metadata_process(uint32_t type, uint32_t code, char *data, uint32_t length)
     if (ret < 1) // no reader
       return;
     // here, we write the data in base64 form using our nice base64 encoder
-    // but, we break it into lines of 76 output characters, except for the last one.
+    // but, we break it into lines of 76 output characters, except for the last
+    // one.
     // thus, we send groups of (76/4)*3 =  57 bytes to the encoder at a time
     size_t remaining_count = length;
     char *remaining_data = data;
@@ -995,10 +1088,13 @@ void metadata_process(uint32_t type, uint32_t code, char *data, uint32_t length)
       size_t towrite_count = remaining_count;
       if (towrite_count > 57)
         towrite_count = 57;
-      size_t outbuf_size = 76; // size of output buffer on entry, length of result on exit
-      if (base64_encode_so((unsigned char *)remaining_data, towrite_count, outbuf, &outbuf_size) == NULL)
+      size_t outbuf_size =
+          76; // size of output buffer on entry, length of result on exit
+      if (base64_encode_so((unsigned char *)remaining_data, towrite_count,
+                           outbuf, &outbuf_size) == NULL)
         debug(1, "Error encoding base64 data.");
-      // debug(1,"Remaining count: %d ret: %d, outbuf_size: %d.",remaining_count,ret,outbuf_size);
+      // debug(1,"Remaining count: %d ret: %d, outbuf_size:
+      // %d.",remaining_count,ret,outbuf_size);
       ret = non_blocking_write(fd, outbuf, outbuf_size);
       if (ret < 0)
         return;
@@ -1033,32 +1129,42 @@ void *metadata_thread_function(void *ignore) {
 
 void metadata_init(void) {
   // create a pc_queue for passing information to a threaded metadata handler
-  pc_queue_init(&metadata_queue, (char *)&metadata_queue_items, sizeof(metadata_package),
-                metadata_queue_size);
-  int ret = pthread_create(&metadata_thread, NULL, metadata_thread_function, NULL);
+  pc_queue_init(&metadata_queue, (char *)&metadata_queue_items,
+                sizeof(metadata_package), metadata_queue_size);
+  int ret =
+      pthread_create(&metadata_thread, NULL, metadata_thread_function, NULL);
   if (ret)
     debug(1, "Failed to create metadata thread!");
 }
 
-int send_metadata(uint32_t type, uint32_t code, char *data, uint32_t length, rtsp_message *carrier,
-                  int block) {
+int send_metadata(uint32_t type, uint32_t code, char *data, uint32_t length,
+                  rtsp_message *carrier, int block) {
 
-  // parameters: type, code, pointer to data or NULL, length of data or NULL, the rtsp_message or
+  // parameters: type, code, pointer to data or NULL, length of data or NULL,
+  // the rtsp_message or
   // NULL
-  // the rtsp_message is sent for 'core' messages, because it contains the data and must not be
-  // freed until the data has been read. So, it is passed to send_metadata to be retained,
-  // sent to the thread where metadata is processed and released (and probably freed).
-  
+  // the rtsp_message is sent for 'core' messages, because it contains the data
+  // and must not be
+  // freed until the data has been read. So, it is passed to send_metadata to be
+  // retained,
+  // sent to the thread where metadata is processed and released (and probably
+  // freed).
+
   // The rtsp_message is also sent for certain non-'core' messages.
 
   // The reading of the parameters is a bit complex
-  // If the rtsp_message field is non-null, then it represents an rtsp_message which should be freed
-  // in the thread handler when the parameter pointed to by the pointer and specified by the length
+  // If the rtsp_message field is non-null, then it represents an rtsp_message
+  // which should be freed
+  // in the thread handler when the parameter pointed to by the pointer and
+  // specified by the length
   // is finished with
-  // If the rtsp_message is NULL, then if the pointer is non-null, it points to a malloc'ed block
-  // and should be freed when the thread is finished with it. The length of the data in the block is
+  // If the rtsp_message is NULL, then if the pointer is non-null, it points to
+  // a malloc'ed block
+  // and should be freed when the thread is finished with it. The length of the
+  // data in the block is
   // given in length
-  // If the rtsp_message is NULL and the pointer is also NULL, nothing further is done.
+  // If the rtsp_message is NULL and the pointer is also NULL, nothing further
+  // is done.
 
   metadata_package pack;
   pack.type = type;
@@ -1072,29 +1178,32 @@ int send_metadata(uint32_t type, uint32_t code, char *data, uint32_t length, rts
   if ((rc == EBUSY) && (carrier))
     msg_free(carrier);
   if (rc == EBUSY)
-    warn("Metadata queue is busy, dropping message of type 0x%08X, code 0x%08X.", type, code);
+    warn(
+        "Metadata queue is busy, dropping message of type 0x%08X, code 0x%08X.",
+        type, code);
   return rc;
 }
 
-static void handle_set_parameter_metadata(rtsp_conn_info *conn, rtsp_message *req,
+static void handle_set_parameter_metadata(rtsp_conn_info *conn,
+                                          rtsp_message *req,
                                           rtsp_message *resp) {
   char *cp = req->content;
   int cl = req->contentlength;
 
   unsigned int off = 8;
 
-  // inform the listener that a set of metadata is starting
-  // this doesn't include the cover art though...
-
-  send_metadata('ssnc', 'mdst', NULL, 0, NULL, 1);
-
+  uint32_t itag, vl;
   while (off < cl) {
     // pick up the metadata tag as an unsigned longint
-    uint32_t itag = ntohl(*(uint32_t *)(cp + off));
+    memcpy(&itag, (uint32_t *)(cp + off),
+           sizeof(uint32_t)); /* can be misaligned, thus memcpy */
+    itag = ntohl(itag);
     off += sizeof(uint32_t);
 
     // pick up the length of the data
-    uint32_t vl = ntohl(*(uint32_t *)(cp + off));
+    memcpy(&vl, (uint32_t *)(cp + off),
+           sizeof(uint32_t)); /* can be misaligned, thus memcpy */
+    vl = ntohl(vl);
     off += sizeof(uint32_t);
 
     // pass the data over
@@ -1106,43 +1215,106 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn, rtsp_message *re
     // move on to the next item
     off += vl;
   }
-
-  // inform the listener that a set of metadata is ending
-  send_metadata('ssnc', 'mden', NULL, 0, NULL, 1);
 }
 
 #endif
 
-static void handle_get_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
+static void handle_get_parameter(rtsp_conn_info *conn, rtsp_message *req,
+                                 rtsp_message *resp) {
   debug(1, "received GET_PARAMETER request.");
   resp->respcode = 200;
 }
 
-
-static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
+static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req,
+                                 rtsp_message *resp) {
   // if (!req->contentlength)
   //    debug(1, "received empty SET_PARAMETER request.");
+
+  // msg_print_debug_headers(req);
 
   char *ct = msg_get_header(req, "Content-Type");
 
   if (ct) {
     debug(2, "SET_PARAMETER Content-Type:\"%s\".", ct);
+
 #ifdef CONFIG_METADATA
+    // It seems that the rtptime of the message is used as a kind of an ID that
+    // can be used
+    // to link items of metadata, including pictures, that refer to the same
+    // entity.
+    // If they refer to the same item, they have the same rtptime.
+    // So we send the rtptime before and after both the metadata items and the
+    // picture item
+    // get the rtptime
+    char *p = NULL;
+    char *hdr = msg_get_header(req, "RTP-Info");
+
+    if (hdr) {
+      p = strstr(hdr, "rtptime=");
+      if (p) {
+        p = strchr(p, '=');
+      }
+    }
+
+    // not all items have RTP-time stuff in them, which is okay
+
     if (!strncmp(ct, "application/x-dmap-tagged", 25)) {
       debug(2, "received metadata tags in SET_PARAMETER request.");
+      if (p == NULL)
+        debug(1, "Missing RTP-Time info for metadata");
+      if (p)
+        send_metadata('ssnc', 'mdst', p + 1, strlen(p + 1), req,
+                      1); // metadata starting
+      else
+        send_metadata('ssnc', 'mdst', NULL, 0, NULL,
+                      0); // metadata starting, if rtptime is not available
+
       handle_set_parameter_metadata(conn, req, resp);
+
+      if (p)
+        send_metadata('ssnc', 'mden', p + 1, strlen(p + 1), req,
+                      1); // metadata ending
+      else
+        send_metadata('ssnc', 'mden', NULL, 0, NULL,
+                      0); // metadata starting, if rtptime is not available
+
     } else if (!strncmp(ct, "image", 5)) {
-      // debug(1, "received image in SET_PARAMETER request.");
-      // note: the image/type tag isn't reliable, so it's not being sent
-      // -- best look at the first few bytes of the image
-      send_metadata('ssnc', 'PICT', req->content, req->contentlength, req, 1);
+      // Some server simply ignore the md field from the TXT record. If The
+      // config says 'please, do not include any cover art', we are polite and
+      // do not write them to the pipe.
+      if (config.get_coverart) {
+        // debug(1, "received image in SET_PARAMETER request.");
+        // note: the image/type tag isn't reliable, so it's not being sent
+        // -- best look at the first few bytes of the image
+        if (p == NULL)
+          debug(1, "Missing RTP-Time info for picture item");
+        if (p)
+          send_metadata('ssnc', 'pcst', p + 1, strlen(p + 1), req,
+                        1); // picture starting
+        else
+          send_metadata('ssnc', 'pcst', NULL, 0, NULL,
+                        0); // picture starting, if rtptime is not available
+
+        send_metadata('ssnc', 'PICT', req->content, req->contentlength, req, 1);
+
+        if (p)
+          send_metadata('ssnc', 'pcen', p + 1, strlen(p + 1), req,
+                        1); // picture ending
+        else
+          send_metadata('ssnc', 'pcen', NULL, 0, NULL,
+                        0); // picture ending, if rtptime is not available
+      } else {
+        debug(1, "Ignore received picture item (include_cover_art = no).");
+      }
     } else
 #endif
         if (!strncmp(ct, "text/parameters", 15)) {
       debug(2, "received parameters in SET_PARAMETER request.");
-      handle_set_parameter_parameter(conn, req, resp);
+      handle_set_parameter_parameter(conn, req,
+                                     resp); // this could be volume or progress
     } else {
-      debug(1, "received unknown Content-Type \"%s\" in SET_PARAMETER request.", ct);
+      debug(1, "received unknown Content-Type \"%s\" in SET_PARAMETER request.",
+            ct);
     }
   } else {
     debug(1, "missing Content-Type header in SET_PARAMETER request.");
@@ -1151,9 +1323,11 @@ static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_m
   resp->respcode = 200;
 }
 
-static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
+static void handle_announce(rtsp_conn_info *conn, rtsp_message *req,
+                            rtsp_message *resp) {
   // interrupt session if permitted
-  if ((config.allow_session_interruption == 1) || (pthread_mutex_trylock(&play_lock) == 0)) {
+  if ((config.allow_session_interruption == 1) ||
+      (pthread_mutex_trylock(&play_lock) == 0)) {
     resp->respcode = 456; // 456 - Header Field Not Valid for Resource
     char *paesiv = NULL;
     char *prsaaeskey = NULL;
@@ -1176,30 +1350,31 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
 
       cp = next;
     }
-    
-    if ((paesiv==NULL) && (prsaaeskey==NULL)) {
-      //debug(1,"Unencrypted session requested?");
+
+    if ((paesiv == NULL) && (prsaaeskey == NULL)) {
+      // debug(1,"Unencrypted session requested?");
       conn->stream.encrypted = 0;
     } else {
       conn->stream.encrypted = 1;
-      //debug(1,"Encrypted session requested");
+      // debug(1,"Encrypted session requested");
     }
-    
+
     if (!pfmtp) {
       warn("FMTP params missing from the following ANNOUNCE message:");
       // print each line of the request content
-      // the problem is that nextline has replace all returns, newlines, etc. by NULLs
+      // the problem is that nextline has replace all returns, newlines, etc. by
+      // NULLs
       char *cp = req->content;
       int cp_left = req->contentlength;
-      while (cp_left>1) {
-        if (strlen(cp)!=0)
-          warn("    %s",cp);
-        cp+=strlen(cp)+1;
-        cp_left-=strlen(cp)+1;
+      while (cp_left > 1) {
+        if (strlen(cp) != 0)
+          warn("    %s", cp);
+        cp += strlen(cp) + 1;
+        cp_left -= strlen(cp) + 1;
       }
       goto out;
     }
-    
+
     if (conn->stream.encrypted) {
       int len, keylen;
       uint8_t *aesiv = base64_dec(paesiv, &len);
@@ -1223,22 +1398,23 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
       free(aeskey);
     }
     int i;
-    for (i = 0; i < sizeof(conn->stream.fmtp) / sizeof(conn->stream.fmtp[0]); i++)
+    for (i = 0; i < sizeof(conn->stream.fmtp) / sizeof(conn->stream.fmtp[0]);
+         i++)
       conn->stream.fmtp[i] = atoi(strsep(&pfmtp, " \t"));
 
     char *hdr = msg_get_header(req, "X-Apple-Client-Name");
     if (hdr) {
       debug(1, "Play connection from device named \"%s\".", hdr);
-      #ifdef CONFIG_METADATA
-      send_metadata('ssnc','snam',hdr,strlen(hdr),req,1);
-      #endif
+#ifdef CONFIG_METADATA
+      send_metadata('ssnc', 'snam', hdr, strlen(hdr), req, 1);
+#endif
     }
     hdr = msg_get_header(req, "User-Agent");
     if (hdr) {
       debug(1, "Play connection from user agent \"%s\".", hdr);
-      #ifdef CONFIG_METADATA
-      send_metadata('ssnc','snua',hdr,strlen(hdr),req,1);
-      #endif
+#ifdef CONFIG_METADATA
+      send_metadata('ssnc', 'snua', hdr, strlen(hdr), req, 1);
+#endif
     }
     resp->respcode = 200;
   } else {
@@ -1398,7 +1574,8 @@ static int rtsp_auth(char **nonce, rtsp_message *req, rtsp_message *resp) {
   md5_update(&tctx, (unsigned char *)":", 1);
   md5_update(&tctx, (const unsigned char *)realm, strlen(realm));
   md5_update(&tctx, (unsigned char *)":", 1);
-  md5_update(&tctx, (const unsigned char *)config.password, strlen(config.password));
+  md5_update(&tctx, (const unsigned char *)config.password,
+             strlen(config.password));
   md5_finish(&tctx, digest_urp);
   md5_starts(&tctx);
   md5_update(&tctx, (const unsigned char *)req->method, strlen(req->method));
@@ -1468,7 +1645,7 @@ static void *rtsp_conversation_thread_func(void *pconn) {
   enum rtsp_read_request_response reply;
 
   do {
-    reply = rtsp_read_request(conn->fd, &req);
+    reply = rtsp_read_request(conn, &req);
     if (reply == rtsp_read_request_response_ok) {
       resp = msg_init();
       resp->respcode = 400;
@@ -1486,17 +1663,18 @@ static void *rtsp_conversation_thread_func(void *pconn) {
       int method_selected = 0;
       for (mh = method_handlers; mh->method; mh++) {
         if (!strcmp(mh->method, req->method)) {
-          //debug(1,"RTSP Packet received of type \"%s\":",mh->method),
-          //msg_print_debug_headers(req);
+          // debug(1,"RTSP Packet received of type \"%s\":",mh->method),
+          // msg_print_debug_headers(req);
           method_selected = 1;
           mh->handler(conn, req, resp);
-          //debug(1,"RTSP Response:");
-          //msg_print_debug_headers(resp);
+          // debug(1,"RTSP Response:");
+          // msg_print_debug_headers(resp);
           break;
         }
       }
-    if (method_selected==0)
-      debug(1,"Unrecognised and unhandled rtsp request \"%s\".",req->method);
+      if (method_selected == 0)
+        debug(1, "Unrecognised and unhandled rtsp request \"%s\".",
+              req->method);
 
     respond:
       msg_write_response(conn->fd, resp);
@@ -1508,20 +1686,23 @@ static void *rtsp_conversation_thread_func(void *pconn) {
     }
   } while (reply != rtsp_read_request_response_shutdown_requested);
 
-  debug(1, "closing RTSP connection.");
+  debug(1, "Now closing RTSP connection.");
   if (conn->fd > 0)
     close(conn->fd);
   if (rtsp_playing()) {
+    player_stop(&conn->player_thread); // might be less noisy doing this first
     rtp_shutdown();
-    player_stop();
     pthread_mutex_unlock(&play_lock);
-    please_shutdown = 0;
     pthread_mutex_unlock(&playing_mutex);
+  } else {
+    debug(1, "This RTSP conversation thread doesn't think it's playing for a "
+             "close RTSP connection.");
   }
   if (auth_nonce)
     free(auth_nonce);
   conn->running = 0;
-  debug(2, "terminating RTSP thread.");
+  debug(2, "Now terminating RTSP conversation thread.");
+  //  please_shutdown = 0;
   return NULL;
 }
 
@@ -1569,7 +1750,8 @@ void rtsp_listen_loop(void) {
 
     // Handle socket open failures if protocol unavailable (or IPV6 not handled)
     if (fd == -1) {
-      // debug(1, "Failed to get socket: fam=%d, %s\n", p->ai_family, strerror(errno));
+      // debug(1, "Failed to get socket: fam=%d, %s\n", p->ai_family,
+      // strerror(errno));
       continue;
     }
 
@@ -1589,6 +1771,7 @@ void rtsp_listen_loop(void) {
 
     // one of the address families will fail on some systems that
     // report its availability. do not complain.
+
     if (ret) {
       debug(1, "Failed to bind to address %s.", format_address(p->ai_addr));
       continue;
@@ -1650,18 +1833,20 @@ void rtsp_listen_loop(void) {
     memset(conn, 0, sizeof(rtsp_conn_info));
     socklen_t slen = sizeof(conn->remote);
 
-    debug(1, "new RTSP connection.");
+    debug(1, "New RTSP connection on port %d", config.port);
     conn->fd = accept(acceptfd, (struct sockaddr *)&conn->remote, &slen);
     if (conn->fd < 0) {
       perror("failed to accept connection");
       free(conn);
     } else {
       pthread_t rtsp_conversation_thread;
-      ret = pthread_create(&rtsp_conversation_thread, NULL, rtsp_conversation_thread_func, conn);
+      ret = pthread_create(&rtsp_conversation_thread, NULL,
+                           rtsp_conversation_thread_func, conn);
       if (ret)
         die("Failed to create RTSP receiver thread!");
 
       conn->thread = rtsp_conversation_thread;
+      conn->stop = 0;
       conn->running = 1;
       track_thread(conn);
     }

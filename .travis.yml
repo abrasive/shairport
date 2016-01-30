@@ -1,0 +1,54 @@
+language: c
+sudo: required
+dist: trusty
+env:
+  matrix:
+    - CFG="--with-alsa --with-avahi --with-ssl=openssl --with-soxr --with-metadata --with-systemv"
+    - CFG="--with-alsa --with-avahi --with-ssl=polarssl --with-soxr --with-metadata --with-systemv"
+    - CFG="--with-alsa --with-avahi --with-ssl=openssl --with-soxr --with-metadata --with-systemd"
+    - CFG="--with-alsa --with-avahi --with-ssl=polarssl --with-soxr --with-metadata --with-systemd"
+    - CFG="--with-alsa --with-avahi --with-ssl=polarssl --with-soxr --with-metadata --with-systemd"
+    - CFG="--with-alsa --with-avahi --with-ssl=openssl --with-soxr --with-metadata --with-systemd"
+    - CFG="--with-stdio --with-avahi --with-ssl=openssl --with-metadata --with-systemd"
+    - CFG="--with-stdio --with-avahi --with-ssl=polarssl --with-metadata --with-systemd"
+    - CFG="--with-pipe --with-avahi --with-ssl=openssl --with-metadata --with-systemd"
+    - CFG="--with-pipe --with-avahi --with-ssl=polarssl --with-metadata --with-systemd"
+    - CFG="--with-ao --with-avahi --with-ssl=openssl --with-metadata --with-systemd"
+    - CFG="--with-ao --with-avahi --with-ssl=polarssl --with-metadata --with-systemd"
+    - CFG="--with-alsa --with-tinysvcmdns --with-ssl=openssl --with-soxr --with-metadata --with-systemv"
+    - CFG="--with-alsa --with-tinysvcmdns --with-ssl=polarssl --with-soxr --with-metadata --with-systemv"
+    - CFG="--with-alsa --with-tinysvcmdns --with-ssl=openssl --with-soxr --with-metadata --with-systemd"
+    - CFG="--with-alsa --with-tinysvcmdns --with-ssl=polarssl --with-soxr --with-metadata --with-systemd"
+    - CFG="--with-alsa --with-tinysvcmdns --with-ssl=polarssl --with-soxr --with-metadata --with-systemd"
+    - CFG="--with-alsa --with-tinysvcmdns --with-ssl=openssl --with-soxr --with-metadata --with-systemd"
+    - CFG="--with-stdio --with-tinysvcmdns --with-ssl=openssl --with-metadata --with-systemd"
+    - CFG="--with-stdio --with-tinysvcmdns --with-ssl=polarssl --with-metadata --with-systemd"
+    - CFG="--with-pipe --with-tinysvcmdns --with-ssl=openssl --with-metadata --with-systemd"
+    - CFG="--with-pipe --with-tinysvcmdns --with-ssl=polarssl --with-metadata --with-systemd"
+    - CFG="--with-ao --with-tinysvcmdns --with-ssl=openssl --with-metadata --with-systemd"
+    - CFG="--with-ao --with-tinysvcmdns --with-ssl=polarssl --with-metadata --with-systemd"
+
+script:
+  - autoreconf -fi 
+  - ./configure $CFG
+  - make
+
+branches:
+  only:
+    - development
+
+before_install:
+  - sudo apt-get -qq update
+  - sudo apt-get install -y libdaemon-dev avahi-daemon libavahi-client-dev 
+  
+addons:
+  apt:
+    packages:
+    - libasound2-dev
+    - libsoxr-dev
+    - libpopt-dev
+    - libssl-dev
+    - libpolarssl-dev
+    - libconfig-dev
+    - xmltoman
+    - libao-dev
