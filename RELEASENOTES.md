@@ -24,7 +24,6 @@ Version 2.8 is derived from version 2.7.10 with slight documentation updates. He
 * Fixed some typos and misspellings.
 * Miscellaneous small bug fixes.
 
-
 Version 2.7.10 -- Development Version
 ----
 **New Feature**
