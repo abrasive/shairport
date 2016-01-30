@@ -3,7 +3,7 @@ Version 2.8 – Stable Version
 Version 2.8 is derived from version 2.7.10 with slight documentation updates. Here is a summary of changes between the last stable version – 2.6 – and this version. For full details, refer to the release notes here, back as far as 2.7.
 
 **New Feature**
-* For hardware mixers with a restricted range (including many cheaper USB DACS), the general `volume_range_db` can be used to specify a wider range than the hardware provides – the extra range is provided by in software.
+* For hardware mixers with a restricted range (including many cheaper USB DACS), the general `volume_range_db` can be used to specify a wider range than the hardware provides – the extra range is provided by software.
 
 **Enhancements**
 * The `man` manual and the html version of it are automagically rebuilt if `xml2man` and friends are available.
