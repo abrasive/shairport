@@ -33,10 +33,6 @@ script:
   - ./configure $CFG
   - make
 
-branches:
-  only:
-    - development
-
 before_install:
   - sudo apt-get -qq update
   - sudo apt-get install -y libdaemon-dev avahi-daemon libavahi-client-dev 

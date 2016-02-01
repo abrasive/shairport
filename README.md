@@ -5,7 +5,7 @@ Audio played by a Shairport Sync-powered device stays synchronised with the sour
 
 Shairport Sync does not support AirPlay video or photo streaming.
 
-This branch — "development" — is unstable and may change quickly. To access the stable version, please switch to the "master" branch.
+This is the stable "master" branch. Changes and updates are incorporated into this branch relatively slowly. To access the development version, where all the latest changes are made first, please switch to the "development" branch.
 
 More Information
 ----------
@@ -129,10 +129,9 @@ Download Shairport Sync:
 
 `git clone https://github.com/mikebrady/shairport-sync.git`
 
-Next, `cd` into the shairport-sync directory and execute the following commands:
+Next, `cd` into the shairport-sync directory and execute the following command:
 
 ```
-$ git checkout development #select the development branch
 $ autoreconf -i -f
 ```
 (Note that the `autoreconf...` step may take some time on less powerful machines.)
@@ -154,7 +153,7 @@ Choose the appropriate `--with-*` options:
 
 **`systemd` and "System V"**
 
-At the time of writing, there are two widely-used systems for automatically starting programs automatically at startup: `systemd` and "System V" . (There are others, but they are not considered here.) To see if the `systemd` process is running on your system, enter the following command:
+At the time of writing, there are two widely-used systems for starting programs automatically at startup: `systemd` and "System V" . (There are others, but they are not considered here.) To see if the `systemd` process is running on your system, enter the following command:
 
 `ps aux | grep systemd | grep -v grep`
 
@@ -234,7 +233,7 @@ There are two logically distinct parts to getting Shairport Sync to run properly
 Starting and stopping Shairport Sync automatically is taken care of differently in different versions of Linux – see the previous section for an example of installing into a `systemd` or a System V based system.
 
 **(2) Settings:**
-To get the best from Shairport Sync, you’ll need to (a) give Shairport Sync a service name by which it will be seen in iTunes etc., (b) specify the output device to use and (c) specify the name of the mixer volume control to use to control the output level. To get values for (b) and (b) you might need to explore the ALSA output devices with a program like `alsamixer` or similar.
+To get the best from Shairport Sync, you’ll need to (a) give Shairport Sync a service name by which it will be seen in iTunes etc., (b) specify the output device to use and (c) specify the name of the mixer volume control to use to control the output level. To get values for (b) and (c) you might need to explore the ALSA output devices with a program like `alsamixer` or similar.
 
 Shairport Sync reads settings from a configuration file at `/etc/shairport-sync.conf`. When you run `$sudo make install`, a sample configuration file is installed (or updated) at `/etc/shairport-sync.conf.sample`. This contains all the setting groups and all the settings available, but they all are commented out (comments begin with `//`) so that default values are used. The file contains explanations of the settings, useful hints and suggestions. In addition, if the file doesn't already exist, a default configuration is installed at `/etc/shairport-sync.conf`, which should work in almost any system with a sound card.
 
