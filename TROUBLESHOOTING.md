@@ -24,7 +24,7 @@ You have installed Shairport-sync successfully, the deamon is running, you can s
 
 **Solution**
 
-You have to allow connections to your Pi from remote devices. To do so, after re-enabling UFW (see last stp of the previous section), enter the following commands in shell:
+You have to allow connections to your Pi from remote devices. To do so, after re-enabling UFW (see last step of the previous section), enter the following commands in shell:
 
 ```
 sudo ufw allow from 192.168.1.1/16 to any port 3689 proto tcp
