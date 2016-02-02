@@ -221,11 +221,12 @@ static inline int seq32_order(uint32_t a, uint32_t b) {
   return (C & 0x80000000) == 0;
 }
 
-static void alac_decode(short *dest, uint8_t *buf, int len) {
+static int alac_decode(short *dest, uint8_t *buf, int len) {
   unsigned char packet[MAX_PACKET];
   unsigned char packetp[MAX_PACKET];
   assert(len <= MAX_PACKET);
-  int outsize;
+  int reply = 0; //everything okay
+  int outsize=FRAME_BYTES(frame_size); // the size it should be
 
   if (encrypted) {
     unsigned char iv[16];
@@ -244,11 +245,13 @@ static void alac_decode(short *dest, uint8_t *buf, int len) {
   }
   if (outsize!=FRAME_BYTES(frame_size)) {
     if(outsize<FRAME_BYTES(frame_size)) {
-      debug(1,"Output from alac_decode is smaller than expected. Encrypted = %d.",encrypted);
+      debug(2,"Output from alac_decode is smaller than expected. Encrypted = %d.",encrypted);
     } else {
-      debug(1,"OUtput from alac_decode larger than expected -- truncated, but buffer overflow possible! Encrypted = %d.",encrypted);
+      debug(2,"Output from alac_decode larger than expected -- truncated, but buffer overflow possible! Encrypted = %d.",encrypted);
     }
+    reply = -1; // output frame is the wrong size
   }
+  return reply;
 }
 
 static int init_decoder(int32_t fmtp[12]) {
@@ -363,10 +366,16 @@ void player_put_packet(seq_t seqno, uint32_t timestamp, uint8_t *data, int len) 
       // pthread_mutex_unlock(&ab_mutex);
 
       if (abuf) {
-        alac_decode(abuf->data, data, len);
-        abuf->ready = 1;
-        abuf->timestamp = timestamp;
-        abuf->sequence_number = seqno;
+        if (alac_decode(abuf->data, data, len)==0) {
+					abuf->ready = 1;
+					abuf->timestamp = timestamp;
+					abuf->sequence_number = seqno;
+        } else {
+        	debug(1,"Bad audio packet detected and discarded.");
+					abuf->ready = 0;
+					abuf->timestamp = 0;
+					abuf->sequence_number = 0;        
+        }
       }
 
       // pthread_mutex_lock(&ab_mutex);
@@ -893,13 +902,12 @@ typedef struct stats { // statistics for running averages
 } stats_t;
 
 static void *player_thread_func(void *arg) {
-  struct inter_threads_record itr;
-	itr.please_stop = 0; // this will be used to signal to the subsidiary threads
+	int threads_stop = 0;
 	// create and start the timing, control and audio receiver threads
 	pthread_t rtp_audio_thread, rtp_control_thread, rtp_timing_thread;
-	pthread_create(&rtp_audio_thread, NULL, &rtp_audio_receiver, (void *)&itr);
-  pthread_create(&rtp_control_thread, NULL, &rtp_control_receiver, (void *)&itr);
-  pthread_create(&rtp_timing_thread, NULL, &rtp_timing_receiver, (void *)&itr);
+	pthread_create(&rtp_audio_thread, NULL, &rtp_audio_receiver, (void *)&threads_stop);
+  pthread_create(&rtp_control_thread, NULL, &rtp_control_receiver, (void *)&threads_stop);
+  pthread_create(&rtp_timing_thread, NULL, &rtp_timing_receiver, (void *)&threads_stop);
 
 		session_corrections = 0;
 		play_segment_reference_frame = 0; // zero signals that we are not in a play segment
@@ -1233,7 +1241,7 @@ static void *player_thread_func(void *arg) {
   free(silence);
   debug(1,"Shut down audio, control and timing threads");
   // usleep(1000000);
-  itr.please_stop = 1;
+  threads_stop = 1;
   pthread_kill(rtp_audio_thread, SIGUSR1);
   pthread_kill(rtp_control_thread, SIGUSR1);
   pthread_kill(rtp_timing_thread, SIGUSR1);
