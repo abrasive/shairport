@@ -437,8 +437,10 @@ static uint32_t delay() {
 static void play(short buf[], int samples) {
   int ret = 0;
   if (alsa_handle == NULL) {
+    pthread_mutex_lock(&alsa_mutex);
     ret = open_alsa_device();
     open_mixer();
+    pthread_mutex_unlock(&alsa_mutex);
     if ((ret == 0) && (audio_alsa.volume))
       audio_alsa.volume(set_volume);
   }
@@ -467,6 +469,7 @@ static void play(short buf[], int samples) {
 }
 
 static void flush(void) {
+  pthread_mutex_lock(&alsa_mutex);
   int derr;
   if (alsa_mix_handle) {
     snd_mixer_close(alsa_mix_handle);
@@ -495,6 +498,7 @@ static void flush(void) {
     snd_pcm_close(alsa_handle);
     alsa_handle = NULL;
   }
+  pthread_mutex_unlock(&alsa_mutex);
 }
 
 static void stop(void) {
@@ -513,7 +517,8 @@ static void parameters(audio_parameters *info) {
 }
 
 static void volume(double vol) {
-  debug(2, "Setting volume db to %f.", vol);
+  pthread_mutex_lock(&alsa_mutex);
+	debug(2, "Setting volume db to %f.", vol);
   set_volume = vol;
   if (alsa_mix_handle) {
     if (snd_mixer_selem_set_playback_dB_all(alsa_mix_elem, vol, 0) != 0) {
@@ -523,6 +528,7 @@ static void volume(double vol) {
           die("Failed to set playback dB volume");
     }
   }
+  pthread_mutex_unlock(&alsa_mutex);
 }
 
 static void linear_volume(double vol) {

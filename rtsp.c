@@ -1694,10 +1694,10 @@ static void *rtsp_conversation_thread_func(void *pconn) {
     rtp_shutdown();
     pthread_mutex_unlock(&play_lock);
     pthread_mutex_unlock(&playing_mutex);
-  } else {
-    debug(1, "This RTSP conversation thread doesn't think it's playing for a "
-             "close RTSP connection.");
-  }
+  } // else {
+    //debug(1, "This RTSP conversation thread doesn't think it's playing for a "
+    //         "close RTSP connection.");
+  // }
   if (auth_nonce)
     free(auth_nonce);
   conn->running = 0;
