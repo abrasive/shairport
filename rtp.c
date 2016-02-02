@@ -47,11 +47,6 @@
 #include <linux/in6.h>
 #endif
 */
-typedef struct {
-  uint32_t seconds;
-  uint32_t fraction;
-} ntp_timestamp;
-
 typedef struct time_ping_record {
   uint64_t local_to_remote_difference;
   uint64_t dispersion;
@@ -96,15 +91,16 @@ static pthread_mutex_t reference_time_mutex = PTHREAD_MUTEX_INITIALIZER;
 uint64_t static local_to_remote_time_difference; // used to switch between local and remote clocks
 
 void *rtp_audio_receiver(void *arg) {
-  // we inherit the signal mask (SIGUSR1)
+  debug(2, "Audio receiver -- Server RTP thread starting.");
 
-	int *stop = arg; // when set to 1, we should stop
+  // we inherit the signal mask (SIGUSR1)
+  struct inter_threads_record *itr = arg;
 
   int32_t last_seqno = -1;
   uint8_t packet[2048], *pktp;
 
   ssize_t nread;
-  while (*stop==0) {
+  while (itr->please_stop==0) {
     nread = recv(audio_socket, packet, sizeof(packet), 0);
     if (nread < 0)
       break;
@@ -160,7 +156,8 @@ void *rtp_audio_receiver(void *arg) {
 void *rtp_control_receiver(void *arg) {
   // we inherit the signal mask (SIGUSR1)
 
-	int *stop = arg; // when set to 1, we should stop
+  debug(2, "Control receiver -- Server RTP thread starting.");
+  struct inter_threads_record *itr = arg;
 
   reference_timestamp = 0; // nothing valid received yet
   uint8_t packet[2048], *pktp;
@@ -168,7 +165,7 @@ void *rtp_control_receiver(void *arg) {
   uint64_t remote_time_of_sync, local_time_now, remote_time_now;
   uint32_t sync_rtp_timestamp, rtp_timestamp_less_latency;
   ssize_t nread;
-  while (*stop==0) {
+  while (itr->please_stop==0) {
     nread = recv(control_socket, packet, sizeof(packet), 0);
     local_time_now = get_absolute_time_in_fp();
     //        clock_gettime(CLOCK_MONOTONIC,&tn);
@@ -260,6 +257,7 @@ void *rtp_control_receiver(void *arg) {
 }
 
 void *rtp_timing_sender(void *arg) {
+  debug(2, "Timing sender thread starting.");
 	int *stop = arg; // the parameter points to this request to stop thing
   struct timing_request {
     char leader;
@@ -315,9 +313,10 @@ void *rtp_timing_sender(void *arg) {
 }
 
 void *rtp_timing_receiver(void *arg) {
+  debug(2, "Timing receiver -- Server RTP thread starting.");
   // we inherit the signal mask (SIGUSR1)
 
-	int *stop = arg; // when set to 1, we should stop
+	struct inter_threads_record *itr = arg;
 
   uint8_t packet[2048], *pktp;
   ssize_t nread;
@@ -335,7 +334,7 @@ void *rtp_timing_receiver(void *arg) {
   uint64_t first_local_to_remote_time_difference = 0;
   uint64_t first_local_to_remote_time_difference_time;
   uint64_t l2rtd = 0;
-  while (*stop==0) {
+  while (itr->please_stop==0) {
     nread = recv(timing_socket, packet, sizeof(packet), 0);
     arrival_time = get_absolute_time_in_fp();
     //      clock_gettime(CLOCK_MONOTONIC,&att);

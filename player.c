@@ -893,12 +893,13 @@ typedef struct stats { // statistics for running averages
 } stats_t;
 
 static void *player_thread_func(void *arg) {
-	int threads_stop = 0;
+  struct inter_threads_record itr;
+	itr.please_stop = 0; // this will be used to signal to the subsidiary threads
 	// create and start the timing, control and audio receiver threads
 	pthread_t rtp_audio_thread, rtp_control_thread, rtp_timing_thread;
-	pthread_create(&rtp_audio_thread, NULL, &rtp_audio_receiver, (void *)&threads_stop);
-  pthread_create(&rtp_control_thread, NULL, &rtp_control_receiver, (void *)&threads_stop);
-  pthread_create(&rtp_timing_thread, NULL, &rtp_timing_receiver, (void *)&threads_stop);
+	pthread_create(&rtp_audio_thread, NULL, &rtp_audio_receiver, (void *)&itr);
+  pthread_create(&rtp_control_thread, NULL, &rtp_control_receiver, (void *)&itr);
+  pthread_create(&rtp_timing_thread, NULL, &rtp_timing_receiver, (void *)&itr);
 
 		session_corrections = 0;
 		play_segment_reference_frame = 0; // zero signals that we are not in a play segment
@@ -1232,6 +1233,7 @@ static void *player_thread_func(void *arg) {
   free(silence);
   debug(1,"Shut down audio, control and timing threads");
   // usleep(1000000);
+  itr.please_stop = 1;
   pthread_kill(rtp_audio_thread, SIGUSR1);
   pthread_kill(rtp_control_thread, SIGUSR1);
   pthread_kill(rtp_timing_thread, SIGUSR1);
