@@ -1839,6 +1839,7 @@ void rtsp_listen_loop(void) {
       perror("failed to accept connection");
       free(conn);
     } else {
+      usleep(500000);
       pthread_t rtsp_conversation_thread;
       ret = pthread_create(&rtsp_conversation_thread, NULL,
                            rtsp_conversation_thread_func, conn);
