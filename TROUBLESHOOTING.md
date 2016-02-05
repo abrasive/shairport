@@ -4,11 +4,27 @@ The installation and setup of Shairport Sync is straightforward on recent Linux 
 
 In this brief document will be listed some problems and some solutions.
 
+### WiFi adapter running in power-saving / low-power mode
+
+**Problem**
+
+Shairport Sync is installed and running, but sometimes it disappears from the network, and sometimes it suffers from long dropouts.
+
+**Possible Problem**
+
+These problems can be caused by lots of things, but one of them is that the WiFi adapter may be set to run in a low-power or power-saving mode. If it's not busy, then after a while it goes into a low-power mode. This is bad as the device needs to be always connected to the network to provide the AirPlay service. You need to turn off power-saving mode. How you do this varies with platform and with WiFi adapter – internet search is your friend. Here, for instance, is the command for the C.H.I.P. from Next Thing Co, which has built in WiFi and Linux and has the `iw` command installed:
+
+```
+iw dev wlan0 set power_save off
+```
+
+There are some more details in some the closed issues on this repository.
+
 ### UFW firewall blocking connections on Raspbian (Raspberry Pi)
 
 **Problem**
 
-You have installed Shairport-sync successfully, the deamon is running, you can see it from your remote terminal but you are unable to play a song.
+You have installed Shairport Sync successfully, the deamon is running, you can see it from your remote terminal but you are unable to play a song.
 
 **Before you change anything to your configuration**
 
