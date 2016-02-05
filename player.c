@@ -301,6 +301,14 @@ static void free_buffer(void) {
 
 void player_put_packet(seq_t seqno, uint32_t timestamp, uint8_t *data, int len) {
 
+  // ignore a request to flush that has been made before the first packet...
+  if (packet_count==0) {
+    pthread_mutex_lock(&flush_mutex);
+    flush_requested = 0;
+    flush_rtp_timestamp = 0;
+    pthread_mutex_unlock(&flush_mutex);
+  }
+  
   pthread_mutex_lock(&ab_mutex);
   packet_count++;
   time_of_last_audio_packet = get_absolute_time_in_fp();

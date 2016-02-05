@@ -237,8 +237,12 @@ int pc_queue_get_item(pc_queue *the_queue, void *the_stuff) {
 // determine if we are the currently playing thread
 static inline int rtsp_playing(void) {
   if (pthread_mutex_trylock(&playing_mutex)) {
+    // if playing_mutex is locked...
+    // return 0 if the threads are different, non-zero if the threads are the same
     return pthread_equal(playing_thread, pthread_self());
   } else {
+    // you actually acquired the playing_mutex, implying that there is no currently playing thread
+    // so unlock it return 0, implying you are not playing
     pthread_mutex_unlock(&playing_mutex);
     return 0;
   }
@@ -1694,6 +1698,7 @@ static void *rtsp_conversation_thread_func(void *pconn) {
     rtp_shutdown();
     pthread_mutex_unlock(&play_lock);
     pthread_mutex_unlock(&playing_mutex);
+    // usleep(1000000);
   } // else {
     //debug(1, "This RTSP conversation thread doesn't think it's playing for a "
     //         "close RTSP connection.");
