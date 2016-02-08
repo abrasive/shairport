@@ -70,7 +70,7 @@ void shairport_shutdown() {
     return;
   shutting_down = 1;
   mdns_unregister();
-  rtsp_shutdown_stream();
+  rtsp_request_shutdown_stream();
   if (config.output)
     config.output->deinit();
 }
