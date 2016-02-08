@@ -2,7 +2,7 @@
 #define _RTSP_H
 
 void rtsp_listen_loop(void);
-void rtsp_shutdown_stream(void);
+// void rtsp_shutdown_stream(void);
 void rtsp_request_shutdown_stream(void);
 
 
