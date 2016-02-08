@@ -73,6 +73,7 @@ enum rtsp_read_request_response {
 };
 
 // Mike Brady's part...
+static pthread_mutex_t barrier_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t play_lock = PTHREAD_MUTEX_INITIALIZER;
 
 // every time we want to retain or release a reference count, lock it with this
@@ -81,9 +82,9 @@ static pthread_mutex_t reference_counter_lock = PTHREAD_MUTEX_INITIALIZER;
 
 // only one thread is allowed to use the player at once.
 // it monitors the request variable (at least when interrupted)
-static pthread_mutex_t playing_mutex = PTHREAD_MUTEX_INITIALIZER;
+//static pthread_mutex_t playing_mutex = PTHREAD_MUTEX_INITIALIZER;
 // static int please_shutdown = 0;
-static pthread_t playing_thread = 0;
+// static pthread_t playing_thread = 0;
 
 typedef struct {
   int fd;
@@ -94,6 +95,14 @@ typedef struct {
   pthread_t thread;
   pthread_t player_thread;
 } rtsp_conn_info;
+
+static rtsp_conn_info *playing_conn = NULL; // the data structure representing the connection that has the player.
+static rtsp_conn_info **conns = NULL;
+
+void memory_barrier() {
+  pthread_mutex_lock(&barrier_mutex);
+  pthread_mutex_unlock(&barrier_mutex);
+}
 
 #ifdef CONFIG_METADATA
 typedef struct {
@@ -236,14 +245,14 @@ int pc_queue_get_item(pc_queue *the_queue, void *the_stuff) {
 
 // determine if we are the currently playing thread
 static inline int rtsp_playing(void) {
-  if (pthread_mutex_trylock(&playing_mutex)) {
+  if (pthread_mutex_trylock(&play_lock)) {
     // if playing_mutex is locked...
     // return 0 if the threads are different, non-zero if the threads are the same
-    return pthread_equal(playing_thread, pthread_self());
+    return pthread_equal(playing_conn->thread, pthread_self());
   } else {
     // you actually acquired the playing_mutex, implying that there is no currently playing thread
     // so unlock it return 0, implying you are not playing
-    pthread_mutex_unlock(&playing_mutex);
+    pthread_mutex_unlock(&play_lock);
     return 0;
   }
 }
@@ -254,27 +263,21 @@ void rtsp_request_shutdown_stream(void) {
       0); // i.e. ask all playing threads to stop
 }
 
-static void rtsp_take_player(void) {
-  if (rtsp_playing())
-    return;
+//static void rtsp_take_player(void) {
+//  if (rtsp_playing())
+//    return;
 
-  if (pthread_mutex_trylock(&playing_mutex)) {
-    debug(1, "Request to all other playing threads to stop.");
-    ask_other_rtsp_conversation_threads_to_stop(
-        pthread_self()); // all threads apart from self
-    pthread_mutex_lock(&playing_mutex);
-  }
-  playing_thread =
-      pthread_self(); // make us the currently-playing thread (why?)
-}
-
-void rtsp_shutdown_stream(void) {
-  rtsp_take_player();
-  pthread_mutex_unlock(&playing_mutex);
-}
+//  if (pthread_mutex_trylock(&playing_mutex)) {
+//    debug(1, "Request to all other playing threads to stop.");
+//    ask_other_rtsp_conversation_threads_to_stop(
+//        pthread_self()); // all threads apart from self
+//    pthread_mutex_lock(&playing_mutex);
+//  }
+//  playing_thread =
+//      pthread_self(); // make us the currently-playing thread (why?)
+//}
 
 // keep track of the threads we have spawned so we can join() them
-static rtsp_conn_info **conns = NULL;
 static int nconns = 0;
 static void track_thread(rtsp_conn_info *conn) {
   conns = realloc(conns, sizeof(rtsp_conn_info *) * (nconns + 1));
@@ -485,6 +488,7 @@ rtsp_read_request(rtsp_conn_info *conn, rtsp_message **the_packet) {
   int msg_size = -1;
 
   while (msg_size < 0) {
+    memory_barrier();
     if (conn->stop != 0) {
       debug(1, "RTSP shutdown requested.");
       reply = rtsp_read_request_response_shutdown_requested;
@@ -492,7 +496,7 @@ rtsp_read_request(rtsp_conn_info *conn, rtsp_message **the_packet) {
     }
     nread = read(conn->fd, buf + inbuf, buflen - inbuf);
     if (!nread) {
-      debug(1, "RTSP connection closed.");
+      debug(2, "RTSP connection closed.");
       reply = rtsp_read_request_response_shutdown_requested;
       goto shutdown;
     }
@@ -798,7 +802,7 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req,
   p = strchr(p, '=') + 1;
   tport = atoi(p);
 
-  rtsp_take_player();
+//  rtsp_take_player();
   rtp_setup(&conn->remote, cport, tport, active_remote, &lsport, &lcport,
             &ltport);
   if (!lsport)
@@ -1329,9 +1333,31 @@ static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req,
 
 static void handle_announce(rtsp_conn_info *conn, rtsp_message *req,
                             rtsp_message *resp) {
+  int have_the_player = 0;
+
   // interrupt session if permitted
-  if ((config.allow_session_interruption == 1) ||
-      (pthread_mutex_trylock(&play_lock) == 0)) {
+  if (pthread_mutex_trylock(&play_lock) == 0) {
+    have_the_player = 1;
+  } else {
+    if (config.allow_session_interruption == 1) {
+      // some other thread has the player ... ask it to relinquish the thread
+      if (playing_conn) {
+        playing_conn->stop = 1;
+        memory_barrier();
+        pthread_kill(playing_conn->thread, SIGUSR1);
+      } else {
+        die("Non existent the_playing_conn with play_lock enabled.");
+      }
+      usleep(1000000); // here, it is possible for other connections to come in and nab the player.
+      debug(1,"Try to get the player now");
+      //pthread_mutex_lock(&play_lock);
+      if (pthread_mutex_trylock(&play_lock) == 0)
+        have_the_player = 1;
+    }
+  }
+  
+  if (have_the_player) {    
+    playing_conn = conn; // the present connection is now playing
     resp->respcode = 456; // 456 - Header Field Not Valid for Resource
     char *paesiv = NULL;
     char *prsaaeskey = NULL;
@@ -1690,23 +1716,25 @@ static void *rtsp_conversation_thread_func(void *pconn) {
     }
   } while (reply != rtsp_read_request_response_shutdown_requested);
 
-  debug(1, "Now closing RTSP connection.");
-  if (conn->fd > 0)
-    close(conn->fd);
+  debug(1, "Closing down RTSP conversation thread...");
   if (rtsp_playing()) {
     player_stop(&conn->player_thread); // might be less noisy doing this first
     rtp_shutdown();
+    // usleep(400000); // let an angel pass...
     pthread_mutex_unlock(&play_lock);
-    pthread_mutex_unlock(&playing_mutex);
+  }
+  conn->running = 0;
+  if (conn->fd > 0)
+    close(conn->fd);
+  if (auth_nonce)
+    free(auth_nonce);
+//    pthread_mutex_unlock(&playing_mutex);
     // usleep(1000000);
-  } // else {
+//  } // else {
     //debug(1, "This RTSP conversation thread doesn't think it's playing for a "
     //         "close RTSP connection.");
   // }
-  if (auth_nonce)
-    free(auth_nonce);
-  conn->running = 0;
-  debug(2, "Now terminating RTSP conversation thread.");
+  debug(2, "RTSP conversation thread terminated.");
   //  please_shutdown = 0;
   return NULL;
 }
