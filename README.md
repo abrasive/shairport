@@ -62,7 +62,7 @@ The following procedures will install the shairport-sync application into your s
 Personal Package Archives for Shairport Sync master and development branches are available at https://launchpad.net/~dantheperson. A `shairport-sync` installer package is available in Ubuntu 16.04, currently in its alpha phase.
 
 **Debian:**
-`shairport-sync` is in the Debian archive and is scheduled for release with Debian Stretch (9): https://tracker.debian.org/shairport-sync. A backport for Debian Jessie (8) may be provided given enough demand.
+`shairport-sync` is in the Debian archive and is scheduled for release with Debian Stretch (9). A backport for Debian Jessie (8) may be provided given enough demand.
 
 **OpenWrt:**
 There is a Shairport Sync package in OpenWrt `trunk`. Also, there's an OpenWrt package at https://github.com/mikebrady/shairport-sync-for-openwrt, including one that builds back to `Barrier Breaker`.
