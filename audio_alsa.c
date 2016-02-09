@@ -97,7 +97,7 @@ static void help(void) {
 
 int open_mixer() {
   if (hardware_mixer) {
-    debug(3, "Open Mixer");
+    debug(2, "Open Mixer");
     int ret = 0;
     snd_mixer_selem_id_alloca(&alsa_mix_sid);
     snd_mixer_selem_id_set_index(alsa_mix_sid, alsa_mix_index);
@@ -122,7 +122,8 @@ int open_mixer() {
 }
 
 static int init(int argc, char **argv) {
-  // debug(1,"audio_alsa init called.");
+  pthread_mutex_lock(&alsa_mutex);
+  debug(2,"audio_alsa init called.");
   const char *str;
   int value;
 
@@ -279,10 +280,12 @@ static int init(int argc, char **argv) {
 
   snd_mixer_close(alsa_mix_handle);
   alsa_mix_handle = NULL;
+  pthread_mutex_unlock(&alsa_mutex);
   return 0;
 }
 
 static void deinit(void) {
+  debug(2,"audio_alsa deinit called.");
   stop();
   if (alsa_mix_handle) {
     snd_mixer_close(alsa_mix_handle);
@@ -290,6 +293,7 @@ static void deinit(void) {
 }
 
 int open_alsa_device(void) {
+  
   const snd_pcm_uframes_t minimal_buffer_headroom =
       352 * 2; // we accept this much headroom in the hardware buffer, but we'll
                // accept less
@@ -392,12 +396,14 @@ int open_alsa_device(void) {
 }
 
 static void start(int sample_rate) {
+  debug(2,"audio_alsa start called.");
   if (sample_rate != 44100)
     die("Unexpected sample rate %d -- only 44,100 supported!", sample_rate);
   desired_sample_rate = sample_rate; // must be a variable
 }
 
 static uint32_t delay() {
+  debug(3,"audio_alsa delay called.");
   if (alsa_handle == NULL) {
     return 0;
   } else {
@@ -435,6 +441,7 @@ static uint32_t delay() {
 }
 
 static void play(short buf[], int samples) {
+  debug(3,"audio_alsa play called.");
   int ret = 0;
   if (alsa_handle == NULL) {
     pthread_mutex_lock(&alsa_mutex);
@@ -469,6 +476,7 @@ static void play(short buf[], int samples) {
 }
 
 static void flush(void) {
+  debug(2,"audio_alsa flush called.");
   pthread_mutex_lock(&alsa_mutex);
   int derr;
   if (alsa_mix_handle) {
@@ -502,13 +510,13 @@ static void flush(void) {
 }
 
 static void stop(void) {
-  if (alsa_handle != 0)
-    // when we want to stop, we want the alsa device
-    // to be closed immediately -- we may even be killing the thread, so we
-    // don't wish to wait
-    // so we should flush first
-    flush(); // flush will also close the device
-             // close_alsa_device();
+  debug(2,"audio_alsa stop called.");
+  // when we want to stop, we want the alsa device
+  // to be closed immediately -- we may even be killing the thread, so we
+  // don't wish to wait
+  // so we should flush first
+  flush(); // flush will also close the device
+           // close_alsa_device();
 }
 
 static void parameters(audio_parameters *info) {
@@ -548,6 +556,8 @@ static void linear_volume(double vol) {
 }
 
 static void mute(int do_mute) {
+  pthread_mutex_lock(&alsa_mutex);
+  debug(2,"audio_alsa mute called.");
   if (alsa_mix_handle) {
     if (do_mute) {
       // debug(1,"Mute");
@@ -557,4 +567,5 @@ static void mute(int do_mute) {
       snd_mixer_selem_set_playback_switch_all(alsa_mix_elem, 1);
     }
   }
+  pthread_mutex_unlock(&alsa_mutex);
 }
