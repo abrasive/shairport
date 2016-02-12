@@ -24,7 +24,7 @@ and enter valid DNS server addresses, e.g. `8.8.8.8`.
  * `flex` for compiling `libconfig`
  * `bison` for compiling `libconfig`
 
-* Download, compile, configure and install `libconfig`.
+* Download, configure, compile and install `libconfig`.
 
 For this, if your home directory name has a space in it, which happens by default with Cygwin, you should
 temporarily rename it to a single word, e.g. `Mike Brady` -> `mike`. This is to allow the `make install` script to work properly.
