@@ -222,63 +222,63 @@ static int init(int argc, char **argv) {
 
   debug(1, "Output device name is \"%s\".", alsa_out_dev);
 
-  if (!hardware_mixer)
-    return 0;
+  if (hardware_mixer) {
+  
+    if (alsa_mix_dev == NULL)
+      alsa_mix_dev = alsa_out_dev;
 
-  if (alsa_mix_dev == NULL)
-    alsa_mix_dev = alsa_out_dev;
+    // Open mixer
 
-  // Open mixer
+    open_mixer();
 
-  open_mixer();
+    if (snd_mixer_selem_get_playback_volume_range(alsa_mix_elem, &alsa_mix_minv,
+                                                  &alsa_mix_maxv) < 0)
+      debug(1, "Can't read mixer's [linear] min and max volumes.");
+    else {
+      if (snd_mixer_selem_get_playback_dB_range(alsa_mix_elem, &alsa_mix_mindb,
+                                                &alsa_mix_maxdb) == 0) {
 
-  if (snd_mixer_selem_get_playback_volume_range(alsa_mix_elem, &alsa_mix_minv,
-                                                &alsa_mix_maxv) < 0)
-    debug(1, "Can't read mixer's [linear] min and max volumes.");
-  else {
-    if (snd_mixer_selem_get_playback_dB_range(alsa_mix_elem, &alsa_mix_mindb,
-                                              &alsa_mix_maxdb) == 0) {
-
-      audio_alsa.volume =
-          &volume; // insert the volume function now we know it can do dB stuff
-      audio_alsa.parameters = &parameters; // likewise the parameters stuff
-      if (alsa_mix_mindb == SND_CTL_TLV_DB_GAIN_MUTE) {
-        // Raspberry Pi does this
-        debug(1, "Lowest dB value is a mute.");
-        if (snd_mixer_selem_ask_playback_vol_dB(
-                alsa_mix_elem, alsa_mix_minv + 1, &alsa_mix_mindb) == 0)
-          debug(1, "Can't get dB value corresponding to a \"volume\" of 1.");
+        audio_alsa.volume =
+            &volume; // insert the volume function now we know it can do dB stuff
+        audio_alsa.parameters = &parameters; // likewise the parameters stuff
+        if (alsa_mix_mindb == SND_CTL_TLV_DB_GAIN_MUTE) {
+          // Raspberry Pi does this
+          debug(1, "Lowest dB value is a mute.");
+          if (snd_mixer_selem_ask_playback_vol_dB(
+                  alsa_mix_elem, alsa_mix_minv + 1, &alsa_mix_mindb) == 0)
+            debug(1, "Can't get dB value corresponding to a \"volume\" of 1.");
+        }
+        debug(1, "Hardware mixer has dB volume from %f to %f.",
+              (1.0 * alsa_mix_mindb) / 100.0, (1.0 * alsa_mix_maxdb) / 100.0);
+      } else {
+        // use the linear scale and do the db conversion ourselves
+        debug(1, "note: the hardware mixer specified -- \"%s\" -- does not have "
+                 "a dB volume scale, so it can't be used.",
+              alsa_mix_ctrl);
+        /*
+        debug(1, "Min and max volumes are %d and
+        %d.",alsa_mix_minv,alsa_mix_maxv);
+        alsa_mix_maxdb = 0;
+        if ((alsa_mix_maxv!=0) && (alsa_mix_minv!=0))
+          alsa_mix_mindb =
+        -20*100*(log10(alsa_mix_maxv*1.0)-log10(alsa_mix_minv*1.0));
+        else if (alsa_mix_maxv!=0)
+          alsa_mix_mindb = -20*100*log10(alsa_mix_maxv*1.0);
+        audio_alsa.volume = &linear_volume; // insert the linear volume function
+        audio_alsa.parameters = &parameters; // likewise the parameters stuff
+        debug(1,"Max and min dB calculated are %d and
+        %d.",alsa_mix_maxdb,alsa_mix_mindb);
+        */
       }
-      debug(1, "Hardware mixer has dB volume from %f to %f.",
-            (1.0 * alsa_mix_mindb) / 100.0, (1.0 * alsa_mix_maxdb) / 100.0);
-    } else {
-      // use the linear scale and do the db conversion ourselves
-      debug(1, "note: the hardware mixer specified -- \"%s\" -- does not have "
-               "a dB volume scale, so it can't be used.",
-            alsa_mix_ctrl);
-      /*
-      debug(1, "Min and max volumes are %d and
-      %d.",alsa_mix_minv,alsa_mix_maxv);
-      alsa_mix_maxdb = 0;
-      if ((alsa_mix_maxv!=0) && (alsa_mix_minv!=0))
-        alsa_mix_mindb =
-      -20*100*(log10(alsa_mix_maxv*1.0)-log10(alsa_mix_minv*1.0));
-      else if (alsa_mix_maxv!=0)
-        alsa_mix_mindb = -20*100*log10(alsa_mix_maxv*1.0);
-      audio_alsa.volume = &linear_volume; // insert the linear volume function
-      audio_alsa.parameters = &parameters; // likewise the parameters stuff
-      debug(1,"Max and min dB calculated are %d and
-      %d.",alsa_mix_maxdb,alsa_mix_mindb);
-      */
     }
-  }
-  if (snd_mixer_selem_has_playback_switch(alsa_mix_elem)) {
-    audio_alsa.mute =
-        &mute; // insert the mute function now we know it can do muting stuff
-    debug(1, "Has mute ability.");
-  }
+    if (snd_mixer_selem_has_playback_switch(alsa_mix_elem)) {
+      audio_alsa.mute =
+          &mute; // insert the mute function now we know it can do muting stuff
+      debug(1, "Has mute ability.");
+    }
 
-  snd_mixer_close(alsa_mix_handle);
+    snd_mixer_close(alsa_mix_handle);
+  }
   alsa_mix_handle = NULL;
   pthread_mutex_unlock(&alsa_mutex);
   return 0;
@@ -287,7 +287,7 @@ static int init(int argc, char **argv) {
 static void deinit(void) {
   debug(2,"audio_alsa deinit called.");
   stop();
-  if (alsa_mix_handle) {
+  if (hardware_mixer && alsa_mix_handle) {
     snd_mixer_close(alsa_mix_handle);
   }
 }
@@ -479,7 +479,7 @@ static void flush(void) {
   debug(2,"audio_alsa flush called.");
   pthread_mutex_lock(&alsa_mutex);
   int derr;
-  if (alsa_mix_handle) {
+  if (hardware_mixer && alsa_mix_handle) {
     snd_mixer_close(alsa_mix_handle);
     alsa_mix_handle = NULL;
   }
@@ -528,7 +528,7 @@ static void volume(double vol) {
   pthread_mutex_lock(&alsa_mutex);
 	debug(2, "Setting volume db to %f.", vol);
   set_volume = vol;
-  if (alsa_mix_handle) {
+  if (hardware_mixer && alsa_mix_handle) {
     if (snd_mixer_selem_set_playback_dB_all(alsa_mix_elem, vol, 0) != 0) {
       debug(1, "Can't set playback volume accurately to %f dB.", vol);
       if (snd_mixer_selem_set_playback_dB_all(alsa_mix_elem, vol, -1) != 0)
@@ -542,7 +542,7 @@ static void volume(double vol) {
 static void linear_volume(double vol) {
   debug(2, "Setting linear volume to %f.", vol);
   set_volume = vol;
-  if (alsa_mix_handle) {
+  if (hardware_mixer && alsa_mix_handle) {
     double linear_volume = pow(10, vol);
     // debug(1,"Linear volume is %f.",linear_volume);
     long int_vol =
@@ -558,7 +558,7 @@ static void linear_volume(double vol) {
 static void mute(int do_mute) {
   pthread_mutex_lock(&alsa_mutex);
   debug(2,"audio_alsa mute called.");
-  if (alsa_mix_handle) {
+  if (hardware_mixer && alsa_mix_handle) {
     if (do_mute) {
       // debug(1,"Mute");
       snd_mixer_selem_set_playback_switch_all(alsa_mix_elem, 0);
