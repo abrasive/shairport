@@ -1,6 +1,6 @@
 Version 2.9.1 – Development Version
 ----
-Version 2.9.1 is focuses on bug fixes and stability improvements.
+Version 2.9.1 focusses on bug fixes and stability improvements.
 * Stability improvements are concentrated on what happens when a play sessions ends and is followed immediately by a new session. This happens in iOS 9.2 when you click to the next track or to the previous track. It also happens playing YouTube videos when a Mac's System Audio is routed through AirPlay. Thanks to [Tim Curtis](https://github.com/moodeaudio) for help with these issues.
 * A workaround for an apparent flushing issue in TuneBlade has been included. Thanks to [gibman](https://github.com/gibman) for reporting this issue.
 * A number of bug fixes have been made to `configure.ac` – thanks to [Jörg Krause](https://github.com/joerg-krause).
