@@ -510,7 +510,7 @@ static void flush(void) {
 }
 
 static void stop(void) {
-  debug(2,"audio_alsa stop called.");
+  // debug(2,"audio_alsa stop called.");
   // when we want to stop, we want the alsa device
   // to be closed immediately -- we may even be killing the thread, so we
   // don't wish to wait
