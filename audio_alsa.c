@@ -403,7 +403,7 @@ static void start(int sample_rate) {
 }
 
 static uint32_t delay() {
-  debug(3,"audio_alsa delay called.");
+  // debug(3,"audio_alsa delay called.");
   if (alsa_handle == NULL) {
     return 0;
   } else {
@@ -441,7 +441,7 @@ static uint32_t delay() {
 }
 
 static void play(short buf[], int samples) {
-  debug(3,"audio_alsa play called.");
+  // debug(3,"audio_alsa play called.");
   int ret = 0;
   if (alsa_handle == NULL) {
     pthread_mutex_lock(&alsa_mutex);
