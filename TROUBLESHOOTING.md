@@ -114,7 +114,7 @@ pcm.!default {
         ipc_key 1024
         slave {
             pcm "hw:1"
-            rate 48000 
+            rate 48000        # this line is only needed for USB DACs which only support 48khz
             period_time 0
             period_size 1920
             buffer_size 19200
@@ -126,4 +126,8 @@ ctl.!default {
     card 1
 }
 ````
+This sets the default alsa audio device to be the USB DAC via a dmixer plugin (which can be used by multiple applications at once) using a modified period and buffer size and optionally mix to 48khz. 
+
+This will then be used by default by Shairport-Sync and any other applications using alsa. 
+
 Note that some distributions (such as Volumio 2) don't use an asound.conf file by default, they instead specificy the hardware details directly in '/etc/shairport-sync.conf' and '/etc/mpd.conf' files so some more in depth modification is needed to override this.
