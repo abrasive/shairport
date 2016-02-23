@@ -1,6 +1,6 @@
 Troubleshooting
 -----
-The installation and setup of Shairport Sync is straightforward on recent Linux distributions. Issues can occasionally arise caused by problems elsewhere in the system, typically WiFi reception and/or the WiFi adapter settings, the network, the router, firewall settings.
+The installation and setup of Shairport Sync is straightforward on recent Linux distributions. Issues can occasionally arise caused by problems elsewhere in the system, typically WiFi reception and/or the WiFi adapter settings, the network, the router, firewall settings or some more esoteric audio interfaces.
 
 In this brief document will be listed some problems and some solutions.
 
@@ -55,3 +55,75 @@ You may have to change the IP adresses range depending on your own local network
 You can check UFW config by typing `sudo ufw status` in shell. Please make sure that UFW is active, especially if you have deactivated it previously for testing purpose.
 
 Run your song from your remote device. Enjoy !
+
+### Stuttering audio on certain USB DACs (such as the Creative Soundblaster MP3+)
+
+**Problem**
+When using a USB DAC on a Raspberry Pi audio plays fine through other methods (such as through mpd, mopidy, mplayer or aplay) but when streamed to Shairport Sync regular dropouts or stutters are heard.
+
+**Possible Cause**
+There is a suspicion (although this is not 100% confirmed) that this is a fun latency/timing issue related to a combination of
+- The Raspberry Pi's ethernet itself being a USB device resulting in shared bandwidth/interrupts with USB DACs
+- Shairport Sync continually checking the latency of the USB DAC to maintain synchronisation of audio
+- Quirky USB DACs (already known to be problematic on the Raspberry Pi more info available [here](https://www.raspberrypi.org/documentation/hardware/raspberrypi/usb/README.md#knownissues)
+For more discussion on this issue see [issue 167](https://github.com/mikebrady/shairport-sync/issues/167) or read on for the quick fix!
+
+**Solution**
+To get nice smooth audio first check the details of your USB DAC by either using 'aplay -l' which will give you output something like this:
+````
+**** List of PLAYBACK Hardware Devices ****
+card 0: ALSA [bcm2835 ALSA], device 0: bcm2835 ALSA [bcm2835 ALSA]
+  Subdevices: 8/8
+  Subdevice #0: subdevice #0
+  Subdevice #1: subdevice #1
+  Subdevice #2: subdevice #2
+  Subdevice #3: subdevice #3
+  Subdevice #4: subdevice #4
+  Subdevice #5: subdevice #5
+  Subdevice #6: subdevice #6
+  Subdevice #7: subdevice #7
+card 0: ALSA [bcm2835 ALSA], device 1: bcm2835 ALSA [bcm2835 IEC958/HDMI]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 1: MP3 [Sound Blaster MP3+], device 0: USB Audio [USB Audio]
+  Subdevices: 0/1
+  Subdevice #0: subdevice #0
+````
+
+or look at your exisiting '/etc/asound.conf' file, which may look something like this
+
+````
+pcm.!default {
+    type hw
+    card 1
+}
+ctl.!default {
+    type hw
+    card 1
+}
+````
+The important information you want is the card number which in this case is 1.
+
+Now modify your 'etc/asound.conf' file (or create one if it doesn't exist) using the following template substituting the 'pcm "hw:1"' and 'card 1' sections with the card number of your device
+
+````
+pcm.!default {
+    type plug
+    slave.pcm {
+        type dmix
+        ipc_key 1024
+        slave {
+            pcm "hw:1"
+            rate 48000 
+            period_time 0
+            period_size 1920
+            buffer_size 19200
+        }
+    }
+}
+ctl.!default {
+    type hw
+    card 1
+}
+````
+Note that some distributions (such as Volumio 2) don't use an asound.conf file by default, they instead specificy the hardware details directly in '/etc/shairport-sync.conf' and '/etc/mpd.conf' files so some more in depth modification is needed to override this.
