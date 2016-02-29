@@ -124,7 +124,7 @@ void *rtp_audio_receiver(void *arg) {
       stat_mean += stat_delta/stat_n;
       stat_M2 += stat_delta*(time_interval_us - stat_mean);
       if (stat_n % 2500 == 0) {
-        debug(2,"Packet reception intervals: mean, standard deviation and max for the last 2,500 packets in microseconds: %10.1f, %10.1f, %10.1f.",stat_mean, sqrtf(stat_M2 / (stat_n-1)),longest_packet_time_interval_us);
+        debug(3,"Packet reception intervals: mean, standard deviation and max for the last 2,500 packets in microseconds: %10.1f, %10.1f, %10.1f.",stat_mean, sqrtf(stat_M2 / (stat_n-1)),longest_packet_time_interval_us);
         stat_n = 0;
         stat_mean = 0.0;
         stat_M2 = 0.0;
@@ -153,8 +153,8 @@ void *rtp_audio_receiver(void *arg) {
         last_seqno = seqno;
       else {
         last_seqno = (last_seqno + 1) & 0xffff;
-        if (seqno != last_seqno)
-          debug(3, "RTP: Packets out of sequence: expected: %d, got %d.", last_seqno, seqno);
+        //if (seqno != last_seqno)
+        //  debug(3, "RTP: Packets out of sequence: expected: %d, got %d.", last_seqno, seqno);
         last_seqno = seqno; // reset warning...
       }
       uint32_t timestamp = ntohl(*(unsigned long *)(pktp + 4));
