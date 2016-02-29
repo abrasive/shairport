@@ -123,7 +123,7 @@ int open_mixer() {
 
 static int init(int argc, char **argv) {
   pthread_mutex_lock(&alsa_mutex);
-  debug(2,"audio_alsa init called.");
+  // debug(2,"audio_alsa init called.");
   const char *str;
   int value;
 
@@ -285,7 +285,7 @@ static int init(int argc, char **argv) {
 }
 
 static void deinit(void) {
-  debug(2,"audio_alsa deinit called.");
+  // debug(2,"audio_alsa deinit called.");
   stop();
   if (hardware_mixer && alsa_mix_handle) {
     snd_mixer_close(alsa_mix_handle);
@@ -396,7 +396,7 @@ int open_alsa_device(void) {
 }
 
 static void start(int sample_rate) {
-  debug(2,"audio_alsa start called.");
+  // debug(2,"audio_alsa start called.");
   if (sample_rate != 44100)
     die("Unexpected sample rate %d -- only 44,100 supported!", sample_rate);
   desired_sample_rate = sample_rate; // must be a variable
@@ -476,7 +476,7 @@ static void play(short buf[], int samples) {
 }
 
 static void flush(void) {
-  debug(2,"audio_alsa flush called.");
+  // debug(2,"audio_alsa flush called.");
   pthread_mutex_lock(&alsa_mutex);
   int derr;
   if (hardware_mixer && alsa_mix_handle) {
@@ -557,7 +557,7 @@ static void linear_volume(double vol) {
 
 static void mute(int do_mute) {
   pthread_mutex_lock(&alsa_mutex);
-  debug(2,"audio_alsa mute called.");
+  // debug(2,"audio_alsa mute called.");
   if (hardware_mixer && alsa_mix_handle) {
     if (do_mute) {
       // debug(1,"Mute");
