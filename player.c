@@ -767,7 +767,7 @@ static abuf_t *buffer_get_frame(void) {
   }
 
   if (!curframe->ready) {
-    debug(1, "Supplying a silent frame for frame %u", read);
+    // debug(1, "Supplying a silent frame for frame %u", read);
     missing_packets++;
     memset(curframe->data, 0, FRAME_BYTES(frame_size));
     curframe->timestamp = 0;

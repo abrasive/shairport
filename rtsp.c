@@ -288,12 +288,12 @@ static void track_thread(rtsp_conn_info *conn) {
 static void cleanup_threads(void) {
   void *retval;
   int i;
-  debug(2, "culling threads.");
+  // debug(2, "culling threads.");
   for (i = 0; i < nconns;) {
     if (conns[i]->running == 0) {
       pthread_join(conns[i]->thread, &retval);
       free(conns[i]);
-      debug(2, "one joined...");
+      debug(2, "one thread joined...");
       nconns--;
       if (nconns)
         conns[i] = conns[nconns];
