@@ -681,8 +681,9 @@ static abuf_t *buffer_get_frame(void) {
     // The packet time + (latency + latency offset - backend_buffer_length).
     // Note: the last three items are expressed in frames and must be converted to time.
 
-    int do_wait = 1;
+    int do_wait = 0; // don't wait unless we can really prove we must
     if ((ab_synced) && (curframe) && (curframe->ready) && (curframe->timestamp)) {
+    	do_wait = 1; // if the current frame exists and is ready, then wait unless it's time to let it go...
       uint32_t reference_timestamp;
       uint64_t reference_timestamp_time,remote_reference_timestamp_time;
       get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time, &remote_reference_timestamp_time);
@@ -766,7 +767,7 @@ static abuf_t *buffer_get_frame(void) {
   }
 
   if (!curframe->ready) {
-    // debug(1, "    %d. Supplying a silent frame.", read);
+    debug(1, "Supplying a silent frame for frame %u", read);
     missing_packets++;
     memset(curframe->data, 0, FRAME_BYTES(frame_size));
     curframe->timestamp = 0;
