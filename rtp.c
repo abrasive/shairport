@@ -29,6 +29,7 @@
 #include <signal.h>
 #include <unistd.h>
 #include <memory.h>
+#include <math.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -99,9 +100,41 @@ void *rtp_audio_receiver(void *arg) {
   int32_t last_seqno = -1;
   uint8_t packet[2048], *pktp;
 
+  uint64_t time_of_previous_packet_fp = 0;
+  float longest_packet_time_interval_us = 0.0;
+  
+  // mean and variance calculations from "online_variance" algorithm at https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online_algorithm
+  
+  int32_t stat_n = 0;
+  float stat_mean = 0.0;
+  float stat_M2 = 0.0;
+  
   ssize_t nread;
   while (itr->please_stop==0) {
     nread = recv(audio_socket, packet, sizeof(packet), 0);
+    
+    uint64_t local_time_now_fp = get_absolute_time_in_fp();
+    if (time_of_previous_packet_fp) {
+      float time_interval_us = (((local_time_now_fp - time_of_previous_packet_fp)*1000000)>>32)*1.0;
+      time_of_previous_packet_fp = local_time_now_fp;
+      if (time_interval_us>longest_packet_time_interval_us)
+        longest_packet_time_interval_us=time_interval_us;
+      stat_n+=1;
+      float stat_delta = time_interval_us - stat_mean;
+      stat_mean += stat_delta/stat_n;
+      stat_M2 += stat_delta*(time_interval_us - stat_mean);
+      if (stat_n % 2500 == 0) {
+        debug(2,"Packet reception intervals: mean, standard deviation and max for the last 2,500 packets in microseconds: %10.1f, %10.1f, %10.1f.",stat_mean, sqrtf(stat_M2 / (stat_n-1)),longest_packet_time_interval_us);
+        stat_n = 0;
+        stat_mean = 0.0;
+        stat_M2 = 0.0;
+        time_of_previous_packet_fp = 0;
+        longest_packet_time_interval_us = 0.0;
+      }
+    } else {
+      time_of_previous_packet_fp = local_time_now_fp;
+    }
+
     if (nread < 0)
       break;
 
@@ -121,7 +154,7 @@ void *rtp_audio_receiver(void *arg) {
       else {
         last_seqno = (last_seqno + 1) & 0xffff;
         if (seqno != last_seqno)
-          debug(2, "RTP: Packets out of sequence: expected: %d, got %d.", last_seqno, seqno);
+          debug(3, "RTP: Packets out of sequence: expected: %d, got %d.", last_seqno, seqno);
         last_seqno = seqno; // reset warning...
       }
       uint32_t timestamp = ntohl(*(unsigned long *)(pktp + 4));
@@ -701,7 +734,7 @@ void rtp_shutdown(void) {
 void rtp_request_resend(seq_t first, uint32_t count) {
   if (running) {
     //if (!request_sent) {
-      debug(2, "requesting resend of %d packets starting at %u.", count, first);
+      debug(3, "requesting resend of %d packets starting at %u.", count, first);
     //  request_sent = 1;
     //}
 
