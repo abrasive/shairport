@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.50])
-AC_INIT([shairport-sync], [2.8.0], [mikebrady@eircom.net])
+AC_INIT([shairport-sync], [2.8.1], [mikebrady@eircom.net])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([shairport.c])
 AC_CONFIG_HEADERS([config.h])
@@ -114,7 +114,7 @@ AC_ARG_WITH(ssl, [ choose --with-ssl=openssl or --with-ssl=polarssl for encrypti
     AC_MSG_ERROR(choose either "openssl" or "polarssl" encryption)
   fi
   if test "x${with_ssl}" = xopenssl ; then
-    if  test "x${with_pkg_config}" = x1 ; then
+    if  test "x${with_pkg_config}" = xyes ; then
       PKG_CHECK_MODULES(
           [SSL], [libssl,libcrypto],
           [LIBS="${SSL_LIBS} ${LIBS}"
@@ -169,7 +169,7 @@ AC_ARG_WITH(alsa, [  --with-alsa = choose ALSA API support (GNU/Linux only)],
   HAS_ALSA=1
   AM_CONDITIONAL([USE_ALSA], [test 0])
   AC_DEFINE([CONFIG_ALSA], 1, [Needed by the compiler.])
-  if  test "x${with_pkg_config}" = x1 ; then
+  if  test "x${with_pkg_config}" = xyes ; then
     PKG_CHECK_MODULES(
       [ALSA], [alsa],
       [LIBS="${ALSA_LIBS} ${LIBS}"

@@ -1,3 +1,22 @@
+Version 2.8.1 – Stable Version
+----
+Version 2.8.1 is derived from development version 2.9.2 and contains important bug fixes.
+
+For full details, please refer to the release notes here, back as far as 2.9.1.
+
+Version 2.9.2 – Development Version
+----
+Version 2.9.2 focusses on further bug fixes and stability improvements.
+* Enhanced stability: an important bug has been fixed in the handling of missing audio frames – i.e. what happens when a frame of audio is truly missing, after all attempts to fetch it have been unsuccessful. The bug would cause Shairport Sync to do an unnecessary resynchronisation, or, if resync was turned off, to jump out of sync. This is a long-standing bug – thanks to [Jörg Krause](https://github.com/joerg-krause) for identifying it.
+* An extra diagnostic has been added which gives the mean, standard deviation and maximum values for inter-packet reception time on the audio port. It may be useful for exploring line quality.
+
+Version 2.9.1 – Development Version
+----
+Version 2.9.1 focusses on bug fixes and stability improvements.
+* Stability improvements are concentrated on what happens when a play sessions ends and is followed immediately by a new session. This happens in iOS 9.2 when you click to the next track or to the previous track. It also happens playing YouTube videos when a Mac's System Audio is routed through AirPlay. Thanks to [Tim Curtis](https://github.com/moodeaudio) for help with these issues.
+* A workaround for an apparent flushing issue in TuneBlade has been included. Thanks to [gibman](https://github.com/gibman) for reporting this issue.
+* A number of bug fixes have been made to `configure.ac` – thanks to [Jörg Krause](https://github.com/joerg-krause).
+
 Version 2.8 – Stable Version
 ----
 Version 2.8 is derived from version 2.7.10 with slight documentation updates. Here is a summary of changes between the last stable version – 2.6 – and this version. For full details, refer to the release notes here, back as far as 2.7.
@@ -17,8 +36,8 @@ Version 2.8 is derived from version 2.7.10 with slight documentation updates. He
 * Disabled picture sending if pictures haven’t been asked for.
 
 **Bug fixes**
-* Fixed a bug that prevented Shairport Sync from correctly setting the hardware mixer volume if it had been altered externally.
-* Modified the shutdown behaviour so that a shutdown followed immediately by a play request is handled properly. This was causing iOS 9.2 sometimes to drop the Airplay link between tunes.
+* Fixed a bug that prevented Shairport Sync from correctly setting the hardware mixer volume if it had been altered externally. Thanks to [Tim Curtis](https://github.com/moodeaudio) for help with these issues.
+* Modified the shutdown behaviour so that a shutdown followed immediately by a play request is handled better. This was causing iOS 9.2 sometimes to drop the Airplay link between tunes.
 * Fixed a data-alignment bug that would cause a crash in certain circumstances on ARM processors with metadata enabled.
 * Corrected the names for a few settings tags.
 * Fixed some typos and misspellings.

@@ -221,11 +221,12 @@ static inline int seq32_order(uint32_t a, uint32_t b) {
   return (C & 0x80000000) == 0;
 }
 
-static void alac_decode(short *dest, uint8_t *buf, int len) {
+static int alac_decode(short *dest, uint8_t *buf, int len) {
   unsigned char packet[MAX_PACKET];
   unsigned char packetp[MAX_PACKET];
   assert(len <= MAX_PACKET);
-  int outsize;
+  int reply = 0; //everything okay
+  int outsize=FRAME_BYTES(frame_size); // the size it should be
 
   if (encrypted) {
     unsigned char iv[16];
@@ -244,11 +245,13 @@ static void alac_decode(short *dest, uint8_t *buf, int len) {
   }
   if (outsize!=FRAME_BYTES(frame_size)) {
     if(outsize<FRAME_BYTES(frame_size)) {
-      debug(1,"Output from alac_decode is smaller than expected. Encrypted = %d.",encrypted);
+      debug(2,"Output from alac_decode is smaller than expected. Encrypted = %d.",encrypted);
     } else {
-      debug(1,"OUtput from alac_decode larger than expected -- truncated, but buffer overflow possible! Encrypted = %d.",encrypted);
+      debug(2,"Output from alac_decode larger than expected -- truncated, but buffer overflow possible! Encrypted = %d.",encrypted);
     }
+    reply = -1; // output frame is the wrong size
   }
+  return reply;
 }
 
 static int init_decoder(int32_t fmtp[12]) {
@@ -298,6 +301,14 @@ static void free_buffer(void) {
 
 void player_put_packet(seq_t seqno, uint32_t timestamp, uint8_t *data, int len) {
 
+  // ignore a request to flush that has been made before the first packet...
+  if (packet_count==0) {
+    pthread_mutex_lock(&flush_mutex);
+    flush_requested = 0;
+    flush_rtp_timestamp = 0;
+    pthread_mutex_unlock(&flush_mutex);
+  }
+  
   pthread_mutex_lock(&ab_mutex);
   packet_count++;
   time_of_last_audio_packet = get_absolute_time_in_fp();
@@ -363,10 +374,16 @@ void player_put_packet(seq_t seqno, uint32_t timestamp, uint8_t *data, int len) 
       // pthread_mutex_unlock(&ab_mutex);
 
       if (abuf) {
-        alac_decode(abuf->data, data, len);
-        abuf->ready = 1;
-        abuf->timestamp = timestamp;
-        abuf->sequence_number = seqno;
+        if (alac_decode(abuf->data, data, len)==0) {
+					abuf->ready = 1;
+					abuf->timestamp = timestamp;
+					abuf->sequence_number = seqno;
+        } else {
+        	debug(1,"Bad audio packet detected and discarded.");
+					abuf->ready = 0;
+					abuf->timestamp = 0;
+					abuf->sequence_number = 0;        
+        }
       }
 
       // pthread_mutex_lock(&ab_mutex);
@@ -664,8 +681,9 @@ static abuf_t *buffer_get_frame(void) {
     // The packet time + (latency + latency offset - backend_buffer_length).
     // Note: the last three items are expressed in frames and must be converted to time.
 
-    int do_wait = 1;
+    int do_wait = 0; // don't wait unless we can really prove we must
     if ((ab_synced) && (curframe) && (curframe->ready) && (curframe->timestamp)) {
+    	do_wait = 1; // if the current frame exists and is ready, then wait unless it's time to let it go...
       uint32_t reference_timestamp;
       uint64_t reference_timestamp_time,remote_reference_timestamp_time;
       get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time, &remote_reference_timestamp_time);
@@ -749,7 +767,7 @@ static abuf_t *buffer_get_frame(void) {
   }
 
   if (!curframe->ready) {
-    // debug(1, "    %d. Supplying a silent frame.", read);
+    // debug(1, "Supplying a silent frame for frame %u", read);
     missing_packets++;
     memset(curframe->data, 0, FRAME_BYTES(frame_size));
     curframe->timestamp = 0;
@@ -893,12 +911,13 @@ typedef struct stats { // statistics for running averages
 } stats_t;
 
 static void *player_thread_func(void *arg) {
-	int threads_stop = 0;
+	struct inter_threads_record itr;
+	itr.please_stop = 0;
 	// create and start the timing, control and audio receiver threads
 	pthread_t rtp_audio_thread, rtp_control_thread, rtp_timing_thread;
-	pthread_create(&rtp_audio_thread, NULL, &rtp_audio_receiver, (void *)&threads_stop);
-  pthread_create(&rtp_control_thread, NULL, &rtp_control_receiver, (void *)&threads_stop);
-  pthread_create(&rtp_timing_thread, NULL, &rtp_timing_receiver, (void *)&threads_stop);
+	pthread_create(&rtp_audio_thread, NULL, &rtp_audio_receiver, (void *)&itr);
+  pthread_create(&rtp_control_thread, NULL, &rtp_control_receiver, (void *)&itr);
+  pthread_create(&rtp_timing_thread, NULL, &rtp_timing_receiver, (void *)&itr);
 
 		session_corrections = 0;
 		play_segment_reference_frame = 0; // zero signals that we are not in a play segment
@@ -1228,10 +1247,11 @@ static void *player_thread_func(void *arg) {
   }
   if (config.output->stop)
   	config.output->stop();
+  usleep(100000); // allow this time to (?) allow the alsa subsystem to finish cleaning up after itself. 50 ms seems too short
   free(outbuf);
   free(silence);
   debug(1,"Shut down audio, control and timing threads");
-  // usleep(1000000);
+  itr.please_stop = 1;
   pthread_kill(rtp_audio_thread, SIGUSR1);
   pthread_kill(rtp_control_thread, SIGUSR1);
   pthread_kill(rtp_timing_thread, SIGUSR1);
