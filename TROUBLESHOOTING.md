@@ -4,6 +4,8 @@ The installation and setup of Shairport Sync is straightforward on recent Linux 
 
 In this brief document will be listed some problems and some solutions.
 
+Before starting, ensure that your software is up-to-date. 
+
 ### WiFi adapter running in power-saving / low-power mode
 
 **Problem**
@@ -68,7 +70,7 @@ There is a suspicion (although this is not 100% confirmed) that this is a fun la
 - Quirky USB DACs (already known to be problematic on the Raspberry Pi more info available [here](https://www.raspberrypi.org/documentation/hardware/raspberrypi/usb/README.md#knownissues)
 For more discussion on this issue see [issue 167](https://github.com/mikebrady/shairport-sync/issues/167) or read on for the quick fix!
 
-**Solution**
+**Possible Solution**
 To get nice smooth audio first check the details of your USB DAC by either using 'aplay -l' which will give you output something like this:
 ````
 **** List of PLAYBACK Hardware Devices ****
@@ -130,4 +132,6 @@ This sets the default alsa audio device to be the USB DAC via a dmixer plugin (w
 
 This will then be used by default by Shairport-Sync and any other applications using alsa. 
 
-Note that some distributions (such as Volumio 2) don't use an asound.conf file by default, they instead specificy the hardware details directly in '/etc/shairport-sync.conf' and '/etc/mpd.conf' files so some more in depth modification is needed to override this.
+Note that some distributions (such as Volumio 2) don't use an asound.conf file by default, they instead specificy the hardware details directly in '/etc/mpd.conf' files so some more in-depth modification is needed to override this.
+
+(Note: not tested by Mike B.)
