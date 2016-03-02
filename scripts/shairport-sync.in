@@ -59,7 +59,8 @@ do_start()
 #	sleep 3
 
 # Uncomment just one of the following start-stop-daemon lines, or comment them all out and add your own.
-# In the default script, the first line is uncommented, selecting daemon mode (-d), the default device and software volume control
+# Shairport Sync will read settings from the configuration file (/etc/shairport-sync.conf by default) and will then apply any command line options.
+# In the default script, the first line is uncommented, selecting daemon mode (-d) and settings will be takenb from the configuration file.
 # BTW, if you're using software volume control, you may have to use alsamixer or similar to set the output device's volume to its maximum level first
 # BTW2, you can use alsamixer to find device identifiers (e.g. hw:1) and mixer names (e.g. "Speaker"). No need to change ALSA's defaults.
 # BTW3, the argument after -a is simply the name the shairport service will be visible as.
