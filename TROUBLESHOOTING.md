@@ -2,7 +2,7 @@ Troubleshooting
 -----
 The installation and setup of Shairport Sync is straightforward on recent Linux distributions. Issues can occasionally arise caused by problems elsewhere in the system, typically WiFi reception and/or the WiFi adapter settings, the network, the router, firewall settings or some more esoteric audio interfaces.
 
-In this brief document will be listed some problems and some solutions.
+In this brief document will be listed some problems and some solutions, some provided by other users.
 
 Before starting, ensure that your software is up-to-date. 
 
