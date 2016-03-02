@@ -61,6 +61,9 @@ The following procedures will install the shairport-sync application into your s
 **Ubuntu:**
 Personal Package Archives for Shairport Sync master and development branches are available at https://launchpad.net/~dantheperson. A `shairport-sync` installer package is available in Ubuntu 16.04, currently in its alpha phase.
 
+**Debian:**
+`shairport-sync` is in the Debian archive and is scheduled for release with Debian Stretch (9): https://tracker.debian.org/shairport-sync. A backport for Debian Jessie (8) may be provided given enough demand.
+
 **OpenWrt:**
 There is a Shairport Sync package in OpenWrt `trunk`. Also, there's an OpenWrt package at https://github.com/mikebrady/shairport-sync-for-openwrt, including one that builds back to `Barrier Breaker`.
 
@@ -73,27 +76,8 @@ An Arch Linux installation package, suitable for compilation on any platform, is
 A [HomeBrew](http://brew.sh) package exists for Shairport Sync. With HomeBrew installed, Shairport Sync can be installed using the command `$brew install shairport-sync`. Note that the installation uses the `libao` library and so synchronisation is not available — playback glitches will occur occasionally, when the `ao` system's buffers overflow or underflow.
 
 **Fedora:**
-Install the toolchain and pre-requisites, if necessary:
-```
-% sudo yum install make automake gcc gcc-c++ kernel-devel
-% sudo yum install alsa-lib-devel autoconf automake avahi-devel libconfig-devel libdaemon-devel openssl-devel popt-devel soxr-devel
-```
-Download the tarball from the "releases" tab on github or use `wget` and then use `rpmbuild`. This example is for version 2.6:
-```
-% wget -O shairport-sync-2.6.tar.gz https://github.com/mikebrady/shairport-sync/archive/2.6.tar.gz
-% rpmbuild -ta shairport-sync-2.6.tar.gz
-```
-The `-ta` means "build all from this tarball".
+Please see the guide at [FEDORA.md](https://github.com/mikebrady/shairport-sync/blob/master/FEDORA.md).
 
-The RPM will be built in a directory and will have a pathname like, for example, `~/rpmbuild/RPMS/i686/shairport-sync-2.6-1.fc22.i686.rpm` You should then install it with (for this example):
-```
-%sudo rpm -i ~/rpmbuild/RPMS/i686/shairport-sync-2.6-1.fc22.i686.rpm
-```
-You may have to manually create the directory `/var/shairport-sync` for the installation to succeed. Having edited the configuration file `/etc/shairport-sync.conf` as appropriate (see "Configuring Shairport Sync" below), enable and start the service with:
-```
-%sudo systemctl enable shairport-sync.service
-%sudo systemctl start shairport-sync.service
-```
 Sincere thanks to all package contributors!
 
 **Cygwin**
