@@ -1,6 +1,6 @@
 Version 2.8.1 – Stable Version
 ----
-Version 2.8.1 is derived from development version 2.9.2 and contains important bug fixes.
+Version 2.8.1 is derived from development version 2.9.2 and has stability improvements and important bug fixes.
 
 For full details, please refer to the release notes here, back as far as 2.9.1.
 
