@@ -78,7 +78,7 @@ A [HomeBrew](http://brew.sh) package exists for Shairport Sync. With HomeBrew in
 **Fedora:**
 Please see the guide at [FEDORA.md](https://github.com/mikebrady/shairport-sync/blob/master/FEDORA.md).
 
-**Cygwin**
+**Cygwin:**
 Please see the guide at [CYGWIN.md](https://github.com/mikebrady/shairport-sync/blob/master/CYGWIN.md).
 
 Sincere thanks to all package contributors!
