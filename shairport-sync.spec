@@ -38,7 +38,6 @@ autoreconf -i -f
 %configure --with-avahi --with-alsa --with-ssl=openssl --with-soxr --with-systemd
 make %{?_smp_mflags}
 
-
 %install
 make install DESTDIR=%{buildroot}
 rm %{buildroot}/etc/shairport-sync.conf.sample
