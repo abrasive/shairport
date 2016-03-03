@@ -9,6 +9,7 @@ AC_CONFIG_HEADERS([config.h])
 
 # Derived from the Avahi configure.ac file
 #
+#
 # Specifying the OS type, defaulting to linux.
 #
 AC_ARG_WITH(os_type, AS_HELP_STRING([--with-os-type=OSType],[Specify the distribution to target: One of linux freebsd or darwin]))
