@@ -1,6 +1,7 @@
 /*
  * stdout output driver. This file is part of Shairport Sync.
  * Copyright (c) Mike Brady 2015
+ *
  * Based on pipe output driver
  * Copyright (c) James Laird 2013
  * All rights reserved.
