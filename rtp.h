@@ -5,6 +5,14 @@
 
 #include "player.h"
 
+typedef struct inter_threads_record {
+  uint32_t please_stop;
+} inter_threads_record;
+
+void *rtp_audio_receiver(void *arg);
+void *rtp_control_receiver(void *arg);
+void *rtp_timing_receiver(void *arg);
+
 void rtp_setup(SOCKADDR *remote, int controlport, int timingport, uint32_t active_remote,
                int *local_server_port, int *local_control_port, int *local_timing_port);
 void rtp_shutdown(void);

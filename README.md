@@ -1,23 +1,23 @@
 Shairport Sync
 =============
-Shairport Sync is an AirPlay audio player — it plays audio streamed from iTunes, iOS devices and other AirPlay sources such as Quicktime Player, ForkedDaapd among others.
+Shairport Sync is an AirPlay audio player — it plays audio streamed from iTunes, iOS devices and other AirPlay sources such as Quicktime Player and ForkedDaapd, among others.
 Audio played by a Shairport Sync-powered device stays synchronised with the source and hence with similar devices playing the same source. In this way, synchronised multi-room audio is possible without difficulty. (Hence the name Shairport Sync, BTW.)
 
 Shairport Sync does not support AirPlay video or photo streaming.
 
-This branch — "development" — is unstable and may change quickly. To access the stable version, please switch to the "master" branch.
+This is the stable "master" branch. Changes and updates are incorporated into this branch relatively slowly. To access the development version, where all the latest changes are made first, please switch to the "development" branch.
 
 More Information
 ----------
-Shairport Sync works by using timing information and timestamps present in data coming from the audio source (e.g. an iPhone) to "play" audio at exactly the right time. It does this by monitoring and controlling the *latency* — the time between a sound frame is supposed to be played, as specified by its `timestamp`, and the time when it is actually played by the audio output device, usually a Digital to Audio Converter (DAC).
+Shairport Sync works by using timing information and timestamps present in data coming from the audio source (e.g. an iPhone) to play audio at exactly the right time. It does this by monitoring and controlling the *latency* — the time-gap between when a sound frame is supposed to be played, as specified by its `timestamp`, and the time when it is actually played by the audio output device, usually a Digital to Audio Converter (DAC).
 
 The latency to be used is specified by the source when it negotiates with Shairport Sync. Most sources set a latency of 88,200 frames — exactly two seconds. Recent versions of iTunes and forkedDaapd use a latency of 99,577 frames.
 
-Timestamps are measured relative to the source computer's clocks, the `source clock`, but timing must be done relative to the clock of the computer running Shairport Sync, the `local clock`. The source and local clocks are synchronised, usually to within a fraction of a millisecond, using a variant of NTP synchronisation protocols. 
+Timestamps are measured relative to the source computer's clock – the `source clock`, but timing must be done relative to the clock of the computer running Shairport Sync – the `local clock`. This is done by synchronising the two clocks, usually to within a fraction of a millisecond, using a variant of NTP synchronisation protocols. 
 
 To maintain the exact latency required, if an output device is running slow relative to the source, Shairport Sync will delete frames of audio to allow the device to keep up. If the output device is running fast, Shairport Sync will insert frames to keep time. The number of frames inserted or deleted is so small as to be almost inaudible on normal audio material. Frames are inserted or deleted as necessary at pseudorandom intervals. Alternatively, with `libsoxr` support, Shairport Sync can resample the audio feed to ensure the output device can keep up. This is less obtrusive than insertion and deletion but requires a good deal of processing power — most embedded devices probably can't support it. The process of insertion/deletion or resampling is rather inelegantly called “stuffing”.
 
-Shairport Sync is a pretty substantial rewrite of the fantastic work done in Shairport 1.0 by James Laird and others — please see https://github.com/abrasive/shairport/blob/master/README.md#contributors-to-version-1x for a list of the contributors to Shairport 1.x and Shairport 0.x. From a "heritage" point of view, Shairport Sync is a fork of Shairport 1.0.
+Shairport Sync is a substantial rewrite of the fantastic work done in Shairport 1.0 by James Laird and others — please see https://github.com/abrasive/shairport/blob/master/README.md#contributors-to-version-1x for a list of the contributors to Shairport 1.x and Shairport 0.x. From a "heritage" point of view, Shairport Sync is a fork of Shairport 1.0.
 
 Shairport Sync is mainly designed for `alsa` and thus for Linux, although since `alsa` has been ported to FreeBSD, Shairport Sync runs in FreeBSD too. It must have direct access to the output device, which must be a real sound card capable of working with 44,100 samples per second interleaved PCM stereo (you'll get a message in the logfile if there's a problem).
 
@@ -25,13 +25,13 @@ For more about the motivation behind Shairport Sync, please see the wiki at http
 
 What else?
 --------------
-* Better Volume Control — Shairport Sync offers finer control at very top and very bottom of the volume range. See http://tangentsoft.net/audio/atten.html for a good discussion of audio "attenuators", upon which volume control in Shairport Sync is modelled. See also the diagram of the volume transfer function in the documents folder.
+* Better Volume Control — Shairport Sync offers finer control at very top and very bottom of the volume range. See http://tangentsoft.net/audio/atten.html for a good discussion of audio "attenuators", upon which volume control in Shairport Sync is modelled. See also the diagram of the volume transfer function in the documents folder. In addition, Shairport Sync can offer an extended volume control range on devices with a restricted range.
 * Hardware Mute — Shairport Sync will mute properly if the hardware supports it.
 * Fast Response — With hardware volume control, response is instantaneous; otherwise the response time is 0.15 seconds.
 * Non-Interruptible — Shairport Sync sends back a "busy" signal if it's already playing audio from another source, so other sources can't disrupt an existing Shairport Sync session. (If a source disappears without warning, the session automatically terminates after two minutes and the device becomes available again.)
-* Metadata — Shairport Sync can be configured to deliver metadata supplied by the source, such as Album Name, Artist Name, Cover Art, etc. through a pipe to a recipient application program — see https://github.com/mikebrady/shairport-sync-metadata-reader for a sample recipient. Sources that supply metadata include iTunes and the Music app in iOS.
+* Metadata — Shairport Sync can deliver metadata supplied by the source, such as Album Name, Artist Name, Cover Art, etc. through a pipe to a recipient application program — see https://github.com/mikebrady/shairport-sync-metadata-reader for a sample recipient. Sources that supply metadata include iTunes and the Music app in iOS.
 * Raw Audio — Shairport Sync can deliver raw PCM audio to standard output or to a pipe. This output is delivered synchronously with the source after the appropriate latency and is not interpolated or "stuffed" on its way through Shairport Sync.
-* Autotools and Libtool Support — One important difference between Shairport Sync and other versions of Shairport is that the Shairport Sync build process uses GNU autotools and libtool to examine and configure the build environment — very important for cross compilation. Previous versions of Shairport looked at the current system to determine which packages were available, instead of looking at the target system for what packages were available.
+* Autotools and Libtool Support — the Shairport Sync build process uses GNU `autotools` and `libtool` to examine and configure the build environment — important for portability and for cross compilation. Previous versions of Shairport looked at the current system to determine which packages were available, instead of looking at the target system for what packages were available.
 
 Status
 ------
@@ -51,7 +51,7 @@ Note: Historically, Shairport Sync has taken its settings from command line argu
 
 Building And Installing
 ---------------------
-If you wish to install Shairport Sync on OpenWrt, Arch or Fedora platforms, please follow the appropriate instructions below. Limited support is also available for MAc OS X. Otherwise follow the General Build Instructions. Then, when the program has been installed, refer to the section on Configuring Shairport Sync that follows.
+If you wish to install Shairport Sync on OpenWrt, Arch or Fedora platforms, please follow the appropriate instructions below. Limited support is also available for Mac OS X. Otherwise follow the General Build Instructions. Then, when the program has been installed, refer to the section on Configuring Shairport Sync that follows.
 
 **Note**
 
@@ -59,10 +59,13 @@ The following procedures will install the shairport-sync application into your s
 (If the existing installation of shairport-sync is where the new copy will be installed into, it will be overwritten;  sometimes, however, the installation is to another location, so it is safer, initially, to delete previous versions manually.)
 
 **Ubuntu:**
-Personal Package Archives for Shairport Sync master and development branches are available at https://launchpad.net/~dantheperson.
+Personal Package Archives for Shairport Sync master and development branches are available at https://launchpad.net/~dantheperson. A `shairport-sync` installer package is available in Ubuntu 16.04, currently in its alpha phase.
+
+**Debian:**
+`shairport-sync` is in the Debian archive and is scheduled for release with Debian Stretch (9): https://tracker.debian.org/shairport-sync. A backport for Debian Jessie (8) may be provided given enough demand.
 
 **OpenWrt:**
-There is a Shairport Sync package in OpenWrt `trunk`. Also, there's an OpenWrt package at https://github.com/mikebrady/shairport-sync-for-openwrt, including one that builds back to `Attitude Adjustment`.
+There is a Shairport Sync package in OpenWrt `trunk`. Also, there's an OpenWrt package at https://github.com/mikebrady/shairport-sync-for-openwrt, including one that builds back to `Barrier Breaker`.
 
 **Arch Linux:**
 Shairport Sync is available for `x86_64` and `i686` platforms in the Arch Linux Community Repository -- search for `shairport-sync`. See also https://www.archlinux.org/packages/.
@@ -73,27 +76,11 @@ An Arch Linux installation package, suitable for compilation on any platform, is
 A [HomeBrew](http://brew.sh) package exists for Shairport Sync. With HomeBrew installed, Shairport Sync can be installed using the command `$brew install shairport-sync`. Note that the installation uses the `libao` library and so synchronisation is not available — playback glitches will occur occasionally, when the `ao` system's buffers overflow or underflow.
 
 **Fedora:**
-Install the toolchain and pre-requisites, if necessary:
-```
-% sudo yum install make automake gcc gcc-c++ kernel-devel
-% sudo yum install alsa-lib-devel autoconf automake avahi-devel libconfig-devel libdaemon-devel openssl-devel popt-devel soxr-devel
-```
-Download the tarball from the "releases" tab on github or use `wget` and then use `rpmbuild`. This example is for version 2.6:
-```
-% wget -O shairport-sync-2.6.tar.gz https://github.com/mikebrady/shairport-sync/archive/2.6.tar.gz
-% rpmbuild -ta shairport-sync-2.6.tar.gz
-```
-The `-ta` means "build all from this tarball".
+Please see the guide at [FEDORA.md](https://github.com/mikebrady/shairport-sync/blob/master/FEDORA.md).
 
-The RPM will be built in a directory and will have a pathname like, for example, `~/rpmbuild/RPMS/i686/shairport-sync-2.6-1.fc22.i686.rpm` You should then install it with (for this example):
-```
-%sudo rpm -i ~/rpmbuild/RPMS/i686/shairport-sync-2.6-1.fc22.i686.rpm
-```
-You may have to manually create the directory `/var/shairport-sync` for the installation to succeed. Having edited the configuration file `/etc/shairport-sync.conf` as appropriate (see "Configuring Shairport Sync" below), enable and start the service with:
-```
-%sudo systemctl enable shairport-sync.service
-%sudo systemctl start shairport-sync.service
-```
+**Cygwin:**
+Please see the guide at [CYGWIN.md](https://github.com/mikebrady/shairport-sync/blob/master/CYGWIN.md).
+
 Sincere thanks to all package contributors!
 
 **General Build Instructions**
@@ -123,7 +110,7 @@ Debian, Ubuntu and Raspbian users can get the basics with:
 - `apt-get install avahi-daemon libavahi-client-dev` if you want to use Avahi (recommended).
 - `apt-get install libssl-dev` if you want to use OpenSSL and libcrypto, or use PolarSSL otherwise.
 - `apt-get install libpolarssl-dev` if you want to use PolarSSL, or use OpenSSL/libcrypto otherwise.
-- `apt-get install libsoxr-dev` if you want support for libsoxr-based resampling. This library is not yet part of every distribution; instructions for how to build it from source for Raspian/Debian Wheezy are available at [LIBSOXR.md](https://github.com/mikebrady/shairport-sync/blob/development/LIBSOXR.md).
+- `apt-get install libsoxr-dev` if you want support for libsoxr-based resampling. This library is in many recent distributions, including Jessie and Raspioan Jessie; if not, instructions for how to build it from source for Raspian/Debian Wheezy are available at [LIBSOXR.md](https://github.com/mikebrady/shairport-sync/blob/master/LIBSOXR.md).
 
 Download Shairport Sync:
 
@@ -151,9 +138,9 @@ Choose the appropriate `--with-*` options:
 - `--with-configfile` to install a configuration file and a separate sample file at the `make install` stage. Default is to install. An existing `/etc/shairport-sync.conf` will not be overwritten.
 - `--with-pkg-config` to use pkg-config to find libraries. Default is to use pkg-config — this option is for special purpose use.
 
-**System V and `systemd`**
+**`systemd` and "System V"**
 
-At the time of writing, there are two widely-used systems for automatically starting programs automatically at startup: `systemd` and "System V" . (There are others, but they are not considered here.) To see if the `systemd` process is running on your system, enter the following command:
+At the time of writing, there are two widely-used systems for starting programs automatically at startup: `systemd` and "System V" . (There are others, but they are not considered here.) To see if the `systemd` process is running on your system, enter the following command:
 
 `ps aux | grep systemd | grep -v grep`
 
@@ -223,15 +210,17 @@ $sudo update-rc.d shairport-sync defaults 90 10
 
 **Man Page**
 
-You can view the man page here: http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/development/man/shairport-sync.html
+You can view the man page here: http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/master/man/shairport-sync.html
 
 Configuring Shairport Sync
 --------
 There are two logically distinct parts to getting Shairport Sync to run properly on your machine — (1) starting and stopping it and (2) ensuring it has the right settings.
 
-Starting and stopping automatically is taken care of differently in different versions of Linux – see the previous section for an example of installing into a System V or a `systemd` based system.
+**(1) Starting and Stopping:**
+Starting and stopping Shairport Sync automatically is taken care of differently in different versions of Linux – see the previous section for an example of installing into a `systemd` or a System V based system.
 
-To get the best from Shairport Sync, you’ll need to (1) give Shairport Sync a service name by which it will be seen in iTunes etc., (2) specify the output device to use and (3) specify the name of the mixer volume control to use to control the output level. To get values for (2) and (3) you might need to explore the ALSA output devices with a program like `alsamixer` or similar.
+**(2) Settings:**
+To get the best from Shairport Sync, you’ll need to (a) give Shairport Sync a service name by which it will be seen in iTunes etc., (b) specify the output device to use and (c) specify the name of the mixer volume control to use to control the output level. To get values for (b) and (c) you might need to explore the ALSA output devices with a program like `alsamixer` or similar.
 
 Shairport Sync reads settings from a configuration file at `/etc/shairport-sync.conf`. When you run `$sudo make install`, a sample configuration file is installed (or updated) at `/etc/shairport-sync.conf.sample`. This contains all the setting groups and all the settings available, but they all are commented out (comments begin with `//`) so that default values are used. The file contains explanations of the settings, useful hints and suggestions. In addition, if the file doesn't already exist, a default configuration is installed at `/etc/shairport-sync.conf`, which should work in almost any system with a sound card.
 
@@ -279,7 +268,7 @@ Another setting to consider is the `general` `drift` setting: you should set it 
 
 *Command Line Arguments*
 
-As previously mentioned, you can use command line arguments to provide settings to Shairport Sync as before, though newer settings will only be available via the configuration file. For full information, please read the Shairport Sync `man` page, also available at  http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/development/man/shairport-sync.html.
+As previously mentioned, you can use command line arguments to provide settings to Shairport Sync as before, though newer settings will only be available via the configuration file. For full information, please read the Shairport Sync `man` page, also available at  http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/master/man/shairport-sync.html.
 
 Apart from the following options, all command line options can be replaced by settings in the configuration file. Here is a brief description of command line options that are not replicated by settings in the settings file.
 
@@ -419,3 +408,8 @@ For reference, a drift of one second per day is approximately 11.57 ppm. Left un
 It's not unusual to have resend requests, late packets and even missing packets if some part of the connection to the Shairport Sync device is over WiFi. Late packets can sometimes be asked for and received multiple times. Sometimes late packets are sent and arrive too late, but have already been sent and received in time, so weren't needed anyway...
 
 "Min DAC queue size" is the minimum size the queue of samples in the output device's hardware buffer was measured at. It is meant to stand at 0.15 seconds = 6,615 samples, and will go low if the processor is very busy. If it goes below about 2,000 then it's a sign that the processor can't really keep up.
+
+Troubleshooting
+---------------
+Please refer to [TROUBLESHOOTING](https://github.com/mikebrady/shairport-sync/blob/master/TROUBLESHOOTING.md) for a few hints, contributed by users.
+

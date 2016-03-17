@@ -710,6 +710,7 @@ void alac_decode_frame(alac_file *alac,
                        unsigned char *inbuffer,
                        void *outbuffer, int *outputsize)
 {
+		int outbuffer_allocation_size = *outputsize; // initial value
     int channels;
     int32_t outputsamples = alac->setinfo_max_samples_per_frame;
 
@@ -720,6 +721,11 @@ void alac_decode_frame(alac_file *alac,
     channels = readbits(alac, 3);
 
     *outputsize = outputsamples * alac->bytespersample;
+    if (*outputsize>outbuffer_allocation_size) {
+    	fprintf(stderr, "FIXME: Not enough space if the output buffer for audio frame - E1.\n");
+    	*outputsize = 0;
+    	return;    	
+    }    	
 
     switch(channels)
     {
@@ -751,6 +757,12 @@ void alac_decode_frame(alac_file *alac,
              * as a 32bit integer */
             outputsamples = readbits(alac, 32);
             *outputsize = outputsamples * alac->bytespersample;
+            if (*outputsize>outbuffer_allocation_size) {
+							fprintf(stderr, "FIXME: Not enough space if the output buffer for audio frame - E2.\n");
+							*outputsize = 0;
+							return;    	
+						}
+
         }
 
         readsamplesize = alac->setinfo_sample_size - (uncompressed_bytes * 8);
@@ -928,6 +940,11 @@ void alac_decode_frame(alac_file *alac,
              * as a 32bit integer */
             outputsamples = readbits(alac, 32);
             *outputsize = outputsamples * alac->bytespersample;
+            if (*outputsize>outbuffer_allocation_size) {
+							fprintf(stderr, "FIXME: Not enough space if the output buffer for audio frame - E3.\n");
+							*outputsize = 0;
+							return;    	
+						}
         }
 
         readsamplesize = alac->setinfo_sample_size - (uncompressed_bytes * 8) + 1;
