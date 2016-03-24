@@ -411,7 +411,8 @@ static uint32_t delay() {
     snd_pcm_sframes_t current_avail, current_delay = 0;
     int derr, ignore;
     if (snd_pcm_state(alsa_handle) == SND_PCM_STATE_RUNNING) {
-      derr = snd_pcm_avail_delay(alsa_handle, &current_avail, &current_delay);
+//      derr = snd_pcm_avail_delay(alsa_handle, &current_avail, &current_delay);
+      derr = snd_pcm_delay(alsa_handle, &current_delay);
       // current_avail not used
       if (derr != 0) {
         ignore = snd_pcm_recover(alsa_handle, derr, 0);
