@@ -31,7 +31,8 @@ typedef struct {
   // returns the delay before the next frame to be sent to the device would actually be audible.
   // almost certainly wrong if the buffer is empty, so put silent buffers into it to make it busy.
   // will change dynamically, so keep watching it. Implemented in ALSA only.
-  uint32_t (*delay)();
+  // returns -1 if there's a problem
+  int32_t (*delay)();
 
   // may be NULL, in which case soft volume is applied
   void (*volume)(double vol);
