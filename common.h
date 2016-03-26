@@ -57,6 +57,7 @@ typedef struct {
   int udp_port_base;
   int udp_port_range;
   int ignore_volume_control;
+  int no_sync; // disable synchronisation, even if it's available
   int resyncthreshold; // if it get's out of whack my more than this, resync. Zero means never
                        // resync.
   int allow_session_interruption;
