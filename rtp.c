@@ -700,6 +700,7 @@ void rtp_setup(SOCKADDR *remote, int cport, int tport, uint32_t active_remote, i
 }
 
 void get_reference_timestamp_stuff(uint32_t *timestamp, uint64_t *timestamp_time, uint64_t *remote_timestamp_time) {
+  // types okay
   pthread_mutex_lock(&reference_time_mutex);
   *timestamp = reference_timestamp;
   *timestamp_time = reference_timestamp_time;
