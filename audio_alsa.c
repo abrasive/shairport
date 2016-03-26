@@ -42,7 +42,7 @@ static void start(int sample_rate);
 static void play(short buf[], int samples);
 static void stop(void);
 static void flush(void);
-static uint32_t delay(void);
+static int32_t delay(void);
 static void volume(double vol);
 static void linear_volume(double vol);
 static void parameters(audio_parameters *info);
@@ -182,7 +182,18 @@ static int init(int argc, char **argv) {
       alsa_mix_ctrl = (char *)str;
       hardware_mixer = 1;
     }
+  
+    /* Get the Daemonize setting. */
+    if (config_lookup_string(config.cfg, "alsa.disable_synchronization", &str)) {
+      if (strcasecmp(str, "no") == 0)
+        config.no_sync = 0;
+      else if (strcasecmp(str, "yes") == 0)
+        config.no_sync = 1;
+      else
+        die("Invalid disable_synchronization option choice \"%s\". It should be \"yes\" or \"no\"");
+    }
   }
+
 
   optind = 1; // optind=0 is equivalent to optind=1 plus special behaviour
   argv--;     // so we shift the arguments to satisfy getopt()
@@ -402,7 +413,7 @@ static void start(int sample_rate) {
   desired_sample_rate = sample_rate; // must be a variable
 }
 
-static uint32_t delay() {
+static int32_t delay() {
   // debug(3,"audio_alsa delay called.");
   if (alsa_handle == NULL) {
     return 0;
