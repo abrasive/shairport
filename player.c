@@ -571,12 +571,16 @@ static abuf_t *buffer_get_frame(void) {
               // if would be in sync. To do this, we would give it a latency offset of -100 ms, i.e.
               // -4410 frames.
 
-              int64_t delta = ((int64_t)first_packet_timestamp - (int64_t)reference_timestamp);
-              first_packet_time_to_play =
-                  reference_timestamp_time +
-                  ((delta + (int64_t)config.latency + (int64_t)config.audio_backend_latency_offset)
-                   << 32) /
-                      44100;
+              int64_t delta = ((int64_t)first_packet_timestamp - (int64_t)reference_timestamp)+config.latency+config.audio_backend_latency_offset; // uint32_t to int64_t is okay and int32t to int64t promotion is okay.
+              
+              if (delta>=0) {
+                uint64_t delta_fp_sec = (delta << 32) / 44100; // int64_t which is positive
+                first_packet_time_to_play=reference_timestamp_time+delta_fp_sec;
+              } else {
+                int64_t abs_delta = -delta;
+                uint64_t delta_fp_sec = (abs_delta << 32) / 44100; // int64_t which is positive
+                first_packet_time_to_play=reference_timestamp_time-delta_fp_sec;              
+              }
 
               if (local_time_now >= first_packet_time_to_play) {
                 debug(
@@ -589,12 +593,16 @@ static abuf_t *buffer_get_frame(void) {
 
           if (first_packet_time_to_play != 0) {
             // recalculate first_packet_time_to_play -- the latency might change
-            int64_t delta = ((int64_t)first_packet_timestamp - (int64_t)reference_timestamp);
-            first_packet_time_to_play =
-                reference_timestamp_time +
-                ((delta + (int64_t)config.latency + (int64_t)config.audio_backend_latency_offset)
-                 << 32) /
-                    44100;
+            int64_t delta = ((int64_t)first_packet_timestamp - (int64_t)reference_timestamp)+config.latency+config.audio_backend_latency_offset; // uint32_t to int64_t is okay and int32t to int64t promotion is okay.
+            
+            if (delta>=0) {
+              uint64_t delta_fp_sec = (delta << 32) / 44100; // int64_t which is positive
+              first_packet_time_to_play=reference_timestamp_time+delta_fp_sec;
+            } else {
+              int64_t abs_delta = -delta;
+              uint64_t delta_fp_sec = (abs_delta << 32) / 44100; // int64_t which is positive
+              first_packet_time_to_play=reference_timestamp_time-delta_fp_sec;              
+            }
 
             uint32_t max_dac_delay = 4410;
             uint32_t filler_size = max_dac_delay; // 0.1 second -- the maximum we'll add to the DAC
@@ -613,6 +621,7 @@ static abuf_t *buffer_get_frame(void) {
               first_packet_time_to_play = 0;
               time_since_play_started = 0;
             } else {
+              // first_packet_time_to_play is definitely later than local_time_now
               if ((config.output->delay) && (have_sent_prefiller_silence != 0)) {
                 dac_delay = config.output->delay();
                 if (dac_delay == -1) {
@@ -656,6 +665,7 @@ static abuf_t *buffer_get_frame(void) {
                 free(silence);
                 have_sent_prefiller_silence = 1;
                 if (ab_buffering == 0) {
+                  // not the time of the playing of the first frame
                   uint64_t reference_timestamp_time; // don't need this...
                   get_reference_timestamp_stuff(&play_segment_reference_frame, &reference_timestamp_time, &play_segment_reference_frame_remote_time);
 #ifdef CONFIG_METADATA
