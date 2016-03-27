@@ -451,7 +451,7 @@ static abuf_t *buffer_get_frame(void) {
   int32_t dac_delay = 0;
   do {
     // get the time
-    local_time_now = get_absolute_time_in_fp();
+    local_time_now = get_absolute_time_in_fp(); // type okay
 
     // if config.timeout (default 120) seconds have elapsed since the last audio packet was
     // received, then we should stop.
@@ -686,21 +686,21 @@ static abuf_t *buffer_get_frame(void) {
     	do_wait = 1; // if the current frame exists and is ready, then wait unless it's time to let it go...
       uint32_t reference_timestamp;
       uint64_t reference_timestamp_time,remote_reference_timestamp_time;
-      get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time, &remote_reference_timestamp_time);
+      get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time, &remote_reference_timestamp_time); // all types okay
       if (reference_timestamp) { // if we have a reference time
-        uint32_t packet_timestamp = curframe->timestamp;
-        int64_t delta = ((int64_t)packet_timestamp - (int64_t)reference_timestamp);
-        int64_t offset = (int64_t)config.latency + config.audio_backend_latency_offset -
-                         (int64_t)config.audio_backend_buffer_desired_length;
-        int64_t net_offset = delta + offset;
-        int64_t time_to_play = reference_timestamp_time;
-        int64_t net_offset_fp_sec;
+        uint32_t packet_timestamp = curframe->timestamp; // types okay
+        int64_t delta = (int64_t)packet_timestamp - (int64_t)reference_timestamp; // uint32_t to int64_t is okay.
+        int64_t offset = config.latency + config.audio_backend_latency_offset -
+                         config.audio_backend_buffer_desired_length; // all arguments are int32_t, so expression promotion okay
+        int64_t net_offset = delta + offset; // okay
+        uint64_t time_to_play = reference_timestamp_time; // type okay
         if (net_offset >= 0) {
-          net_offset_fp_sec = (net_offset << 32) / 44100;
+          uint64_t net_offset_fp_sec = (net_offset << 32) / 44100; // int64_t which is positive
           time_to_play += net_offset_fp_sec; // using the latency requested...
           // debug(2,"Net Offset: %lld, adjusted: %lld.",net_offset,net_offset_fp_sec);
         } else {
-          net_offset_fp_sec = ((-net_offset) << 32) / 44100;
+          int64_t abs_net_offset = -net_offset;
+          uint64_t net_offset_fp_sec = (abs_net_offset << 32) / 44100; // int64_t which is positive
           time_to_play -= net_offset_fp_sec;
           // debug(2,"Net Offset: %lld, adjusted: -%lld.",net_offset,net_offset_fp_sec);
         }
