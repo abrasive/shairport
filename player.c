@@ -776,6 +776,7 @@ static abuf_t *buffer_get_frame(void) {
     }
   }
 
+
   if (!curframe->ready) {
     // debug(1, "Supplying a silent frame for frame %u", read);
     missing_packets++;
@@ -1039,8 +1040,8 @@ static void *player_thread_func(void *arg) {
             if (inframe->sequence_number != last_seqno_read) { //seq_t, ei.e. uint16_t and int32_t, so okay
               debug(
                   1,
-                  "Player: packets out of sequence: expected: %d, got: %d, sync error: %d frames.",
-                  last_seqno_read, inframe->sequence_number, sync_error);
+                  "Player: packets out of sequence: expected: %u, got: %u, with ab_read: %u and ab_write: %u.",
+                  last_seqno_read, inframe->sequence_number,ab_read,ab_write);
               last_seqno_read = inframe->sequence_number; // reset warning...
             }
           }
