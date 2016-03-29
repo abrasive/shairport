@@ -42,7 +42,7 @@ static void start(int sample_rate);
 static void play(short buf[], int samples);
 static void stop(void);
 static void flush(void);
-static int32_t delay(void);
+static long delay(void);
 static void volume(double vol);
 static void linear_volume(double vol);
 static void parameters(audio_parameters *info);
@@ -413,13 +413,14 @@ static void start(int sample_rate) {
   desired_sample_rate = sample_rate; // must be a variable
 }
 
-static int32_t delay() {
+static long delay() {
   // debug(3,"audio_alsa delay called.");
   if (alsa_handle == NULL) {
     return 0;
   } else {
     pthread_mutex_lock(&alsa_mutex);
     snd_pcm_sframes_t current_avail, current_delay = 0;
+    //snd_pcm_sframes_t is a signed long -- hence the return of a "long"
     int derr, ignore;
     if (snd_pcm_state(alsa_handle) == SND_PCM_STATE_RUNNING) {
 //      derr = snd_pcm_avail_delay(alsa_handle, &current_avail, &current_delay);
