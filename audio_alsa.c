@@ -427,9 +427,9 @@ static long delay() {
       derr = snd_pcm_delay(alsa_handle, &current_delay);
       // current_avail not used
       if (derr != 0) {
-        ignore = snd_pcm_recover(alsa_handle, derr, 0);
         debug(1, "Error %d in delay(): %s. Delay reported is %d frames.", derr,
               snd_strerror(derr), current_delay);
+        ignore = snd_pcm_recover(alsa_handle, derr, 0);
         current_delay = -1;
       }
     } else if (snd_pcm_state(alsa_handle) == SND_PCM_STATE_PREPARED) {
