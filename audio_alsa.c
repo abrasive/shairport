@@ -42,7 +42,7 @@ static void start(int sample_rate);
 static void play(short buf[], int samples);
 static void stop(void);
 static void flush(void);
-static long delay(void);
+int delay(long* the_delay);
 static void volume(double vol);
 static void linear_volume(double vol);
 static void parameters(audio_parameters *info);
@@ -381,6 +381,7 @@ int open_alsa_device(void) {
 
   if (actual_buffer_length <
       config.audio_backend_buffer_desired_length + minimal_buffer_headroom) {
+    /*
     // the dac buffer is too small, so let's try to set it
     buffer_size =
         config.audio_backend_buffer_desired_length + requested_buffer_headroom;
@@ -401,6 +402,8 @@ int open_alsa_device(void) {
                             requested_buffer_headroom,
           buffer_size);
     }
+    */
+    die("The alsa buffer is to small (%lu bytes) to accommodate the desired backend buffer length (%ld) you have chosen.",actual_buffer_length,config.audio_backend_buffer_desired_length);
   }
 
   return (0);
@@ -413,43 +416,44 @@ static void start(int sample_rate) {
   desired_sample_rate = sample_rate; // must be a variable
 }
 
-static long delay() {
+int delay(long* the_delay) {
+  //snd_pcm_sframes_t is a signed long -- hence the return of a "long"
+	int reply;
   // debug(3,"audio_alsa delay called.");
   if (alsa_handle == NULL) {
-    return 0;
+    return -ENODEV;
   } else {
     pthread_mutex_lock(&alsa_mutex);
-    snd_pcm_sframes_t current_avail, current_delay = 0;
-    //snd_pcm_sframes_t is a signed long -- hence the return of a "long"
     int derr, ignore;
     if (snd_pcm_state(alsa_handle) == SND_PCM_STATE_RUNNING) {
-//      derr = snd_pcm_avail_delay(alsa_handle, &current_avail, &current_delay);
-      derr = snd_pcm_delay(alsa_handle, &current_delay);
-      // current_avail not used
-      if (derr != 0) {
+      reply = snd_pcm_delay(alsa_handle, the_delay);
+      if (reply != 0) {
         debug(1, "Error %d in delay(): %s. Delay reported is %d frames.", derr,
-              snd_strerror(derr), current_delay);
+              snd_strerror(derr), *the_delay);
         ignore = snd_pcm_recover(alsa_handle, derr, 0);
-        current_delay = -1;
       }
     } else if (snd_pcm_state(alsa_handle) == SND_PCM_STATE_PREPARED) {
-      current_delay = 0;
+      *the_delay = 0;
+      reply = 0; // no error
     } else {
-      if (snd_pcm_state(alsa_handle) == SND_PCM_STATE_XRUN)
-        current_delay = 0;
-      else {
-        current_delay = -1;
+      if (snd_pcm_state(alsa_handle) == SND_PCM_STATE_XRUN) {
+				*the_delay = 0;
+      	reply = 0; // no error
+      } else {
+        reply = -EIO;
         debug(1, "Error -- ALSA delay(): bad state: %d.",
               snd_pcm_state(alsa_handle));
       }
       if ((derr = snd_pcm_prepare(alsa_handle))) {
         ignore = snd_pcm_recover(alsa_handle, derr, 0);
         debug(1, "Error preparing after delay error: %s.", snd_strerror(derr));
-        current_delay = -1;
       }
     }
     pthread_mutex_unlock(&alsa_mutex);
-    return current_delay;
+    // here, occasionally pretend there's a problem with pcm_get_delay()
+		//if ((random() % 100000) < 3) // keep it pretty rare
+		//	reply = -EPERM; // pretend something bad has happened
+    return reply;
   }
 }
 
@@ -472,9 +476,9 @@ static void play(short buf[], int samples) {
         (snd_pcm_state(alsa_handle) == SND_PCM_STATE_RUNNING)) {
       err = snd_pcm_writei(alsa_handle, (char *)buf, samples);
       if (err < 0) {
-        ignore = snd_pcm_recover(alsa_handle, err, 0);
         debug(1, "Error %d writing %d samples in play() %s.", err, samples,
               snd_strerror(err));
+        ignore = snd_pcm_recover(alsa_handle, err, 0);
       }
     } else {
       debug(1, "Error -- ALSA device in incorrect state (%d) for play.",

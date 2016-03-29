@@ -31,8 +31,8 @@ typedef struct {
   // returns the delay before the next frame to be sent to the device would actually be audible.
   // almost certainly wrong if the buffer is empty, so put silent buffers into it to make it busy.
   // will change dynamically, so keep watching it. Implemented in ALSA only.
-  // returns -1 if there's a problem
-  long (*delay)(); // snd_pcm_sframes_t is a signed long
+  // returns a negative error code if there's a problem
+  int (*delay)(long* the_delay); // snd_pcm_sframes_t is a signed long
 
   // may be NULL, in which case soft volume is applied
   void (*volume)(double vol);
