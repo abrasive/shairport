@@ -445,6 +445,7 @@ static abuf_t *buffer_get_frame(void) {
   abuf_t *abuf = 0;
   int i;
   abuf_t *curframe;
+  int notified_buffer_empty = 0; // diagnostic only
 
   pthread_mutex_lock(&ab_mutex);
   int wait;
@@ -534,6 +535,7 @@ static abuf_t *buffer_get_frame(void) {
       curframe = audio_buffer + BUFIDX(ab_read);
 
       if (curframe->ready) {
+        notified_buffer_empty=0; // at least one buffer now -- diagnostic only.
         if (ab_buffering) { // if we are getting packets but not yet forwarding them to the player
           int have_sent_prefiller_silence; // set true when we have send some silent frames to the DAC
           uint32_t reference_timestamp;
@@ -720,6 +722,14 @@ static abuf_t *buffer_get_frame(void) {
         }
       }
     }
+    if (do_wait==0)
+      if ((ab_synced!=0) && (ab_read==ab_write)) { // the buffer is empty!
+        if (notified_buffer_empty==0) {
+          debug(1,"All buffers exhausted!");
+          notified_buffer_empty=1;
+        }
+        do_wait=1;
+      }
     wait = (ab_buffering || (do_wait != 0) || (!ab_synced)) && (!please_stop);
 
     if (wait) {
@@ -1023,7 +1033,8 @@ static void *player_thread_func(void *arg) {
             td_in_frames = (td * 44100) >> 32;
           } else {
             td = reference_timestamp_time - local_time_now; // this is the absolute value, which should be negated. Conversion is positive uint64_t to int64_t, thus okay.
-            td_in_frames = -((td * 44100) >> 32); //use the absolute td value for the present. Types okay
+            td_in_frames = (td * 44100) >> 32; //use the absolute td value for the present. Types okay
+            td_in_frames = -td_in_frames;
             td = -td; // should be okay, as the range of values should be very small w.r.t 64 bits
           }
 
