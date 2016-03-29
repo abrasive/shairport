@@ -449,7 +449,7 @@ static abuf_t *buffer_get_frame(void) {
 
   pthread_mutex_lock(&ab_mutex);
   int wait;
-  int32_t dac_delay = 0;
+  long dac_delay = 0; // long because alsa returns a long 
   do {
     // get the time
     local_time_now = get_absolute_time_in_fp(); // type okay
@@ -606,8 +606,8 @@ static abuf_t *buffer_get_frame(void) {
               first_packet_time_to_play=reference_timestamp_time-delta_fp_sec;              
             }
 
-            uint32_t max_dac_delay = 4410;
-            uint32_t filler_size = max_dac_delay; // 0.1 second -- the maximum we'll add to the DAC
+            int64_t max_dac_delay = 4410;
+            int64_t filler_size = max_dac_delay; // 0.1 second -- the maximum we'll add to the DAC
 
             if (local_time_now >= first_packet_time_to_play) {
               // we've gone past the time...
@@ -625,14 +625,14 @@ static abuf_t *buffer_get_frame(void) {
             } else {
               // first_packet_time_to_play is definitely later than local_time_now
               if ((config.output->delay) && (have_sent_prefiller_silence != 0)) {
-                dac_delay = config.output->delay();
-                if (dac_delay == -1) {
-                  debug(1, "Error getting dac_delay in buffer_get_frame.");
+          			int resp = config.output->delay(&dac_delay);
+                if (resp != 0) {
+                  debug(1, "Error %d getting dac_delay in buffer_get_frame.",resp);
                   dac_delay = 0;
-                }
+                }              
               } else
                 dac_delay = 0;
-              uint64_t gross_frame_gap =
+              int64_t gross_frame_gap =
                   ((first_packet_time_to_play - local_time_now) * 44100) >> 32;
               int64_t exact_frame_gap = gross_frame_gap - dac_delay;
               if (exact_frame_gap <= 0) {
@@ -647,7 +647,7 @@ static abuf_t *buffer_get_frame(void) {
                 first_packet_timestamp = 0;
                 first_packet_time_to_play = 0;
               } else {
-                uint32_t fs = filler_size;
+                int64_t fs = filler_size;
                 if (fs > (max_dac_delay - dac_delay))
                   fs = max_dac_delay - dac_delay;
                 if ((exact_frame_gap <= fs) || (exact_frame_gap <= frame_size * 2)) {
@@ -659,6 +659,7 @@ static abuf_t *buffer_get_frame(void) {
                   ab_buffering = 0;
                 }
                 signed short *silence;
+                // fs will be truncated here
                 silence = malloc(FRAME_BYTES(fs));
                 memset(silence, 0, FRAME_BYTES(fs));
                 // debug(1,"Exact frame gap is %llu; play %d frames of silence. Dac_delay is %d,
@@ -1068,20 +1069,27 @@ static void *player_thread_func(void *arg) {
           // here, we want to check (a) if we are meant to do synchronisation, (b) if we have a delay procedure, (b) if we can get the delay.
           // If any of these are false, we don't do any synchronisation stuff
 
+					int resp = -1; // use this as a flag -- if negative, we can't rely on a real known delay
           current_delay = -1; // use this as a failure flag
  
-           if (config.output->delay) {
-            current_delay = config.output->delay();  // int64_t from int32_t, so okay;
-            if (current_delay >= 0) {
-              if (current_delay < minimum_dac_queue_size) {
-                minimum_dac_queue_size = current_delay; // update for display later
-              }
-            } else { 
-              debug(1, "Delay error when checking running latency.");
-            }
-          }
+					if (config.output->delay) {
+						long l_delay; 
+						resp = config.output->delay(&l_delay);
+						current_delay = l_delay;
+						if (resp==0) { // no error
+							if (current_delay<0) {
+								debug(1,"Underrun of %d frames reported, but ignored.",current_delay);
+								current_delay=0; // could get a negative value if there was underrun, but ignore it.
+							}
+							if (current_delay < minimum_dac_queue_size) {
+								minimum_dac_queue_size = current_delay; // update for display later
+							}
+						} else { 
+							debug(1, "Delay error %d when checking running latency.",resp);
+						}
+					}
 
-          if (current_delay >= 0) {
+          if (resp >= 0) {
 
             // this is the actual delay, including the latency we actually want, which will
             // fluctuate a good bit about a potentially rising or falling trend.
