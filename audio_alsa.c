@@ -86,6 +86,11 @@ static int hardware_mixer = 0;
 
 static int play_number;
 static int64_t accumulated_delay, accumulated_da_delay;
+int alsa_characteristics_already_listed = 0;
+
+static snd_pcm_uframes_t period_size_requested,buffer_size_requested;
+static int 	set_period_size_request,set_buffer_size_request;
+
 
 static void help(void) {
   printf("    -d output-device    set the output device [default*|...]\n"
@@ -127,6 +132,9 @@ static int init(int argc, char **argv) {
   const char *str;
   int value;
 
+	set_period_size_request = 0;
+	set_buffer_size_request = 0;
+	
   config.audio_backend_latency_offset = 0; // this is the default for ALSA
   config.audio_backend_buffer_desired_length =
       6615; // default for alsa with a software mixer
@@ -183,7 +191,7 @@ static int init(int argc, char **argv) {
       hardware_mixer = 1;
     }
   
-    /* Get the Daemonize setting. */
+    /* Get the disable_synchronization setting. */
     if (config_lookup_string(config.cfg, "alsa.disable_synchronization", &str)) {
       if (strcasecmp(str, "no") == 0)
         config.no_sync = 0;
@@ -192,7 +200,34 @@ static int init(int argc, char **argv) {
       else
         die("Invalid disable_synchronization option choice \"%s\". It should be \"yes\" or \"no\"");
     }
+    
+    /* Get the optional period size value */
+    if (config_lookup_int(config.cfg, "alsa.period_size",
+                          &value)) {
+      set_period_size_request = 1;
+      debug(1,"Value read for period size is %d.",value);
+      if (value < 0)
+        die("Invalid alsa period size setting \"%d\". It "
+            "must be greater than 0.",
+            value);
+      else
+        period_size_requested = value;
+    }
+
+    /* Get the optional buffer size value */
+    if (config_lookup_int(config.cfg, "alsa.buffer_size",
+                          &value)) {
+      set_buffer_size_request = 1;
+      debug(1,"Value read for buffer size is %d.",value);
+      if (value < 0)
+        die("Invalid alsa buffer size setting \"%d\". It "
+            "must be greater than 0.",
+            value);
+      else
+        buffer_size_requested = value;
+    }
   }
+  
 
 
   optind = 1; // optind=0 is equivalent to optind=1 plus special behaviour
@@ -290,6 +325,7 @@ static int init(int argc, char **argv) {
 
     snd_mixer_close(alsa_mix_handle);
   }
+  
   alsa_mix_handle = NULL;
   pthread_mutex_unlock(&alsa_mutex);
   return 0;
@@ -358,10 +394,31 @@ int open_alsa_device(void) {
         desired_sample_rate, snd_strerror(ret));
   }
 
-  // snd_pcm_hw_params_set_period_size_near(alsa_handle, alsa_params, &frames,
-  // &dir);
-  // snd_pcm_hw_params_set_buffer_size_near(alsa_handle, alsa_params,
-  // &buffer_size);
+	if (set_period_size_request!=0) {
+		debug(1,"Attempting to set the period size");
+		ret = snd_pcm_hw_params_set_period_size_near(alsa_handle, alsa_params, &period_size_requested, &dir);
+		if (ret < 0) {
+			die("audio_alsa: cannot set period size of %lu: %s",
+					period_size_requested, snd_strerror(ret));
+		snd_pcm_uframes_t actual_period_size;
+		snd_pcm_hw_params_get_period_size(alsa_params, &actual_period_size, &dir);
+		if (actual_period_size!=period_size_requested)
+			inform("Actual period size set to a different value than requested. Requested: %lu, actual setting: %lu",period_size_requested,actual_period_size);
+		}
+  }
+
+	if (set_buffer_size_request!=0) {
+		debug(1,"Attempting to set the buffer size to %lu",buffer_size_requested);
+		ret = snd_pcm_hw_params_set_buffer_size_near(alsa_handle, alsa_params, &buffer_size_requested);
+		if (ret < 0) {
+			die("audio_alsa: cannot set buffer size of %lu: %s",
+					buffer_size_requested, snd_strerror(ret));
+		snd_pcm_uframes_t actual_buffer_size;
+		snd_pcm_hw_params_get_buffer_size(alsa_params, &actual_buffer_size);
+		if (actual_buffer_size!=buffer_size_requested)
+			inform("Actual period size set to a different value than requested. Requested: %lu, actual setting: %lu",buffer_size,actual_buffer_size);
+		}
+  }
 
   ret = snd_pcm_hw_params(alsa_handle, alsa_params);
   if (ret < 0) {
@@ -403,9 +460,80 @@ int open_alsa_device(void) {
           buffer_size);
     }
     */
-    die("The alsa buffer is to small (%lu bytes) to accommodate the desired backend buffer length (%ld) you have chosen.",actual_buffer_length,config.audio_backend_buffer_desired_length);
+    debug(1,"The alsa buffer is to small (%lu bytes) to accommodate the desired backend buffer length (%ld) you have chosen.",actual_buffer_length,config.audio_backend_buffer_desired_length);
   }
+  
+  if ((alsa_characteristics_already_listed==0)) {
+  		alsa_characteristics_already_listed=1;
+  		
+  		int rc;
+			unsigned int val, val2;
+			int dir;
+			snd_pcm_uframes_t frames;
 
+			debug(1,"PCM handle name = '%s'",
+						 snd_pcm_name(alsa_handle));
+			
+//			ret = snd_pcm_hw_params_any(alsa_handle, alsa_params);
+//			if (ret < 0) {
+//				die("audio_alsa: Cannpot get configuration for device \"%s\": no configurations "
+//						"available",
+//						alsa_out_dev);
+//			}
+
+
+			snd_pcm_hw_params_get_access(alsa_params,
+															(snd_pcm_access_t *) &val);
+			debug(1,"access type = %s",
+						 snd_pcm_access_name((snd_pcm_access_t)val));
+
+			snd_pcm_hw_params_get_format(alsa_params,(snd_pcm_format_t*)&val);
+			debug(1,"format = '%s' (%s)",
+				snd_pcm_format_name((snd_pcm_format_t)val),
+				snd_pcm_format_description(
+																 (snd_pcm_format_t)val));
+
+			snd_pcm_hw_params_get_subformat(alsa_params,
+														(snd_pcm_subformat_t *)&val);
+			debug(1,"subformat = '%s' (%s)",
+				snd_pcm_subformat_name((snd_pcm_subformat_t)val),
+				snd_pcm_subformat_description(
+															(snd_pcm_subformat_t)val));
+
+			snd_pcm_hw_params_get_channels(alsa_params, &val);
+			debug(1,"channels = %d", val);
+
+			snd_pcm_hw_params_get_rate(alsa_params, &val, &dir);
+			debug(1,"rate = %d bps", val);
+
+			snd_pcm_hw_params_get_period_time(alsa_params,
+																				&val, &dir);
+			debug(1,"period time = %d us", val);
+
+			snd_pcm_hw_params_get_period_size(alsa_params,
+																				&frames, &dir);
+			debug(1,"period size = %d frames", (int)frames);
+
+			snd_pcm_hw_params_get_buffer_time(alsa_params,
+																				&val, &dir);
+			debug(1,"buffer time = %d us", val);
+
+			snd_pcm_hw_params_get_buffer_size(alsa_params,
+														 (snd_pcm_uframes_t *) &val);
+			debug(1,"buffer size = %d frames", val);
+
+			snd_pcm_hw_params_get_periods(alsa_params, &val, &dir);
+			debug(1,"periods per buffer = %d frames", val);
+
+			snd_pcm_hw_params_get_rate_numden(alsa_params,
+																				&val, &val2);
+			debug(1,"exact rate = %d/%d bps", val, val2);
+
+			val = snd_pcm_hw_params_get_sbits(alsa_params);
+			debug(1,"significant bits = %d", val);
+
+		}
+  
   return (0);
 }
 
