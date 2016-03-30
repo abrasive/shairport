@@ -104,7 +104,7 @@ static pthread_mutex_t vol_mutex = PTHREAD_MUTEX_INITIALIZER;
 #define MAX_PACKET 2048
 
 // DAC buffer occupancy stuff
-#define DAC_BUFFER_QUEUE_MINIMUM_LENGTH 5000
+#define DAC_BUFFER_QUEUE_MINIMUM_LENGTH 2000
 
 typedef struct audio_buffer_entry { // decoded audio packets
   int ready;
