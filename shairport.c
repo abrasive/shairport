@@ -79,7 +79,7 @@ static void sig_ignore(int foo, siginfo_t *bar, void *baz) {}
 static void sig_shutdown(int foo, siginfo_t *bar, void *baz) {
   debug(1, "shutdown requested...");
   shairport_shutdown();
-  daemon_log(LOG_NOTICE, "exit...");
+//  daemon_log(LOG_NOTICE, "exit...");
   daemon_retval_send(255);
   daemon_pid_file_remove();
   exit(0);
@@ -104,52 +104,64 @@ static void sig_connect_audio_output(int foo, siginfo_t *bar, void *baz) {
   set_requested_connection_state_to_output(1);
 }
 
+char* get_version_string() {
+  char* version_string = malloc(200);
+  if (version_string) {
+    strcpy(version_string, PACKAGE_VERSION);
+  #ifdef HAVE_LIBPOLARSSL
+    strcat(version_string, "-polarssl");
+  #endif
+  #ifdef HAVE_LIBSSL
+    strcat(version_string, "-openssl");
+  #endif
+  #ifdef CONFIG_TINYSVCMDNS
+    strcat(version_string, "-tinysvcmdns");
+  #endif
+  #ifdef CONFIG_AVAHI
+    strcat(version_string, "-Avahi");
+  #endif
+  #ifdef CONFIG_DNS_SD
+    strcat(version_string, "-dns_sd");
+  #endif
+  #ifdef CONFIG_ALSA
+    strcat(version_string, "-ALSA");
+  #endif
+  #ifdef CONFIG_SNDIO
+    strcat(version_string, "-sndio");
+  #endif
+  #ifdef CONFIG_AO
+    strcat(version_string, "-ao");
+  #endif
+  #ifdef CONFIG_PULSE
+    strcat(version_string, "-pulse");
+  #endif
+  #ifdef CONFIG_DUMMY
+    strcat(version_string, "-dummy");
+  #endif
+  #ifdef CONFIG_STDOUT
+    strcat(version_string, "-stdout");
+  #endif
+  #ifdef CONFIG_PIPE
+    strcat(version_string, "-pipe");
+  #endif
+  #ifdef HAVE_LIBSOXR
+    strcat(version_string, "-soxr");
+  #endif
+  #ifdef CONFIG_METADATA
+    strcat(version_string, "-metadata");
+  #endif
+  }
+  return version_string;
+}
+
 void print_version(void) {
-  char version_string[200];
-  strcpy(version_string, PACKAGE_VERSION);
-#ifdef HAVE_LIBPOLARSSL
-  strcat(version_string, "-polarssl");
-#endif
-#ifdef HAVE_LIBSSL
-  strcat(version_string, "-openssl");
-#endif
-#ifdef CONFIG_TINYSVCMDNS
-  strcat(version_string, "-tinysvcmdns");
-#endif
-#ifdef CONFIG_AVAHI
-  strcat(version_string, "-Avahi");
-#endif
-#ifdef CONFIG_DNS_SD
-  strcat(version_string, "-dns_sd");
-#endif
-#ifdef CONFIG_ALSA
-  strcat(version_string, "-ALSA");
-#endif
-#ifdef CONFIG_SNDIO
-  strcat(version_string, "-sndio");
-#endif
-#ifdef CONFIG_AO
-  strcat(version_string, "-ao");
-#endif
-#ifdef CONFIG_PULSE
-  strcat(version_string, "-pulse");
-#endif
-#ifdef CONFIG_DUMMY
-  strcat(version_string, "-dummy");
-#endif
-#ifdef CONFIG_STDOUT
-  strcat(version_string, "-stdout");
-#endif
-#ifdef CONFIG_PIPE
-  strcat(version_string, "-pipe");
-#endif
-#ifdef HAVE_LIBSOXR
-  strcat(version_string, "-soxr");
-#endif
-#ifdef CONFIG_METADATA
-  strcat(version_string, "-metadata");
-#endif
-  printf("%s\n", version_string);
+  char* version_string = get_version_string();
+  if (version_string) {
+    printf("%s\n", version_string);
+    free(version_string);
+  } else {
+    debug(1,"Can't print version string!");
+  }
 }
 
 void usage(char *progname) {
@@ -851,7 +863,7 @@ int main(int argc, char **argv) {
   }
   config.output->init(argc - audio_arg, argv + audio_arg);
 
-  daemon_log(LOG_NOTICE, "startup");
+  // daemon_log(LOG_NOTICE, "startup");
   
   switch (endianness) {
     case SS_LITTLE_ENDIAN:
@@ -907,47 +919,57 @@ int main(int argc, char **argv) {
     inform("Please remove this setting and use the relevant audio_backend_latency_offset setting, if necessary, to compensate for delays elsewhere.");
   }
   
+  /* print out version */
   
+  char* version_dbs = get_version_string();
+  if (version_dbs) {
+    debug(1,"Version: \"%s\"",version_dbs);
+    free(version_dbs);
+  } else {
+    debug(1,"Can't print the version information!");
+  }
+
   /* Print out options */
 
-  debug(2, "statistics_requester status is %d.", config.statistics_requested);
-  debug(2, "daemon status is %d.", config.daemonise);
-  debug(2, "rtsp listening port is %d.", config.port);
-  debug(2, "udp base port is %d.", config.udp_port_base);
-  debug(2, "udp port range is %d.", config.udp_port_range);
-  debug(2, "Shairport Sync player name is \"%s\".", config.apname);
-  debug(2, "Audio Output name is \"%s\".", config.output_name);
-  debug(2, "on-start action is \"%s\".", config.cmd_start);
-  debug(2, "on-stop action is \"%s\".", config.cmd_stop);
-  debug(2, "wait-cmd status is %d.", config.cmd_blocking);
-  debug(2, "mdns backend \"%s\".", config.mdns_name);
+  debug(1, "statistics_requester status is %d.", config.statistics_requested);
+  debug(1, "daemon status is %d.", config.daemonise);
+  debug(1, "rtsp listening port is %d.", config.port);
+  debug(1, "udp base port is %d.", config.udp_port_base);
+  debug(1, "udp port range is %d.", config.udp_port_range);
+  debug(1, "Shairport Sync player name is \"%s\".", config.apname);
+  debug(1, "Audio Output name is \"%s\".", config.output_name);
+  debug(1, "on-start action is \"%s\".", config.cmd_start);
+  debug(1, "on-stop action is \"%s\".", config.cmd_stop);
+  debug(1, "wait-cmd status is %d.", config.cmd_blocking);
+  debug(1, "mdns backend \"%s\".", config.mdns_name);
   debug(2, "userSuppliedLatency is %d.", config.userSuppliedLatency);
   debug(2, "AirPlayLatency is %d.", config.AirPlayLatency);
   debug(2, "iTunesLatency is %d.", config.iTunesLatency);
   debug(2, "forkedDaapdLatency is %d.", config.ForkedDaapdLatency);
-  debug(2, "stuffing option is \"%d\".", config.packet_stuffing);
-  debug(2, "resync time is %d.", config.resyncthreshold);
-  debug(2, "allow a session to be interrupted: %d.", config.allow_session_interruption);
-  debug(2, "busy timeout time is %d.", config.timeout);
-  debug(2, "tolerance is %d frames.", config.tolerance);
-  debug(2, "password is \"%s\".", config.password);
-  debug(2, "ignore_volume_control is %d.", config.ignore_volume_control);
-  debug(2, "audio backend desired buffer length is %d.",
+  debug(1, "stuffing option is \"%d\".", config.packet_stuffing);
+  debug(1, "resync time is %d.", config.resyncthreshold);
+  debug(1, "allow a session to be interrupted: %d.", config.allow_session_interruption);
+  debug(1, "busy timeout time is %d.", config.timeout);
+  debug(1, "drift tolerance is %d frames.", config.tolerance);
+  debug(1, "password is \"%s\".", config.password);
+  debug(1, "ignore_volume_control is %d.", config.ignore_volume_control);
+  debug(1, "disable_synchronization is %d.", config.no_sync);
+  debug(1, "audio backend desired buffer length is %d.",
         config.audio_backend_buffer_desired_length);
-  debug(2, "audio backend latency offset is %d.", config.audio_backend_latency_offset);
-  debug(2, "volume range in dB (zero means use the range specified by the mixer): %u.", config.volume_range_db);
+  debug(1, "audio backend latency offset is %d.", config.audio_backend_latency_offset);
+  debug(1, "volume range in dB (zero means use the range specified by the mixer): %u.", config.volume_range_db);
   
   char *realConfigPath = realpath(config.configfile,NULL);
   if (realConfigPath) {
-    debug(2, "configuration file name \"%s\" resolves to \"%s\".", config.configfile,realConfigPath);
+    debug(1, "configuration file name \"%s\" resolves to \"%s\".", config.configfile,realConfigPath);
     free(realConfigPath);
   } else {
-     debug(2, "configuration file name \"%s\" can not be resolved.", config.configfile);
+     debug(1, "configuration file name \"%s\" can not be resolved.", config.configfile);
   }   
 #ifdef CONFIG_METADATA
-  debug(2, "metdata enabled is %d.", config.metadata_enabled);
-  debug(2, "metadata pipename is \"%s\".", config.metadata_pipename);
-  debug(2, "get-coverart is %d.", config.get_coverart);
+  debug(1, "metdata enabled is %d.", config.metadata_enabled);
+  debug(1, "metadata pipename is \"%s\".", config.metadata_pipename);
+  debug(1, "get-coverart is %d.", config.get_coverart);
 #endif
 
   uint8_t ap_md5[16];

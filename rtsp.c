@@ -293,7 +293,7 @@ static void cleanup_threads(void) {
     if (conns[i]->running == 0) {
       pthread_join(conns[i]->thread, &retval);
       free(conns[i]);
-      debug(2, "one thread joined...");
+      debug(3, "one thread joined...");
       nconns--;
       if (nconns)
         conns[i] = conns[nconns];
