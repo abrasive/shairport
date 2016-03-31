@@ -38,7 +38,6 @@
 static AvahiClient *client = NULL;
 static AvahiEntryGroup *group = NULL;
 static AvahiThreadedPoll *tpoll = NULL;
-static pthread_t tpoll_id;
 
 static char *name = NULL;
 static int port = 0;
@@ -52,7 +51,6 @@ static void egroup_callback(AvahiEntryGroup *g, AvahiEntryGroupState state,
       case AVAHI_ENTRY_GROUP_ESTABLISHED:
          /* The entry group has been established successfully */
          inform("Service '%s' successfully established.\n", name );
-         tpoll_id = pthread_self();
          break;
 
       case AVAHI_ENTRY_GROUP_COLLISION:
@@ -82,6 +80,10 @@ static void egroup_callback(AvahiEntryGroup *g, AvahiEntryGroupState state,
 
       case AVAHI_ENTRY_GROUP_REGISTERING:
          inform( "Service '%s' group is registering.\n", name );
+         break;
+
+      default:
+         warn( "Unhandled avahi egroup state: %d\n", state );
          break;
    }
 }
@@ -124,30 +126,30 @@ static void register_service(AvahiClient *c) {
 static void client_callback(AvahiClient *c, AvahiClientState state,
                             AVAHI_GCC_UNUSED void *userdata) {
   switch (state) {
-  case AVAHI_CLIENT_S_REGISTERING:
-    if (group)
-      avahi_entry_group_reset(group);
-    break;
+     case AVAHI_CLIENT_S_REGISTERING:
+       if (group)
+         avahi_entry_group_reset(group);
+       break;
 
-  case AVAHI_CLIENT_S_RUNNING:
-    register_service(c);
-    break;
+     case AVAHI_CLIENT_S_RUNNING:
+       register_service(c);
+       break;
 
-  case AVAHI_CLIENT_FAILURE:
-    die("avahi client failure");
-    break;
-       
-  case AVAHI_CLIENT_S_COLLISION:
-    warn( "Avahi state is AVAHI_CLIENT_S_COLLISION...would have killed the service: %s\n", name );
-    break;
+     case AVAHI_CLIENT_FAILURE:
+       die("avahi client failure");
+       break;
 
-  case AVAHI_CLIENT_CONNECTING:
-    inform( "Received AVAHI_CLIENT_CONNECTING\n" );
-    break;
+     case AVAHI_CLIENT_S_COLLISION:
+       warn( "Avahi state is AVAHI_CLIENT_S_COLLISION...needs a rename: %s\n", name );
+       break;
 
-  default:
-    warn( "Unhandled avahi state: %d\n", state );
-    break;
+     case AVAHI_CLIENT_CONNECTING:
+       inform( "Received AVAHI_CLIENT_CONNECTING\n" );
+       break;
+
+     default:
+       warn( "Unhandled avahi client state: %d\n", state );
+       break;
   }
 }
 
