@@ -71,7 +71,7 @@ static void egroup_callback(AvahiEntryGroup *g, AvahiEntryGroupState state,
       }
 
       case AVAHI_ENTRY_GROUP_FAILURE:
-        die( "Entry group failure: %s\n", avahi_strerror( avahi_client_errno( avahi_entry_group_get_client( g ) ) ) );
+        warn( "Entry group failure: %s\n", avahi_strerror( avahi_client_errno( avahi_entry_group_get_client( g ) ) ) );
         break;
 
       case AVAHI_ENTRY_GROUP_UNCOMMITED:
@@ -93,34 +93,37 @@ static void register_service(AvahiClient *c) {
   if (!group)
     group = avahi_entry_group_new(c, egroup_callback, NULL);
   if (!group)
-    die("avahi_entry_group_new failed");
+    warn("avahi_entry_group_new failed");
+  else {
 
-  if (!avahi_entry_group_is_empty(group))
-    return;
+    if (!avahi_entry_group_is_empty(group))
+      return;
 
-  int ret;
-#ifdef CONFIG_METADATA
-  if (config.metadata_enabled) {
-    debug(1, "Avahi with metadata");
-    ret = avahi_entry_group_add_service(group, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC, 0, name,
-                                        "_raop._tcp", NULL, NULL, port, MDNS_RECORD_WITH_METADATA,
-                                        NULL);
-  } else {
-#endif
-    debug(1, "Avahi without metadata");
-    ret = avahi_entry_group_add_service(group, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC, 0, name,
-                                        "_raop._tcp", NULL, NULL, port,
-                                        MDNS_RECORD_WITHOUT_METADATA, NULL);
-#ifdef CONFIG_METADATA
+    int ret;
+  #ifdef CONFIG_METADATA
+    if (config.metadata_enabled) {
+      debug(1, "Avahi with metadata");
+      ret = avahi_entry_group_add_service(group, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC, 0, name,
+                                          "_raop._tcp", NULL, NULL, port, MDNS_RECORD_WITH_METADATA,
+                                          NULL);
+    } else {
+  #endif
+      debug(1, "Avahi without metadata");
+      ret = avahi_entry_group_add_service(group, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC, 0, name,
+                                          "_raop._tcp", NULL, NULL, port,
+                                          MDNS_RECORD_WITHOUT_METADATA, NULL);
+  #ifdef CONFIG_METADATA
+    }
+  #endif
+
+    if (ret < 0)
+      warn("avahi_entry_group_add_service failed");
+    else {
+      ret = avahi_entry_group_commit(group);
+      if (ret < 0)
+        warn("avahi_entry_group_commit failed");
+    }
   }
-#endif
-
-  if (ret < 0)
-    die("avahi_entry_group_add_service failed");
-
-  ret = avahi_entry_group_commit(group);
-  if (ret < 0)
-    die("avahi_entry_group_commit failed");
 }
 
 static void client_callback(AvahiClient *c, AvahiClientState state,
@@ -136,7 +139,7 @@ static void client_callback(AvahiClient *c, AvahiClientState state,
        break;
 
      case AVAHI_CLIENT_FAILURE:
-       die("avahi client failure");
+       warn("avahi client failure");
        break;
 
      case AVAHI_CLIENT_S_COLLISION:

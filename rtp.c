@@ -124,7 +124,7 @@ void *rtp_audio_receiver(void *arg) {
       stat_mean += stat_delta/stat_n;
       stat_M2 += stat_delta*(time_interval_us - stat_mean);
       if (stat_n % 2500 == 0) {
-        debug(3,"Packet reception intervals: mean, standard deviation and max for the last 2,500 packets in microseconds: %10.1f, %10.1f, %10.1f.",stat_mean, sqrtf(stat_M2 / (stat_n-1)),longest_packet_time_interval_us);
+        debug(2,"Packet reception interval stats: mean, standard deviation and max for the last 2,500 packets in microseconds: %10.1f, %10.1f, %10.1f.",stat_mean, sqrtf(stat_M2 / (stat_n-1)),longest_packet_time_interval_us);
         stat_n = 0;
         stat_mean = 0.0;
         stat_M2 = 0.0;
@@ -513,10 +513,10 @@ void *rtp_timing_receiver(void *arg) {
        source_drift_usec = 0;
      source_drift_usec = (source_drift_usec*1000000)>>32; // turn it to microseconds
       
-     int64_t current_delay = 0;
-     if (config.output->delay) {
-            current_delay = config.output->delay();
-     }
+     //long current_delay = 0;
+     //if (config.output->delay) {
+     //       config.output->delay(&current_delay);
+     //}
      //  Useful for troubleshooting:
      //    clock_drift between source and local clock -- +ve means source is faster
      //    session_corrections -- the amount of correction done, in microseconds. +ve means frames added
@@ -524,7 +524,7 @@ void *rtp_timing_receiver(void *arg) {
      //    source_drift_usec = how much faster (+ve) or slower the source DAC is running relative to the source clock
      //    buffer_occupancy = the number of buffers occupied. Crude, but should show no long term trend if source and device are in sync.
      //    return_time = the time from soliciting a timing packet to getting it back. It should be short ( < 5 ms) and pretty consistent.
-     // debug(1, "%lld\t%lld\t%lld\t%lld\t%u\t%llu", clock_drift_in_usec,(session_corrections*1000000)/44100,current_delay,source_drift_usec,buffer_occupancy,(return_time*1000000)>>32);
+     // debug(1, "%lld\t%lld\t%ld\t%lld\t%u\t%llu", clock_drift_in_usec,(session_corrections*1000000)/44100,current_delay,source_drift_usec,buffer_occupancy,(return_time*1000000)>>32);
       
     } else {
       debug(1, "Timing port -- Unknown RTP packet of type 0x%02X length %d.", packet[1], nread);
@@ -700,6 +700,7 @@ void rtp_setup(SOCKADDR *remote, int cport, int tport, uint32_t active_remote, i
 }
 
 void get_reference_timestamp_stuff(uint32_t *timestamp, uint64_t *timestamp_time, uint64_t *remote_timestamp_time) {
+  // types okay
   pthread_mutex_lock(&reference_time_mutex);
   *timestamp = reference_timestamp;
   *timestamp_time = reference_timestamp_time;

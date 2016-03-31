@@ -478,7 +478,7 @@ uint64_t get_absolute_time_in_fp() {
   struct timespec tn;
   // can't use CLOCK_MONOTONIC_RAW as it's not implemented in OpenWrt
   clock_gettime(CLOCK_MONOTONIC, &tn);
-  time_now_fp = ((uint64_t)tn.tv_sec << 32) + ((uint64_t)tn.tv_nsec << 32) / 1000000000;
+  time_now_fp = ((uint64_t)tn.tv_sec << 32) + ((uint64_t)tn.tv_nsec << 32) / 1000000000; // types okay
 #endif
 #ifdef COMPILE_FOR_OSX
   uint64_t time_now_mach;

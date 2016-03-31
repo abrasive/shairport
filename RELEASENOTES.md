@@ -1,3 +1,14 @@
+Version 2.9.4 – Development Version
+----
+Version 2.9.4 corrects some bugs in how Avahi error conditions are handled.
+
+**Bug Fix**
+* During operation, if the network disappeared, Avahi would occasionally report an error. This would cause Shairport Sync to attempt to terminate gracefully (which is the wrong thing to do in the circumstances). However, the termination attempt was actually causing an assertion violation crash. These errors are now simply logged.
+
+Version 2.9.3 – Development Version
+----
+Version 2.9.3 is 2.8.1 with documentation and version changes to indicate that it's in the development branch.
+
 Version 2.8.1 – Stable Version
 ----
 Version 2.8.1 is derived from development version 2.9.2 and has stability improvements and important bug fixes.
