@@ -26,14 +26,16 @@
 
 #include <stdlib.h>
 
-#include <avahi-client/client.h>
-#include <avahi-client/publish.h>
-#include <avahi-common/thread-watch.h>
-#include <avahi-common/error.h>
-
 #include <string.h>
 #include "common.h"
 #include "mdns.h"
+
+#include <avahi-client/client.h>
+#include <avahi-client/publish.h>
+#include <avahi-common/thread-watch.h>
+#include <avahi-common/malloc.h>
+#include <avahi-common/error.h>
+
 
 static AvahiClient *client = NULL;
 static AvahiEntryGroup *group = NULL;
@@ -50,7 +52,7 @@ static void egroup_callback(AvahiEntryGroup *g, AvahiEntryGroupState state,
    {
       case AVAHI_ENTRY_GROUP_ESTABLISHED:
          /* The entry group has been established successfully */
-         inform("Service '%s' successfully established.\n", name );
+         debug(1,"avahi: service '%s'  successfully added.", name );
          break;
 
       case AVAHI_ENTRY_GROUP_COLLISION:
@@ -63,7 +65,7 @@ static void egroup_callback(AvahiEntryGroup *g, AvahiEntryGroupState state,
          avahi_free( name );
          name = n;
 
-         warn( "Service name collision, renaming service to '%s'\n", name );
+         debug(2,"avahi: service name collision, renaming service to '%s'", name );
 
          /* And recreate the services */
          register_service( avahi_entry_group_get_client( g ) );
@@ -71,19 +73,19 @@ static void egroup_callback(AvahiEntryGroup *g, AvahiEntryGroupState state,
       }
 
       case AVAHI_ENTRY_GROUP_FAILURE:
-        warn( "Entry group failure: %s\n", avahi_strerror( avahi_client_errno( avahi_entry_group_get_client( g ) ) ) );
+        debug(1,"avahi: entry group failure: %s", avahi_strerror( avahi_client_errno( avahi_entry_group_get_client( g ) ) ) );
         break;
 
       case AVAHI_ENTRY_GROUP_UNCOMMITED:
-         debug(1, "Service '%s' group is not yet commited.\n", name );
+         debug(2,"avahi: service '%s' group is not yet commited.", name );
          break;
 
       case AVAHI_ENTRY_GROUP_REGISTERING:
-         inform( "Service '%s' group is registering.\n", name );
+         debug(2,"avahi: service '%s' group is registering.", name );
          break;
 
       default:
-         warn( "Unhandled avahi egroup state: %d\n", state );
+         debug(1,"avahi: unhandled egroup state: %d", state );
          break;
    }
 }
@@ -93,7 +95,7 @@ static void register_service(AvahiClient *c) {
   if (!group)
     group = avahi_entry_group_new(c, egroup_callback, NULL);
   if (!group)
-    warn("avahi_entry_group_new failed");
+    debug(2, "avahi: avahi_entry_group_new failed");
   else {
 
     if (!avahi_entry_group_is_empty(group))
@@ -102,26 +104,28 @@ static void register_service(AvahiClient *c) {
     int ret;
   #ifdef CONFIG_METADATA
     if (config.metadata_enabled) {
-      debug(1, "Avahi with metadata");
       ret = avahi_entry_group_add_service(group, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC, 0, name,
-                                          "_raop._tcp", NULL, NULL, port, MDNS_RECORD_WITH_METADATA,
+                                          config.regtype, NULL, NULL, port, MDNS_RECORD_WITH_METADATA,
                                           NULL);
+    if (ret==0)
+      debug(1, "avahi: request to add \"%s\" service with metadata",config.regtype);
     } else {
   #endif
-      debug(1, "Avahi without metadata");
       ret = avahi_entry_group_add_service(group, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC, 0, name,
-                                          "_raop._tcp", NULL, NULL, port,
+                                          config.regtype, NULL, NULL, port,
                                           MDNS_RECORD_WITHOUT_METADATA, NULL);
-  #ifdef CONFIG_METADATA
+    if (ret==0)
+      debug(1, "avahi: request to add \"%s\" service without metadata",config.regtype);
+ #ifdef CONFIG_METADATA
     }
   #endif
 
     if (ret < 0)
-      warn("avahi_entry_group_add_service failed");
+      debug(1,"avahi: avahi_entry_group_add_service failed");
     else {
       ret = avahi_entry_group_commit(group);
       if (ret < 0)
-        warn("avahi_entry_group_commit failed");
+        debug(1,"avahi: avahi_entry_group_commit failed");
     }
   }
 }
@@ -139,19 +143,19 @@ static void client_callback(AvahiClient *c, AvahiClientState state,
        break;
 
      case AVAHI_CLIENT_FAILURE:
-       warn("avahi client failure");
+       debug(1,"avahi: client failure");
        break;
 
      case AVAHI_CLIENT_S_COLLISION:
-       warn( "Avahi state is AVAHI_CLIENT_S_COLLISION...needs a rename: %s\n", name );
+       debug(2, "avahi: state is AVAHI_CLIENT_S_COLLISION...needs a rename: %s", name );
        break;
 
      case AVAHI_CLIENT_CONNECTING:
-       inform( "Received AVAHI_CLIENT_CONNECTING\n" );
+       debug(2, "avahi: received AVAHI_CLIENT_CONNECTING" );
        break;
 
      default:
-       warn( "Unhandled avahi client state: %d\n", state );
+       debug(1,"avahi: unexpected and unhandled avahi client state: %d", state );
        break;
   }
 }
