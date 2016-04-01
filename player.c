@@ -726,7 +726,7 @@ static abuf_t *buffer_get_frame(void) {
     if (do_wait==0)
       if ((ab_synced!=0) && (ab_read==ab_write)) { // the buffer is empty!
         if (notified_buffer_empty==0) {
-          debug(1,"All buffers exhausted!");
+          debug(1,"Buffers exhausted.");
           notified_buffer_empty=1;
         }
         do_wait=1;
