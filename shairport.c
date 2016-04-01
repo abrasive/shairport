@@ -411,6 +411,13 @@ int parse_options(int argc, char **argv) {
           die("Invalid ignore_volume_control option choice \"%s\". It should be \"yes\" or \"no\"");
       }
 
+      /* Get the regtype -- the service type and protocol, separated by a dot. Default is "_raop._tcp" */
+      if (config_lookup_string(config.cfg, "general.regtype", &str))
+        config.regtype = strdup(str);
+      else
+        config.regtype = strdup("_raop._tcp");
+     
+
       /* Get the volume range, in dB, that should be used If not set, it means you just use the range set by the mixer. */
       if (config_lookup_int(config.cfg, "general.volume_range_db", &value)) {
         if ((value < 30) || (value > 150))
@@ -958,6 +965,7 @@ int main(int argc, char **argv) {
         config.audio_backend_buffer_desired_length);
   debug(1, "audio backend latency offset is %d.", config.audio_backend_latency_offset);
   debug(1, "volume range in dB (zero means use the range specified by the mixer): %u.", config.volume_range_db);
+  debug(1, "zeroconf regtype is \"%s\".", config.regtype);
   
   char *realConfigPath = realpath(config.configfile,NULL);
   if (realConfigPath) {

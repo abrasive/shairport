@@ -124,12 +124,20 @@ static int mdns_tinysvcmdns_register(char *apname, int port) {
 #endif
 
     txt = txtwithoutmetadata;
+  
+  char* extendedregtype = malloc(strlen(config.regtype)+strlen(".local")+1);
 
-  struct mdns_service *svc =
-      mdnsd_register_svc(svr, apname, "_raop._tcp.local", port, NULL,
+  if (extendedregtype==NULL)
+    die("tinysvcmdns: could not allocated memory to request a Zeroconf service");
+    
+  strcpy(extendedregtype,config.regtype);
+  strcat(extendedregtype,".local");
+
+  struct mdns_service *svc = mdnsd_register_svc(svr, apname, extendedregtype, port, NULL,
                          (const char **)txt); // TTL should be 75 minutes, i.e. 4500 seconds
-
   mdns_service_destroy(svc);
+  
+  free(extendedregtype);
 
   return 0;
 }
