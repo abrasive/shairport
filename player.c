@@ -961,6 +961,8 @@ static void *player_thread_func(void *arg) {
   int32_t minimum_buffer_occupancy = INT32_MAX;
   int32_t maximum_buffer_occupancy = INT32_MIN;
 
+  time_t playstart = time(NULL);
+
   buffer_occupancy = 0;
 
   int play_samples;
@@ -1280,28 +1282,29 @@ static void *player_thread_func(void *arg) {
             	if ((config.output->delay)) {
                 if (config.no_sync==0) {
                   inform("Sync error: %.1f (frames); net correction: %.1f (ppm); corrections: %.1f "
-                         "(ppm); missing packets %llu; late packets %llu; too late packets %llu; "
+                         "(ppm); total packets %d; missing packets %llu; late packets %llu; too late packets %llu; "
                          "resend requests %llu; min DAC queue size %lli, min and max buffer occupancy "
                          "%d and %d.",
                          moving_average_sync_error, moving_average_correction * 1000000 / 352,
-                         moving_average_insertions_plus_deletions * 1000000 / 352, missing_packets,
+                         moving_average_insertions_plus_deletions * 1000000 / 352, play_number, missing_packets,
                          late_packets, too_late_packets, resend_requests, minimum_dac_queue_size,
                          minimum_buffer_occupancy, maximum_buffer_occupancy);
                 } else {
-                  inform("Synchronisation disabled. Sync error: %.1f (frames); missing packets %llu; late packets %llu; too late packets %llu; "
+                  inform("Synchronisation disabled. Sync error: %.1f (frames); total packets %d; "
+                         "missing packets %llu; late packets %llu; too late packets %llu; "
                          "resend requests %llu; min DAC queue size %lli, min and max buffer occupancy "
                          "%d and %d.",
-                         moving_average_sync_error, missing_packets,
+                         moving_average_sync_error, play_number, missing_packets,
                          late_packets, too_late_packets, resend_requests, minimum_dac_queue_size,
                          minimum_buffer_occupancy, maximum_buffer_occupancy);
                 } 
               } else {
-								inform("Synchronisation disabled. Missing packets %llu; late packets %llu; too late packets %llu; "
-											 "resend requests %llu; min and max buffer occupancy "
-											 "%d and %d.",
-											 missing_packets,
-											 late_packets, too_late_packets, resend_requests,
-											 minimum_buffer_occupancy, maximum_buffer_occupancy);
+								inform("Synchronisation disabled. Total packets %d; missing packets %llu; late packets %llu; too late packets %llu; "
+										 "resend requests %llu; min and max buffer occupancy "
+										 "%d and %d.",
+										 play_number, missing_packets,
+										 late_packets, too_late_packets, resend_requests,
+										 minimum_buffer_occupancy, maximum_buffer_occupancy);
 							}            
             } else {
               inform("No frames received in the last sampling interval.");
@@ -1315,6 +1318,15 @@ static void *player_thread_func(void *arg) {
       }
     }
   }
+
+  if (config.statistics_requested) {
+     int rawSeconds = (int) difftime( time( NULL ), playstart );
+     int elapsedHours = rawSeconds / 3600;
+     int elapsedMin = (rawSeconds / 60) % 60;
+     int elapsedSec = rawSeconds % 60;
+     inform( "Playback Stopped. Total playing time %02d:%02d:%02d\n", elapsedHours, elapsedMin, elapsedSec );
+  }
+
   if (config.output->stop)
   	config.output->stop();
   usleep(100000); // allow this time to (?) allow the alsa subsystem to finish cleaning up after itself. 50 ms seems too short
