@@ -467,7 +467,12 @@ int open_alsa_device(void) {
   		alsa_characteristics_already_listed=1;
   		
   		int rc;
+  		snd_pcm_access_t access_type;
+  		snd_pcm_format_t format_type;
+  		snd_pcm_subformat_t subformat_type;
 			unsigned int val, val2;
+			unsigned int uval, uval2;
+			int sval;
 			int dir;
 			snd_pcm_uframes_t frames;
 
@@ -481,57 +486,90 @@ int open_alsa_device(void) {
 //						alsa_out_dev);
 //			}
 
+			debug(1,"alsa device parameters:");
 
-			snd_pcm_hw_params_get_access(alsa_params,
-															(snd_pcm_access_t *) &val);
-			debug(1,"access type = %s",
-						 snd_pcm_access_name((snd_pcm_access_t)val));
+			snd_pcm_hw_params_get_access(alsa_params,&access_type);			
+			debug(1,"  access type = %s", snd_pcm_access_name(access_type));
 
-			snd_pcm_hw_params_get_format(alsa_params,(snd_pcm_format_t*)&val);
-			debug(1,"format = '%s' (%s)",
-				snd_pcm_format_name((snd_pcm_format_t)val),
-				snd_pcm_format_description(
-																 (snd_pcm_format_t)val));
+			snd_pcm_hw_params_get_format(alsa_params,&format_type);
+			debug(1,"  format = '%s' (%s)",snd_pcm_format_name(format_type),snd_pcm_format_description(format_type));
 
-			snd_pcm_hw_params_get_subformat(alsa_params,
-														(snd_pcm_subformat_t *)&val);
-			debug(1,"subformat = '%s' (%s)",
-				snd_pcm_subformat_name((snd_pcm_subformat_t)val),
-				snd_pcm_subformat_description(
-															(snd_pcm_subformat_t)val));
+			snd_pcm_hw_params_get_subformat(alsa_params,&subformat_type);
+			debug(1,"  subformat = '%s' (%s)",snd_pcm_subformat_name(subformat_type),snd_pcm_subformat_description(subformat_type));
 
-			snd_pcm_hw_params_get_channels(alsa_params, &val);
-			debug(1,"channels = %d", val);
+			snd_pcm_hw_params_get_channels(alsa_params, &uval);
+			debug(1,"  number of channels = %u", uval);
 
-			snd_pcm_hw_params_get_rate(alsa_params, &val, &dir);
-			debug(1,"rate = %d bps", val);
+			sval = snd_pcm_hw_params_get_sbits(alsa_params);
+			debug(1,"  number of significant bits = %d", sval);
 
-			snd_pcm_hw_params_get_period_time(alsa_params,
-																				&val, &dir);
-			debug(1,"period time = %d us", val);
+			snd_pcm_hw_params_get_rate_numden(alsa_params,&uval, &uval2);
+			debug(1,"  rate = %.3f bps (i.e. %u/%u).", uval, uval2, ((double)uval)/uval2);
 
-			snd_pcm_hw_params_get_period_size(alsa_params,
-																				&frames, &dir);
-			debug(1,"period size = %d frames", (int)frames);
+			snd_pcm_hw_params_get_period_time(alsa_params,&uval, &dir);			
+			switch (dir) {
+			  case -1:
+			    debug(1,"  period_time = %u us (nominal) -- the exact time is a fraction shorter.", uval);
+			    break;
+			  case 0:
+			    debug(1,"  period_time = %u us.", uval);
+			    break;
+			  case 1:
+			    debug(1,"  period_time = %u us (nominal) -- the exact time is a fraction longer.", uval);
+			    break;
+			}
 
-			snd_pcm_hw_params_get_buffer_time(alsa_params,
-																				&val, &dir);
-			debug(1,"buffer time = %d us", val);
+			snd_pcm_hw_params_get_period_size(alsa_params,&frames, &dir);
+			switch (dir) {
+			  case -1:
+			    debug(1,"  period_size = %lu frames (nominal) -- the exact size is a fraction smaller.", frames);
+			    break;
+			  case 0:
+			    debug(1,"  period_size = %lu frames.", frames);
+			    break;
+			  case 1:
+			    debug(1,"  period_size = %lu frames (nominal) --  exact size is a fraction greater.", frames);
+			    break;
+			}
 
-			snd_pcm_hw_params_get_buffer_size(alsa_params,
-														 (snd_pcm_uframes_t *) &val);
-			debug(1,"buffer size = %d frames", val);
+			snd_pcm_hw_params_get_buffer_time(alsa_params,&uval, &dir);
+			switch (dir) {
+			  case -1:
+			    debug(1,"  buffer_time = %u us (nominal) -- the exact time is a fraction shorter.", uval);
+			    break;
+			  case 0:
+			    debug(1,"  buffer_time = %u us.", uval);
+			    break;
+			  case 1:
+			    debug(1,"  buffer_time = %u us (nominal) -- the exact time is a fraction longer.", uval);
+			    break;
+			}
 
-			snd_pcm_hw_params_get_periods(alsa_params, &val, &dir);
-			debug(1,"periods per buffer = %d frames", val);
-
-			snd_pcm_hw_params_get_rate_numden(alsa_params,
-																				&val, &val2);
-			debug(1,"exact rate = %d/%d bps", val, val2);
-
-			val = snd_pcm_hw_params_get_sbits(alsa_params);
-			debug(1,"significant bits = %d", val);
-
+			snd_pcm_hw_params_get_buffer_size(alsa_params,&frames);
+			switch (dir) {
+			  case -1:
+			    debug(1,"  buffer_size = %lu frames (nominal) -- the exact size is a fraction smaller.", frames);
+			    break;
+			  case 0:
+			    debug(1,"  buffer_size = %lu frames.", frames);
+			    break;
+			  case 1:
+			    debug(1,"  buffer_size = %lu frames (nominal) -- the exact size is fraction greater.", frames);
+			    break;
+			}
+			
+			snd_pcm_hw_params_get_periods(alsa_params, &uval, &dir);
+			switch (dir) {
+			  case -1:
+			    debug(1,"  periods_per_buffer = %u (nominal) -- the exact number is a fraction less.", uval);
+			    break;
+			  case 0:
+			    debug(1,"  periods_per_buffer = %u.", uval);
+			    break;
+			  case 1:
+			    debug(1,"  periods_per_buffer = %u (nominal) -- the exact number is a fraction more.", uval);
+			    break;
+			}
 		}
   
   return (0);
