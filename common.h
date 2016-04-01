@@ -82,9 +82,10 @@ typedef struct {
   int tolerance; // allow this much drift before attempting to correct it
   enum stuffing_type packet_stuffing;
   char *pidfile;
-  char *logfile;
-  char *errfile;
+  // char *logfile;
+  // char *errfile;
   char *configfile;
+  char *regtype; // The regtype is the service type followed by the protocol, separated by a dot, by default “_raop._tcp.”.
   long audio_backend_buffer_desired_length; // this will be the desired number of frames in the
                                             // audio backend buffer -- the DAC buffer for ALSA
   long audio_backend_latency_offset; // this will be the offset to compensate for any fixed latency
