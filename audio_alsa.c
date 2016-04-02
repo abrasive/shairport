@@ -502,72 +502,87 @@ int open_alsa_device(void) {
 
 			sval = snd_pcm_hw_params_get_sbits(alsa_params);
 			debug(1,"  number of significant bits = %d", sval);
+			
+			snd_pcm_hw_params_get_rate(alsa_params, &uval, &dir);
+ 			switch (dir) {
+			  case -1:
+			    debug(1,"  rate = %u frames per second (<).", uval);
+			    break;
+			  case 0:
+			    debug(1,"  rate = %u frames per second (precisely).", uval);
+			    break;
+			  case 1:
+			    debug(1,"  rate = %u frames per second (>).", uval);
+			    break;
+			}
 
-			snd_pcm_hw_params_get_rate_numden(alsa_params,&uval, &uval2);
-			debug(1,"  rate = %.3f bps (i.e. %u/%u).", uval, uval2, ((double)uval)/uval2);
+			if (snd_pcm_hw_params_get_rate_numden(alsa_params,&uval, &uval2)==0)
+				debug(1,"  precise (rational) rate = %.3f frames per second (i.e. %u/%u).", uval, uval2, ((double)uval)/uval2);
+			else
+				debug(1,"  precise (rational) rate information unavailable.");
 
 			snd_pcm_hw_params_get_period_time(alsa_params,&uval, &dir);			
 			switch (dir) {
 			  case -1:
-			    debug(1,"  period_time = %u us (nominal) -- the exact time is a fraction shorter.", uval);
+			    debug(1,"  period_time = %u us (<).", uval);
 			    break;
 			  case 0:
-			    debug(1,"  period_time = %u us.", uval);
+			    debug(1,"  period_time = %u us (precisely).", uval);
 			    break;
 			  case 1:
-			    debug(1,"  period_time = %u us (nominal) -- the exact time is a fraction longer.", uval);
+			    debug(1,"  period_time = %u us (>).", uval);
 			    break;
 			}
 
 			snd_pcm_hw_params_get_period_size(alsa_params,&frames, &dir);
 			switch (dir) {
 			  case -1:
-			    debug(1,"  period_size = %lu frames (nominal) -- the exact size is a fraction smaller.", frames);
+			    debug(1,"  period_size = %lu frames (<).", frames);
 			    break;
 			  case 0:
-			    debug(1,"  period_size = %lu frames.", frames);
+			    debug(1,"  period_size = %lu frames (precisely).", frames);
 			    break;
 			  case 1:
-			    debug(1,"  period_size = %lu frames (nominal) --  exact size is a fraction greater.", frames);
+			    debug(1,"  period_size = %lu frames (>).", frames);
 			    break;
 			}
 
 			snd_pcm_hw_params_get_buffer_time(alsa_params,&uval, &dir);
 			switch (dir) {
 			  case -1:
-			    debug(1,"  buffer_time = %u us (nominal) -- the exact time is a fraction shorter.", uval);
+			    debug(1,"  buffer_time = %u us (<).", uval);
 			    break;
 			  case 0:
-			    debug(1,"  buffer_time = %u us.", uval);
+			    debug(1,"  buffer_time = %u us (precisely).", uval);
 			    break;
 			  case 1:
-			    debug(1,"  buffer_time = %u us (nominal) -- the exact time is a fraction longer.", uval);
+			    debug(1,"  buffer_time = %u us (>).", uval);
 			    break;
 			}
 
 			snd_pcm_hw_params_get_buffer_size(alsa_params,&frames);
 			switch (dir) {
 			  case -1:
-			    debug(1,"  buffer_size = %lu frames (nominal) -- the exact size is a fraction smaller.", frames);
+			    debug(1,"  buffer_size = %lu frames (<).", frames);
 			    break;
 			  case 0:
-			    debug(1,"  buffer_size = %lu frames.", frames);
+			    debug(1,"  buffer_size = %lu frames (precisely).", frames);
 			    break;
 			  case 1:
-			    debug(1,"  buffer_size = %lu frames (nominal) -- the exact size is fraction greater.", frames);
+			    debug(1,"  buffer_size = %lu frames (>).", frames);
 			    break;
 			}
 			
 			snd_pcm_hw_params_get_periods(alsa_params, &uval, &dir);
 			switch (dir) {
 			  case -1:
-			    debug(1,"  periods_per_buffer = %u (nominal) -- the exact number is a fraction less.", uval);
+			    debug(1,"  periods_per_buffer = %u (<).", uval);
 			    break;
 			  case 0:
-			    debug(1,"  periods_per_buffer = %u.", uval);
+			    debug(1,"  periods_per_buffer = %u (precisely).", uval);
 			    break;
 			  case 1:
-			    debug(1,"  periods_per_buffer = %u (nominal) -- the exact number is a fraction more.", uval);
+			    debug(1,"  periods_per_buffer = %u (>).", uval);
 			    break;
 			}
 		}
