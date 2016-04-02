@@ -1087,7 +1087,7 @@ static void *player_thread_func(void *arg) {
 								minimum_dac_queue_size = current_delay; // update for display later
 							}
 						} else { 
-							debug(1, "Delay error %d when checking running latency.",resp);
+							debug(2, "Delay error %d when checking running latency.",resp);
 						}
 					}
 

@@ -607,11 +607,12 @@ int delay(long* the_delay) {
     pthread_mutex_lock(&alsa_mutex);
     int derr, ignore;
     if (snd_pcm_state(alsa_handle) == SND_PCM_STATE_RUNNING) {
+      *the_delay = 0; // just to see what happens
       reply = snd_pcm_delay(alsa_handle, the_delay);
       if (reply != 0) {
-        debug(1, "Error %d in delay(): %s. Delay reported is %d frames.", derr,
-              snd_strerror(derr), *the_delay);
-        ignore = snd_pcm_recover(alsa_handle, derr, 0);
+        debug(1, "Error %d in delay(): \"%s\". Delay reported is %d frames.", reply,
+              snd_strerror(reply), *the_delay);
+        ignore = snd_pcm_recover(alsa_handle, reply, 1);
       }
     } else if (snd_pcm_state(alsa_handle) == SND_PCM_STATE_PREPARED) {
       *the_delay = 0;
@@ -626,8 +627,8 @@ int delay(long* the_delay) {
               snd_pcm_state(alsa_handle));
       }
       if ((derr = snd_pcm_prepare(alsa_handle))) {
-        ignore = snd_pcm_recover(alsa_handle, derr, 0);
-        debug(1, "Error preparing after delay error: %s.", snd_strerror(derr));
+        ignore = snd_pcm_recover(alsa_handle, derr, 1);
+        debug(1, "Error preparing after delay error: \"%s\".", snd_strerror(derr));
       }
     }
     pthread_mutex_unlock(&alsa_mutex);
@@ -657,16 +658,16 @@ static void play(short buf[], int samples) {
         (snd_pcm_state(alsa_handle) == SND_PCM_STATE_RUNNING)) {
       err = snd_pcm_writei(alsa_handle, (char *)buf, samples);
       if (err < 0) {
-        debug(1, "Error %d writing %d samples in play() %s.", err, samples,
+        debug(1, "Error %d writing %d samples in play(): \"%s\".", err, samples,
               snd_strerror(err));
-        ignore = snd_pcm_recover(alsa_handle, err, 0);
+        ignore = snd_pcm_recover(alsa_handle, err, 1);
       }
     } else {
       debug(1, "Error -- ALSA device in incorrect state (%d) for play.",
             snd_pcm_state(alsa_handle));
       if ((err = snd_pcm_prepare(alsa_handle))) {
-        ignore = snd_pcm_recover(alsa_handle, err, 0);
-        debug(1, "Error preparing after play error: %s.", snd_strerror(err));
+        ignore = snd_pcm_recover(alsa_handle, err, 1);
+        debug(1, "Error preparing after play error: \"%s\".", snd_strerror(err));
       }
     }
     pthread_mutex_unlock(&alsa_mutex);
@@ -684,10 +685,10 @@ static void flush(void) {
   if (alsa_handle) {
     // debug(1,"Dropping frames for flush...");
     if ((derr = snd_pcm_drop(alsa_handle)))
-      debug(1, "Error dropping frames: %s.", snd_strerror(derr));
+      debug(1, "Error dropping frames: \"%s\".", snd_strerror(derr));
     // debug(1,"Dropped frames ok. State is %d.",snd_pcm_state(alsa_handle));
     if ((derr = snd_pcm_prepare(alsa_handle)))
-      debug(1, "Error preparing after flush: %s.", snd_strerror(derr));
+      debug(1, "Error preparing after flush: \"%s\".", snd_strerror(derr));
     // debug(1,"Frames successfully dropped.");
     /*
     if (snd_pcm_state(alsa_handle)==SND_PCM_STATE_PREPARED)
