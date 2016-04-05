@@ -1442,15 +1442,12 @@ void player_volume(double airplay_volume) {
     
   // now, we can map the input to the desired output volume
   if (airplay_volume==-144.0) {    
-    // do a mute    
-  	if (config.output->mute) {
+    // do a mute   
+    // needed even with hardware mute, as when sound is unmuted it might otherwise be very loud.
+  	hardware_attenuation = hw_min_db;
+  	software_attenuation = sw_min_db;
+  	if (config.output->mute)
   		config.output->mute(1); // use real mute if it's there
-  	  software_attenuation = sw_min_db; // needed for when sound is unmuted; otherwise it might be very loud.
-  	} else {
-  	  hardware_attenuation = hw_min_db;
-  	  software_attenuation = sw_min_db;
-  		// debug(1,"Software mute.");
-  	}    
     
   } else {
   	if (config.output->mute)
