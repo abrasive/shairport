@@ -38,6 +38,7 @@
 #include <avahi-common/error.h>
 
 #include <avahi-client/lookup.h>
+#include <avahi-common/alternative.h>
 
 static AvahiServiceBrowser *sb = NULL;
 static AvahiClient *client = NULL;
@@ -171,8 +172,8 @@ static void egroup_callback(AvahiEntryGroup *g, AvahiEntryGroupState state,
 
          /* A service name collision with a remote service
           * happened. Let's pick a new name */
-         n = avahi_alternative_service_name( name );
-         avahi_free( name );
+         n = avahi_alternative_service_name(name);
+         avahi_free(name);
          name = n;
 
          debug(2,"avahi: service name collision, renaming service to '%s'", name );
