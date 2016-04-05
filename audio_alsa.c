@@ -100,7 +100,7 @@ static void help(void) {
          "    *) default option\n");
 }
 
-int open_mixer() {
+void open_mixer() {
   if (hardware_mixer) {
     debug(2, "Open Mixer");
     int ret = 0;
@@ -463,7 +463,7 @@ int open_alsa_device(void) {
     debug(1,"The alsa buffer is to small (%lu bytes) to accommodate the desired backend buffer length (%ld) you have chosen.",actual_buffer_length,config.audio_backend_buffer_desired_length);
   }
   
-  if ((alsa_characteristics_already_listed==0)) {
+  if (alsa_characteristics_already_listed==0) {
   		alsa_characteristics_already_listed=1;
   		
   		int rc;
