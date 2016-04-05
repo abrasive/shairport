@@ -1,14 +1,18 @@
 Version 2.9.5.7 – Development Version
 ----
 Version 2.9.5.7 contains general bug fixes and enhancements for some special situations.
+
 **Bug Fixes**
+
 * Getting delay and latency information from the `alsa` subsystem has been improved -- bugs fixed, error codes handled better, arithmetic handling (hopefully) better. 
 * If latency information is temporarily unavailable from the `alsa` subsystem, skip trying to synchronise until the next time.
 * Some condition variables and a mutex were uninitialised, yikes! Fixed.
 * A bug that set the output volume to maximum at the same time as muting the output has been fixed. AFAIK, this was inaudible, but it was scary looking.
 * Recover from name collisions in Avahi.
 * Detect and handle empty buffers better.
+
 **Enhancements**
+
 * Turn off synchronisation. This is an advanced feature and generally leads to buffer underrun or overrun.
 * Set `alsa` buffer size and `alsa` period size. There are advanced features, mainly for debugging. They may be removed.
 * Change the Zeroconf/Bonjour `regtype` to enable Shairport Sync to continue to run but to be invisible to AirPlay clients. Special purpose usage only.
