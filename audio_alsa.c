@@ -42,7 +42,7 @@ static void start(int sample_rate);
 static void play(short buf[], int samples);
 static void stop(void);
 static void flush(void);
-static uint32_t delay(void);
+int delay(long* the_delay);
 static void volume(double vol);
 static void linear_volume(double vol);
 static void parameters(audio_parameters *info);
@@ -86,6 +86,11 @@ static int hardware_mixer = 0;
 
 static int play_number;
 static int64_t accumulated_delay, accumulated_da_delay;
+int alsa_characteristics_already_listed = 0;
+
+static snd_pcm_uframes_t period_size_requested,buffer_size_requested;
+static int 	set_period_size_request,set_buffer_size_request;
+
 
 static void help(void) {
   printf("    -d output-device    set the output device [default*|...]\n"
@@ -95,7 +100,7 @@ static void help(void) {
          "    *) default option\n");
 }
 
-int open_mixer() {
+void open_mixer() {
   if (hardware_mixer) {
     debug(2, "Open Mixer");
     int ret = 0;
@@ -127,6 +132,9 @@ static int init(int argc, char **argv) {
   const char *str;
   int value;
 
+	set_period_size_request = 0;
+	set_buffer_size_request = 0;
+	
   config.audio_backend_latency_offset = 0; // this is the default for ALSA
   config.audio_backend_buffer_desired_length =
       6615; // default for alsa with a software mixer
@@ -182,7 +190,45 @@ static int init(int argc, char **argv) {
       alsa_mix_ctrl = (char *)str;
       hardware_mixer = 1;
     }
+  
+    /* Get the disable_synchronization setting. */
+    if (config_lookup_string(config.cfg, "alsa.disable_synchronization", &str)) {
+      if (strcasecmp(str, "no") == 0)
+        config.no_sync = 0;
+      else if (strcasecmp(str, "yes") == 0)
+        config.no_sync = 1;
+      else
+        die("Invalid disable_synchronization option choice \"%s\". It should be \"yes\" or \"no\"");
+    }
+    
+    /* Get the optional period size value */
+    if (config_lookup_int(config.cfg, "alsa.period_size",
+                          &value)) {
+      set_period_size_request = 1;
+      debug(1,"Value read for period size is %d.",value);
+      if (value < 0)
+        die("Invalid alsa period size setting \"%d\". It "
+            "must be greater than 0.",
+            value);
+      else
+        period_size_requested = value;
+    }
+
+    /* Get the optional buffer size value */
+    if (config_lookup_int(config.cfg, "alsa.buffer_size",
+                          &value)) {
+      set_buffer_size_request = 1;
+      debug(1,"Value read for buffer size is %d.",value);
+      if (value < 0)
+        die("Invalid alsa buffer size setting \"%d\". It "
+            "must be greater than 0.",
+            value);
+      else
+        buffer_size_requested = value;
+    }
   }
+  
+
 
   optind = 1; // optind=0 is equivalent to optind=1 plus special behaviour
   argv--;     // so we shift the arguments to satisfy getopt()
@@ -279,6 +325,7 @@ static int init(int argc, char **argv) {
 
     snd_mixer_close(alsa_mix_handle);
   }
+  
   alsa_mix_handle = NULL;
   pthread_mutex_unlock(&alsa_mutex);
   return 0;
@@ -347,10 +394,31 @@ int open_alsa_device(void) {
         desired_sample_rate, snd_strerror(ret));
   }
 
-  // snd_pcm_hw_params_set_period_size_near(alsa_handle, alsa_params, &frames,
-  // &dir);
-  // snd_pcm_hw_params_set_buffer_size_near(alsa_handle, alsa_params,
-  // &buffer_size);
+	if (set_period_size_request!=0) {
+		debug(1,"Attempting to set the period size");
+		ret = snd_pcm_hw_params_set_period_size_near(alsa_handle, alsa_params, &period_size_requested, &dir);
+		if (ret < 0) {
+			die("audio_alsa: cannot set period size of %lu: %s",
+					period_size_requested, snd_strerror(ret));
+		snd_pcm_uframes_t actual_period_size;
+		snd_pcm_hw_params_get_period_size(alsa_params, &actual_period_size, &dir);
+		if (actual_period_size!=period_size_requested)
+			inform("Actual period size set to a different value than requested. Requested: %lu, actual setting: %lu",period_size_requested,actual_period_size);
+		}
+  }
+
+	if (set_buffer_size_request!=0) {
+		debug(1,"Attempting to set the buffer size to %lu",buffer_size_requested);
+		ret = snd_pcm_hw_params_set_buffer_size_near(alsa_handle, alsa_params, &buffer_size_requested);
+		if (ret < 0) {
+			die("audio_alsa: cannot set buffer size of %lu: %s",
+					buffer_size_requested, snd_strerror(ret));
+		snd_pcm_uframes_t actual_buffer_size;
+		snd_pcm_hw_params_get_buffer_size(alsa_params, &actual_buffer_size);
+		if (actual_buffer_size!=buffer_size_requested)
+			inform("Actual period size set to a different value than requested. Requested: %lu, actual setting: %lu",buffer_size,actual_buffer_size);
+		}
+  }
 
   ret = snd_pcm_hw_params(alsa_handle, alsa_params);
   if (ret < 0) {
@@ -370,6 +438,7 @@ int open_alsa_device(void) {
 
   if (actual_buffer_length <
       config.audio_backend_buffer_desired_length + minimal_buffer_headroom) {
+    /*
     // the dac buffer is too small, so let's try to set it
     buffer_size =
         config.audio_backend_buffer_desired_length + requested_buffer_headroom;
@@ -390,8 +459,134 @@ int open_alsa_device(void) {
                             requested_buffer_headroom,
           buffer_size);
     }
+    */
+    debug(1,"The alsa buffer is to small (%lu bytes) to accommodate the desired backend buffer length (%ld) you have chosen.",actual_buffer_length,config.audio_backend_buffer_desired_length);
   }
+  
+  if (alsa_characteristics_already_listed==0) {
+  		alsa_characteristics_already_listed=1;
+  		
+  		int rc;
+  		snd_pcm_access_t access_type;
+  		snd_pcm_format_t format_type;
+  		snd_pcm_subformat_t subformat_type;
+			unsigned int val, val2;
+			unsigned int uval, uval2;
+			int sval;
+			int dir;
+			snd_pcm_uframes_t frames;
 
+			debug(1,"PCM handle name = '%s'",
+						 snd_pcm_name(alsa_handle));
+			
+//			ret = snd_pcm_hw_params_any(alsa_handle, alsa_params);
+//			if (ret < 0) {
+//				die("audio_alsa: Cannpot get configuration for device \"%s\": no configurations "
+//						"available",
+//						alsa_out_dev);
+//			}
+
+			debug(1,"alsa device parameters:");
+
+			snd_pcm_hw_params_get_access(alsa_params,&access_type);			
+			debug(1,"  access type = %s", snd_pcm_access_name(access_type));
+
+			snd_pcm_hw_params_get_format(alsa_params,&format_type);
+			debug(1,"  format = '%s' (%s)",snd_pcm_format_name(format_type),snd_pcm_format_description(format_type));
+
+			snd_pcm_hw_params_get_subformat(alsa_params,&subformat_type);
+			debug(1,"  subformat = '%s' (%s)",snd_pcm_subformat_name(subformat_type),snd_pcm_subformat_description(subformat_type));
+
+			snd_pcm_hw_params_get_channels(alsa_params, &uval);
+			debug(1,"  number of channels = %u", uval);
+
+			sval = snd_pcm_hw_params_get_sbits(alsa_params);
+			debug(1,"  number of significant bits = %d", sval);
+			
+			snd_pcm_hw_params_get_rate(alsa_params, &uval, &dir);
+ 			switch (dir) {
+			  case -1:
+			    debug(1,"  rate = %u frames per second (<).", uval);
+			    break;
+			  case 0:
+			    debug(1,"  rate = %u frames per second (precisely).", uval);
+			    break;
+			  case 1:
+			    debug(1,"  rate = %u frames per second (>).", uval);
+			    break;
+			}
+
+			if (snd_pcm_hw_params_get_rate_numden(alsa_params,&uval, &uval2)==0)
+				debug(1,"  precise (rational) rate = %.3f frames per second (i.e. %u/%u).", uval, uval2, ((double)uval)/uval2);
+			else
+				debug(1,"  precise (rational) rate information unavailable.");
+
+			snd_pcm_hw_params_get_period_time(alsa_params,&uval, &dir);			
+			switch (dir) {
+			  case -1:
+			    debug(1,"  period_time = %u us (<).", uval);
+			    break;
+			  case 0:
+			    debug(1,"  period_time = %u us (precisely).", uval);
+			    break;
+			  case 1:
+			    debug(1,"  period_time = %u us (>).", uval);
+			    break;
+			}
+
+			snd_pcm_hw_params_get_period_size(alsa_params,&frames, &dir);
+			switch (dir) {
+			  case -1:
+			    debug(1,"  period_size = %lu frames (<).", frames);
+			    break;
+			  case 0:
+			    debug(1,"  period_size = %lu frames (precisely).", frames);
+			    break;
+			  case 1:
+			    debug(1,"  period_size = %lu frames (>).", frames);
+			    break;
+			}
+
+			snd_pcm_hw_params_get_buffer_time(alsa_params,&uval, &dir);
+			switch (dir) {
+			  case -1:
+			    debug(1,"  buffer_time = %u us (<).", uval);
+			    break;
+			  case 0:
+			    debug(1,"  buffer_time = %u us (precisely).", uval);
+			    break;
+			  case 1:
+			    debug(1,"  buffer_time = %u us (>).", uval);
+			    break;
+			}
+
+			snd_pcm_hw_params_get_buffer_size(alsa_params,&frames);
+			switch (dir) {
+			  case -1:
+			    debug(1,"  buffer_size = %lu frames (<).", frames);
+			    break;
+			  case 0:
+			    debug(1,"  buffer_size = %lu frames (precisely).", frames);
+			    break;
+			  case 1:
+			    debug(1,"  buffer_size = %lu frames (>).", frames);
+			    break;
+			}
+			
+			snd_pcm_hw_params_get_periods(alsa_params, &uval, &dir);
+			switch (dir) {
+			  case -1:
+			    debug(1,"  periods_per_buffer = %u (<).", uval);
+			    break;
+			  case 0:
+			    debug(1,"  periods_per_buffer = %u (precisely).", uval);
+			    break;
+			  case 1:
+			    debug(1,"  periods_per_buffer = %u (>).", uval);
+			    break;
+			}
+		}
+  
   return (0);
 }
 
@@ -402,41 +597,45 @@ static void start(int sample_rate) {
   desired_sample_rate = sample_rate; // must be a variable
 }
 
-static uint32_t delay() {
+int delay(long* the_delay) {
+  //snd_pcm_sframes_t is a signed long -- hence the return of a "long"
+	int reply;
   // debug(3,"audio_alsa delay called.");
   if (alsa_handle == NULL) {
-    return 0;
+    return -ENODEV;
   } else {
     pthread_mutex_lock(&alsa_mutex);
-    snd_pcm_sframes_t current_avail, current_delay = 0;
     int derr, ignore;
     if (snd_pcm_state(alsa_handle) == SND_PCM_STATE_RUNNING) {
-      derr = snd_pcm_avail_delay(alsa_handle, &current_avail, &current_delay);
-      // current_avail not used
-      if (derr != 0) {
-        ignore = snd_pcm_recover(alsa_handle, derr, 0);
-        debug(1, "Error %d in delay(): %s. Delay reported is %d frames.", derr,
-              snd_strerror(derr), current_delay);
-        current_delay = -1;
+      *the_delay = 0; // just to see what happens
+      reply = snd_pcm_delay(alsa_handle, the_delay);
+      if (reply != 0) {
+        debug(1, "Error %d in delay(): \"%s\". Delay reported is %d frames.", reply,
+              snd_strerror(reply), *the_delay);
+        ignore = snd_pcm_recover(alsa_handle, reply, 1);
       }
     } else if (snd_pcm_state(alsa_handle) == SND_PCM_STATE_PREPARED) {
-      current_delay = 0;
+      *the_delay = 0;
+      reply = 0; // no error
     } else {
-      if (snd_pcm_state(alsa_handle) == SND_PCM_STATE_XRUN)
-        current_delay = 0;
-      else {
-        current_delay = -1;
+      if (snd_pcm_state(alsa_handle) == SND_PCM_STATE_XRUN) {
+				*the_delay = 0;
+      	reply = 0; // no error
+      } else {
+        reply = -EIO;
         debug(1, "Error -- ALSA delay(): bad state: %d.",
               snd_pcm_state(alsa_handle));
       }
       if ((derr = snd_pcm_prepare(alsa_handle))) {
-        ignore = snd_pcm_recover(alsa_handle, derr, 0);
-        debug(1, "Error preparing after delay error: %s.", snd_strerror(derr));
-        current_delay = -1;
+        ignore = snd_pcm_recover(alsa_handle, derr, 1);
+        debug(1, "Error preparing after delay error: \"%s\".", snd_strerror(derr));
       }
     }
     pthread_mutex_unlock(&alsa_mutex);
-    return current_delay;
+    // here, occasionally pretend there's a problem with pcm_get_delay()
+		//if ((random() % 100000) < 3) // keep it pretty rare
+		//	reply = -EPERM; // pretend something bad has happened
+    return reply;
   }
 }
 
@@ -459,16 +658,16 @@ static void play(short buf[], int samples) {
         (snd_pcm_state(alsa_handle) == SND_PCM_STATE_RUNNING)) {
       err = snd_pcm_writei(alsa_handle, (char *)buf, samples);
       if (err < 0) {
-        ignore = snd_pcm_recover(alsa_handle, err, 0);
-        debug(1, "Error %d writing %d samples in play() %s.", err, samples,
+        debug(1, "Error %d writing %d samples in play(): \"%s\".", err, samples,
               snd_strerror(err));
+        ignore = snd_pcm_recover(alsa_handle, err, 1);
       }
     } else {
       debug(1, "Error -- ALSA device in incorrect state (%d) for play.",
             snd_pcm_state(alsa_handle));
       if ((err = snd_pcm_prepare(alsa_handle))) {
-        ignore = snd_pcm_recover(alsa_handle, err, 0);
-        debug(1, "Error preparing after play error: %s.", snd_strerror(err));
+        ignore = snd_pcm_recover(alsa_handle, err, 1);
+        debug(1, "Error preparing after play error: \"%s\".", snd_strerror(err));
       }
     }
     pthread_mutex_unlock(&alsa_mutex);
@@ -486,10 +685,10 @@ static void flush(void) {
   if (alsa_handle) {
     // debug(1,"Dropping frames for flush...");
     if ((derr = snd_pcm_drop(alsa_handle)))
-      debug(1, "Error dropping frames: %s.", snd_strerror(derr));
+      debug(1, "Error dropping frames: \"%s\".", snd_strerror(derr));
     // debug(1,"Dropped frames ok. State is %d.",snd_pcm_state(alsa_handle));
     if ((derr = snd_pcm_prepare(alsa_handle)))
-      debug(1, "Error preparing after flush: %s.", snd_strerror(derr));
+      debug(1, "Error preparing after flush: \"%s\".", snd_strerror(derr));
     // debug(1,"Frames successfully dropped.");
     /*
     if (snd_pcm_state(alsa_handle)==SND_PCM_STATE_PREPARED)

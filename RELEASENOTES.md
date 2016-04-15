@@ -1,3 +1,34 @@
+Version 2.9.5.7 – Development Version
+----
+Version 2.9.5.7 contains general bug fixes and enhancements for some special situations.
+
+**Bug Fixes**
+
+* Getting delay and latency information from the `alsa` subsystem has been improved -- bugs fixed, error codes handled better, arithmetic handling (hopefully) better. 
+* If latency information is temporarily unavailable from the `alsa` subsystem, skip trying to synchronise until the next time.
+* Some condition variables and a mutex were uninitialised, yikes! Fixed.
+* A bug that set the output volume to maximum at the same time as muting the output has been fixed. AFAIK, this was inaudible, but it was scary looking.
+* Recover from name collisions in Avahi.
+* Detect and handle empty buffers better.
+
+**Enhancements**
+
+* Turn off synchronisation. This is an advanced feature and generally leads to buffer underrun or overrun.
+* Set `alsa` buffer size and `alsa` period size. There are advanced features, mainly for debugging. They may be removed.
+* Change the Zeroconf/Bonjour `regtype` to enable Shairport Sync to continue to run but to be invisible to AirPlay clients. Special purpose usage only.
+* Output total number of packets and the play time of a session when statistics are enabled.
+
+Version 2.9.4 – Development Version
+----
+Version 2.9.4 corrects some bugs in how Avahi error conditions are handled.
+
+**Bug Fix**
+* During operation, if the network disappeared, Avahi would occasionally report an error. This would cause Shairport Sync to attempt to terminate gracefully (which is the wrong thing to do in the circumstances). However, the termination attempt was actually causing an assertion violation crash. These errors are now simply logged.
+
+Version 2.9.3 – Development Version
+----
+Version 2.9.3 is 2.8.1 with documentation and version changes to indicate that it's in the development branch.
+
 Version 2.8.1 – Stable Version
 ----
 Version 2.8.1 is derived from development version 2.9.2 and has stability improvements and important bug fixes.

@@ -69,7 +69,7 @@ static int mdns_dns_sd_register(char *apname, int port) {
   }
 
   DNSServiceErrorType error;
-  error = DNSServiceRegister(&service, 0, kDNSServiceInterfaceIndexAny, apname, "_raop._tcp", "",
+  error = DNSServiceRegister(&service, 0, kDNSServiceInterfaceIndexAny, apname, config.regtype, "",
                              NULL, htons((uint16_t)port), length, buf, NULL, NULL);
 
   free(buf);

@@ -57,6 +57,7 @@ typedef struct {
   int udp_port_base;
   int udp_port_range;
   int ignore_volume_control;
+  int no_sync; // disable synchronisation, even if it's available
   int resyncthreshold; // if it get's out of whack my more than this, resync. Zero means never
                        // resync.
   int allow_session_interruption;
@@ -81,12 +82,13 @@ typedef struct {
   int tolerance; // allow this much drift before attempting to correct it
   enum stuffing_type packet_stuffing;
   char *pidfile;
-  char *logfile;
-  char *errfile;
+  // char *logfile;
+  // char *errfile;
   char *configfile;
-  int32_t audio_backend_buffer_desired_length; // this will be the desired number of frames in the
+  char *regtype; // The regtype is the service type followed by the protocol, separated by a dot, by default “_raop._tcp.”.
+  long audio_backend_buffer_desired_length; // this will be the desired number of frames in the
                                             // audio backend buffer -- the DAC buffer for ALSA
-  int32_t audio_backend_latency_offset; // this will be the offset to compensate for any fixed latency
+  long audio_backend_latency_offset; // this will be the offset to compensate for any fixed latency
   uint32_t volume_range_db; // the range, in dB, from max dB to min dB. Zero means use the mixer's native range.
                                      // there might be in the audio
 } shairport_cfg;
