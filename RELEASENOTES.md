@@ -1,3 +1,9 @@
+Version 2.8.2 – Stable Version
+----
+Version 2.8.2 is derived from development version 2.9.5.7 and has stability improvements, bug fixes and a few special-purpose enhancements.
+
+For full details, please refer to the release notes here, back as far as 2.8.1.
+
 Version 2.9.5.7 – Development Version
 ----
 Version 2.9.5.7 contains general bug fixes and enhancements for some special situations.
