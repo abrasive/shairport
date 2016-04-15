@@ -88,7 +88,6 @@ Download Shairport Sync:
 Next, `cd` into the shairport-sync directory and execute the following command:
 
 ```
-$ git checkout development
 $ autoreconf -i -f
 ```
 (Note that the `autoreconf...` step may take some time on less powerful machines.)
