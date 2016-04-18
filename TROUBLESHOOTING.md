@@ -22,6 +22,16 @@ iw dev wlan0 set power_save off
 
 There are some more details in some the closed issues on this repository.
 
+### Can't play from iTunes on Windows
+
+**Problem**
+
+You can play from other devices but not from your Windows PC.
+
+**Possible Solution**
+
+Allow network discovery. This setting creates a private type network and enables Windows to access the ports and protocols necessary to use Shairport Sync.
+
 ### UFW firewall blocking connections on Raspbian (Raspberry Pi)
 
 **Problem**
