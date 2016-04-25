@@ -1,3 +1,7 @@
+Version 2.8.3.1 – Development Version
+----
+Added a new `mono` setting -- thanks to [faceless2](https://github.com/faceless2). Documentation to follow.
+
 Version 2.8.3 – Stable Version
 ----
 A bug in 2.8.2 caused Avahi to fail at startup under some circumstances with older installations. The problem was that sometimes the `regtype` setting would not be initialised properly.
