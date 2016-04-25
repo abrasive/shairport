@@ -125,6 +125,9 @@ static int mdns_tinysvcmdns_register(char *apname, int port) {
 
     txt = txtwithoutmetadata;
   
+  if (config.regtype == NULL)
+    die("tinysvcmdns: regtype is null");
+
   char* extendedregtype = malloc(strlen(config.regtype)+strlen(".local")+1);
 
   if (extendedregtype==NULL)
