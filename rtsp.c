@@ -1023,6 +1023,9 @@ char *base64_encode_so(const unsigned char *data, size_t input_length,
 static int fd = -1;
 static int dirty = 0;
 pc_queue metadata_queue;
+static int metadata_sock;
+static struct sockaddr_in metadata_sockaddr;
+static char *metadata_sockmsg;
 #define metadata_queue_size 500
 metadata_package metadata_queue_items[metadata_queue_size];
 
@@ -1031,6 +1034,24 @@ static pthread_t metadata_thread;
 void metadata_create(void) {
   if (config.metadata_enabled == 0)
     return;
+
+  // Unlike metadata pipe, socket is opened once and stays open,
+  // so we can call it in create
+  if (config.metadata_sockaddr && config.metadata_sockport) {
+    metadata_sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (metadata_sock < 0) {
+      debug(1, "Could not open metadata socket");
+    } else {
+      bzero((char *)&metadata_sockaddr, sizeof(metadata_sockaddr));
+      metadata_sockaddr.sin_family = AF_INET;
+      metadata_sockaddr.sin_addr.s_addr = inet_addr(config.metadata_sockaddr);
+      metadata_sockaddr.sin_port = htons(config.metadata_sockport);
+      if (!(metadata_sockmsg = malloc(config.metadata_sockmsglength))) {
+        die("Could not malloc metadata socket buffer");
+      }
+      memset(metadata_sockmsg, 0, config.metadata_sockmsglength);
+    }
+  }
 
   size_t pl = strlen(config.metadata_pipename) + 1;
 
@@ -1070,6 +1091,20 @@ void metadata_process(uint32_t type, uint32_t code, char *data,
   debug(2, "Process metadata with type %x, code %x and length %u.", type, code,
         length);
   int ret;
+
+  if (metadata_sock >= 0 && length < config.metadata_sockmsglength - 8) {
+    char *ptr = metadata_sockmsg;
+    uint32_t v;
+    v = htonl(type);
+    memcpy(ptr, &v, 4);
+    ptr += 4;
+    v = htonl(code);
+    memcpy(ptr, &v, 4);
+    ptr += 4;
+    memcpy(ptr, data, length);
+    sendto(metadata_sock, metadata_sockmsg, length + 8, 0, (struct sockaddr *)&metadata_sockaddr, sizeof(metadata_sockaddr));
+  }
+
   // readers may go away and come back
   if (fd < 0)
     metadata_open();

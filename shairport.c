@@ -477,6 +477,17 @@ int parse_options(int argc, char **argv) {
       if (config_lookup_string(config.cfg, "metadata.pipe_name", &str)) {
         config.metadata_pipename = (char *)str;
       }
+
+      if (config_lookup_string(config.cfg, "metadata.socket_address", &str)) {
+        config.metadata_sockaddr = (char *)str;
+      }
+      if (config_lookup_int(config.cfg, "metadata.socket_port", &value)) {
+        config.metadata_sockport = value;
+      }
+      config.metadata_sockmsglength = 500;
+      if (config_lookup_int(config.cfg, "metadata.socket_msglength", &value)) {
+        config.metadata_sockmsglength = value < 500 ? 500 : value > 65000 ? 65000 : value;
+      }
   #endif
 
       if (config_lookup_string(config.cfg, "sessioncontrol.run_this_before_play_begins", &str)) {
@@ -991,6 +1002,8 @@ int main(int argc, char **argv) {
 #ifdef CONFIG_METADATA
   debug(1, "metdata enabled is %d.", config.metadata_enabled);
   debug(1, "metadata pipename is \"%s\".", config.metadata_pipename);
+  debug(1, "metadata socket address is \"%s\" port %d.", config.metadata_sockaddr, config.metadata_sockport);
+  debug(1, "metadata socket packet size is \"%d\".", config.metadata_sockmsglength);
   debug(1, "get-coverart is %d.", config.get_coverart);
 #endif
 
