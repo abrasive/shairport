@@ -426,8 +426,6 @@ int parse_options(int argc, char **argv) {
       /* Get the regtype -- the service type and protocol, separated by a dot. Default is "_raop._tcp" */
       if (config_lookup_string(config.cfg, "general.regtype", &str))
         config.regtype = strdup(str);
-      else
-        config.regtype = strdup("_raop._tcp");
      
 
       /* Get the volume range, in dB, that should be used If not set, it means you just use the range set by the mixer. */
@@ -587,6 +585,9 @@ int parse_options(int argc, char **argv) {
     config.metadata_pipename=strdup("/tmp/shairport-sync-metadata");
 #endif
 
+/* if the regtype hasn't been set, do it now */
+  if (config.regtype==NULL)
+    config.regtype = strdup("_raop._tcp");
   
   if (tdebuglev!=0)
     debuglev = tdebuglev;
