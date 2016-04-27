@@ -465,6 +465,7 @@ double vol2attn(double vol, long max_db, long min_db) {
   } else if (vol != -144.0) {
     debug(1, "Volume request value %f is out of range: should be from 0.0 to -30.0 or -144.0.",
           vol);
+    vol_setting = min_db; // for safety, return the lowest setting...
   } else {
     vol_setting = min_db; // for safety, return the lowest setting...
   }
