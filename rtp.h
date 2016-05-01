@@ -13,7 +13,7 @@ void *rtp_audio_receiver(void *arg);
 void *rtp_control_receiver(void *arg);
 void *rtp_timing_receiver(void *arg);
 
-void rtp_setup(SOCKADDR *remote, int controlport, int timingport, uint32_t active_remote,
+void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int controlport, int timingport, uint32_t active_remote,
                int *local_server_port, int *local_control_port, int *local_timing_port);
 void rtp_shutdown(void);
 void rtp_request_resend(seq_t first, uint32_t count);
