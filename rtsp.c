@@ -1023,7 +1023,7 @@ char *base64_encode_so(const unsigned char *data, size_t input_length,
 static int fd = -1;
 static int dirty = 0;
 pc_queue metadata_queue;
-static int metadata_sock;
+static int metadata_sock = -1;
 static struct sockaddr_in metadata_sockaddr;
 static char *metadata_sockmsg;
 #define metadata_queue_size 500
