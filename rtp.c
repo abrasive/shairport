@@ -59,7 +59,8 @@ typedef struct time_ping_record {
 static int running = 0;
 
 static char client_ip_string[INET6_ADDRSTRLEN]; // the ip string pointing to the client
-static short client_ip_family;                  // AF_INET / AF_INET6
+static char self_ip_string[INET6_ADDRSTRLEN]; // the ip string being used by this program -- it could be one of many, so we need to know it
+static short connection_ip_family;                  // AF_INET / AF_INET6
 static uint32_t client_active_remote;           // used when you want to control the client...
 
 static SOCKADDR rtp_client_control_socket; // a socket pointing to the control port of the client
@@ -543,47 +544,27 @@ void *rtp_timing_receiver(void *arg) {
   return NULL;
 }
 
-static int bind_port(SOCKADDR *remote, int *sock) {
+static int bind_port(int ip_family,const char *self_ip_address, int *sock) {
   struct addrinfo hints, *info;
 
   memset(&hints, 0, sizeof(hints));
-  hints.ai_family = remote->SAFAMILY;
+  hints.ai_family = ip_family;
   hints.ai_socktype = SOCK_DGRAM;
   hints.ai_flags = AI_PASSIVE;
 
-  char buffer[10];
+  char buffer[20];
   
   // look for a port in the range, if any was specified.
   int desired_port = config.udp_port_base;
   int ret;
   do {
     snprintf(buffer, 10, "%d", desired_port);
-
-    ret = getaddrinfo(NULL, buffer, &hints, &info);
-
+    ret = getaddrinfo(self_ip_address, buffer, &hints, &info);
     if (ret < 0)
       die("failed to get usable addrinfo?! %s.", gai_strerror(ret));
-
-    *sock = socket(remote->SAFAMILY, SOCK_DGRAM, IPPROTO_UDP);
-    
-/*
-  // this doesn't compile properly with OpenWrt Barrier Breaker.
-    #if defined(__linux__)
-    #ifdef AF_INET6
-    // now, if we are on IPv6, prefer a public ipv6 address
-    if (remote->SAFAMILY==AF_INET6) {
-      int value = IPV6_PREFER_SRC_PUBLIC;
-      ret = setsockopt(*sock, IPPROTO_IPV6, IPV6_ADDR_PREFERENCES, &value, sizeof(value));
-      if (ret<0)
-        die("error: could not select a preference for public IPv6 address");
-    }
-    #endif
-    #endif
-*/
+    *sock = socket(ip_family, SOCK_DGRAM, IPPROTO_UDP);    
     ret = bind(*sock, info->ai_addr, info->ai_addrlen);
-
     freeaddrinfo(info);
-
   } while ((ret<0) && (errno==EADDRINUSE) && (desired_port!=0) && (desired_port++ < config.udp_port_base+config.udp_port_range));
   
   // debug(1,"UDP port chosen: %d.",desired_port);
@@ -592,7 +573,6 @@ static int bind_port(SOCKADDR *remote, int *sock) {
      die("error: could not bind a UDP port!");
   }
  
-  
   int sport;
   SOCKADDR local;
   socklen_t local_len = sizeof(local);
@@ -611,8 +591,13 @@ static int bind_port(SOCKADDR *remote, int *sock) {
   return sport;
 }
 
-void rtp_setup(SOCKADDR *remote, int cport, int tport, uint32_t active_remote, int *lsport,
+void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t active_remote, int *lsport,
                int *lcport, int *ltport) {
+               
+  // this gets the local and remote ip numbers (and ports used for the TCD stuff)
+  // we use the local stuff to specify the address we are coming from and
+  // we use the remote stuff to specify where we're goint to
+  
   if (running)
     die("rtp_setup called with active stream!");
 
@@ -621,28 +606,39 @@ void rtp_setup(SOCKADDR *remote, int cport, int tport, uint32_t active_remote, i
   client_active_remote = active_remote;
 
   // print out what we know about the client
-  void *addr;
+  void *client_addr,*self_addr;
   char *ipver;
-  int port;
-  char portstr[20];
-  client_ip_family = remote->SAFAMILY; // keep information about the kind of ip of the client
+  int client_port,self_port;
+  char client_port_str[20];
+  char self_addr_str[20];
+  
+  connection_ip_family = remote->SAFAMILY; // keep information about the kind of ip of the client
+  
 #ifdef AF_INET6
-  if (remote->SAFAMILY == AF_INET6) {
-    struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)remote;
-    addr = &(sa6->sin6_addr);
-    port = ntohs(sa6->sin6_port);
+  if (connection_ip_family == AF_INET6) {
     ipver = "IPv6";
+    struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)remote;
+    client_addr = &(sa6->sin6_addr);
+    client_port = ntohs(sa6->sin6_port);
+    sa6 = (struct sockaddr_in6 *)local;
+    self_addr = &(sa6->sin6_addr);
+    self_port = ntohs(sa6->sin6_port);
   }
 #endif
-  if (remote->SAFAMILY == AF_INET) {
-    struct sockaddr_in *sa4 = (struct sockaddr_in *)remote;
-    addr = &(sa4->sin_addr);
-    port = ntohs(sa4->sin_port);
+  if (connection_ip_family == AF_INET) {
     ipver = "IPv4";
+    struct sockaddr_in *sa4 = (struct sockaddr_in *)remote;
+    client_addr = &(sa4->sin_addr);
+    client_port = ntohs(sa4->sin_port);
+    sa4 = (struct sockaddr_in *)local;
+    self_addr = &(sa4->sin_addr);
+    self_port = ntohs(sa4->sin_port);
   }
-  inet_ntop(remote->SAFAMILY, addr, client_ip_string,
+  inet_ntop(connection_ip_family, client_addr, client_ip_string,
             sizeof(client_ip_string)); // keep the client's ip number
-  debug(1, "Connection from %s: %s:%d", ipver, client_ip_string, port);
+  inet_ntop(connection_ip_family, self_addr, self_ip_string,
+            sizeof(self_ip_string)); // keep the client's ip number
+  debug(1, "Connection via %s from AirPlay client at: %s:%u to this Shairport Sync AirPlay server at: %s:%u.", ipver, client_ip_string, client_port,self_ip_string,self_port);
 
   // set up a the record of the remote's control socket
   struct addrinfo hints;
@@ -650,8 +646,9 @@ void rtp_setup(SOCKADDR *remote, int cport, int tport, uint32_t active_remote, i
 
   memset(&rtp_client_control_socket, 0, sizeof(rtp_client_control_socket));
   memset(&hints, 0, sizeof hints);
-  hints.ai_family = remote->SAFAMILY;
+  hints.ai_family = connection_ip_family;
   hints.ai_socktype = SOCK_DGRAM;
+  char portstr[20];
   snprintf(portstr, 20, "%d", cport);
   if (getaddrinfo(client_ip_string, portstr, &hints, &servinfo) != 0)
     die("Can't get address of client's control port");
@@ -667,7 +664,7 @@ void rtp_setup(SOCKADDR *remote, int cport, int tport, uint32_t active_remote, i
   // set up a the record of the remote's timing socket
   memset(&rtp_client_timing_socket, 0, sizeof(rtp_client_timing_socket));
   memset(&hints, 0, sizeof hints);
-  hints.ai_family = remote->SAFAMILY;
+  hints.ai_family = connection_ip_family;
   hints.ai_socktype = SOCK_DGRAM;
   snprintf(portstr, 20, "%d", tport);
   if (getaddrinfo(client_ip_string, portstr, &hints, &servinfo) != 0)
@@ -683,9 +680,9 @@ void rtp_setup(SOCKADDR *remote, int cport, int tport, uint32_t active_remote, i
   // now, we open three sockets -- one for the audio stream, one for the timing and one for the
   // control
 
-  *lsport = bind_port(remote, &audio_socket);
-  *lcport = bind_port(remote, &control_socket);
-  *ltport = bind_port(remote, &timing_socket);
+  *lsport = bind_port(connection_ip_family,self_ip_string,&audio_socket);
+  *lcport = bind_port(connection_ip_family,self_ip_string,&control_socket);
+  *ltport = bind_port(connection_ip_family,self_ip_string,&timing_socket);
 
   debug(2, "listening for audio, control and timing on ports %d, %d, %d.", *lsport, *lcport,
         *ltport);

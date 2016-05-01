@@ -89,7 +89,7 @@ static pthread_mutex_t reference_counter_lock = PTHREAD_MUTEX_INITIALIZER;
 typedef struct {
   int fd;
   stream_cfg stream;
-  SOCKADDR remote;
+  SOCKADDR remote,local;
   int stop;
   int running;
   pthread_t thread;
@@ -806,7 +806,7 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req,
   tport = atoi(p);
 
 //  rtsp_take_player();
-  rtp_setup(&conn->remote, cport, tport, active_remote, &lsport, &lcport,
+  rtp_setup(&conn->local, &conn->remote, cport, tport, active_remote, &lsport, &lcport,
             &ltport);
   if (!lsport)
     goto error;
@@ -1904,12 +1904,46 @@ void rtsp_listen_loop(void) {
     memset(conn, 0, sizeof(rtsp_conn_info));
     socklen_t slen = sizeof(conn->remote);
 
-    debug(1, "New RTSP connection on port %d", config.port);
     conn->fd = accept(acceptfd, (struct sockaddr *)&conn->remote, &slen);
     if (conn->fd < 0) {
+      debug(1, "New RTSP connection on port %d not accepted:", config.port);
       perror("failed to accept connection");
       free(conn);
     } else {
+      SOCKADDR *local_info = (SOCKADDR*)&conn->local;
+      socklen_t size_of_reply = sizeof(*local_info);
+      memset(local_info,0,sizeof(SOCKADDR));
+      if (getsockname(conn->fd, (struct sockaddr*)local_info, &size_of_reply)==0) {
+        char host[1024];
+        char service[20];
+                
+        // IPv4:
+        if (local_info->SAFAMILY==AF_INET) {
+          char ip4[INET_ADDRSTRLEN];  // space to hold the IPv4 string
+          struct sockaddr_in *sa = (struct sockaddr_in*)local_info;      // pretend this is loaded with something
+
+          inet_ntop(AF_INET, &(sa->sin_addr), ip4, INET_ADDRSTRLEN);
+          unsigned short int tport = ntohs(sa->sin_port);
+          debug(1,"New RTSP connection at: %s:%u", ip4,tport);
+        }
+#ifdef AF_INET6
+        if (local_info->SAFAMILY==AF_INET6) {
+          // IPv6:
+
+          char ip6[INET6_ADDRSTRLEN]; // space to hold the IPv6 string
+          struct sockaddr_in6 *sa6 = (struct sockaddr_in6*)local_info; ;    // pretend this is loaded with something
+
+          inet_ntop(AF_INET6, &(sa6->sin6_addr), ip6, INET6_ADDRSTRLEN);
+          u_int16_t tport = ntohs(sa6->sin6_port);
+ 
+          debug(1,"New RTSP connection at: %s:%u", ip6,tport);
+        }
+ #endif       
+      
+      } else {
+        debug(1,"Error figuring out Shairport Sync's own ipnumber");
+      }
+
       usleep(500000);
       pthread_t rtsp_conversation_thread;
       ret = pthread_create(&rtsp_conversation_thread, NULL,
