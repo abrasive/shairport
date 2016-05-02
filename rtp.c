@@ -544,39 +544,46 @@ void *rtp_timing_receiver(void *arg) {
   return NULL;
 }
 
-static int bind_port(int ip_family,const char *self_ip_address, int *sock) {
-  struct addrinfo hints, *info;
-
-  memset(&hints, 0, sizeof(hints));
-  hints.ai_family = ip_family;
-  hints.ai_socktype = SOCK_DGRAM;
-  hints.ai_flags = AI_PASSIVE;
-
-  char buffer[20];
-  
+static int bind_port(int ip_family,const char *self_ip_address, int *sock) { 
   // look for a port in the range, if any was specified.
   int desired_port = config.udp_port_base;
   int ret;
+  
+  int local_socket = socket(ip_family, SOCK_DGRAM, IPPROTO_UDP);
+  if (local_socket== -1)
+    die("Could not allocate a socket.");
+  SOCKADDR myaddr;
   do {
-    snprintf(buffer, 10, "%d", desired_port);
-    ret = getaddrinfo(self_ip_address, buffer, &hints, &info);
-    if (ret < 0)
-      die("failed to get usable addrinfo?! %s.", gai_strerror(ret));
-    *sock = socket(ip_family, SOCK_DGRAM, IPPROTO_UDP);    
-    ret = bind(*sock, info->ai_addr, info->ai_addrlen);
-    freeaddrinfo(info);
+    memset(&myaddr,0,sizeof(myaddr));
+    if (ip_family==AF_INET) {
+      struct sockaddr_in *sa = (struct sockaddr_in *)&myaddr;
+      sa->sin_family = AF_INET;
+      sa->sin_port = ntohs(desired_port);
+      inet_pton(AF_INET,self_ip_address,&(sa->sin_addr));
+      ret = bind(local_socket,(struct sockaddr*)sa, sizeof(struct sockaddr_in));
+    }
+#ifdef AF_INET6
+    if (ip_family==AF_INET6) {
+      struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)&myaddr;
+      sa6->sin6_family = AF_INET6;
+      sa6->sin6_port = ntohs(desired_port);
+      ret = bind(local_socket,(struct sockaddr*)sa6, sizeof(struct sockaddr_in6));
+    }
+#endif   
+    
   } while ((ret<0) && (errno==EADDRINUSE) && (desired_port!=0) && (desired_port++ < config.udp_port_base+config.udp_port_range));
   
   // debug(1,"UDP port chosen: %d.",desired_port);
   
   if (ret < 0) {
+     close(local_socket);
      die("error: could not bind a UDP port!");
   }
  
   int sport;
   SOCKADDR local;
   socklen_t local_len = sizeof(local);
-  getsockname(*sock, (struct sockaddr *)&local, &local_len);
+  getsockname(local_socket, (struct sockaddr *)&local, &local_len);
 #ifdef AF_INET6
   if (local.SAFAMILY == AF_INET6) {
     struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)&local;
@@ -587,7 +594,8 @@ static int bind_port(int ip_family,const char *self_ip_address, int *sock) {
     struct sockaddr_in *sa = (struct sockaddr_in *)&local;
     sport = ntohs(sa->sin_port);
   }
-
+  
+  *sock = local_socket;
   return sport;
 }
 
