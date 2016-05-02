@@ -567,6 +567,7 @@ static int bind_port(int ip_family,const char *self_ip_address, int *sock) {
       struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)&myaddr;
       sa6->sin6_family = AF_INET6;
       sa6->sin6_port = ntohs(desired_port);
+      inet_pton(AF_INET6,self_ip_address,&(sa6->sin6_addr));
       ret = bind(local_socket,(struct sockaddr*)sa6, sizeof(struct sockaddr_in6));
     }
 #endif   
