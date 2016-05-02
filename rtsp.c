@@ -1914,34 +1914,39 @@ void rtsp_listen_loop(void) {
       socklen_t size_of_reply = sizeof(*local_info);
       memset(local_info,0,sizeof(SOCKADDR));
       if (getsockname(conn->fd, (struct sockaddr*)local_info, &size_of_reply)==0) {
-        char host[1024];
-        char service[20];
                 
         // IPv4:
         if (local_info->SAFAMILY==AF_INET) {
           char ip4[INET_ADDRSTRLEN];  // space to hold the IPv4 string
-          struct sockaddr_in *sa = (struct sockaddr_in*)local_info;      // pretend this is loaded with something
-
+          char remote_ip4[INET_ADDRSTRLEN];  // space to hold the IPv4 string
+          struct sockaddr_in *sa = (struct sockaddr_in*)local_info;
           inet_ntop(AF_INET, &(sa->sin_addr), ip4, INET_ADDRSTRLEN);
           unsigned short int tport = ntohs(sa->sin_port);
-          debug(1,"New RTSP connection at: %s:%u", ip4,tport);
+          sa = (struct sockaddr_in*)&conn->remote;
+          inet_ntop(AF_INET, &(sa->sin_addr), remote_ip4, INET_ADDRSTRLEN);
+          unsigned short int rport = ntohs(sa->sin_port);
+          debug(1,"New RTSP connection from %s:%u to self at %s:%u.",remote_ip4,rport,ip4,tport);
         }
 #ifdef AF_INET6
         if (local_info->SAFAMILY==AF_INET6) {
           // IPv6:
 
           char ip6[INET6_ADDRSTRLEN]; // space to hold the IPv6 string
-          struct sockaddr_in6 *sa6 = (struct sockaddr_in6*)local_info; ;    // pretend this is loaded with something
-
+          char remote_ip6[INET6_ADDRSTRLEN]; // space to hold the IPv6 string
+          struct sockaddr_in6 *sa6 = (struct sockaddr_in6*)local_info;    // pretend this is loaded with something
           inet_ntop(AF_INET6, &(sa6->sin6_addr), ip6, INET6_ADDRSTRLEN);
           u_int16_t tport = ntohs(sa6->sin6_port);
- 
-          debug(1,"New RTSP connection at: %s:%u", ip6,tport);
+          
+          sa6 = (struct sockaddr_in6*)&conn->remote;    // pretend this is loaded with something
+          inet_ntop(AF_INET6, &(sa6->sin6_addr), remote_ip6, INET6_ADDRSTRLEN);
+          u_int16_t rport = ntohs(sa6->sin6_port);
+
+          debug(1,"New RTSP connection from [%s]:%u to self at [%s]:%u.",remote_ip6,rport,ip6,tport);
         }
  #endif       
       
       } else {
-        debug(1,"Error figuring out Shairport Sync's own ipnumber");
+        debug(1,"Error figuring out Shairport Sync's own IP number.");
       }
 
       usleep(500000);

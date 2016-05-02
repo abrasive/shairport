@@ -607,16 +607,14 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
 
   // print out what we know about the client
   void *client_addr,*self_addr;
-  char *ipver;
   int client_port,self_port;
-  char client_port_str[20];
-  char self_addr_str[20];
+  char client_port_str[64];
+  char self_addr_str[64];
   
   connection_ip_family = remote->SAFAMILY; // keep information about the kind of ip of the client
   
 #ifdef AF_INET6
   if (connection_ip_family == AF_INET6) {
-    ipver = "IPv6";
     struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)remote;
     client_addr = &(sa6->sin6_addr);
     client_port = ntohs(sa6->sin6_port);
@@ -626,7 +624,6 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
   }
 #endif
   if (connection_ip_family == AF_INET) {
-    ipver = "IPv4";
     struct sockaddr_in *sa4 = (struct sockaddr_in *)remote;
     client_addr = &(sa4->sin_addr);
     client_port = ntohs(sa4->sin_port);
@@ -634,11 +631,14 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
     self_addr = &(sa4->sin_addr);
     self_port = ntohs(sa4->sin_port);
   }
+
   inet_ntop(connection_ip_family, client_addr, client_ip_string,
-            sizeof(client_ip_string)); // keep the client's ip number
+            sizeof(client_ip_string));
   inet_ntop(connection_ip_family, self_addr, self_ip_string,
-            sizeof(self_ip_string)); // keep the client's ip number
-  debug(1, "Connection via %s from AirPlay client at: %s:%u to this Shairport Sync AirPlay server at: %s:%u.", ipver, client_ip_string, client_port,self_ip_string,self_port);
+            sizeof(self_ip_string));
+
+  debug(1, "Set up play connection from %s to self at %s.", client_ip_string,self_ip_string);
+
 
   // set up a the record of the remote's control socket
   struct addrinfo hints;
