@@ -287,11 +287,11 @@ static int avahi_register(char *srvname, int srvport) {
     return -1;
   }
   
-  // we need this to detect the IPv6 number we're advertising...
-  if (!(sb = avahi_service_browser_new(client, AVAHI_IF_UNSPEC,  AVAHI_PROTO_UNSPEC, config.regtype, NULL, 0, browse_callback, client))) {
-      warn("Failed to create service browser: %s\n", avahi_strerror(avahi_client_errno(client)));
-      return -1;
-  }
+ // we need this to detect the IPv6 number we're advertising...
+ // if (!(sb = avahi_service_browser_new(client, AVAHI_IF_UNSPEC,  AVAHI_PROTO_UNSPEC, config.regtype, NULL, 0, browse_callback, client))) {
+ //     warn("Failed to create service browser: %s\n", avahi_strerror(avahi_client_errno(client)));
+ //     return -1;
+ // }
 
 
   if (avahi_threaded_poll_start(tpoll) < 0) {
