@@ -43,6 +43,11 @@ enum stuffing_type {
   ST_soxr,
 } type;
 
+enum playback_mode_type {
+  ST_stereo = 0,
+  ST_mono,
+} playback_mode_type;
+
 typedef struct {
   config_t *cfg;
   char *password;
@@ -80,7 +85,7 @@ typedef struct {
   int32_t ForkedDaapdLatency; // supplied with --ForkedDaapdLatency option
   int daemonise;
   int statistics_requested,use_negotiated_latencies;
-  int mono;
+  enum playback_mode_type playback_mode;
   char *cmd_start, *cmd_stop;
   int cmd_blocking;
   int tolerance; // allow this much drift before attempting to correct it

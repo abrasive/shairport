@@ -379,7 +379,7 @@ void player_put_packet(seq_t seqno, uint32_t timestamp, uint8_t *data, int len) 
 					abuf->timestamp = timestamp;
 					abuf->sequence_number = seqno;
 
-          if (config.mono) {
+          if (config.playback_mode==ST_mono) {
             signed short *v = abuf->data;
             int i;
             int both;
