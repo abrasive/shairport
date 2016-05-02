@@ -1,4 +1,4 @@
-Version 2.8.3.2 – Development Version
+Version 2.8.3.3 – Development Version
 ----
 **Bug Fix**
 
@@ -6,6 +6,9 @@ The networking subsystem has been modified to always use the same IP number duri
 
 
 Changed the `mono` setting for a `playback_mode` setting with two possible values: `stereo` (default) and `mono`.
+
+Version 2.8.3.2 – Deleted
+----
 
 Version 2.8.3.1 – Development Version
 ----
