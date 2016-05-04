@@ -15,33 +15,7 @@ $sudo apt-get upgrade
 ```
 Next, stop playing music to your device.
 
-Now, to update and install Shairport Sync, if you still have the directory in which you previously built Shairport Sync, it will contain the repository you originally downloaded. Navigate your way to it and check its status as follows:
-```
-$git status
-```
-You might get something like this
-```
-On branch master
-Your branch is up-to-date with 'origin/master'.
-Changes not staged for commit:
-  (use "git add <file>..." to update what will be committed)
-  (use "git checkout -- <file>..." to discard changes in working directory)
-
-	modified:   INSTALL
-```
-
-If you get this, it means that the file `INSTALL` is different from what it was when you downloaded the repository the first time. In this case, it's not important, so discard the changes by checking out the repository's version using the following command:
-
-```
-$git checkout INSTALL
-```
-Eventually, having checked out all the modified files, you should get something like this:
-```
-On branch master
-Your branch is up-to-date with 'origin/master'.
-nothing to commit, working directory clean
-```
-(What this measn is that the files used to compile Shairport Sync are the same as they were when originally downloaded. They are up to date with what was downloaded, not with repository at GitHub. Now pull the changes from GitHub:
+Now, to update and install Shairport Sync, if you still have the directory in which you previously built Shairport Sync, it will contain the repository you originally downloaded. Navigate your way to it and 'pull' the changes from GitHub:
 
 ```
 $git pull
