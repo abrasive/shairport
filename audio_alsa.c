@@ -290,9 +290,9 @@ static int init(int argc, char **argv) {
         if (alsa_mix_mindb == SND_CTL_TLV_DB_GAIN_MUTE) {
           // Raspberry Pi does this
           debug(1, "Lowest dB value is a mute.");
-          if (snd_mixer_selem_ask_playback_vol_dB(
-                  alsa_mix_elem, alsa_mix_minv + 1, &alsa_mix_mindb) == 0)
-            debug(1, "Can't get dB value corresponding to a \"volume\" of 1.");
+          //if (snd_mixer_selem_ask_playback_vol_dB(
+          //        alsa_mix_elem, alsa_mix_minv + 1, &alsa_mix_mindb) == 0)
+          //  debug(1, "Can't get dB value corresponding to a \"volume\" of 1.");
         }
         debug(1, "Hardware mixer has dB volume from %f to %f.",
               (1.0 * alsa_mix_mindb) / 100.0, (1.0 * alsa_mix_maxdb) / 100.0);
@@ -465,7 +465,7 @@ int open_alsa_device(void) {
   
   if (alsa_characteristics_already_listed==0) {
   		alsa_characteristics_already_listed=1;
-  		
+  		int log_level = 2; // the level at which debug information should be output
   		int rc;
   		snd_pcm_access_t access_type;
   		snd_pcm_format_t format_type;
@@ -476,7 +476,7 @@ int open_alsa_device(void) {
 			int dir;
 			snd_pcm_uframes_t frames;
 
-			debug(1,"PCM handle name = '%s'",
+			debug(log_level,"PCM handle name = '%s'",
 						 snd_pcm_name(alsa_handle));
 			
 //			ret = snd_pcm_hw_params_any(alsa_handle, alsa_params);
@@ -486,103 +486,103 @@ int open_alsa_device(void) {
 //						alsa_out_dev);
 //			}
 
-			debug(1,"alsa device parameters:");
+			debug(log_level,"alsa device parameters:");
 
 			snd_pcm_hw_params_get_access(alsa_params,&access_type);			
-			debug(1,"  access type = %s", snd_pcm_access_name(access_type));
+			debug(log_level,"  access type = %s", snd_pcm_access_name(access_type));
 
 			snd_pcm_hw_params_get_format(alsa_params,&format_type);
-			debug(1,"  format = '%s' (%s)",snd_pcm_format_name(format_type),snd_pcm_format_description(format_type));
+			debug(log_level,"  format = '%s' (%s)",snd_pcm_format_name(format_type),snd_pcm_format_description(format_type));
 
 			snd_pcm_hw_params_get_subformat(alsa_params,&subformat_type);
-			debug(1,"  subformat = '%s' (%s)",snd_pcm_subformat_name(subformat_type),snd_pcm_subformat_description(subformat_type));
+			debug(log_level,"  subformat = '%s' (%s)",snd_pcm_subformat_name(subformat_type),snd_pcm_subformat_description(subformat_type));
 
 			snd_pcm_hw_params_get_channels(alsa_params, &uval);
-			debug(1,"  number of channels = %u", uval);
+			debug(log_level,"  number of channels = %u", uval);
 
 			sval = snd_pcm_hw_params_get_sbits(alsa_params);
-			debug(1,"  number of significant bits = %d", sval);
+			debug(log_level,"  number of significant bits = %d", sval);
 			
 			snd_pcm_hw_params_get_rate(alsa_params, &uval, &dir);
  			switch (dir) {
 			  case -1:
-			    debug(1,"  rate = %u frames per second (<).", uval);
+			    debug(log_level,"  rate = %u frames per second (<).", uval);
 			    break;
 			  case 0:
-			    debug(1,"  rate = %u frames per second (precisely).", uval);
+			    debug(log_level,"  rate = %u frames per second (precisely).", uval);
 			    break;
 			  case 1:
-			    debug(1,"  rate = %u frames per second (>).", uval);
+			    debug(log_level,"  rate = %u frames per second (>).", uval);
 			    break;
 			}
 
 			if (snd_pcm_hw_params_get_rate_numden(alsa_params,&uval, &uval2)==0)
-				debug(1,"  precise (rational) rate = %.3f frames per second (i.e. %u/%u).", uval, uval2, ((double)uval)/uval2);
+				debug(log_level,"  precise (rational) rate = %.3f frames per second (i.e. %u/%u).", uval, uval2, ((double)uval)/uval2);
 			else
-				debug(1,"  precise (rational) rate information unavailable.");
+				debug(log_level,"  precise (rational) rate information unavailable.");
 
 			snd_pcm_hw_params_get_period_time(alsa_params,&uval, &dir);			
 			switch (dir) {
 			  case -1:
-			    debug(1,"  period_time = %u us (<).", uval);
+			    debug(log_level,"  period_time = %u us (<).", uval);
 			    break;
 			  case 0:
-			    debug(1,"  period_time = %u us (precisely).", uval);
+			    debug(log_level,"  period_time = %u us (precisely).", uval);
 			    break;
 			  case 1:
-			    debug(1,"  period_time = %u us (>).", uval);
+			    debug(log_level,"  period_time = %u us (>).", uval);
 			    break;
 			}
 
 			snd_pcm_hw_params_get_period_size(alsa_params,&frames, &dir);
 			switch (dir) {
 			  case -1:
-			    debug(1,"  period_size = %lu frames (<).", frames);
+			    debug(log_level,"  period_size = %lu frames (<).", frames);
 			    break;
 			  case 0:
-			    debug(1,"  period_size = %lu frames (precisely).", frames);
+			    debug(log_level,"  period_size = %lu frames (precisely).", frames);
 			    break;
 			  case 1:
-			    debug(1,"  period_size = %lu frames (>).", frames);
+			    debug(log_level,"  period_size = %lu frames (>).", frames);
 			    break;
 			}
 
 			snd_pcm_hw_params_get_buffer_time(alsa_params,&uval, &dir);
 			switch (dir) {
 			  case -1:
-			    debug(1,"  buffer_time = %u us (<).", uval);
+			    debug(log_level,"  buffer_time = %u us (<).", uval);
 			    break;
 			  case 0:
-			    debug(1,"  buffer_time = %u us (precisely).", uval);
+			    debug(log_level,"  buffer_time = %u us (precisely).", uval);
 			    break;
 			  case 1:
-			    debug(1,"  buffer_time = %u us (>).", uval);
+			    debug(log_level,"  buffer_time = %u us (>).", uval);
 			    break;
 			}
 
 			snd_pcm_hw_params_get_buffer_size(alsa_params,&frames);
 			switch (dir) {
 			  case -1:
-			    debug(1,"  buffer_size = %lu frames (<).", frames);
+			    debug(log_level,"  buffer_size = %lu frames (<).", frames);
 			    break;
 			  case 0:
-			    debug(1,"  buffer_size = %lu frames (precisely).", frames);
+			    debug(log_level,"  buffer_size = %lu frames (precisely).", frames);
 			    break;
 			  case 1:
-			    debug(1,"  buffer_size = %lu frames (>).", frames);
+			    debug(log_level,"  buffer_size = %lu frames (>).", frames);
 			    break;
 			}
 			
 			snd_pcm_hw_params_get_periods(alsa_params, &uval, &dir);
 			switch (dir) {
 			  case -1:
-			    debug(1,"  periods_per_buffer = %u (<).", uval);
+			    debug(log_level,"  periods_per_buffer = %u (<).", uval);
 			    break;
 			  case 0:
-			    debug(1,"  periods_per_buffer = %u (precisely).", uval);
+			    debug(log_level,"  periods_per_buffer = %u (precisely).", uval);
 			    break;
 			  case 1:
-			    debug(1,"  periods_per_buffer = %u (>).", uval);
+			    debug(log_level,"  periods_per_buffer = %u (>).", uval);
 			    break;
 			}
 		}
@@ -656,11 +656,17 @@ static void play(short buf[], int samples) {
     int err, ignore;
     if ((snd_pcm_state(alsa_handle) == SND_PCM_STATE_PREPARED) ||
         (snd_pcm_state(alsa_handle) == SND_PCM_STATE_RUNNING)) {
-      err = snd_pcm_writei(alsa_handle, (char *)buf, samples);
-      if (err < 0) {
-        debug(1, "Error %d writing %d samples in play(): \"%s\".", err, samples,
-              snd_strerror(err));
-        ignore = snd_pcm_recover(alsa_handle, err, 1);
+      if (buf==NULL)
+      	debug(1,"NULL buffer passed to pcm_writei -- skipping it");
+      if (samples==0)
+      	debug(1,"empty buffer being passed to pcm_writei -- skipping it");
+      if ((samples!=0) && (buf!=NULL)) {
+				err = snd_pcm_writei(alsa_handle, (char *)buf, samples);
+				if (err < 0) {
+					debug(1, "Error %d writing %d samples in play(): \"%s\".", err, samples,
+								snd_strerror(err));
+					ignore = snd_pcm_recover(alsa_handle, err, 1);
+				}
       }
     } else {
       debug(1, "Error -- ALSA device in incorrect state (%d) for play.",
