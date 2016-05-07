@@ -289,10 +289,10 @@ static int init(int argc, char **argv) {
         audio_alsa.parameters = &parameters; // likewise the parameters stuff
         if (alsa_mix_mindb == SND_CTL_TLV_DB_GAIN_MUTE) {
           // Raspberry Pi does this
-          debug(1, "Lowest dB value is a mute.");
-          //if (snd_mixer_selem_ask_playback_vol_dB(
-          //        alsa_mix_elem, alsa_mix_minv + 1, &alsa_mix_mindb) == 0)
-          //  debug(1, "Can't get dB value corresponding to a \"volume\" of 1.");
+          debug(1, "Lowest dB value is a mute -- try minimum volume +1");
+          if (snd_mixer_selem_ask_playback_vol_dB(
+                  alsa_mix_elem, alsa_mix_minv + 1, &alsa_mix_mindb) != 0)
+            debug(1, "Can't get dB value corresponding to a minimum volume + 1.");
         }
         debug(1, "Hardware mixer has dB volume from %f to %f.",
               (1.0 * alsa_mix_mindb) / 100.0, (1.0 * alsa_mix_maxdb) / 100.0);
