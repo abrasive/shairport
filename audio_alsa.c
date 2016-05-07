@@ -59,9 +59,9 @@ audio_output audio_alsa = {
     .flush = &flush,
     .delay = &delay,
     .play = &play,
-    .mute = NULL,      // to be set later on...
-    .volume = NULL,    // to be set later on...
-    .parameters = NULL // to be set later on...
+    .mute = &mute,
+    .volume = &volume,
+    .parameters = &parameters
 };
 
 static pthread_mutex_t alsa_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -70,7 +70,8 @@ static unsigned int desired_sample_rate;
 
 static snd_pcm_t *alsa_handle = NULL;
 static snd_pcm_hw_params_t *alsa_params = NULL;
-
+static snd_ctl_t *ctl = NULL;
+static snd_ctl_elem_id_t *elem_id = NULL;
 static snd_mixer_t *alsa_mix_handle = NULL;
 static snd_mixer_elem_t *alsa_mix_elem = NULL;
 static snd_mixer_selem_id_t *alsa_mix_sid = NULL;
@@ -82,7 +83,7 @@ static char *alsa_mix_dev = NULL;
 static char *alsa_mix_ctrl = "Master";
 static int alsa_mix_index = 0;
 static int hardware_mixer = 0;
-
+static int has_softvol = 0;
 
 static int play_number;
 static int64_t accumulated_delay, accumulated_da_delay;
@@ -299,8 +300,29 @@ static int init(int argc, char **argv) {
       } else {
         // use the linear scale and do the db conversion ourselves
         debug(1, "note: the hardware mixer specified -- \"%s\" -- does not have "
-                 "a dB volume scale, so it can't be used.",
+                 "a dB volume scale, so it can't be used. Trying software "
+                 "volume control.",
               alsa_mix_ctrl);
+
+        if (snd_ctl_open(&ctl, alsa_mix_dev, 0) < 0)
+          die("Cannot open control \"%s\"", alsa_mix_dev);
+        if (snd_ctl_elem_id_malloc(&elem_id) < 0)
+          die("Cannot allocate memory for control \"%s\"", alsa_mix_dev);
+        snd_ctl_elem_id_set_interface(elem_id, SND_CTL_ELEM_IFACE_MIXER);
+        snd_ctl_elem_id_set_name(elem_id, alsa_mix_ctrl);
+
+        if (snd_ctl_get_dB_range(ctl, elem_id, &alsa_mix_mindb,
+                                               &alsa_mix_maxdb) == 0) {
+          debug(1, "Volume control \"%s\" has dB volume from %f to %f.",
+                    alsa_mix_ctrl,
+                    (1.0 * alsa_mix_mindb) / 100.0,
+                    (1.0 * alsa_mix_maxdb) / 100.0);
+          has_softvol = 1;
+        } else {
+          debug(1, "Cannot get the dB range from the volume control \"%s\"",
+                    alsa_mix_ctrl);
+        }
+
         /*
         debug(1, "Min and max volumes are %d and
         %d.",alsa_mix_minv,alsa_mix_maxv);
@@ -734,11 +756,30 @@ static void volume(double vol) {
 	debug(2, "Setting volume db to %f.", vol);
   set_volume = vol;
   if (hardware_mixer && alsa_mix_handle) {
-    if (snd_mixer_selem_set_playback_dB_all(alsa_mix_elem, vol, 0) != 0) {
-      debug(1, "Can't set playback volume accurately to %f dB.", vol);
-      if (snd_mixer_selem_set_playback_dB_all(alsa_mix_elem, vol, -1) != 0)
-        if (snd_mixer_selem_set_playback_dB_all(alsa_mix_elem, vol, 1) != 0)
-          die("Failed to set playback dB volume");
+    if (has_softvol) {
+      if (ctl && elem_id) {
+        snd_ctl_elem_value_t *value;
+        long raw;
+
+        if (snd_ctl_convert_from_dB(ctl, elem_id, (long) vol, &raw, 0) < 0)
+        debug(1, "Failed converting dB gain to raw volume value for the "
+                 "software volume control.");
+
+        snd_ctl_elem_value_alloca(&value);
+        snd_ctl_elem_value_set_id(value, elem_id);
+        snd_ctl_elem_value_set_integer(value, 0, raw);
+        snd_ctl_elem_value_set_integer(value, 1, raw);
+        if (snd_ctl_elem_write(ctl, value) < 0)
+        debug(1, "Failed to set playback dB volume for the software volume "
+                 "control.");
+      }
+    } else {
+      if (snd_mixer_selem_set_playback_dB_all(alsa_mix_elem, vol, 0) != 0) {
+        debug(1, "Can't set playback volume accurately to %f dB.", vol);
+        if (snd_mixer_selem_set_playback_dB_all(alsa_mix_elem, vol, -1) != 0)
+          if (snd_mixer_selem_set_playback_dB_all(alsa_mix_elem, vol, 1) != 0)
+            die("Failed to set playback dB volume");
+      }
     }
   }
   pthread_mutex_unlock(&alsa_mutex);
