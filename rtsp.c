@@ -498,13 +498,14 @@ rtsp_read_request(rtsp_conn_info *conn, rtsp_message **the_packet) {
       goto shutdown;
     }
     nread = read(conn->fd, buf + inbuf, buflen - inbuf);
-    /*
-    if (!nread) {
+    
+    if (nread==0) {
+      // a blocking read that returns zero means eof -- implies connection closed
       debug(2, "RTSP connection closed.");
       reply = rtsp_read_request_response_shutdown_requested;
       goto shutdown;
     }
-    */
+
     if (nread < 0) {
       if (errno == EINTR)
         continue;
