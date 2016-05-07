@@ -143,8 +143,6 @@ typedef struct {
   rtsp_message *carrier;
 } metadata_package;
 
-void ask_other_rtsp_conversation_threads_to_stop(pthread_t except_this_thread);
-
 void pc_queue_init(pc_queue *the_queue, char *items, size_t item_size,
                    uint32_t number_of_items) {
   pthread_mutex_init(&the_queue->pc_queue_lock, NULL);
@@ -245,6 +243,8 @@ int pc_queue_get_item(pc_queue *the_queue, void *the_stuff) {
 }
 
 #endif
+
+void ask_other_rtsp_conversation_threads_to_stop(pthread_t except_this_thread);
 
 // determine if we are the currently playing thread
 static inline int rtsp_playing(void) {
