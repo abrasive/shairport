@@ -653,7 +653,7 @@ static abuf_t *buffer_get_frame(void) {
               int64_t gross_frame_gap =
                   ((first_packet_time_to_play - local_time_now) * 44100) >> 32;
               int64_t exact_frame_gap = gross_frame_gap - dac_delay;
-              if (exact_frame_gap <= 0) {
+              if (exact_frame_gap < 0) {
                 // we've gone past the time...
                 // debug(1,"Run a bit past the exact start time by %lld frames, with time now of
                 // %llx, fpttp of %llx and dac_delay of %d and %d packets;
@@ -668,6 +668,10 @@ static abuf_t *buffer_get_frame(void) {
                 int64_t fs = filler_size;
                 if (fs > (max_dac_delay - dac_delay))
                   fs = max_dac_delay - dac_delay;
+                if (fs<0) {
+                  debug(2,"frame size (fs) < 0!");
+                  fs=0;
+                }
                 if ((exact_frame_gap <= fs) || (exact_frame_gap <= frame_size * 2)) {
                   fs = exact_frame_gap;
                   // debug(1,"Exact frame gap is %llu; play %d frames of silence. Dac_delay is %d,
@@ -678,24 +682,32 @@ static abuf_t *buffer_get_frame(void) {
                 }
                 signed short *silence;
                 // fs will be truncated here
-                silence = malloc(FRAME_BYTES(fs));
-                memset(silence, 0, FRAME_BYTES(fs));
-                // debug(1,"Exact frame gap is %llu; play %d frames of silence. Dac_delay is %d,
-                // with %d packets.",exact_frame_gap,fs,dac_delay,seq_diff(ab_read, ab_write));
-                config.output->play(silence, fs);
-                free(silence);
-                have_sent_prefiller_silence = 1;
-                if (ab_buffering == 0) {
-                  // not the time of the playing of the first frame
-                  uint64_t reference_timestamp_time; // don't need this...
-                  get_reference_timestamp_stuff(&play_segment_reference_frame, &reference_timestamp_time, &play_segment_reference_frame_remote_time);
-#ifdef CONFIG_METADATA
-                  send_ssnc_metadata('prsm', NULL, 0, 0); // "resume", but don't wait if the queue is locked
-#endif
+                if (fs==0)
+                  debug(2,"Zero length silence buffer needed, duh.");
+                else {
+                  silence = malloc(FRAME_BYTES(fs));
+                  if (silence==NULL)
+                    debug(1,"Failed to allocate %d byte silence buffer.",fs);
+                  else {
+                    memset(silence, 0, FRAME_BYTES(fs));
+                    // debug(1,"Exact frame gap is %llu; play %d frames of silence. Dac_delay is %d,
+                    // with %d packets.",exact_frame_gap,fs,dac_delay,seq_diff(ab_read, ab_write));
+                    config.output->play(silence, fs);
+                    free(silence);
+                    have_sent_prefiller_silence = 1;
+                  }
                 }
               }
             }
           }
+          if (ab_buffering == 0) {
+            // not the time of the playing of the first frame
+            uint64_t reference_timestamp_time; // don't need this...
+            get_reference_timestamp_stuff(&play_segment_reference_frame, &reference_timestamp_time, &play_segment_reference_frame_remote_time);
+#ifdef CONFIG_METADATA
+            send_ssnc_metadata('prsm', NULL, 0, 0); // "resume", but don't wait if the queue is locked
+#endif
+          }              
         }
       }
     }
@@ -1000,7 +1012,11 @@ static void *player_thread_func(void *arg) {
 
   signed short *inbuf, *outbuf, *silence;
   outbuf = malloc(OUTFRAME_BYTES(frame_size));
+  if (outbuf==NULL)
+    debug(1,"Failed to allocate memory for an output buffer.");
   silence = malloc(OUTFRAME_BYTES(frame_size));
+  if (silence==NULL)
+    debug(1,"Failed to allocate memory for a silence buffer.");
   memset(silence, 0, OUTFRAME_BYTES(frame_size));
   late_packet_message_sent = 0;
   first_packet_timestamp = 0;
@@ -1021,7 +1037,14 @@ static void *player_thread_func(void *arg) {
           // debug(1,"Player has a supplied silent frame.");
           last_seqno_read =
               (SUCCESSOR(last_seqno_read) & 0xffff); // manage the packet out of sequence minder
-          config.output->play(inbuf, frame_size);
+          if (inbuf==NULL)
+            debug(1,"NULL inbuf to play -- skipping it.");
+          else {
+            if (frame_size==0)
+              debug(1,"empty frame to play -- skipping it (1).");
+            else
+              config.output->play(inbuf, frame_size);
+          }
         } else {
           // We have a frame of data. We need to see if we want to add or remove a frame from it to
           // keep in sync.
@@ -1163,7 +1186,14 @@ static void *player_thread_func(void *arg) {
               // if no stuffing needed and no volume adjustment, then
               // don't send to stuff_buffer_* and don't copy to outbuf; just send directly to the
               // output device...
-              config.output->play(inbuf, frame_size);
+              if (inbuf==NULL)
+                debug(1,"NULL inbuf to play -- skipping it.");
+              else {
+                if (frame_size==0)
+                  debug(1,"empty frame to play -- skipping it (2).");
+                else
+                  config.output->play(inbuf, frame_size);
+              }
             } else {
 #ifdef HAVE_LIBSOXR
               switch (config.packet_stuffing) {
@@ -1195,8 +1225,16 @@ static void *player_thread_func(void *arg) {
                   debug(1,"Silence!");
               }
               */
-
-              config.output->play(outbuf, play_samples);
+              
+              
+              if (outbuf==NULL)
+                debug(1,"NULL outbuf to play -- skipping it.");
+              else {
+                if (play_samples==0)
+                  debug(1,"play_samples==0 skipping it (1).");
+                else
+                  config.output->play(outbuf, play_samples);
+              }
             }
 
             // check for loss of sync
@@ -1227,10 +1265,26 @@ static void *player_thread_func(void *arg) {
             // if there is no delay procedure, or it's not working or not allowed, there can be no synchronising
             
             if (fix_volume == 0x10000)
-              config.output->play(inbuf, frame_size);
+            
+              if (inbuf==NULL)
+                debug(1,"NULL inbuf to play -- skipping it.");
+              else {
+                if (frame_size==0)
+                  debug(1,"empty frame to play -- skipping it (3).");
+                else
+                  config.output->play(inbuf, frame_size);
+              }
             else {
               play_samples = stuff_buffer_basic(inbuf, outbuf, 0); // no stuffing, but volume adjustment
-              config.output->play(outbuf, frame_size);
+
+              if (outbuf==NULL)
+                debug(1,"NULL outbuf to play -- skipping it.");
+              else {
+                if (frame_size==0)
+                  debug(1,"empty frame to play -- skipping it (4).");
+                else
+                  config.output->play(outbuf, frame_size);
+              }
             }
           }
 
