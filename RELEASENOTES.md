@@ -1,6 +1,6 @@
 Version 2.8.3.5 – Development Version
 ----
-**Enhancements**
+**Enhancement**
 
 Experimental support for a softvol plugin, thanks to the work of [Jörg Krause](https://github.com/joerg-krause) -- see [#293](https://github.com/mikebrady/shairport-sync/pull/293).
 
