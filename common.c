@@ -437,7 +437,7 @@ double vol2attn(double vol, long max_db, long min_db) {
 
 #define order 3
 
-  double vol_setting = max_db;
+  double vol_setting = 0;
 
   if ((vol <= 0.0) && (vol >= -30.0)) {
     long range_db = max_db - min_db; // this will be a positive nunmber
