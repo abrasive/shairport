@@ -43,6 +43,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <limits.h>
+#include <inttypes.h>
 
 #include "config.h"
 
@@ -669,7 +670,7 @@ static abuf_t *buffer_get_frame(void) {
                 if (fs > (max_dac_delay - dac_delay))
                   fs = max_dac_delay - dac_delay;
                 if (fs<0) {
-                  debug(2,"frame size (fs) < 0!");
+                  debug(2,"frame size (fs) < 0 with max_dac_delay of %lld and dac_delay of %ld",max_dac_delay, dac_delay);
                   fs=0;
                 }
                 if ((exact_frame_gap <= fs) || (exact_frame_gap <= frame_size * 2)) {
@@ -681,10 +682,10 @@ static abuf_t *buffer_get_frame(void) {
                   ab_buffering = 0;
                 }
                 signed short *silence;
-                // fs will be truncated here
-                if (fs==0)
-                  debug(2,"Zero length silence buffer needed, duh.");
-                else {
+                //if (fs==0)
+                //  debug(2,"Zero length silence buffer needed with gross_frame_gap of %lld and dac_delay of %lld.",gross_frame_gap,dac_delay);
+                // the fs (number of frames of silence to play) can be zero in the DAC doesn't start ouotputting frames for a while -- it could get loaded up but not start responding for many milliseconds.
+                if (fs!=0) {
                   silence = malloc(FRAME_BYTES(fs));
                   if (silence==NULL)
                     debug(1,"Failed to allocate %d byte silence buffer.",fs);
