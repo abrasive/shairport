@@ -667,9 +667,10 @@ static void play(short buf[], int samples) {
   if (alsa_handle == NULL) {
     pthread_mutex_lock(&alsa_mutex);
     ret = open_alsa_device();
-    open_mixer();
+    if (hardware_mixer)
+    	open_mixer();
     pthread_mutex_unlock(&alsa_mutex);
-    if ((ret == 0) && (audio_alsa.volume))
+    if ((hardware_mixer) && (ret == 0) && (audio_alsa.volume))
       audio_alsa.volume(set_volume);
   }
   if (ret == 0) {
