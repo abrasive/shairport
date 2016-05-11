@@ -1819,6 +1819,7 @@ void rtsp_listen_loop(void) {
   }
 
   for (p = info; p; p = p->ai_next) {
+  	ret = 0;
     int fd = socket(p->ai_family, p->ai_socktype, IPPROTO_TCP);
     int yes = 1;
 
@@ -1847,7 +1848,14 @@ void rtsp_listen_loop(void) {
     // report its availability. do not complain.
 
     if (ret) {
-      debug(1, "Failed to bind to address %s.", format_address(p->ai_addr));
+    	char *family;
+#ifdef AF_INET6
+			if (p->ai_family == AF_INET6) {
+			family = "IPv6";
+			} else
+#endif
+			family = "IPv4";
+      debug(1, "Unable to listen on %s port %d. The error is: \"%s\".", family, config.port,strerror(errno));
       continue;
     }
 
@@ -1860,7 +1868,7 @@ void rtsp_listen_loop(void) {
   freeaddrinfo(info);
 
   if (!nsock)
-    die("could not bind any listen sockets!");
+    die("Could not listen on port %d -- program terminating. Is another Shairport Sync running?",config.port);
 
   int maxfd = -1;
   fd_set fds;
