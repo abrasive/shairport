@@ -1868,7 +1868,7 @@ void rtsp_listen_loop(void) {
   freeaddrinfo(info);
 
   if (!nsock)
-    die("Could not listen on port %d -- program terminating. Is another Shairport Sync running?",config.port);
+    die("Could not establish a service on port %d -- program terminating. Is another Shairport Sync running?",config.port);
 
   int maxfd = -1;
   fd_set fds;
