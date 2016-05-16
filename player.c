@@ -1026,6 +1026,42 @@ static void *player_thread_func(void *arg) {
                            // as a null operand, so we'll use it like that too
   int sync_error_out_of_bounds = 0; // number of times in a row that there's been a serious sync error
 
+  if (config.statistics_requested) {
+    if ((config.output->delay)) {
+      if (config.no_sync==0) {
+        inform("sync error in frames, "
+               "net correction in ppm, "
+               "corrections in ppm, "
+               "total packets, "
+               "missing packets, "
+               "late packets, "
+               "too late packets, "
+               "resend requests, "
+               "min DAC queue size, "
+               "min buffer occupancy, "
+               "max buffer occupancy");
+      } else {
+        inform("sync error in frames, "
+               "total packets, "
+               "missing packets, "
+               "late packets, "
+               "too late packets, "
+               "resend requests, "
+               "min DAC queue size, "
+               "min buffer occupancy, "
+               "max buffer occupancy");
+      }
+    } else {
+      inform("total packets, "
+             "missing packets, "
+             "late packets, "
+             "too late packets, "
+             "resend requests, "
+             "min buffer occupancy, "
+             "max buffer occupancy");
+    }
+  }
+
   uint64_t tens_of_seconds = 0;
   while (!please_stop) {
     abuf_t *inframe = buffer_get_frame();
@@ -1354,31 +1390,66 @@ static void *player_thread_func(void *arg) {
             if (at_least_one_frame_seen) {
             	if ((config.output->delay)) {
                 if (config.no_sync==0) {
-                  inform("Sync error: %.1f (frames); net correction: %.1f (ppm); corrections: %.1f "
-                         "(ppm); total packets %d; missing packets %llu; late packets %llu; too late packets %llu; "
-                         "resend requests %llu; min DAC queue size %lli, min and max buffer occupancy "
-                         "%d and %d.",
-                         moving_average_sync_error, moving_average_correction * 1000000 / 352,
-                         moving_average_insertions_plus_deletions * 1000000 / 352, play_number, missing_packets,
-                         late_packets, too_late_packets, resend_requests, minimum_dac_queue_size,
-                         minimum_buffer_occupancy, maximum_buffer_occupancy);
+                  inform("%*.1f,"  /* Sync error inf frames */
+                         "%*.1f,"  /* net correction in ppm */
+                         "%*.1f,"  /* corrections in ppm */
+                         "%*d,"    /* total packets */
+                         "%*llu,"  /* missing packets */
+                         "%*llu,"  /* late packets */
+                         "%*llu,"  /* too late packets */
+                         "%*llu,"  /* resend requests */
+                         "%*lli,"  /* min DAC queue size */
+                         "%*d,"    /* min buffer occupancy */
+                         "%*d",    /* max buffer occupancy */
+                         10, moving_average_sync_error,
+                         10, moving_average_correction * 1000000 / 352,
+                         10, moving_average_insertions_plus_deletions * 1000000 / 352,
+                         12, play_number,
+                         7, missing_packets,
+                         7, late_packets,
+                         7, too_late_packets,
+                         7, resend_requests,
+                         7, minimum_dac_queue_size,
+                         5, minimum_buffer_occupancy,
+                         5, maximum_buffer_occupancy);
                 } else {
-                  inform("Synchronisation disabled. Sync error: %.1f (frames); total packets %d; "
-                         "missing packets %llu; late packets %llu; too late packets %llu; "
-                         "resend requests %llu; min DAC queue size %lli, min and max buffer occupancy "
-                         "%d and %d.",
-                         moving_average_sync_error, play_number, missing_packets,
-                         late_packets, too_late_packets, resend_requests, minimum_dac_queue_size,
-                         minimum_buffer_occupancy, maximum_buffer_occupancy);
+                  inform("%*.1f,"  /* Sync error inf frames */
+                         "%*d,"    /* total packets */
+                         "%*llu,"  /* missing packets */
+                         "%*llu,"  /* late packets */
+                         "%*llu,"  /* too late packets */
+                         "%*llu,"  /* resend requests */
+                         "%*lli,"  /* min DAC queue size */
+                         "%*d,"    /* min buffer occupancy */
+                         "%*d",    /* max buffer occupancy */
+                         10, moving_average_sync_error,
+                         12, play_number,
+                         7, missing_packets,
+                         7, late_packets,
+                         7, too_late_packets,
+                         7, resend_requests,
+                         7, minimum_dac_queue_size,
+                         5, minimum_buffer_occupancy,
+                         5, maximum_buffer_occupancy);
                 } 
               } else {
-								inform("Synchronisation disabled. Total packets %d; missing packets %llu; late packets %llu; too late packets %llu; "
-										 "resend requests %llu; min and max buffer occupancy "
-										 "%d and %d.",
-										 play_number, missing_packets,
-										 late_packets, too_late_packets, resend_requests,
-										 minimum_buffer_occupancy, maximum_buffer_occupancy);
-							}            
+                inform("%*.1f,"  /* Sync error inf frames */
+                       "%*d,"    /* total packets */
+                       "%*llu,"  /* missing packets */
+                       "%*llu,"  /* late packets */
+                       "%*llu,"  /* too late packets */
+                       "%*llu,"  /* resend requests */
+                       "%*d,"    /* min buffer occupancy */
+                       "%*d",    /* max buffer occupancy */
+                       10, moving_average_sync_error,
+                       12, play_number,
+                       7, missing_packets,
+                       7, late_packets,
+                       7, too_late_packets,
+                       7, resend_requests,
+                       5, minimum_buffer_occupancy,
+                       5, maximum_buffer_occupancy);
+              }
             } else {
               inform("No frames received in the last sampling interval.");
             }
