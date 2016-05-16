@@ -1,3 +1,9 @@
+Version 2.8.3.6 – Development Version
+----
+**Bug fix**
+
+An IPv6 link-local connection issue was fixed. A bug in the networking software would not allow an IPv6 link-local connection to be made from a client if Shairport Sync was running on a device with more than one network interface. The solution was to take account of the `config_id` information.
+
 Version 2.8.3.5 – Development Version
 ----
 **Enhancement**
