@@ -88,6 +88,7 @@ static pthread_mutex_t reference_counter_lock = PTHREAD_MUTEX_INITIALIZER;
 
 typedef struct {
   int fd;
+  int authorized; // set is a password is required and has been supplied
   stream_cfg stream;
   SOCKADDR remote,local;
   int stop;
@@ -388,10 +389,10 @@ static char *msg_get_header(rtsp_message *msg, char *name) {
   return NULL;
 }
 
-static void msg_print_debug_headers(rtsp_message *msg) {
+static void debug_print_msg_headers(int level, rtsp_message *msg) {
   int i;
   for (i = 0; i < msg->nheaders; i++) {
-    debug(1, "  Type: \"%s\", content: \"%s\"", msg->name[i], msg->value[i]);
+    debug(level, "  Type: \"%s\", content: \"%s\"", msg->name[i], msg->value[i]);
   }
 }
 
@@ -501,7 +502,7 @@ rtsp_read_request(rtsp_conn_info *conn, rtsp_message **the_packet) {
     
     if (nread==0) {
       // a blocking read that returns zero means eof -- implies connection closed
-      debug(2, "RTSP connection closed.");
+      debug(3, "RTSP connection closed.");
       reply = rtsp_read_request_response_shutdown_requested;
       goto shutdown;
     }
@@ -606,7 +607,7 @@ static void msg_write_response(int fd, rtsp_message *resp) {
   int i, n;
 
   n = snprintf(p, pktfree, "RTSP/1.0 %d %s\r\n", resp->respcode,
-               resp->respcode == 200 ? "OK" : "Error");
+               resp->respcode == 200 ? "OK" : "Unauthorized");
   // debug(1, "sending response: %s", pkt);
   pktfree -= n;
   p += n;
@@ -1279,7 +1280,7 @@ static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req,
   // if (!req->contentlength)
   //    debug(1, "received empty SET_PARAMETER request.");
 
-  // msg_print_debug_headers(req);
+  // debug_print_msg_headers(1,req);
 
   char *ct = msg_get_header(req, "Content-Type");
 
@@ -1658,7 +1659,7 @@ static int rtsp_auth(char **nonce, rtsp_message *req, rtsp_message *resp) {
   int i;
   unsigned char buf[33];
   for (i = 0; i < 16; i++)
-    sprintf((char *)buf + 2 * i, "%02X", digest_urp[i]);
+    sprintf((char *)buf + 2 * i, "%02x", digest_urp[i]);
 
 #ifdef HAVE_LIBSSL
   MD5_Init(&ctx);
@@ -1667,7 +1668,7 @@ static int rtsp_auth(char **nonce, rtsp_message *req, rtsp_message *resp) {
   MD5_Update(&ctx, *nonce, strlen(*nonce));
   MD5_Update(&ctx, ":", 1);
   for (i = 0; i < 16; i++)
-    sprintf((char *)buf + 2 * i, "%02X", digest_mu[i]);
+    sprintf((char *)buf + 2 * i, "%02x", digest_mu[i]);
   MD5_Update(&ctx, buf, 32);
   MD5_Final(digest_total, &ctx);
 #endif
@@ -1679,23 +1680,23 @@ static int rtsp_auth(char **nonce, rtsp_message *req, rtsp_message *resp) {
   md5_update(&tctx, (const unsigned char *)*nonce, strlen(*nonce));
   md5_update(&tctx, (unsigned char *)":", 1);
   for (i = 0; i < 16; i++)
-    sprintf((char *)buf + 2 * i, "%02X", digest_mu[i]);
+    sprintf((char *)buf + 2 * i, "%02x", digest_mu[i]);
   md5_update(&tctx, buf, 32);
   md5_finish(&tctx, digest_total);
 #endif
 
   for (i = 0; i < 16; i++)
-    sprintf((char *)buf + 2 * i, "%02X", digest_total[i]);
+    sprintf((char *)buf + 2 * i, "%02x", digest_total[i]);
 
   if (!strcmp(response, (const char *)buf))
     return 0;
-  warn("auth failed");
+  warn("Password authorization failed.");
 
 authenticate:
   resp->respcode = 401;
   int hdrlen = strlen(*nonce) + 40;
   char *authhdr = malloc(hdrlen);
-  snprintf(authhdr, hdrlen, "Digest realm=\"taco\", nonce=\"%s\"", *nonce);
+  snprintf(authhdr, hdrlen, "Digest realm=\"raop\", nonce=\"%s\"", *nonce);
   msg_add_header(resp, "WWW-Authenticate", authhdr);
   free(authhdr);
   return 1;
@@ -1718,6 +1719,8 @@ static void *rtsp_conversation_thread_func(void *pconn) {
   do {
     reply = rtsp_read_request(conn, &req);
     if (reply == rtsp_read_request_response_ok) {
+			debug(3,"RTSP Packet received of type \"%s\":",req->method),
+			debug_print_msg_headers(3,req);
       resp = msg_init();
       resp->respcode = 400;
 
@@ -1725,29 +1728,26 @@ static void *rtsp_conversation_thread_func(void *pconn) {
       hdr = msg_get_header(req, "CSeq");
       if (hdr)
         msg_add_header(resp, "CSeq", hdr);
-      msg_add_header(resp, "Audio-Jack-Status", "connected; type=analog");
-
-      if (rtsp_auth(&auth_nonce, req, resp))
-        goto respond;
-
-      struct method_handler *mh;
-      int method_selected = 0;
-      for (mh = method_handlers; mh->method; mh++) {
-        if (!strcmp(mh->method, req->method)) {
-          // debug(1,"RTSP Packet received of type \"%s\":",mh->method),
-          // msg_print_debug_headers(req);
-          method_selected = 1;
-          mh->handler(conn, req, resp);
-          // debug(1,"RTSP Response:");
-          // msg_print_debug_headers(resp);
-          break;
-        }
-      }
-      if (method_selected == 0)
-        debug(1, "Unrecognised and unhandled rtsp request \"%s\".",
-              req->method);
-
-    respond:
+//      msg_add_header(resp, "Audio-Jack-Status", "connected; type=analog");
+      msg_add_header(resp, "Server", "AirTunes/105.1");
+      
+      if ((conn->authorized==1) || (rtsp_auth(&auth_nonce, req, resp))==0) {
+				conn->authorized=1; // it must have been authorized or didn't need a password
+				struct method_handler *mh;
+				int method_selected = 0;
+				for (mh = method_handlers; mh->method; mh++) {
+					if (!strcmp(mh->method, req->method)) {
+						method_selected = 1;
+						mh->handler(conn, req, resp);
+						break;
+					}
+				}
+				if (method_selected == 0)
+					debug(1, "Unrecognised and unhandled rtsp request \"%s\".",
+								req->method);
+			}
+			debug(3,"RTSP Response:");
+			debug_print_msg_headers(3,resp);
       msg_write_response(conn->fd, resp);
       msg_free(req);
       msg_free(resp);
@@ -1969,6 +1969,7 @@ void rtsp_listen_loop(void) {
 
       conn->thread = rtsp_conversation_thread;
       conn->stop = 0;
+      conn->authorized = 0;
       conn->running = 1;
       track_thread(conn);
     }
