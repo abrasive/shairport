@@ -1,3 +1,11 @@
+Version 2.8.3.7 – Development Version
+----
+**Enhancement**
+
+Shairport Sync now works with AllStream/Streambels on Android with password proection. (As with all Android clients, you should set the `drift` to something large, like 500 or 1000, as the timetkeeping of thes clients isn't as accurate as that of iTunes, etc.)
+
+The text strings advertising the capabilities of Shairport Sync over Bonjour/Zeroconf/Avahi have been changed and now more closely match those of an AirPort Express Base Station (First Generation). 
+
 Version 2.8.3.6 – Development Version
 ----
 **Bug fix**
