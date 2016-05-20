@@ -1024,6 +1024,7 @@ int main(int argc, char **argv) {
 #ifdef CONFIG_METADATA
   metadata_init(); // create the metadata pipe if necessary
 #endif
+  daemon_log(LOG_INFO,"Successful Startup");
   rtsp_listen_loop();
 
   // should not reach this...
