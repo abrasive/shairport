@@ -1,3 +1,13 @@
+Version 2.8.3.8 – Development Version
+----
+**Enhancements**
+
+* Substitutions can now be made in the service name, i.e. the name that appears in iTunes, etc. The following substitutions can be used in the service name you specify: `%h` for the hostname, `%H` for the hostname with the first letter capitalised, `%v` for the version number and `%V` for the full version string. Maximum length is 50 characters.
+
+* The new default service name is simply the hostname, with its first character capitalised.
+
+* An existing `shairport-sync.service` file will not be overwritten by `sudo make install`. 
+
 Version 2.8.3.7 – Development Version
 ----
 **Enhancements**
