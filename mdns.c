@@ -57,15 +57,15 @@ static mdns_backend *mdns_backends[] = {
     NULL};
 
 void mdns_register(void) {
-  char *mdns_apname = alloca(strlen(config.apname) + 14);
-  char *p = mdns_apname;
+  char *mdns_service_name = alloca(strlen(config.service_name) + 14);
+  char *p = mdns_service_name;
   int i;
   for (i = 0; i < 6; i++) {
     sprintf(p, "%02X", config.hw_addr[i]);
     p += 2;
   }
   *p++ = '@';
-  strcpy(p, config.apname);
+  strcpy(p, config.service_name);
 
   mdns_backend **b = NULL;
 
@@ -73,7 +73,7 @@ void mdns_register(void) {
     for (b = mdns_backends; *b; b++) {
       if (strcmp((*b)->name, config.mdns_name) != 0) // Not the one we are looking for
         continue;
-      int error = (*b)->mdns_register(mdns_apname, config.port);
+      int error = (*b)->mdns_register(mdns_service_name, config.port);
       if (error >= 0) {
         config.mdns = *b;
       }
@@ -84,7 +84,7 @@ void mdns_register(void) {
       warn("%s mDNS backend not found");
   } else {
     for (b = mdns_backends; *b; b++) {
-      int error = (*b)->mdns_register(mdns_apname, config.port);
+      int error = (*b)->mdns_register(mdns_service_name, config.port);
       if (error >= 0) {
         config.mdns = *b;
         break;
