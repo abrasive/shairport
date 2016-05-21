@@ -51,7 +51,7 @@ enum playback_mode_type {
 typedef struct {
   config_t *cfg;
   char *password;
-  char *apname;
+  char *service_name; // the name for the shairport service, e.g. "Shairport Sync Version %v running on host %h"
 #ifdef CONFIG_METADATA
   int metadata_enabled;
   char *metadata_pipename;
@@ -109,6 +109,9 @@ int get_requested_connection_state_to_output();
 void set_requested_connection_state_to_output(int v);
 
 ssize_t non_blocking_write(int fd, const void *buf, size_t count); // used in a few places
+
+/* from http://coding.debuntu.org/c-implementing-str_replace-replace-all-occurrences-substring#comment-722 */
+char *str_replace ( const char *string, const char *substr, const char *replacement );
 
 int debuglev;
 void die(char *format, ...);
