@@ -62,5 +62,5 @@ if INSTALL_SYSTEMV
 endif
 if INSTALL_SYSTEMD
 	[ -e $(DESTDIR)$(systemdsystemunitdir) ] || mkdir -p $(DESTDIR)$(systemdsystemunitdir)
-	cp scripts/shairport-sync.service $(DESTDIR)$(systemdsystemunitdir)
+	[ -f $(DESTDIR)$(systemdsystemunitdir)/shairport-sync.service ] || cp scripts/shairport-sync.service $(DESTDIR)$(systemdsystemunitdir)
 endif
