@@ -763,7 +763,9 @@ int main(int argc, char **argv) {
   //snprintf(config.service_name, 20 + 100, "Shairport Sync on %s", hostname);
   set_requested_connection_state_to_output(1); // we expect to be able to connect to the output device
   config.audio_backend_buffer_desired_length = 6615; // 0.15 seconds.
+#ifdef CONFIG_METADATA
   config.metadata_pipe_timeout = 5000; //milliseconds
+#endif
   config.udp_port_base = 6001;
   config.udp_port_range = 100;
 
