@@ -531,10 +531,8 @@ ssize_t non_blocking_write(int fd, const void *buf, size_t count) {
     } else { //rc > 0, implying it might be ready
     	size_t bytes_written = write(fd,ibuf,bytes_remaining);
     	if (bytes_written==-1) {
-    		if (errno==EINTR)
-    			debug(1,"non-blocking write interrupted by a signal interrupt");
-    		if (!((errno == EAGAIN) || (errno == EWOULDBLOCK)))
-    			rc = -1;
+    	  debug(1,"Error %d in non_blocking_write: \"%s\".",errno,strerror(errno));
+    		rc = -1;
     	} else {
     		ibuf += bytes_written;
     		bytes_remaining -= bytes_written;
@@ -542,7 +540,7 @@ ssize_t non_blocking_write(int fd, const void *buf, size_t count) {
     }
 	}
 	if (rc==0)
-		return bytes_remaining;
+		return count-bytes_remaining; // this is just to mimic a normal write/3.
 	else
 		return rc;
   //  return write(fd,buf,count);
