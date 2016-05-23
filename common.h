@@ -54,6 +54,7 @@ typedef struct {
   char *service_name; // the name for the shairport service, e.g. "Shairport Sync Version %v running on host %h"
 #ifdef CONFIG_METADATA
   int metadata_enabled;
+  int metadata_pipe_timeout; // in milliseconds
   char *metadata_pipename;
   char *metadata_sockaddr;
   int metadata_sockport;
@@ -97,9 +98,8 @@ typedef struct {
   char *regtype; // The regtype is the service type followed by the protocol, separated by a dot, by default “_raop._tcp.”.
   long audio_backend_buffer_desired_length; // this will be the desired number of frames in the
                                             // audio backend buffer -- the DAC buffer for ALSA
-  long audio_backend_latency_offset; // this will be the offset to compensate for any fixed latency
+  long audio_backend_latency_offset; // this will be the offset to compensate for any fixed latency there might be in the audio path
   uint32_t volume_range_db; // the range, in dB, from max dB to min dB. Zero means use the mixer's native range.
-                                     // there might be in the audio
 } shairport_cfg;
 
 // true if Shairport Sync is supposed to be sending output to the output device, false otherwise

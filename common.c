@@ -514,7 +514,7 @@ uint64_t get_absolute_time_in_fp() {
 }
 
 ssize_t non_blocking_write(int fd, const void *buf, size_t count) {
-	void *ibuf = buf;
+	void *ibuf = (void *)buf;
 	size_t bytes_remaining = count;
 	int rc = 0;
   struct pollfd ufds[1];
@@ -522,11 +522,11 @@ ssize_t non_blocking_write(int fd, const void *buf, size_t count) {
 		// check that we can do some writing
 		ufds[0].fd = fd;
     ufds[0].events = POLLOUT;
-    rc = poll(ufds, 1, 5000);
+    rc = poll(ufds, 1, config.metadata_pipe_timeout);
     if (rc < 0) {
       debug(1, "error waiting for pipe to become ready for writing...");
     } else if (rc == 0) {
-      debug(1, "timeout waiting for pipe to become ready for writing");
+      warn("timeout waiting for pipe to become ready for writing");
       rc = -2;
     } else { //rc > 0, implying it might be ready
     	size_t bytes_written = write(fd,ibuf,bytes_remaining);

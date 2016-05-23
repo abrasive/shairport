@@ -490,6 +490,15 @@ int parse_options(int argc, char **argv) {
       if (config_lookup_int(config.cfg, "metadata.socket_msglength", &value)) {
         config.metadata_sockmsglength = value < 500 ? 500 : value > 65000 ? 65000 : value;
       }
+      if (config_lookup_int(config.cfg, "metadata.pipe_timeout", &value)) {
+      
+        if ((value < 1) || (value > 150000))
+          die("Invalid timeout range  \"%sd\". It should be in the range 1 to 150,000 milliseconds.",
+              value);
+        else
+          config.metadata_pipe_timeout = value;
+      }
+
   #endif
 
       if (config_lookup_string(config.cfg, "sessioncontrol.run_this_before_play_begins", &str)) {
@@ -754,6 +763,7 @@ int main(int argc, char **argv) {
   //snprintf(config.service_name, 20 + 100, "Shairport Sync on %s", hostname);
   set_requested_connection_state_to_output(1); // we expect to be able to connect to the output device
   config.audio_backend_buffer_desired_length = 6615; // 0.15 seconds.
+  config.metadata_pipe_timeout = 5000; //milliseconds
   config.udp_port_base = 6001;
   config.udp_port_range = 100;
 
