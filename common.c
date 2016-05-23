@@ -514,26 +514,35 @@ uint64_t get_absolute_time_in_fp() {
 }
 
 ssize_t non_blocking_write(int fd, const void *buf, size_t count) {
-  // debug(1,"writing %u to pipe...",count);
-  // we are assuming that the count is always smaller than the FIFO's buffer
+	void *ibuf = buf;
+	size_t bytes_remaining = count;
+	int rc = 0;
   struct pollfd ufds[1];
-  ssize_t reply;
-  do {
-    ufds[0].fd = fd;
+	while ((bytes_remaining>0) && (rc==0)) {
+		// check that we can do some writing
+		ufds[0].fd = fd;
     ufds[0].events = POLLOUT;
-    int rv = poll(ufds, 1, 5000);
-    if (rv == -1)
-      debug(1, "error waiting for pipe to unblock...");
-    if (rv == 0)
-      debug(1, "timeout waiting for pipe to unblock");
-    reply = write(fd, buf, count);
-    if ((reply == -1) && ((errno == EAGAIN) || (errno == EWOULDBLOCK)))
-      debug(1, "writing to pipe will block...");
-    //    else
-    //      debug(1,"writing %u to pipe done...",reply);
-  } while ((reply == -1) && ((errno == EAGAIN) || (errno == EWOULDBLOCK)));
-  return reply;
-
+    rc = poll(ufds, 1, 5000);
+    if (rc < 0) {
+      debug(1, "error waiting for pipe to become ready for writing...");
+    } else if (rc == 0) {
+      debug(1, "timeout waiting for pipe to become ready for writing");
+      rc = -2;
+    } else { //rc > 0, implying it might be ready
+    	size_t bytes_written = write(fd,ibuf,bytes_remaining);
+    	if (bytes_written==-1) {
+    		if (!((errno == EAGAIN) || (errno == EWOULDBLOCK)))
+    			rc = -1;
+    	} else {
+    		ibuf += bytes_written;
+    		bytes_remaining -= bytes_written;
+    	}    		
+    }
+	}
+	if (rc==0)
+		return bytes_remaining;
+	else
+		return rc;
   //  return write(fd,buf,count);
 }
 
