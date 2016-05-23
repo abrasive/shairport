@@ -513,6 +513,7 @@ uint64_t get_absolute_time_in_fp() {
   return time_now_fp;
 }
 
+#ifdef CONFIG_METADATA
 ssize_t non_blocking_write(int fd, const void *buf, size_t count) {
 	void *ibuf = (void *)buf;
 	size_t bytes_remaining = count;
@@ -547,6 +548,7 @@ ssize_t non_blocking_write(int fd, const void *buf, size_t count) {
 		return rc;
   //  return write(fd,buf,count);
 }
+#endif
 
 /* from http://coding.debuntu.org/c-implementing-str_replace-replace-all-occurrences-substring#comment-722 */
 
