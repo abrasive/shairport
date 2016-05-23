@@ -1119,13 +1119,17 @@ void metadata_process(uint32_t type, uint32_t code, char *data,
            "<item><type>%x</type><code>%x</code><length>%u</length>", type,
            code, length);
   ret = non_blocking_write(fd, thestring, strlen(thestring));
-  if (ret < 1)
+  if (ret < 0) {
+    debug(1,"metadata_process error %d exit 1",ret);
     return;
+  }
   if ((data != NULL) && (length > 0)) {
     snprintf(thestring, 1024, "\n<data encoding=\"base64\">\n");
     ret = non_blocking_write(fd, thestring, strlen(thestring));
-    if (ret < 1) // no reader
+    if (ret < 0) {
+      debug(1,"metadata_process error %d exit 2",ret);
       return;
+    }
     // here, we write the data in base64 form using our nice base64 encoder
     // but, we break it into lines of 76 output characters, except for the last
     // one.
@@ -1146,20 +1150,26 @@ void metadata_process(uint32_t type, uint32_t code, char *data,
       // debug(1,"Remaining count: %d ret: %d, outbuf_size:
       // %d.",remaining_count,ret,outbuf_size);
       ret = non_blocking_write(fd, outbuf, outbuf_size);
-      if (ret < 0)
+      if (ret < 0) {
+        debug(1,"metadata_process error %d exit 3",ret);
         return;
+      }
       remaining_data += towrite_count;
       remaining_count -= towrite_count;
     }
     snprintf(thestring, 1024, "</data>");
     ret = non_blocking_write(fd, thestring, strlen(thestring));
-    if (ret < 1) // no reader
+    if (ret < 0) {
+      debug(1,"metadata_process error %d exit 4",ret);
       return;
+    }
   }
   snprintf(thestring, 1024, "</item>\n");
   ret = non_blocking_write(fd, thestring, strlen(thestring));
-  if (ret < 1) // no reader
+  if (ret < 0) {
+    debug(1,"metadata_process error %d exit 5",ret);
     return;
+  }
 }
 
 void *metadata_thread_function(void *ignore) {
