@@ -1,3 +1,13 @@
+Version 2.8.3.11 – Development Version
+----
+**Enhancement**
+
+It is now possible to set the amount of time Shiarport Sync will wait for the metadata pipe to become ready to write to. The setting is `pipe_timeout` in the `metadata` section. Default is 5,000 milliseconds.
+
+**Bug Fix**
+
+Fix some problems with the non-blocking write function used to write to the metadata pipe.
+
 Version 2.8.3.10 – Development Version
 ----
 **Bug Fix**
