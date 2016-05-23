@@ -12,7 +12,7 @@ Version 2.8.3.10 – Development Version
 ----
 **Bug Fix**
 
-* Restored metadata feed lost in 2.8.3.9.
+* Restored metadata feed lost in 2.8.3.7.
 
 Version 2.8.3.9 – Development Version
 ----
