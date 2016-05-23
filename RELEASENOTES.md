@@ -2,7 +2,7 @@ Version 2.8.3.11 – Development Version
 ----
 **Bug Fix**
 
-Fix some problems with the non-blocking write function used to write to the metadata pipe.
+Fixed some problems with the non-blocking write function used to write to the metadata pipe.
 
 **Enhancement**
 
