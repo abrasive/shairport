@@ -1,3 +1,11 @@
+Version 2.8.3.12 – Development Version
+----
+This is a candidate for stable release 2.8.4
+
+**Changes**
+
+Some debug messages have been quietened.
+
 Version 2.8.3.11 – Development Version
 ----
 **Bug Fix**
