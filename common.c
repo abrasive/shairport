@@ -525,14 +525,14 @@ ssize_t non_blocking_write(int fd, const void *buf, size_t count) {
     ufds[0].events = POLLOUT;
     rc = poll(ufds, 1, config.metadata_pipe_timeout);
     if (rc < 0) {
-      debug(1, "non-blocking write error waiting for pipe to become ready for writing...");
+      // debug(1, "non-blocking write error waiting for pipe to become ready for writing...");
     } else if (rc == 0) {
-      warn("non-blocking write timeout waiting for pipe to become ready for writing");
+      // warn("non-blocking write timeout waiting for pipe to become ready for writing");
       rc = -2;
     } else { //rc > 0, implying it might be ready
     	size_t bytes_written = write(fd,ibuf,bytes_remaining);
     	if (bytes_written==-1) {
-    	  debug(1,"Error %d in non_blocking_write: \"%s\".",errno,strerror(errno));
+    	  // debug(1,"Error %d in non_blocking_write: \"%s\".",errno,strerror(errno));
     		rc = -1;
     	} else {
     		ibuf += bytes_written;

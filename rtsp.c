@@ -888,8 +888,8 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn,
 #ifdef CONFIG_METADATA
         if (!strncmp(cp, "progress: ", 10)) {
       char *progress = cp + 10;
-      debug(2, "progress: \"%s\"\n",
-            progress); // rtpstampstart/rtpstampnow/rtpstampend 44100 per second
+      //debug(2, "progress: \"%s\"\n",
+      //      progress); // rtpstampstart/rtpstampnow/rtpstampend 44100 per second
       send_ssnc_metadata('prgr', strdup(progress), strlen(progress), 1);
     } else
 #endif
@@ -1092,8 +1092,7 @@ static void metadata_close(void) {
 
 void metadata_process(uint32_t type, uint32_t code, char *data,
                       uint32_t length) {
-  debug(2, "Process metadata with type %x, code %x and length %u.", type, code,
-        length);
+  // debug(2, "Process metadata with type %x, code %x and length %u.", type, code, length);
   int ret;
 
   if (metadata_sock >= 0 && length < config.metadata_sockmsglength - 8) {
@@ -1120,14 +1119,14 @@ void metadata_process(uint32_t type, uint32_t code, char *data,
            code, length);
   ret = non_blocking_write(fd, thestring, strlen(thestring));
   if (ret < 0) {
-    debug(1,"metadata_process error %d exit 1",ret);
+    // debug(1,"metadata_process error %d exit 1",ret);
     return;
   }
   if ((data != NULL) && (length > 0)) {
     snprintf(thestring, 1024, "\n<data encoding=\"base64\">\n");
     ret = non_blocking_write(fd, thestring, strlen(thestring));
     if (ret < 0) {
-      debug(1,"metadata_process error %d exit 2",ret);
+      // debug(1,"metadata_process error %d exit 2",ret);
       return;
     }
     // here, we write the data in base64 form using our nice base64 encoder
@@ -1151,7 +1150,7 @@ void metadata_process(uint32_t type, uint32_t code, char *data,
       // %d.",remaining_count,ret,outbuf_size);
       ret = non_blocking_write(fd, outbuf, outbuf_size);
       if (ret < 0) {
-        debug(1,"metadata_process error %d exit 3",ret);
+        // debug(1,"metadata_process error %d exit 3",ret);
         return;
       }
       remaining_data += towrite_count;
@@ -1160,14 +1159,14 @@ void metadata_process(uint32_t type, uint32_t code, char *data,
     snprintf(thestring, 1024, "</data>");
     ret = non_blocking_write(fd, thestring, strlen(thestring));
     if (ret < 0) {
-      debug(1,"metadata_process error %d exit 4",ret);
+      // debug(1,"metadata_process error %d exit 4",ret);
       return;
     }
   }
   snprintf(thestring, 1024, "</item>\n");
   ret = non_blocking_write(fd, thestring, strlen(thestring));
   if (ret < 0) {
-    debug(1,"metadata_process error %d exit 5",ret);
+    // debug(1,"metadata_process error %d exit 5",ret);
     return;
   }
 }
@@ -1295,7 +1294,7 @@ static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req,
   char *ct = msg_get_header(req, "Content-Type");
 
   if (ct) {
-    debug(2, "SET_PARAMETER Content-Type:\"%s\".", ct);
+    // debug(2, "SET_PARAMETER Content-Type:\"%s\".", ct);
 
 #ifdef CONFIG_METADATA
     // It seems that the rtptime of the message is used as a kind of an ID that
@@ -1369,7 +1368,7 @@ static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req,
     } else
 #endif
         if (!strncmp(ct, "text/parameters", 15)) {
-      debug(2, "received parameters in SET_PARAMETER request.");
+      // debug(2, "received parameters in SET_PARAMETER request.");
       handle_set_parameter_parameter(conn, req,
                                      resp); // this could be volume or progress
     } else {
