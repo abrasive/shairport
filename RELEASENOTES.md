@@ -8,13 +8,13 @@ The following is a summary of the bug fixes and enhancements since version 2.8.3
 
 **Bug Fixes**
 
-* An IPv6 bug was fixed; a bug in the networking software would not allow an IPv6 link-local connection to be made from a client if Shairport Sync was running on a device with more than one network interface. The solution was to take account of the `config_id` information.
+* An IPv6 bug has been fixed; a bug in the networking software would not allow an IPv6 link-local connection to be made from a client if Shairport Sync was running on a device with more than one network interface. The solution was to take account of the `config_id` information.
 
 * Checks have been added for empty or NULL audio buffers that were causing assertion violations and subsequent abmormal program termination.
 
-* Fixed some problems with the non-blocking write function used to write metadata.
+* Some problems have been fixed with the non-blocking write function used to write metadata.
 
-* Fixed a bug in the volume control transfer function, thanks to [Jörg Krause](https://github.com/joerg-krause).
+* A bug in the volume control transfer function has been fixed, thanks to [Jörg Krause](https://github.com/joerg-krause).
 
 **Enhancements**
 
@@ -26,7 +26,7 @@ The following is a summary of the bug fixes and enhancements since version 2.8.3
 
 * A `playback_mode` setting has been added to allow the selection of `stereo` (default) or `mono` playback -- thanks to [faceless2](https://github.com/faceless2).
 
-* The new default service name is simply the device's `hostname`, with its first character capitalised (ASCII only).
+* The new default service name is now the device's `hostname`, with its first character capitalised (ASCII only).
 
 * Substitutions can now be made in the service name. The following substitutions can be used in the service name: `%h` for the `hostname`, `%H` for the `hostname` with the first letter capitalised, `%v` for the version number and `%V` for the full version string. Maximum length is 50 characters.
 
@@ -39,7 +39,7 @@ The following is a summary of the bug fixes and enhancements since version 2.8.3
 * Metadata can now be provided via UDP -- thanks to [faceless2](https://github.com/faceless2).
 
 * Statistics output is more machine readable -- thanks to [Jörg Krause](https://github.com/joerg-krause)
-* Update the `shairport-sync.spec` file for compatability with building Debian packages using `checkinstall` -- thanks to [vru1](https://github.com/vru1).
+* The `shairport-sync.spec` file has been updated for compatability with building Debian packages using `checkinstall` -- thanks to [vru1](https://github.com/vru1).
 
 Version 2.8.3.11 – Development Version
 ----
