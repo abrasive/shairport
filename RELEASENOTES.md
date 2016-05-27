@@ -2,21 +2,33 @@ Version 2.8.3.12 – Development Version
 ----
 This is a candidate for stable release 2.8.4.
 
-This release includes minor enhancements and important bug fixes and is recommended for all users. No settings need to be changed. For advice on updating an installatioon you built yourself, visit the [UPDATING.md](https://github.com/mikebrady/shairport-sync/blob/master/UPDATING.md) page.
+This release includes bug fixes and minor enhancements and is recommended for all users. No settings need to be changed. For advice on updating an installatioon you built yourself, please visit [UPDATING.md](https://github.com/mikebrady/shairport-sync/blob/master/UPDATING.md).
 
-The following is a summary of the enhancements and bug fixes since version 2.8.3.
+The following is a summary of the bug fixes and enhancements since version 2.8.3.
+
+**Bug Fixes**
+
+* An IPv6 bug was fixed; a bug in the networking software would not allow an IPv6 link-local connection to be made from a client if Shairport Sync was running on a device with more than one network interface. The solution was to take account of the `config_id` information.
+
+* Checks have been added for empty or NULL audio buffers that were causing assertion violations and subsequent abmormal program termination.
+
+* Fixed some problems with the non-blocking write function used to write metadata.
+
+* Fixed a bug in the volume control transfer function, thanks to [Jörg Krause](https://github.com/joerg-krause).
 
 **Enhancements**
 
+* Shairport Sync now works with [AllConnect/Streambels](http://allconnectapp.com) on Android with password protection. (As with all Android clients, you should set the `drift` to something large, like 500 or 1,000, as the timekeeping of these clients isn't as accurate as that of iTunes, etc.)
+
+* The networking subsystem has been modified to always use the same IP number during a session. Background: the computer Shairport Sync is running on can have many IP numbers active at the same time – various IPv6 numbers and also various IPv4 numbers. During a play session, when Shairport Sync has to create connections back to the source, it would use an automatically-assigned IP number for itself, but that number might not be same as the the number used earlier in the session. From now on, it will always use the same IP number it used when the connection was first established. Thanks to [ejurgensen](https://github.com/ejurgensen) for help with this.
+
 * Experimental support has been added for a softvol plugin, thanks to the work of [Jörg Krause](https://github.com/joerg-krause) -- see [#293](https://github.com/mikebrady/shairport-sync/pull/293).
 
-* A `playback_mode` setting has been added to allow the selection of `stereo` (default) or `mono` playback.
+* A `playback_mode` setting has been added to allow the selection of `stereo` (default) or `mono` playback -- thanks to [faceless2](https://github.com/faceless2).
 
 * The new default service name is simply the device's `hostname`, with its first character capitalised (ASCII only).
 
 * Substitutions can now be made in the service name. The following substitutions can be used in the service name: `%h` for the `hostname`, `%H` for the `hostname` with the first letter capitalised, `%v` for the version number and `%V` for the full version string. Maximum length is 50 characters.
-
-* Shairport Sync now works with [AllConnect/Streambels](http://allconnectapp.com) on Android with password protection. (As with all Android clients, you should set the `drift` to something large, like 500 or 1,000, as the timekeeping of these clients isn't as accurate as that of iTunes, etc.)
 
 * An existing `shairport-sync.service` file will not be overwritten by `sudo make install`. 
 
@@ -24,17 +36,10 @@ The following is a summary of the enhancements and bug fixes since version 2.8.3
 
 * It is now possible to set the amount of time to wait for the metadata pipe to become ready for writing. The setting is called `pipe_timeout` in the `metadata` section. Default is 5,000 milliseconds.
 
-* Metadata can now be provided via UDP.
+* Metadata can now be provided via UDP -- thanks to [faceless2](https://github.com/faceless2).
 
-**Bug Fixes**
-
-* Fixed some problems with the non-blocking write function used to write metadata.
-
-* An IPv6 link-local connection issue was fixed. A bug in the networking software would not allow an IPv6 link-local connection to be made from a client if Shairport Sync was running on a device with more than one network interface. The solution was to take account of the `config_id` information.
-
-* The networking subsystem has been modified to always use the same IP number during a session. Background: the computer Shairport Sync is running on can have many IP numbers active at the same time – various IPv6 numbers and also various IPv4 numbers. During a play session, when Shairport Sync has to create connections back to the source, it would use an automatically-assigned IP number for itself, but that number might not be same as the the number used earlier in the session. From now on, it will always use the same IP number it used when the connection was first established. Thanks to [ejurgensen](https://github.com/ejurgensen) for help with this.
-
-* Checks have been added for empty or NULL audio buffers that were causing assertion violations and subsequent abmormal program termination.
+* Statistics output is more machine readable -- thanks to [Jörg Krause](https://github.com/joerg-krause)
+* Update the `shairport-sync.spec` file for compatability with building Debian packages using `checkinstall` -- thanks to [vru1](https://github.com/vru1).
 
 Version 2.8.3.11 – Development Version
 ----
