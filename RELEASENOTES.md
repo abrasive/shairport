@@ -2,15 +2,15 @@ Version 2.8.3.12 – Development Version
 ----
 This is a candidate for stable release 2.8.4.
 
-This release includes bug fixes and minor enhancements and is recommended for all users. No settings need to be changed. For advice on updating an installatioon you built yourself, please visit [UPDATING](https://github.com/mikebrady/shairport-sync/blob/master/UPDATING.md).
+This release includes important bug fixes and minor enhancements and is recommended for all users. No settings need to be changed. For advice on updating an installatioon you built yourself, please visit [UPDATING](https://github.com/mikebrady/shairport-sync/blob/master/UPDATING.md).
 
 The following is a summary of the bug fixes and enhancements since version 2.8.3.
 
 **Bug Fixes**
 
-* An IPv6 bug has been fixed; a bug in the networking software would not allow an IPv6 link-local connection to be made from a client if Shairport Sync was running on a device with more than one network interface. The solution was to take account of the `config_id` information.
-
 * Checks have been added for empty or NULL audio buffers that were causing assertion violations and subsequent abnormal program termination.
+
+* An IPv6 bug has been fixed — a bug in the networking software would not allow an IPv6 link-local connection to be made from a client if Shairport Sync was running on a device with more than one network interface. The solution was to take account of the `config_id` information.
 
 * Some problems have been fixed with the non-blocking write function used to write metadata.
 
