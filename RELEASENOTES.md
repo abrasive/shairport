@@ -10,7 +10,7 @@ The following is a summary of the bug fixes and enhancements since version 2.8.3
 
 * An IPv6 bug has been fixed; a bug in the networking software would not allow an IPv6 link-local connection to be made from a client if Shairport Sync was running on a device with more than one network interface. The solution was to take account of the `config_id` information.
 
-* Checks have been added for empty or NULL audio buffers that were causing assertion violations and subsequent abmormal program termination.
+* Checks have been added for empty or NULL audio buffers that were causing assertion violations and subsequent abnormal program termination.
 
 * Some problems have been fixed with the non-blocking write function used to write metadata.
 
@@ -89,7 +89,7 @@ Experimental support for a softvol plugin, thanks to the work of [Jörg Krause](
 
 **Bug fix**
 
-Add checks for empty or NULL audio buffers that seem to be causing assertion violations and subsequent abmormal program termination.
+Add checks for empty or NULL audio buffers that seem to be causing assertion violations and subsequent abnormal program termination.
 
 Version 2.8.3.4 – Development Version
 ----
