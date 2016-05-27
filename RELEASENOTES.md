@@ -2,7 +2,7 @@ Version 2.8.3.12 – Development Version
 ----
 This is a candidate for stable release 2.8.4.
 
-This release includes bug fixes and minor enhancements and is recommended for all users. No settings need to be changed. For advice on updating an installatioon you built yourself, please visit [UPDATING.md](https://github.com/mikebrady/shairport-sync/blob/master/UPDATING.md).
+This release includes bug fixes and minor enhancements and is recommended for all users. No settings need to be changed. For advice on updating an installatioon you built yourself, please visit [UPDATING](https://github.com/mikebrady/shairport-sync/blob/master/UPDATING.md).
 
 The following is a summary of the bug fixes and enhancements since version 2.8.3.
 
