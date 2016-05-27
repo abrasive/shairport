@@ -3,8 +3,8 @@
 <?xml-stylesheet type="text/xsl" href="xmltoman.xsl" ?>
 
   <!--
-  This man pager source file is part of shairport-sync.
-  Copyright (c) Mike Brady 2014-2015
+  This man page source file is part of shairport-sync.
+  Copyright (c) Mike Brady 2014-2016
 
   All rights reserved.
  
@@ -57,7 +57,6 @@
       <opt>[-- </opt><arg>audio_backend_options</arg><opt>]</opt>
       </cmd>
       <cmd>shairport-sync <opt>-D</opt></cmd>
-      <cmd>shairport-sync <opt>-h</opt></cmd>
       <cmd>shairport-sync <opt>-k</opt></cmd>
       <cmd>shairport-sync <opt>-h</opt></cmd>
       <cmd>shairport-sync <opt>-R</opt></cmd>
@@ -102,7 +101,7 @@
     <p><opt>};</opt></p>
 	  
 	  <p>Most settings have sensible default values, so -- as in the example above -- users generally only need to set (1) the service name, (2) a password (if desired) and
-	  (3) the output device. If the output device has a mixer that can be used for volume control, then (4) the volume control's name should be specificed. It is highly desirable to use the output device's mixer for volume control, if available -- response time is reduced to zero and the processor load is reduced. In the example above, "soxr" interpolation was also enabled.</p>
+	  (3) the output device. If the output device has a mixer that can be used for volume control, then (4) the volume control's name should be specified. It is highly desirable to use the output device's mixer for volume control, if available -- response time is reduced to zero and the processor load is reduced. In the example above, "soxr" interpolation was also enabled.</p>
 	  
 	  <p>A sample configuration file with all possible settings, but with all of them commented out, is installed at <file>/etc/shairport-sync.conf.sample</file>.</p>
 	  
@@ -119,8 +118,13 @@
     <option>
 		<p><opt>name=</opt><arg>"service_name"</arg><opt>;</opt></p>
 		<optdesc>
-		Use this <arg>service_name</arg> to identify this player in iTunes, etc.
-    The default name is "Shairport Sync on &lt;hostname&gt;".
+		<p>Use this <arg>service_name</arg> to identify this player in iTunes, etc.</p>
+		<p>The following substitutions are allowed:
+		<opt>%h</opt> for the computer's hostname,
+		<opt>%H</opt> for the computer's hostname with the first letter capitalised (ASCII only),
+		<opt>%v</opt> for the Shairport Sync version number, e.g. "2.8.4" and
+		<opt>%V</opt> for the Shairport Sync version string, e.g. "2.8.4-OpenSSL-Avahi-ALSA-soxr-metadata".</p>
+    <p>The default is "%H", which is replaced by the hostname with the first letter capitalised.</p>
     </optdesc>
 	  </option>
 	  
@@ -194,17 +198,34 @@
     
     <option>
     <p><opt>volume_range_db=</opt><arg>dBvalue</arg><opt>;</opt></p>
-    <optdesc>Set this <arg>dBvalue</arg> to use just a portion of the full range of attenuation offered by a mixer.
-    For example, if a mixer has a minimum volume of -80 dB and a maximum of +20 dB, you might wish to use only 60 dB of the 100 dB available.
+    <optdesc><p>Use this <arg>dBvalue</arg> to reduce or increase the attenuation range, in decibels, between the minimum and maximum volume.</p>
+    
+    <p>For example, if a mixer has a minimum volume of -80 dB and a maximum of +20 dB, you might wish to use only 60 dB of the 100 dB available.
     This might be because the sound becomes inaudible at the lowest setting and unbearably loud at the highest setting --
-    indeed, many domestic HiFi systmes have a volume copntrol range of just 60 to 80dB.
-    Another potential use might be where the range specified by the mixer does not match the capabilities of the device.
+    indeed, many domestic HiFi systems have a volume control range of just 60 to 80dB.</p>
+    <p>Another potential use might be where the range specified by the mixer does not match the capabilities of the device.
     For example, the Raspberry Pi's DAC that feeds the built-in audio jack claims a range of 106 dB but has a useful range of only about 35dB.
     The setting allows you to specify the maximum range from highest to lowest.
     The range suggested for the Raspberry Pi's built-in audio DAC, which feeds the headphone jack, is 35.
-    Using it in this case gives the volume control a much more useful range of settings.
-    If you omit this setting, the full "native" range of the mixer is used.</optdesc>
+    Using it in this case gives the volume control a much more useful range of settings.</p>
+    <p>As a third example, you can actually extend the range provided by a mixer.
+    Many cheaper DACs have hardware mixers that offer a restricted attenuation range.
+    If you specify a volume range greater than the range of the mixer, software attenuation and hardware attenuation
+    will be combined to give the specified range.</p>
+    <p>If you omit this setting, the full "native" range of the mixer is used.</p></optdesc>
     </option>
+    
+    <option>
+    <p><opt>regtype=</opt><arg>"regTypeString"</arg><opt>;</opt></p>
+    <optdesc>Use this advanced setting to set the service type and transport to be advertised by Zeroconf/Bonjour. Default is "_raop._tcp".</optdesc>
+    </option>
+    
+    <option>
+    <p><opt>playback_mode=</opt><arg>"mode"</arg><opt>;</opt></p>
+    <optdesc>The <arg>mode</arg> can be "stereo" or "mono". Default is "stereo".</optdesc>
+    </option>
+    
+    
     
     <option><p><opt>"ALSA" SETTINGS</opt></p></option>
     <p>These settings are for the ALSA back end, used to communicate with audio output devices in the ALSA system.
@@ -243,6 +264,22 @@
     If too large, the response times when using software volume control (i.e. when not using a mixer control to control volume) become annoying,
     or it may exceed the hardware buffer size.
     It may need to be larger on low-powered machines that are also performing other tasks, such as processing metadata.</optdesc>
+    </option>
+    
+    <option>
+    <p><opt>disable_synchronization=</opt><arg>"no"</arg><opt>;</opt></p>
+    <optdesc>This is an advanced setting and is for debugging only. Set to "yes" to disable synchronization. Default is "no".
+    If you use it to disable synchronisation, then soner or later you'll experience audio glitches due to
+    audio buffer overflow or underflow.
+    </optdesc>
+    </option>
+    <option>
+    <p><opt>period_size=</opt><arg>number</arg><opt>;</opt></p>
+    <optdesc>Use this optional advanced setting to set the alsa period size near to this value.</optdesc>
+    </option>
+    <option>
+    <p><opt>buffer_size=</opt><arg>number</arg><opt>;</opt></p>
+    <optdesc>Use this optional advanced setting to set the alsa buffer size near to this value.</optdesc>
     </option>
     
     <option><p><opt>"PIPE" SETTINGS</opt></p></option>
@@ -360,9 +397,24 @@
     <optdesc>Specify the absolute path name of the pipe through which metadata should be sent The default is <file>/tmp/shairport-sync-metadata</file>".</optdesc>
     </option>
     
+    <option>
+    <p><opt>socket_address=</opt><arg>"hostnameOrIP"</arg><opt>;</opt></p>
+    <optdesc>If <arg>hostnameOrIP</arg> is set to a host name or and IP address, UDP packets containing metadata will be sent to this address.
+    May be a multicast address. "socket-port" must be non-zero and "enabled" must be set to "yes".</optdesc>
+    </option>
+    <option>
+    <p><opt>socket_port=</opt><arg>port</arg><opt>;</opt></p>
+    <optdesc>If <opt>socket_address</opt> is set, use <arg>port</arg> to specify the port to send UDP packets to. Must not be zero.</optdesc>
+    </option>
+    <option>
+    <p><opt>socket_msglength=</opt><arg>65000</arg><opt>;</opt></p>
+    <optdesc>The maximum packet size for any UDP metadata. This must be between 500 or 65000. The default is 500.</optdesc>
+    </option>
+
+    
     <option><p><opt>"SESSIONCONTROL" SETTINGS</opt></p></option>
     <p>shairport-sync can run programs just before it starts to play an audio stream and just after it finishes.
-    You specify them using the sessioncontrol group settings run_this_before_play_begins and run_this_after_play_ends. </p>
+    You specify them using the sessioncontrol group settings run_this_before_play_begins and run_this_after_play_ends.</p>
 
 
     <option>
@@ -399,13 +451,13 @@
      
      <p>Shairport Sync now sets latencies automatically using information supplied by the source, typically either 88,200 or 99,577 frames.</p>
           
-    <p>The following relates to the old scheme of using fixed latencies, which ignores the latency information supplied by the source.
+    <p>The following relates to the old scheme of using fixed latencies, which ignored the latency information supplied by the source.
     There are four default latency settings. One latency matches the latency used by recent versions of
     iTunes when playing audio and another matches the latency
     used by so-called "AirPlay" devices, including iOS devices and iTunes and Quicktime Player when they are playing video.
     A third latency is used when the audio source is forked-daapd. The fourth latency is the default if no other latency is chosen and is used for older versions of iTunes.</p>
     <p>Note: If you are thinking of changing latencies to compensate for a delay in the audio output device, then
-    instead of changing these individual latencies, consider using the <opt>audio_backend_latency_offset</opt> setting in the <opt>alsa</opt> group
+    instead of changing these individual latencies, use the <opt>audio_backend_latency_offset</opt> setting in the <opt>alsa</opt> group
     (or the appropriate other group if you're not outputing through the alsa backend).</p>
 
 
@@ -452,7 +504,13 @@
 		<p><opt>-a </opt><arg>service name</arg><opt> | --name=</opt><arg>service name</arg></p>
 		<optdesc><p>
 		Use this <arg>service name</arg> to identify this player in iTunes, etc.
-    The default name is "Shairport Sync on &lt;hostname&gt;".
+		
+		<p>The following substitutions are allowed:
+		<opt>%h</opt> for the computer's hostname,
+		<opt>%H</opt> for the computer's hostname with the first letter capitalised (ASCII only),
+		<opt>%v</opt> for the Shairport Sync version number, e.g. "2.8.4" and
+		<opt>%V</opt> for the Shairport Sync version string, e.g. "2.8.4-OpenSSL-Avahi-ALSA-soxr-metadata".</p> 
+    <p>The default is "%H", which is replaced by the hostname with the first letter capitalised.</p>
     </p></optdesc>
 	  </option>
 
@@ -462,7 +520,9 @@
 		Use this <arg>latency</arg>, in frames, for audio streamed from an AirPlay
     device. The default is 88,200 frames, where there are 44,100
     frames to the second.
-    </p></optdesc>
+    </p>
+    <p>Please note that this feature is deprecated and will be removed in a future version of Shairport Sync.</p>
+    </optdesc>
 	  </option>
 
 	  <option>
@@ -491,7 +551,9 @@
 		Disconnect the shairport-sync daemon from the output device and
     exit. (Requires that the daemon has written its PID to an agreed
     file -- see the <opt>-d</opt> option).
-		</p></optdesc>
+		</p>
+		<p>Please note that this feature is deprecated and will be removed in a future version of Shairport Sync.</p>
+		</optdesc>
 	  </option>
 
 	  <option>
@@ -523,7 +585,9 @@
 		Use this <arg>latency</arg>, in frames, for audio streamed from a forked-daapd based
     source. The default is 99,400 frames, where there are 44,100
     frames to the second.
-    </p></optdesc>
+    </p>
+    <p>Please note that this feature is deprecated and will be removed in a future version of Shairport Sync.</p>
+    </optdesc>
 	  </option>
 	  
 	  <option>
@@ -550,7 +614,9 @@
 		Use this <arg>latency</arg>, in frames, for audio streamed from an iTunes
     source, where iTunes is Version 10 or later. The default is 99,400 frames, where there are 44,100
     frames to the second. If the source is iTunes but is earler than Version 10, the <arg>default latency</arg> is used (see the <opt>-L</opt> option). Some third party programs masquerade as older versions of iTunes.
-    </p></optdesc>
+    </p>
+    <p>Please note that this feature is deprecated and will be removed in a future version of Shairport Sync.</p>
+    </optdesc>
 	  </option>
 
 	  <option>
@@ -566,7 +632,9 @@
 		<optdesc><p>
 		Use this to set the <arg>default latency</arg>, in frames, for audio coming from an unidentified source or from an iTunes Version 9 or earlier source. The standard value for the <arg>default latency</arg> is 88,200 frames, where there are 44,100
     frames to the second.
-    </p></optdesc>
+    </p>
+    <p>Please note that this feature is deprecated and will be removed in a future version of Shairport Sync.</p>
+    </optdesc>
 	  </option>
 
 	  <option>
@@ -620,7 +688,9 @@
     exit. It may take a few seconds to synchronise. (Requires  that
     the daemon has written its PID to an agreed file -- see the <opt>-d</opt>
     option).
-		</p></optdesc>
+		</p>
+    <p>Please note that this feature is deprecated and will be removed in a future version of Shairport Sync.</p>
+		</optdesc>
 	  </option>
 
 	  <option>
@@ -705,21 +775,16 @@
 	  </option>
 
   <section name="Audio Backend Options">
-  <p>These  options are passed to the chosen audio backend. (At present, the
-  only backend implemented is for ALSA.) The audio  backend  options  are
+  <p>These  options are passed to the chosen audio backend. The audio  backend  options  are
   preceded by a <opt>--</opt> symbol to introduce them and to separate them from any
   program options. In this way, option letters can be used  as  program
   options and also as audio backend options without ambiguity.</p>
   <p>In the ALSA backend, audio is sent to an output device
   which you can specify using the <opt>-d</opt> option.
   The output level (the "volume") is controlled using a level control associated with a mixer.
-  By default, the mixer is implemented in shairport-sync itself, i.e. the type of
-  the mixer is "software".
-  To use a level control on a mixer on the sound card, you must (a)
-  specify that the mixer's type is "hardware" with the <opt>-t</opt> option;
-  (b) you must specify where the mixer is to be found using the <opt>-m</opt> option
-  and finally (c) you must specify the name of the level control you are using
-  with the <opt>-c</opt> option.</p>
+  By default, the mixer is implemented in shairport-sync itself in software.
+  To use a hardware level control on a mixer on the sound card, specify the name of the mixer control with the <opt>-c</opt> option.
+  If the mixer is not associated with the output device, then you need to specify where the mixer is to be found with the <opt>-m</opt> option.</p>
   </section>
   
   <option>
@@ -766,7 +831,7 @@
 	</options>
 
   <section name="Examples">
-  <p>Here is a slightly contrived but typical example:</p>
+  <p>Here is a slightly contrived example:</p>
       <cmd>shairport-sync  <opt>-d</opt>
       <opt>-a "Joe's Stereo"</opt>
       <opt>-S soxr</opt>

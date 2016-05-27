@@ -6,8 +6,6 @@ shairport-sync \- Synchronised Audio Player for iTunes / AirPlay
 
 shairport-sync -D\fB
 
-shairport-sync -h\fB
-
 shairport-sync -k\fB
 
 shairport-sync -h\fB
@@ -49,7 +47,7 @@ Settings are organised into groups, for example, there is a "general" group of s
 
 \fB};\f1
 
-Most settings have sensible default values, so -- as in the example above -- users generally only need to set (1) the service name, (2) a password (if desired) and (3) the output device. If the output device has a mixer that can be used for volume control, then (4) the volume control's name should be specificed. It is highly desirable to use the output device's mixer for volume control, if available -- response time is reduced to zero and the processor load is reduced. In the example above, "soxr" interpolation was also enabled.
+Most settings have sensible default values, so -- as in the example above -- users generally only need to set (1) the service name, (2) a password (if desired) and (3) the output device. If the output device has a mixer that can be used for volume control, then (4) the volume control's name should be specified. It is highly desirable to use the output device's mixer for volume control, if available -- response time is reduced to zero and the processor load is reduced. In the example above, "soxr" interpolation was also enabled.
 
 A sample configuration file with all possible settings, but with all of them commented out, is installed at \fI/etc/shairport-sync.conf.sample\f1.
 
@@ -61,7 +59,11 @@ The configuration file is processed using the \fIlibconfig\f1 library -- see \fB
 These are the settings available within the \fBgeneral\f1 group:
 .TP
 \fBname=\f1\fI"service_name"\f1\fB;\f1
-Use this \fIservice_name\f1 to identify this player in iTunes, etc. The default name is "Shairport Sync on <hostname>". 
+Use this \fIservice_name\f1 to identify this player in iTunes, etc.
+
+The following substitutions are allowed: \fB%h\f1 for the computer's hostname, \fB%H\f1 for the computer's hostname with the first letter capitalised (ASCII only), \fB%v\f1 for the Shairport Sync version number, e.g. "2.8.4" and \fB%V\f1 for the Shairport Sync version string, e.g. "2.8.4-OpenSSL-Avahi-ALSA-soxr-metadata".
+
+The default is "%H", which is replaced by the hostname with the first letter capitalised.
 .TP
 \fBpassword=\f1\fI"password"\f1\fB;\f1
 Require the password \fIpassword\f1 to connect to the service. If you leave this setting commented out, no password is needed. 
@@ -100,7 +102,21 @@ Use this to specify how much debugging information should be output or logged. "
 Set this \fIchoice\f1 to "yes" if you want the volume to be at 100% no matter what the source's volume control is set to. This might be useful if you want to set the volume on the output device, independently of the setting at the source. The default is "no". 
 .TP
 \fBvolume_range_db=\f1\fIdBvalue\f1\fB;\f1
-Set this \fIdBvalue\f1 to use just a portion of the full range of attenuation offered by a mixer. For example, if a mixer has a minimum volume of -80 dB and a maximum of +20 dB, you might wish to use only 60 dB of the 100 dB available. This might be because the sound becomes inaudible at the lowest setting and unbearably loud at the highest setting -- indeed, many domestic HiFi systmes have a volume copntrol range of just 60 to 80dB. Another potential use might be where the range specified by the mixer does not match the capabilities of the device. For example, the Raspberry Pi's DAC that feeds the built-in audio jack claims a range of 106 dB but has a useful range of only about 35dB. The setting allows you to specify the maximum range from highest to lowest. The range suggested for the Raspberry Pi's built-in audio DAC, which feeds the headphone jack, is 35. Using it in this case gives the volume control a much more useful range of settings. If you omit this setting, the full "native" range of the mixer is used. 
+Use this \fIdBvalue\f1 to reduce or increase the attenuation range, in decibels, between the minimum and maximum volume.
+
+For example, if a mixer has a minimum volume of -80 dB and a maximum of +20 dB, you might wish to use only 60 dB of the 100 dB available. This might be because the sound becomes inaudible at the lowest setting and unbearably loud at the highest setting -- indeed, many domestic HiFi systems have a volume control range of just 60 to 80dB.
+
+Another potential use might be where the range specified by the mixer does not match the capabilities of the device. For example, the Raspberry Pi's DAC that feeds the built-in audio jack claims a range of 106 dB but has a useful range of only about 35dB. The setting allows you to specify the maximum range from highest to lowest. The range suggested for the Raspberry Pi's built-in audio DAC, which feeds the headphone jack, is 35. Using it in this case gives the volume control a much more useful range of settings.
+
+As a third example, you can actually extend the range provided by a mixer. Many cheaper DACs have hardware mixers that offer a restricted attenuation range. If you specify a volume range greater than the range of the mixer, software attenuation and hardware attenuation will be combined to give the specified range.
+
+If you omit this setting, the full "native" range of the mixer is used.
+.TP
+\fBregtype=\f1\fI"regTypeString"\f1\fB;\f1
+Use this advanced setting to set the service type and transport to be advertised by Zeroconf/Bonjour. Default is "_raop._tcp". 
+.TP
+\fBplayback_mode=\f1\fI"mode"\f1\fB;\f1
+The \fImode\f1 can be "stereo" or "mono". Default is "stereo". 
 .TP
 \fB"ALSA" SETTINGS\f1
 These settings are for the ALSA back end, used to communicate with audio output devices in the ALSA system. (By the way, you can use tools such as \fBalsamixer\f1 or \fBaplay\f1 to discover what devices are available.) Use these settings to select the output device and the mixer control to be used to control the output volume. You can additionally set the desired size of the output buffer and you can adjust overall latency. Here are the \fBalsa\f1 group settings:
@@ -121,6 +137,15 @@ Set this \fIoffset\f1, in frames, to compensate for a fixed delay in the audio b
 .TP
 \fBaudio_backend_buffer_desired_length=\f1\fIlength\f1\fB;\f1
 Use this to set the desired number frames to be in the output device's hardware output buffer. The default is 6,615 frames, or 0.15 seconds. If set too small, buffer underflow may occur on low-powered machines. If too large, the response times when using software volume control (i.e. when not using a mixer control to control volume) become annoying, or it may exceed the hardware buffer size. It may need to be larger on low-powered machines that are also performing other tasks, such as processing metadata. 
+.TP
+\fBdisable_synchronization=\f1\fI"no"\f1\fB;\f1
+This is an advanced setting and is for debugging only. Set to "yes" to disable synchronization. Default is "no". If you use it to disable synchronisation, then soner or later you'll experience audio glitches due to audio buffer overflow or underflow. 
+.TP
+\fBperiod_size=\f1\fInumber\f1\fB;\f1
+Use this optional advanced setting to set the alsa period size near to this value. 
+.TP
+\fBbuffer_size=\f1\fInumber\f1\fB;\f1
+Use this optional advanced setting to set the alsa buffer size near to this value. 
 .TP
 \fB"PIPE" SETTINGS\f1
 These settings are for the PIPE backend, used to route audio to a named unix pipe. The audio is in raw CD audio format: PCM 16 bit little endian, 44,100 samples per second, stereo.
@@ -182,8 +207,17 @@ Set the \fIchoice\f1 to "yes" to enable shairport-sync to look for cover art fro
 \fBpipe_name=\f1\fI"filepathname"\f1\fB;\f1
 Specify the absolute path name of the pipe through which metadata should be sent The default is \fI/tmp/shairport-sync-metadata\f1". 
 .TP
+\fBsocket_address=\f1\fI"hostnameOrIP"\f1\fB;\f1
+If \fIhostnameOrIP\f1 is set to a host name or and IP address, UDP packets containing metadata will be sent to this address. May be a multicast address. "socket-port" must be non-zero and "enabled" must be set to "yes". 
+.TP
+\fBsocket_port=\f1\fIport\f1\fB;\f1
+If \fBsocket_address\f1 is set, use \fIport\f1 to specify the port to send UDP packets to. Must not be zero. 
+.TP
+\fBsocket_msglength=\f1\fI65000\f1\fB;\f1
+The maximum packet size for any UDP metadata. This must be between 500 or 65000. The default is 500. 
+.TP
 \fB"SESSIONCONTROL" SETTINGS\f1
-shairport-sync can run programs just before it starts to play an audio stream and just after it finishes. You specify them using the sessioncontrol group settings run_this_before_play_begins and run_this_after_play_ends. 
+shairport-sync can run programs just before it starts to play an audio stream and just after it finishes. You specify them using the sessioncontrol group settings run_this_before_play_begins and run_this_after_play_ends.
 .TP
 \fBrun_this_before_play_begins=\f1\fI"/path/to/application and args"\f1\fB;\f1
 Here you can specify a program and its arguments that will be run just before a play session begins. Be careful to include the full path to the application. The application must be marked as executable and, if it is a script, its first line must begin with the standard \fI#!/bin/...\f1 as appropriate. 
@@ -207,9 +241,9 @@ Latency is the exact time from a sound signal's original timestamp until that si
 
 Shairport Sync now sets latencies automatically using information supplied by the source, typically either 88,200 or 99,577 frames.
 
-The following relates to the old scheme of using fixed latencies, which ignores the latency information supplied by the source. There are four default latency settings. One latency matches the latency used by recent versions of iTunes when playing audio and another matches the latency used by so-called "AirPlay" devices, including iOS devices and iTunes and Quicktime Player when they are playing video. A third latency is used when the audio source is forked-daapd. The fourth latency is the default if no other latency is chosen and is used for older versions of iTunes.
+The following relates to the old scheme of using fixed latencies, which ignored the latency information supplied by the source. There are four default latency settings. One latency matches the latency used by recent versions of iTunes when playing audio and another matches the latency used by so-called "AirPlay" devices, including iOS devices and iTunes and Quicktime Player when they are playing video. A third latency is used when the audio source is forked-daapd. The fourth latency is the default if no other latency is chosen and is used for older versions of iTunes.
 
-Note: If you are thinking of changing latencies to compensate for a delay in the audio output device, then instead of changing these individual latencies, consider using the \fBaudio_backend_latency_offset\f1 setting in the \fBalsa\f1 group (or the appropriate other group if you're not outputing through the alsa backend).
+Note: If you are thinking of changing latencies to compensate for a delay in the audio output device, then instead of changing these individual latencies, use the \fBaudio_backend_latency_offset\f1 setting in the \fBalsa\f1 group (or the appropriate other group if you're not outputing through the alsa backend).
 .TP
 \fBitunes=\f1\fIlatency\f1\fB;\f1
 This is the \fIlatency\f1, in frames, used for iTunes 10 or later. Default is 99,400. 
@@ -232,10 +266,14 @@ The command line for shairport-sync can take two kinds of options: regular \fBpr
 These options are used by shairport-sync itself.
 .TP
 \fB-a \f1\fIservice name\f1\fB | --name=\f1\fIservice name\f1
-Use this \fIservice name\f1 to identify this player in iTunes, etc. The default name is "Shairport Sync on <hostname>". 
+Use this \fIservice name\f1 to identify this player in iTunes, etc. The following substitutions are allowed: \fB%h\f1 for the computer's hostname, \fB%H\f1 for the computer's hostname with the first letter capitalised (ASCII only), \fB%v\f1 for the Shairport Sync version number, e.g. "2.8.4" and \fB%V\f1 for the Shairport Sync version string, e.g. "2.8.4-OpenSSL-Avahi-ALSA-soxr-metadata".
+
+The default is "%H", which is replaced by the hostname with the first letter capitalised.
 .TP
 \fB-A | --AirPlayLatency=\f1\fIlatency\f1
 Use this \fIlatency\f1, in frames, for audio streamed from an AirPlay device. The default is 88,200 frames, where there are 44,100 frames to the second. 
+
+Please note that this feature is deprecated and will be removed in a future version of Shairport Sync.
 .TP
 \fB-B \f1\fIprogram\f1\fB | --on-start=\f1\fIprogram\f1
 Execute \fIprogram\f1 when playback is about to begin. Specify the full path to the program, e.g. \fI/usr/bin/logger\f1. Executable scripts can be used, but they must have \fI#!/bin/sh\f1 (or whatever is appropriate) in the headline.
@@ -247,6 +285,8 @@ Read configuration settings from \fIfilename\f1. The default is to read them fro
 .TP
 \fB-D | --disconnectFromOutput\f1
 Disconnect the shairport-sync daemon from the output device and exit. (Requires that the daemon has written its PID to an agreed file -- see the \fB-d\f1 option). 
+
+Please note that this feature is deprecated and will be removed in a future version of Shairport Sync.
 .TP
 \fB-d | --daemon\f1
 Instruct shairport-sync to demonise itself. It will write its Process ID (PID) to a file, usually at \fI/var/run/shairport-sync.pid\f1, which is used by the \fB-k\f1, \fB-D\f1 and \fB-R\f1 options to locate the daemon at a later time. 
@@ -258,6 +298,8 @@ If you want shairport-sync to wait until the command has completed before contin
 .TP
 \fB--forkedDaapdLatency=\f1\fIlatency\f1
 Use this \fIlatency\f1, in frames, for audio streamed from a forked-daapd based source. The default is 99,400 frames, where there are 44,100 frames to the second. 
+
+Please note that this feature is deprecated and will be removed in a future version of Shairport Sync.
 .TP
 \fB--get-coverart\f1
 This option requires the \fB--meta-dir\f1 option to be set, and enables shairport-sync to request cover art from the source and to transmit it through the metadata pipe.
@@ -269,12 +311,16 @@ Print brief help message and exit.
 .TP
 \fB-i | --iTunesLatency=\f1\fIlatency\f1
 Use this \fIlatency\f1, in frames, for audio streamed from an iTunes source, where iTunes is Version 10 or later. The default is 99,400 frames, where there are 44,100 frames to the second. If the source is iTunes but is earler than Version 10, the \fIdefault latency\f1 is used (see the \fB-L\f1 option). Some third party programs masquerade as older versions of iTunes. 
+
+Please note that this feature is deprecated and will be removed in a future version of Shairport Sync.
 .TP
 \fB-k | --kill\f1
 Kill the shairport-sync daemon and exit. (Requires that the daemon has written its PID to an agreed file -- see the \fB-d\f1 option). 
 .TP
 \fB-L | --latency=\f1\fIlatency\f1
 Use this to set the \fIdefault latency\f1, in frames, for audio coming from an unidentified source or from an iTunes Version 9 or earlier source. The standard value for the \fIdefault latency\f1 is 88,200 frames, where there are 44,100 frames to the second. 
+
+Please note that this feature is deprecated and will be removed in a future version of Shairport Sync.
 .TP
 \fB--meta-dir=\f1\fIdirectory\f1
 Listen for metadata coming from the source and send it, along with metadata from shairport-sync itself, to a pipe called \fIshairport-sync-metadata\f1 in the \fIdirectory\f1 you specify. If you add the \fB--get-cover-art\f1 then cover art will be sent through the pipe too. See \fBhttps://github.com/mikebrady/shairport-sync-metadata-reader\f1 for a sample metadata reader. 
@@ -293,6 +339,8 @@ Require the password \fIsecret\f1 to be able to connect and stream to the servic
 .TP
 \fB-R | --reconnectToOutput\f1
 Reconnect the shairport-sync daemon to the output device and exit. It may take a few seconds to synchronise. (Requires that the daemon has written its PID to an agreed file -- see the \fB-d\f1 option). 
+
+Please note that this feature is deprecated and will be removed in a future version of Shairport Sync.
 .TP
 \fB-r \f1\fIthreshold\f1\fB | --resync=\f1\fIthreshold\f1
 Resynchronise if timings differ by more than \fIthreshold\f1 frames. If the output timing differs from the source timing by more than the threshold, output will be muted and a full resynchronisation will occur. The default threshold is 2,205 frames, i.e. 50 milliseconds. Specify \fB0\f1 to disable resynchronisation. 
@@ -320,9 +368,9 @@ Print debug information. Repeat up to three times to get more detail.
 \fB-w | --wait-cmd\f1
 Wait for commands specified using \fB-B\f1 or \fB-E\f1 to complete before continuing execution. 
 .SH AUDIO BACKEND OPTIONS
-These options are passed to the chosen audio backend. (At present, the only backend implemented is for ALSA.) The audio backend options are preceded by a \fB--\f1 symbol to introduce them and to separate them from any program options. In this way, option letters can be used as program options and also as audio backend options without ambiguity.
+These options are passed to the chosen audio backend. The audio backend options are preceded by a \fB--\f1 symbol to introduce them and to separate them from any program options. In this way, option letters can be used as program options and also as audio backend options without ambiguity.
 
-In the ALSA backend, audio is sent to an output device which you can specify using the \fB-d\f1 option. The output level (the "volume") is controlled using a level control associated with a mixer. By default, the mixer is implemented in shairport-sync itself, i.e. the type of the mixer is "software". To use a level control on a mixer on the sound card, you must (a) specify that the mixer's type is "hardware" with the \fB-t\f1 option; (b) you must specify where the mixer is to be found using the \fB-m\f1 option and finally (c) you must specify the name of the level control you are using with the \fB-c\f1 option.
+In the ALSA backend, audio is sent to an output device which you can specify using the \fB-d\f1 option. The output level (the "volume") is controlled using a level control associated with a mixer. By default, the mixer is implemented in shairport-sync itself in software. To use a hardware level control on a mixer on the sound card, specify the name of the mixer control with the \fB-c\f1 option. If the mixer is not associated with the output device, then you need to specify where the mixer is to be found with the \fB-m\f1 option.
 .TP
 \fB-c \f1\fIcontrolname\f1
 Use the level control called \fIcontrolname\f1 on the hardware mixer for controlling volume. This is needed if the mixer type is specified, using the \fB-t\f1 option, to be \fBhardware\f1. There is no default. 
@@ -336,7 +384,7 @@ Use the specified hardware \fImixer\f1 for volume control. Use this to specify w
 \fB-t \f1\fIdevicetype\f1
 This option is deprecated and is ignored. For your information, its functionality has been automatically incorporated in the -c option -- if you specify a mixer name with the -c option, it is assumed that the mixer is implemented in hardware. 
 .SH EXAMPLES
-Here is a slightly contrived but typical example:
+Here is a slightly contrived example:
 
 shairport-sync \fB-d\f1 \fB-a "Joe's Stereo"\f1 \fB-S soxr\f1 \fB--\f1 \fB-d hw:1,0\f1 \fB-m hw:1\f1 \fB-c PCM\f1
 
