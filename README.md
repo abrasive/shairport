@@ -5,7 +5,7 @@ Audio played by a Shairport Sync-powered device stays synchronised with the sour
 
 Shairport Sync does not support AirPlay video or photo streaming.
 
-This is the unstable "development" branch. Changes and updates are incorporated into this branch quickly. To access the stable version, where changes are made after due time, please switch to the "master" branch.
+This is the stable "master" branch. Changes and updates are incorporated into this branch relatively slowly. To access the development version, where all the latest changes are made first, please switch to the "development" branch.
 
 More Information
 ----------
@@ -29,7 +29,7 @@ What else?
 * Hardware Mute — Shairport Sync will mute properly if the hardware supports it.
 * Fast Response — With hardware volume control, response is instantaneous; otherwise the response time is 0.15 seconds.
 * Non-Interruptible — Shairport Sync sends back a "busy" signal if it's already playing audio from another source, so other sources can't disrupt an existing Shairport Sync session. (If a source disappears without warning, the session automatically terminates after two minutes and the device becomes available again.)
-* Metadata — Shairport Sync can deliver metadata supplied by the source, such as Album Name, Artist Name, Cover Art, etc. through a pipe or UDP socket to a recipient application program — see https://github.com/mikebrady/shairport-sync-metadata-reader for a sample recipient. Sources that supply metadata include iTunes and the Music app in iOS.
+* Metadata — Shairport Sync can deliver metadata supplied by the source, such as Album Name, Artist Name, Cover Art, etc. through a pipe to a recipient application program — see https://github.com/mikebrady/shairport-sync-metadata-reader for a sample recipient. Sources that supply metadata include iTunes and the Music app in iOS.
 * Raw Audio — Shairport Sync can deliver raw PCM audio to standard output or to a pipe. This output is delivered synchronously with the source after the appropriate latency and is not interpolated or "stuffed" on its way through Shairport Sync.
 * Autotools and Libtool Support — the Shairport Sync build process uses GNU `autotools` and `libtool` to examine and configure the build environment — important for portability and for cross compilation. Previous versions of Shairport looked at the current system to determine which packages were available, instead of looking at the target system for what packages were available.
 
@@ -49,10 +49,41 @@ For information about changes and updates, please refer to the RELEASENOTES.md f
 
 Note: Historically, Shairport Sync has taken its settings from command line arguments. While this is still the case, it does not always work well across distributions. Accordingly, from version 2.4 onwards, Shairport Sync reads settings from the file `/etc/shairport-sync.conf`. Access to new features will only be provided via the settings file.
 
-Building And Installing the Development Version
+Building And Installing
 ---------------------
+If you wish to install Shairport Sync on OpenWrt, Arch or Fedora platforms, please follow the appropriate instructions below. Limited support is also available for Mac OS X. Otherwise follow the General Build Instructions. Then, when the program has been installed, refer to the section on Configuring Shairport Sync that follows.
+
+**Note**
+
 The following procedures will install the shairport-sync application into your system. Before continuing, you should check to see if shairport-sync is already installed – you can use `which shairport-sync` to find where it is located, if installed. If it is installed you should delete it – you may need superuser privileges. After deleting, check again in case further copies are installed elsewhere.
 (If the existing installation of shairport-sync is where the new copy will be installed into, it will be overwritten;  sometimes, however, the installation is to another location, so it is safer, initially, to delete previous versions manually.)
+
+**Ubuntu:**
+Personal Package Archives for Shairport Sync master and development branches are available at https://launchpad.net/~dantheperson. A `shairport-sync` installer package is available in Ubuntu 16.04, currently in its late beta phase.
+
+**Debian:**
+`shairport-sync` is in the Debian archive and is scheduled for release with Debian Stretch (9): https://tracker.debian.org/shairport-sync. A backport for Debian Jessie (8) may be provided given enough demand.
+
+**OpenWrt:**
+There is a Shairport Sync package in OpenWrt `trunk`. Also, there's an OpenWrt package at https://github.com/mikebrady/shairport-sync-for-openwrt, including one that builds back to `Barrier Breaker`.
+
+**Arch Linux:**
+Shairport Sync is available for `x86_64` and `i686` platforms in the Arch Linux Community Repository -- search for `shairport-sync`. See also https://www.archlinux.org/packages/.
+
+An Arch Linux installation package, suitable for compilation on any platform, is available at  [EliaCereda/shairport-sync-PKGBUILD](https://github.com/EliaCereda/shairport-sync-PKGBUILD).
+
+**Mac OS X:**
+A [HomeBrew](http://brew.sh) package exists for Shairport Sync. With HomeBrew installed, Shairport Sync can be installed using the command `$brew install shairport-sync`. Note that the installation uses the `libao` library and so synchronisation is not available — playback glitches will occur occasionally, when the `ao` system's buffers overflow or underflow.
+
+**Fedora:**
+Please see the guide at [FEDORA.md](https://github.com/mikebrady/shairport-sync/blob/master/FEDORA.md).
+
+**Cygwin:**
+Please see the guide at [CYGWIN.md](https://github.com/mikebrady/shairport-sync/blob/master/CYGWIN.md).
+
+Sincere thanks to all package contributors!
+
+**General Build Instructions**
 
 To build Shairport Sync from sources on Debian, Ubuntu, Raspbian, etc. follow these instructions.
 
@@ -74,12 +105,12 @@ Many Linux distributions have Avahi and OpenSSL already in place, so normally it
 
 Debian, Ubuntu and Raspbian users can get the basics with:
 
-- `apt-get install build-essential git xmltoman` – these may already be installed.
+- `apt-get install build-essential git` – these may already be installed.
 - `apt-get install autoconf automake libtool libdaemon-dev libasound2-dev libpopt-dev libconfig-dev`
 - `apt-get install avahi-daemon libavahi-client-dev` if you want to use Avahi (recommended).
 - `apt-get install libssl-dev` if you want to use OpenSSL and libcrypto, or use PolarSSL otherwise.
 - `apt-get install libpolarssl-dev` if you want to use PolarSSL, or use OpenSSL/libcrypto otherwise.
-- `apt-get install libsoxr-dev` if you want support for libsoxr-based resampling. This library is in many recent distributions, including Jessie and Raspbian Jessie; if not, instructions for how to build it from source for Rasbpian/Debian Wheezy are available at [LIBSOXR.md](https://github.com/mikebrady/shairport-sync/blob/development/LIBSOXR.md).
+- `apt-get install libsoxr-dev` if you want support for libsoxr-based resampling. This library is in many recent distributions, including Jessie and Raspioan Jessie; if not, instructions for how to build it from source for Raspian/Debian Wheezy are available at [LIBSOXR.md](https://github.com/mikebrady/shairport-sync/blob/master/LIBSOXR.md).
 
 Download Shairport Sync:
 
@@ -88,7 +119,6 @@ Download Shairport Sync:
 Next, `cd` into the shairport-sync directory and execute the following command:
 
 ```
-$ git checkout development
 $ autoreconf -i -f
 ```
 (Note that the `autoreconf...` step may take some time on less powerful machines.)
@@ -180,7 +210,7 @@ $sudo update-rc.d shairport-sync defaults 90 10
 
 **Man Page**
 
-You can view the man page here: http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/development/man/shairport-sync.html
+You can view the man page here: http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/master/man/shairport-sync.html
 
 Configuring Shairport Sync
 --------
@@ -238,7 +268,7 @@ Another setting to consider is the `general` `drift` setting: you should set it 
 
 *Command Line Arguments*
 
-As previously mentioned, you can use command line arguments to provide settings to Shairport Sync as before, though newer settings will only be available via the configuration file. For full information, please read the Shairport Sync `man` page, also available at  http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/development/man/shairport-sync.html.
+As previously mentioned, you can use command line arguments to provide settings to Shairport Sync as before, though newer settings will only be available via the configuration file. For full information, please read the Shairport Sync `man` page, also available at  http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/master/man/shairport-sync.html.
 
 Apart from the following options, all command line options can be replaced by settings in the configuration file. Here is a brief description of command line options that are not replicated by settings in the settings file.
 
@@ -342,14 +372,6 @@ alsa = {
 };
 ```
 
-Metadata broadcasting over UDP
-------------------------------
-As an alternative to sending metadata to a pipe, the `socket_address` and `socket_port` tags may be set in the metadata group to cause Shairport Sync to broadcast UDP packets containing the track metadata.
-
-The advantage of UDP is that packets can be sent to a single listener or, if a multicast address is used, to multiple listeners. It also allows metadata to be routed to a different host. However UDP has a maximum packet size of about 65000 bytes; while large enough for most data, Cover Art will often exceed this value. Any metadata exceeding this limit will not be sent over the socket interface. The maximum packet size may be set with the `socket_msglength` tag to any value between 500 and 65000 to control this - lower values may be used to ensure that each UDP packet is sent in a single network frame. The default is 500. Other than this restriction, metadata sent over the socket interface is identical to metadata sent over the pipe interface.
-
-The UDP metadata format is very simple - the first four bytes are the metadata *type*, and the next four bytes are the metadata *code* (both are sent in network byte order - see https://github.com/mikebrady/shairport-sync-metadata-reader for a definition of those terms). The remaining bytes of the packet, if any, make up the raw value of the metadata.
-
 Latency
 -------
 Latency is the exact time from a sound signal's original timestamp until that signal actually "appears" on the output of the audio output device, usually a Digital to Audio Converter (DAC), irrespective of any internal delays, processing times, etc. in the computer. 
@@ -389,5 +411,5 @@ It's not unusual to have resend requests, late packets and even missing packets 
 
 Troubleshooting
 ---------------
-Please refer to [TROUBLESHOOTING](https://github.com/mikebrady/shairport-sync/blob/development/TROUBLESHOOTING.md) for a few hints, contributed by users.
+Please refer to [TROUBLESHOOTING](https://github.com/mikebrady/shairport-sync/blob/master/TROUBLESHOOTING.md) for a few hints, contributed by users.
 
