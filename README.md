@@ -79,7 +79,7 @@ Debian, Ubuntu and Raspbian users can get the basics with:
 - `apt-get install avahi-daemon libavahi-client-dev` if you want to use Avahi (recommended).
 - `apt-get install libssl-dev` if you want to use OpenSSL and libcrypto, or use PolarSSL otherwise.
 - `apt-get install libpolarssl-dev` if you want to use PolarSSL, or use OpenSSL/libcrypto otherwise.
-- `apt-get install libsoxr-dev` if you want support for libsoxr-based resampling. This library is in many recent distributions, including Jessie and Raspbian Jessie; if not, instructions for how to build it from source for Rasbpian/Debian Wheezy are available at [LIBSOXR.md](https://github.com/mikebrady/shairport-sync/blob/master/LIBSOXR.md).
+- `apt-get install libsoxr-dev` if you want support for libsoxr-based resampling. This library is in many recent distributions, including Jessie and Raspbian Jessie; if not, instructions for how to build it from source for Rasbpian/Debian Wheezy are available at [LIBSOXR.md](https://github.com/mikebrady/shairport-sync/blob/development/LIBSOXR.md).
 
 Download Shairport Sync:
 
@@ -180,7 +180,7 @@ $sudo update-rc.d shairport-sync defaults 90 10
 
 **Man Page**
 
-You can view the man page here: http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/master/man/shairport-sync.html
+You can view the man page here: http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/development/man/shairport-sync.html
 
 Configuring Shairport Sync
 --------
@@ -238,7 +238,7 @@ Another setting to consider is the `general` `drift` setting: you should set it 
 
 *Command Line Arguments*
 
-As previously mentioned, you can use command line arguments to provide settings to Shairport Sync as before, though newer settings will only be available via the configuration file. For full information, please read the Shairport Sync `man` page, also available at  http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/master/man/shairport-sync.html.
+As previously mentioned, you can use command line arguments to provide settings to Shairport Sync as before, though newer settings will only be available via the configuration file. For full information, please read the Shairport Sync `man` page, also available at  http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/development/man/shairport-sync.html.
 
 Apart from the following options, all command line options can be replaced by settings in the configuration file. Here is a brief description of command line options that are not replicated by settings in the settings file.
 
@@ -389,5 +389,5 @@ It's not unusual to have resend requests, late packets and even missing packets 
 
 Troubleshooting
 ---------------
-Please refer to [TROUBLESHOOTING](https://github.com/mikebrady/shairport-sync/blob/master/TROUBLESHOOTING.md) for a few hints, contributed by users.
+Please refer to [TROUBLESHOOTING](https://github.com/mikebrady/shairport-sync/blob/development/TROUBLESHOOTING.md) for a few hints, contributed by users.
 
