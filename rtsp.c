@@ -88,8 +88,9 @@ static pthread_mutex_t reference_counter_lock = PTHREAD_MUTEX_INITIALIZER;
 
 typedef struct {
   int fd;
+  int authorized; // set is a password is required and has been supplied
   stream_cfg stream;
-  SOCKADDR remote;
+  SOCKADDR remote,local;
   int stop;
   int running;
   pthread_t thread;
@@ -142,8 +143,6 @@ typedef struct {
   uint32_t length;
   rtsp_message *carrier;
 } metadata_package;
-
-void ask_other_rtsp_conversation_threads_to_stop(pthread_t except_this_thread);
 
 void pc_queue_init(pc_queue *the_queue, char *items, size_t item_size,
                    uint32_t number_of_items) {
@@ -245,6 +244,8 @@ int pc_queue_get_item(pc_queue *the_queue, void *the_stuff) {
 }
 
 #endif
+
+void ask_other_rtsp_conversation_threads_to_stop(pthread_t except_this_thread);
 
 // determine if we are the currently playing thread
 static inline int rtsp_playing(void) {
@@ -388,10 +389,10 @@ static char *msg_get_header(rtsp_message *msg, char *name) {
   return NULL;
 }
 
-static void msg_print_debug_headers(rtsp_message *msg) {
+static void debug_print_msg_headers(int level, rtsp_message *msg) {
   int i;
   for (i = 0; i < msg->nheaders; i++) {
-    debug(1, "  Type: \"%s\", content: \"%s\"", msg->name[i], msg->value[i]);
+    debug(level, "  Type: \"%s\", content: \"%s\"", msg->name[i], msg->value[i]);
   }
 }
 
@@ -498,11 +499,14 @@ rtsp_read_request(rtsp_conn_info *conn, rtsp_message **the_packet) {
       goto shutdown;
     }
     nread = read(conn->fd, buf + inbuf, buflen - inbuf);
-    if (!nread) {
-      debug(2, "RTSP connection closed.");
+    
+    if (nread==0) {
+      // a blocking read that returns zero means eof -- implies connection closed
+      debug(3, "RTSP connection closed.");
       reply = rtsp_read_request_response_shutdown_requested;
       goto shutdown;
     }
+
     if (nread < 0) {
       if (errno == EINTR)
         continue;
@@ -603,7 +607,7 @@ static void msg_write_response(int fd, rtsp_message *resp) {
   int i, n;
 
   n = snprintf(p, pktfree, "RTSP/1.0 %d %s\r\n", resp->respcode,
-               resp->respcode == 200 ? "OK" : "Error");
+               resp->respcode == 200 ? "OK" : "Unauthorized");
   // debug(1, "sending response: %s", pkt);
   pktfree -= n;
   p += n;
@@ -806,7 +810,7 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req,
   tport = atoi(p);
 
 //  rtsp_take_player();
-  rtp_setup(&conn->remote, cport, tport, active_remote, &lsport, &lcport,
+  rtp_setup(&conn->local, &conn->remote, cport, tport, active_remote, &lsport, &lcport,
             &ltport);
   if (!lsport)
     goto error;
@@ -884,8 +888,8 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn,
 #ifdef CONFIG_METADATA
         if (!strncmp(cp, "progress: ", 10)) {
       char *progress = cp + 10;
-      debug(2, "progress: \"%s\"\n",
-            progress); // rtpstampstart/rtpstampnow/rtpstampend 44100 per second
+      //debug(2, "progress: \"%s\"\n",
+      //      progress); // rtpstampstart/rtpstampnow/rtpstampend 44100 per second
       send_ssnc_metadata('prgr', strdup(progress), strlen(progress), 1);
     } else
 #endif
@@ -1023,6 +1027,9 @@ char *base64_encode_so(const unsigned char *data, size_t input_length,
 static int fd = -1;
 static int dirty = 0;
 pc_queue metadata_queue;
+static int metadata_sock = -1;
+static struct sockaddr_in metadata_sockaddr;
+static char *metadata_sockmsg;
 #define metadata_queue_size 500
 metadata_package metadata_queue_items[metadata_queue_size];
 
@@ -1031,6 +1038,24 @@ static pthread_t metadata_thread;
 void metadata_create(void) {
   if (config.metadata_enabled == 0)
     return;
+
+  // Unlike metadata pipe, socket is opened once and stays open,
+  // so we can call it in create
+  if (config.metadata_sockaddr && config.metadata_sockport) {
+    metadata_sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (metadata_sock < 0) {
+      debug(1, "Could not open metadata socket");
+    } else {
+      bzero((char *)&metadata_sockaddr, sizeof(metadata_sockaddr));
+      metadata_sockaddr.sin_family = AF_INET;
+      metadata_sockaddr.sin_addr.s_addr = inet_addr(config.metadata_sockaddr);
+      metadata_sockaddr.sin_port = htons(config.metadata_sockport);
+      if (!(metadata_sockmsg = malloc(config.metadata_sockmsglength))) {
+        die("Could not malloc metadata socket buffer");
+      }
+      memset(metadata_sockmsg, 0, config.metadata_sockmsglength);
+    }
+  }
 
   size_t pl = strlen(config.metadata_pipename) + 1;
 
@@ -1067,9 +1092,22 @@ static void metadata_close(void) {
 
 void metadata_process(uint32_t type, uint32_t code, char *data,
                       uint32_t length) {
-  debug(2, "Process metadata with type %x, code %x and length %u.", type, code,
-        length);
+  // debug(2, "Process metadata with type %x, code %x and length %u.", type, code, length);
   int ret;
+
+  if (metadata_sock >= 0 && length < config.metadata_sockmsglength - 8) {
+    char *ptr = metadata_sockmsg;
+    uint32_t v;
+    v = htonl(type);
+    memcpy(ptr, &v, 4);
+    ptr += 4;
+    v = htonl(code);
+    memcpy(ptr, &v, 4);
+    ptr += 4;
+    memcpy(ptr, data, length);
+    sendto(metadata_sock, metadata_sockmsg, length + 8, 0, (struct sockaddr *)&metadata_sockaddr, sizeof(metadata_sockaddr));
+  }
+
   // readers may go away and come back
   if (fd < 0)
     metadata_open();
@@ -1080,13 +1118,17 @@ void metadata_process(uint32_t type, uint32_t code, char *data,
            "<item><type>%x</type><code>%x</code><length>%u</length>", type,
            code, length);
   ret = non_blocking_write(fd, thestring, strlen(thestring));
-  if (ret < 1)
+  if (ret < 0) {
+    // debug(1,"metadata_process error %d exit 1",ret);
     return;
+  }
   if ((data != NULL) && (length > 0)) {
     snprintf(thestring, 1024, "\n<data encoding=\"base64\">\n");
     ret = non_blocking_write(fd, thestring, strlen(thestring));
-    if (ret < 1) // no reader
+    if (ret < 0) {
+      // debug(1,"metadata_process error %d exit 2",ret);
       return;
+    }
     // here, we write the data in base64 form using our nice base64 encoder
     // but, we break it into lines of 76 output characters, except for the last
     // one.
@@ -1107,20 +1149,26 @@ void metadata_process(uint32_t type, uint32_t code, char *data,
       // debug(1,"Remaining count: %d ret: %d, outbuf_size:
       // %d.",remaining_count,ret,outbuf_size);
       ret = non_blocking_write(fd, outbuf, outbuf_size);
-      if (ret < 0)
+      if (ret < 0) {
+        // debug(1,"metadata_process error %d exit 3",ret);
         return;
+      }
       remaining_data += towrite_count;
       remaining_count -= towrite_count;
     }
     snprintf(thestring, 1024, "</data>");
     ret = non_blocking_write(fd, thestring, strlen(thestring));
-    if (ret < 1) // no reader
+    if (ret < 0) {
+      // debug(1,"metadata_process error %d exit 4",ret);
       return;
+    }
   }
   snprintf(thestring, 1024, "</item>\n");
   ret = non_blocking_write(fd, thestring, strlen(thestring));
-  if (ret < 1) // no reader
+  if (ret < 0) {
+    // debug(1,"metadata_process error %d exit 5",ret);
     return;
+  }
 }
 
 void *metadata_thread_function(void *ignore) {
@@ -1241,12 +1289,12 @@ static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req,
   // if (!req->contentlength)
   //    debug(1, "received empty SET_PARAMETER request.");
 
-  // msg_print_debug_headers(req);
+  // debug_print_msg_headers(1,req);
 
   char *ct = msg_get_header(req, "Content-Type");
 
   if (ct) {
-    debug(2, "SET_PARAMETER Content-Type:\"%s\".", ct);
+    // debug(2, "SET_PARAMETER Content-Type:\"%s\".", ct);
 
 #ifdef CONFIG_METADATA
     // It seems that the rtptime of the message is used as a kind of an ID that
@@ -1320,7 +1368,7 @@ static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req,
     } else
 #endif
         if (!strncmp(ct, "text/parameters", 15)) {
-      debug(2, "received parameters in SET_PARAMETER request.");
+      // debug(2, "received parameters in SET_PARAMETER request.");
       handle_set_parameter_parameter(conn, req,
                                      resp); // this could be volume or progress
     } else {
@@ -1620,7 +1668,7 @@ static int rtsp_auth(char **nonce, rtsp_message *req, rtsp_message *resp) {
   int i;
   unsigned char buf[33];
   for (i = 0; i < 16; i++)
-    sprintf((char *)buf + 2 * i, "%02X", digest_urp[i]);
+    sprintf((char *)buf + 2 * i, "%02x", digest_urp[i]);
 
 #ifdef HAVE_LIBSSL
   MD5_Init(&ctx);
@@ -1629,7 +1677,7 @@ static int rtsp_auth(char **nonce, rtsp_message *req, rtsp_message *resp) {
   MD5_Update(&ctx, *nonce, strlen(*nonce));
   MD5_Update(&ctx, ":", 1);
   for (i = 0; i < 16; i++)
-    sprintf((char *)buf + 2 * i, "%02X", digest_mu[i]);
+    sprintf((char *)buf + 2 * i, "%02x", digest_mu[i]);
   MD5_Update(&ctx, buf, 32);
   MD5_Final(digest_total, &ctx);
 #endif
@@ -1641,23 +1689,23 @@ static int rtsp_auth(char **nonce, rtsp_message *req, rtsp_message *resp) {
   md5_update(&tctx, (const unsigned char *)*nonce, strlen(*nonce));
   md5_update(&tctx, (unsigned char *)":", 1);
   for (i = 0; i < 16; i++)
-    sprintf((char *)buf + 2 * i, "%02X", digest_mu[i]);
+    sprintf((char *)buf + 2 * i, "%02x", digest_mu[i]);
   md5_update(&tctx, buf, 32);
   md5_finish(&tctx, digest_total);
 #endif
 
   for (i = 0; i < 16; i++)
-    sprintf((char *)buf + 2 * i, "%02X", digest_total[i]);
+    sprintf((char *)buf + 2 * i, "%02x", digest_total[i]);
 
   if (!strcmp(response, (const char *)buf))
     return 0;
-  warn("auth failed");
+  warn("Password authorization failed.");
 
 authenticate:
   resp->respcode = 401;
   int hdrlen = strlen(*nonce) + 40;
   char *authhdr = malloc(hdrlen);
-  snprintf(authhdr, hdrlen, "Digest realm=\"taco\", nonce=\"%s\"", *nonce);
+  snprintf(authhdr, hdrlen, "Digest realm=\"raop\", nonce=\"%s\"", *nonce);
   msg_add_header(resp, "WWW-Authenticate", authhdr);
   free(authhdr);
   return 1;
@@ -1680,6 +1728,8 @@ static void *rtsp_conversation_thread_func(void *pconn) {
   do {
     reply = rtsp_read_request(conn, &req);
     if (reply == rtsp_read_request_response_ok) {
+			debug(3,"RTSP Packet received of type \"%s\":",req->method),
+			debug_print_msg_headers(3,req);
       resp = msg_init();
       resp->respcode = 400;
 
@@ -1687,29 +1737,26 @@ static void *rtsp_conversation_thread_func(void *pconn) {
       hdr = msg_get_header(req, "CSeq");
       if (hdr)
         msg_add_header(resp, "CSeq", hdr);
-      msg_add_header(resp, "Audio-Jack-Status", "connected; type=analog");
-
-      if (rtsp_auth(&auth_nonce, req, resp))
-        goto respond;
-
-      struct method_handler *mh;
-      int method_selected = 0;
-      for (mh = method_handlers; mh->method; mh++) {
-        if (!strcmp(mh->method, req->method)) {
-          // debug(1,"RTSP Packet received of type \"%s\":",mh->method),
-          // msg_print_debug_headers(req);
-          method_selected = 1;
-          mh->handler(conn, req, resp);
-          // debug(1,"RTSP Response:");
-          // msg_print_debug_headers(resp);
-          break;
-        }
-      }
-      if (method_selected == 0)
-        debug(1, "Unrecognised and unhandled rtsp request \"%s\".",
-              req->method);
-
-    respond:
+//      msg_add_header(resp, "Audio-Jack-Status", "connected; type=analog");
+      msg_add_header(resp, "Server", "AirTunes/105.1");
+      
+      if ((conn->authorized==1) || (rtsp_auth(&auth_nonce, req, resp))==0) {
+				conn->authorized=1; // it must have been authorized or didn't need a password
+				struct method_handler *mh;
+				int method_selected = 0;
+				for (mh = method_handlers; mh->method; mh++) {
+					if (!strcmp(mh->method, req->method)) {
+						method_selected = 1;
+						mh->handler(conn, req, resp);
+						break;
+					}
+				}
+				if (method_selected == 0)
+					debug(1, "Unrecognised and unhandled rtsp request \"%s\".",
+								req->method);
+			}
+			debug(3,"RTSP Response:");
+			debug_print_msg_headers(3,resp);
       msg_write_response(conn->fd, resp);
       msg_free(req);
       msg_free(resp);
@@ -1781,6 +1828,7 @@ void rtsp_listen_loop(void) {
   }
 
   for (p = info; p; p = p->ai_next) {
+  	ret = 0;
     int fd = socket(p->ai_family, p->ai_socktype, IPPROTO_TCP);
     int yes = 1;
 
@@ -1809,7 +1857,14 @@ void rtsp_listen_loop(void) {
     // report its availability. do not complain.
 
     if (ret) {
-      debug(1, "Failed to bind to address %s.", format_address(p->ai_addr));
+    	char *family;
+#ifdef AF_INET6
+			if (p->ai_family == AF_INET6) {
+			family = "IPv6";
+			} else
+#endif
+			family = "IPv4";
+      debug(1, "Unable to listen on %s port %d. The error is: \"%s\".", family, config.port,strerror(errno));
       continue;
     }
 
@@ -1822,7 +1877,7 @@ void rtsp_listen_loop(void) {
   freeaddrinfo(info);
 
   if (!nsock)
-    die("could not bind any listen sockets!");
+    die("Could not establish a service on port %d -- program terminating. Is another Shairport Sync running?",config.port);
 
   int maxfd = -1;
   fd_set fds;
@@ -1869,12 +1924,51 @@ void rtsp_listen_loop(void) {
     memset(conn, 0, sizeof(rtsp_conn_info));
     socklen_t slen = sizeof(conn->remote);
 
-    debug(1, "New RTSP connection on port %d", config.port);
     conn->fd = accept(acceptfd, (struct sockaddr *)&conn->remote, &slen);
     if (conn->fd < 0) {
+      debug(1, "New RTSP connection on port %d not accepted:", config.port);
       perror("failed to accept connection");
       free(conn);
     } else {
+      SOCKADDR *local_info = (SOCKADDR*)&conn->local;
+      socklen_t size_of_reply = sizeof(*local_info);
+      memset(local_info,0,sizeof(SOCKADDR));
+      if (getsockname(conn->fd, (struct sockaddr*)local_info, &size_of_reply)==0) {
+                
+        // IPv4:
+        if (local_info->SAFAMILY==AF_INET) {
+          char ip4[INET_ADDRSTRLEN];  // space to hold the IPv4 string
+          char remote_ip4[INET_ADDRSTRLEN];  // space to hold the IPv4 string
+          struct sockaddr_in *sa = (struct sockaddr_in*)local_info;
+          inet_ntop(AF_INET, &(sa->sin_addr), ip4, INET_ADDRSTRLEN);
+          unsigned short int tport = ntohs(sa->sin_port);
+          sa = (struct sockaddr_in*)&conn->remote;
+          inet_ntop(AF_INET, &(sa->sin_addr), remote_ip4, INET_ADDRSTRLEN);
+          unsigned short int rport = ntohs(sa->sin_port);
+          debug(1,"New RTSP connection from %s:%u to self at %s:%u.",remote_ip4,rport,ip4,tport);
+        }
+#ifdef AF_INET6
+        if (local_info->SAFAMILY==AF_INET6) {
+          // IPv6:
+
+          char ip6[INET6_ADDRSTRLEN]; // space to hold the IPv6 string
+          char remote_ip6[INET6_ADDRSTRLEN]; // space to hold the IPv6 string
+          struct sockaddr_in6 *sa6 = (struct sockaddr_in6*)local_info;    // pretend this is loaded with something
+          inet_ntop(AF_INET6, &(sa6->sin6_addr), ip6, INET6_ADDRSTRLEN);
+          u_int16_t tport = ntohs(sa6->sin6_port);
+          
+          sa6 = (struct sockaddr_in6*)&conn->remote;    // pretend this is loaded with something
+          inet_ntop(AF_INET6, &(sa6->sin6_addr), remote_ip6, INET6_ADDRSTRLEN);
+          u_int16_t rport = ntohs(sa6->sin6_port);
+
+          debug(1,"New RTSP connection from [%s]:%u to self at [%s]:%u.",remote_ip6,rport,ip6,tport);
+        }
+ #endif       
+      
+      } else {
+        debug(1,"Error figuring out Shairport Sync's own IP number.");
+      }
+
       usleep(500000);
       pthread_t rtsp_conversation_thread;
       ret = pthread_create(&rtsp_conversation_thread, NULL,
@@ -1884,6 +1978,7 @@ void rtsp_listen_loop(void) {
 
       conn->thread = rtsp_conversation_thread;
       conn->stop = 0;
+      conn->authorized = 0;
       conn->running = 1;
       track_thread(conn);
     }

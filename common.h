@@ -43,13 +43,22 @@ enum stuffing_type {
   ST_soxr,
 } type;
 
+enum playback_mode_type {
+  ST_stereo = 0,
+  ST_mono,
+} playback_mode_type;
+
 typedef struct {
   config_t *cfg;
   char *password;
-  char *apname;
+  char *service_name; // the name for the shairport service, e.g. "Shairport Sync Version %v running on host %h"
 #ifdef CONFIG_METADATA
   int metadata_enabled;
+  int metadata_pipe_timeout; // in milliseconds
   char *metadata_pipename;
+  char *metadata_sockaddr;
+  int metadata_sockport;
+  int metadata_sockmsglength;
   int get_coverart;
 #endif
   uint8_t hw_addr[6];
@@ -77,6 +86,7 @@ typedef struct {
   int32_t ForkedDaapdLatency; // supplied with --ForkedDaapdLatency option
   int daemonise;
   int statistics_requested,use_negotiated_latencies;
+  enum playback_mode_type playback_mode;
   char *cmd_start, *cmd_stop;
   int cmd_blocking;
   int tolerance; // allow this much drift before attempting to correct it
@@ -88,9 +98,8 @@ typedef struct {
   char *regtype; // The regtype is the service type followed by the protocol, separated by a dot, by default “_raop._tcp.”.
   long audio_backend_buffer_desired_length; // this will be the desired number of frames in the
                                             // audio backend buffer -- the DAC buffer for ALSA
-  long audio_backend_latency_offset; // this will be the offset to compensate for any fixed latency
+  long audio_backend_latency_offset; // this will be the offset to compensate for any fixed latency there might be in the audio path
   uint32_t volume_range_db; // the range, in dB, from max dB to min dB. Zero means use the mixer's native range.
-                                     // there might be in the audio
 } shairport_cfg;
 
 // true if Shairport Sync is supposed to be sending output to the output device, false otherwise
@@ -100,6 +109,9 @@ int get_requested_connection_state_to_output();
 void set_requested_connection_state_to_output(int v);
 
 ssize_t non_blocking_write(int fd, const void *buf, size_t count); // used in a few places
+
+/* from http://coding.debuntu.org/c-implementing-str_replace-replace-all-occurrences-substring#comment-722 */
+char *str_replace ( const char *string, const char *substr, const char *replacement );
 
 int debuglev;
 void die(char *format, ...);

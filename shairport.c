@@ -2,6 +2,7 @@
  * Shairport, an Apple Airplay receiver
  * Copyright (c) James Laird 2013
  * All rights reserved.
+ * Modifications (c) Mike Brady 2014--2016
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -109,10 +110,10 @@ char* get_version_string() {
   if (version_string) {
     strcpy(version_string, PACKAGE_VERSION);
   #ifdef HAVE_LIBPOLARSSL
-    strcat(version_string, "-polarssl");
+    strcat(version_string, "-PolarSSL");
   #endif
   #ifdef HAVE_LIBSSL
-    strcat(version_string, "-openssl");
+    strcat(version_string, "-OpenSSL");
   #endif
   #ifdef CONFIG_TINYSVCMDNS
     strcat(version_string, "-tinysvcmdns");
@@ -234,6 +235,8 @@ void usage(char *progname) {
 }
 
 int parse_options(int argc, char **argv) {
+  // there are potential memory leaks here -- it's called a second time, previously allocated strings will dangle.
+  char *raw_service_name = NULL; /* Used to pick up the service name before possibly expanding it */
   char *stuffing = NULL; /* used for picking up the stuffing option */
   signed char c;      /* used for argument parsing */
   int i = 0;          /* used for tracking options */
@@ -248,7 +251,7 @@ int parse_options(int argc, char **argv) {
       {"statistics", 0, POPT_ARG_NONE, &config.statistics_requested, 0, NULL},
       {"version", 'V', POPT_ARG_NONE, NULL, 0, NULL},
       {"port", 'p', POPT_ARG_INT, &config.port, 0, NULL},
-      {"name", 'a', POPT_ARG_STRING, &config.apname, 0, NULL},
+      {"name", 'a', POPT_ARG_STRING, &raw_service_name, 0, NULL},
       {"output", 'o', POPT_ARG_STRING, &config.output_name, 0, NULL},
       {"on-start", 'B', POPT_ARG_STRING, &config.cmd_start, 0, NULL},
       {"on-stop", 'E', POPT_ARG_STRING, &config.cmd_stop, 0, NULL},
@@ -295,9 +298,9 @@ int parse_options(int argc, char **argv) {
   }
 
   config_setting_t *setting;
-  const char *str;
-  int value;
-
+  const char *str=0;
+  int value=0;
+  
   debug(1,"Looking for the configuration file \"%s\".",config.configfile);
   
   config_init(&config_file_stuff);
@@ -312,8 +315,9 @@ int parse_options(int argc, char **argv) {
       // make config.cfg point to it
       config.cfg = &config_file_stuff;
       /* Get the Service Name. */
-      if (config_lookup_string(config.cfg, "general.name", &str))
-        config.apname = (char *)str;
+      if (config_lookup_string(config.cfg, "general.name", &str)) {
+        raw_service_name = (char *)str;
+      }
 
       /* Get the Daemonize setting. */
       if (config_lookup_string(config.cfg, "general.daemonize", &str)) {
@@ -411,6 +415,16 @@ int parse_options(int argc, char **argv) {
           die("Invalid ignore_volume_control option choice \"%s\". It should be \"yes\" or \"no\"");
       }
 
+      /* Get the playback_mode setting */
+       if (config_lookup_string(config.cfg, "general.playback_mode", &str)) {
+        if (strcasecmp(str, "stereo") == 0)
+          config.playback_mode = ST_stereo;
+        else if (strcasecmp(str, "mono") == 0)
+          config.playback_mode = ST_mono;
+        else
+          die("Invalid playback_mode choice \"%s\". It should be \"stereo\" (default) or \"mono\"");
+      }
+
       /* Get the regtype -- the service type and protocol, separated by a dot. Default is "_raop._tcp" */
       if (config_lookup_string(config.cfg, "general.regtype", &str))
         config.regtype = strdup(str);
@@ -465,6 +479,26 @@ int parse_options(int argc, char **argv) {
       if (config_lookup_string(config.cfg, "metadata.pipe_name", &str)) {
         config.metadata_pipename = (char *)str;
       }
+
+      if (config_lookup_string(config.cfg, "metadata.socket_address", &str)) {
+        config.metadata_sockaddr = (char *)str;
+      }
+      if (config_lookup_int(config.cfg, "metadata.socket_port", &value)) {
+        config.metadata_sockport = value;
+      }
+      config.metadata_sockmsglength = 500;
+      if (config_lookup_int(config.cfg, "metadata.socket_msglength", &value)) {
+        config.metadata_sockmsglength = value < 500 ? 500 : value > 65000 ? 65000 : value;
+      }
+      if (config_lookup_int(config.cfg, "metadata.pipe_timeout", &value)) {
+      
+        if ((value < 1) || (value > 150000))
+          die("Invalid timeout range  \"%sd\". It should be in the range 1 to 150,000 milliseconds.",
+              value);
+        else
+          config.metadata_pipe_timeout = value;
+      }
+
   #endif
 
       if (config_lookup_string(config.cfg, "sessioncontrol.run_this_before_play_begins", &str)) {
@@ -579,6 +613,27 @@ int parse_options(int argc, char **argv) {
   
   if (tdebuglev!=0)
     debuglev = tdebuglev;
+
+/* if the Service Name wasn't specified, do it now */
+
+  if (raw_service_name==NULL)
+    raw_service_name = strdup("%H");
+    
+// now, do the substitutions in the service name
+  char hostname[100];
+  gethostname(hostname, 100);
+  char *i1 = str_replace(raw_service_name,"%h",hostname);
+  if ((hostname[0]>='a') && (hostname[0]<='z'))
+    hostname[0] = hostname[0]-0x20; // convert a lowercase first letter into a capital letter
+  char *i2 = str_replace(i1,"%H",hostname);
+  char *i3 = str_replace(i2,"%v",PACKAGE_VERSION);
+  char *vs = get_version_string();
+  config.service_name = str_replace(i3,"%V",vs);  
+  free(i1);
+  free(i2);
+  free(i3);
+  free(vs);
+
   return optind + 1;
 }
 
@@ -702,12 +757,15 @@ int main(int argc, char **argv) {
   config.buffer_start_fill = 220;
   config.port = 5000;
   config.packet_stuffing = ST_basic; // simple interpolation or deletion
-  char hostname[100];
-  gethostname(hostname, 100);
-  config.apname = malloc(20 + 100);
-  snprintf(config.apname, 20 + 100, "Shairport Sync on %s", hostname);
+  //char hostname[100];
+  //gethostname(hostname, 100);
+  //config.service_name = malloc(20 + 100);
+  //snprintf(config.service_name, 20 + 100, "Shairport Sync on %s", hostname);
   set_requested_connection_state_to_output(1); // we expect to be able to connect to the output device
   config.audio_backend_buffer_desired_length = 6615; // 0.15 seconds.
+#ifdef CONFIG_METADATA
+  config.metadata_pipe_timeout = 5000; //milliseconds
+#endif
   config.udp_port_base = 6001;
   config.udp_port_range = 100;
 
@@ -802,8 +860,10 @@ int main(int argc, char **argv) {
   int audio_arg = parse_options(argc, argv);
 
   // mDNS supports maximum of 63-character names (we append 13).
-  if (strlen(config.apname) > 50)
-    die("Supplied name too long (max 50 characters)");
+  if (strlen(config.service_name) > 50) {
+    warn("Supplied name too long (max 50 characters)");
+    config.service_name[50] = '\0'; //truncate it and carry on...
+  }
 
   /* here, daemonise with libdaemon */
 
@@ -944,7 +1004,7 @@ int main(int argc, char **argv) {
   debug(1, "rtsp listening port is %d.", config.port);
   debug(1, "udp base port is %d.", config.udp_port_base);
   debug(1, "udp port range is %d.", config.udp_port_range);
-  debug(1, "Shairport Sync player name is \"%s\".", config.apname);
+  debug(1, "Shairport Sync player name is \"%s\".", config.service_name);
   debug(1, "Audio Output name is \"%s\".", config.output_name);
   debug(1, "on-start action is \"%s\".", config.cmd_start);
   debug(1, "on-stop action is \"%s\".", config.cmd_stop);
@@ -954,13 +1014,14 @@ int main(int argc, char **argv) {
   debug(2, "AirPlayLatency is %d.", config.AirPlayLatency);
   debug(2, "iTunesLatency is %d.", config.iTunesLatency);
   debug(2, "forkedDaapdLatency is %d.", config.ForkedDaapdLatency);
-  debug(1, "stuffing option is \"%d\".", config.packet_stuffing);
+  debug(1, "stuffing option is \"%d\" (0-basic, 1-soxr).", config.packet_stuffing);
   debug(1, "resync time is %d.", config.resyncthreshold);
   debug(1, "allow a session to be interrupted: %d.", config.allow_session_interruption);
   debug(1, "busy timeout time is %d.", config.timeout);
   debug(1, "drift tolerance is %d frames.", config.tolerance);
   debug(1, "password is \"%s\".", config.password);
   debug(1, "ignore_volume_control is %d.", config.ignore_volume_control);
+  debug(1, "playback_mode is %d (0-stereo, 1-mono).", config.playback_mode);
   debug(1, "disable_synchronization is %d.", config.no_sync);
   debug(1, "audio backend desired buffer length is %d.",
         config.audio_backend_buffer_desired_length);
@@ -978,6 +1039,8 @@ int main(int argc, char **argv) {
 #ifdef CONFIG_METADATA
   debug(1, "metdata enabled is %d.", config.metadata_enabled);
   debug(1, "metadata pipename is \"%s\".", config.metadata_pipename);
+  debug(1, "metadata socket address is \"%s\" port %d.", config.metadata_sockaddr, config.metadata_sockport);
+  debug(1, "metadata socket packet size is \"%d\".", config.metadata_sockmsglength);
   debug(1, "get-coverart is %d.", config.get_coverart);
 #endif
 
@@ -986,20 +1049,21 @@ int main(int argc, char **argv) {
 #ifdef HAVE_LIBSSL
   MD5_CTX ctx;
   MD5_Init(&ctx);
-  MD5_Update(&ctx, config.apname, strlen(config.apname));
+  MD5_Update(&ctx, config.service_name, strlen(config.service_name));
   MD5_Final(ap_md5, &ctx);
 #endif
 
 #ifdef HAVE_LIBPOLARSSL
   md5_context tctx;
   md5_starts(&tctx);
-  md5_update(&tctx, (unsigned char *)config.apname, strlen(config.apname));
+  md5_update(&tctx, (unsigned char *)config.service_name, strlen(config.service_name));
   md5_finish(&tctx, ap_md5);
 #endif
   memcpy(config.hw_addr, ap_md5, sizeof(config.hw_addr));
 #ifdef CONFIG_METADATA
   metadata_init(); // create the metadata pipe if necessary
 #endif
+  daemon_log(LOG_INFO,"Successful Startup");
   rtsp_listen_loop();
 
   // should not reach this...

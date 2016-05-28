@@ -43,6 +43,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <limits.h>
+#include <inttypes.h>
 
 #include "config.h"
 
@@ -378,6 +379,24 @@ void player_put_packet(seq_t seqno, uint32_t timestamp, uint8_t *data, int len) 
 					abuf->ready = 1;
 					abuf->timestamp = timestamp;
 					abuf->sequence_number = seqno;
+
+          if (config.playback_mode==ST_mono) {
+            signed short *v = abuf->data;
+            int i;
+            int both;
+            for (i=frame_size;i;i--) {
+              int both = *v + *(v+1);
+              if (both > INT16_MAX) {
+                both = INT16_MAX;
+              } else if (both < INT16_MIN) {
+                both = INT16_MIN;
+              }
+              short sboth = (short)both;
+              *v++ = sboth;
+              *v++ = sboth;
+            }
+          }
+
         } else {
         	debug(1,"Bad audio packet detected and discarded.");
 					abuf->ready = 0;
@@ -635,7 +654,7 @@ static abuf_t *buffer_get_frame(void) {
               int64_t gross_frame_gap =
                   ((first_packet_time_to_play - local_time_now) * 44100) >> 32;
               int64_t exact_frame_gap = gross_frame_gap - dac_delay;
-              if (exact_frame_gap <= 0) {
+              if (exact_frame_gap < 0) {
                 // we've gone past the time...
                 // debug(1,"Run a bit past the exact start time by %lld frames, with time now of
                 // %llx, fpttp of %llx and dac_delay of %d and %d packets;
@@ -650,6 +669,10 @@ static abuf_t *buffer_get_frame(void) {
                 int64_t fs = filler_size;
                 if (fs > (max_dac_delay - dac_delay))
                   fs = max_dac_delay - dac_delay;
+                if (fs<0) {
+                  debug(2,"frame size (fs) < 0 with max_dac_delay of %lld and dac_delay of %ld",max_dac_delay, dac_delay);
+                  fs=0;
+                }
                 if ((exact_frame_gap <= fs) || (exact_frame_gap <= frame_size * 2)) {
                   fs = exact_frame_gap;
                   // debug(1,"Exact frame gap is %llu; play %d frames of silence. Dac_delay is %d,
@@ -659,25 +682,33 @@ static abuf_t *buffer_get_frame(void) {
                   ab_buffering = 0;
                 }
                 signed short *silence;
-                // fs will be truncated here
-                silence = malloc(FRAME_BYTES(fs));
-                memset(silence, 0, FRAME_BYTES(fs));
-                // debug(1,"Exact frame gap is %llu; play %d frames of silence. Dac_delay is %d,
-                // with %d packets.",exact_frame_gap,fs,dac_delay,seq_diff(ab_read, ab_write));
-                config.output->play(silence, fs);
-                free(silence);
-                have_sent_prefiller_silence = 1;
-                if (ab_buffering == 0) {
-                  // not the time of the playing of the first frame
-                  uint64_t reference_timestamp_time; // don't need this...
-                  get_reference_timestamp_stuff(&play_segment_reference_frame, &reference_timestamp_time, &play_segment_reference_frame_remote_time);
-#ifdef CONFIG_METADATA
-                  send_ssnc_metadata('prsm', NULL, 0, 0); // "resume", but don't wait if the queue is locked
-#endif
+                //if (fs==0)
+                //  debug(2,"Zero length silence buffer needed with gross_frame_gap of %lld and dac_delay of %lld.",gross_frame_gap,dac_delay);
+                // the fs (number of frames of silence to play) can be zero in the DAC doesn't start ouotputting frames for a while -- it could get loaded up but not start responding for many milliseconds.
+                if (fs!=0) {
+                  silence = malloc(FRAME_BYTES(fs));
+                  if (silence==NULL)
+                    debug(1,"Failed to allocate %d byte silence buffer.",fs);
+                  else {
+                    memset(silence, 0, FRAME_BYTES(fs));
+                    // debug(1,"Exact frame gap is %llu; play %d frames of silence. Dac_delay is %d,
+                    // with %d packets.",exact_frame_gap,fs,dac_delay,seq_diff(ab_read, ab_write));
+                    config.output->play(silence, fs);
+                    free(silence);
+                    have_sent_prefiller_silence = 1;
+                  }
                 }
               }
             }
           }
+          if (ab_buffering == 0) {
+            // not the time of the playing of the first frame
+            uint64_t reference_timestamp_time; // don't need this...
+            get_reference_timestamp_stuff(&play_segment_reference_frame, &reference_timestamp_time, &play_segment_reference_frame_remote_time);
+#ifdef CONFIG_METADATA
+            send_ssnc_metadata('prsm', NULL, 0, 0); // "resume", but don't wait if the queue is locked
+#endif
+          }              
         }
       }
     }
@@ -982,7 +1013,11 @@ static void *player_thread_func(void *arg) {
 
   signed short *inbuf, *outbuf, *silence;
   outbuf = malloc(OUTFRAME_BYTES(frame_size));
+  if (outbuf==NULL)
+    debug(1,"Failed to allocate memory for an output buffer.");
   silence = malloc(OUTFRAME_BYTES(frame_size));
+  if (silence==NULL)
+    debug(1,"Failed to allocate memory for a silence buffer.");
   memset(silence, 0, OUTFRAME_BYTES(frame_size));
   late_packet_message_sent = 0;
   first_packet_timestamp = 0;
@@ -990,6 +1025,42 @@ static void *player_thread_func(void *arg) {
   flush_rtp_timestamp = 0; // it seems this number has a special significance -- it seems to be used
                            // as a null operand, so we'll use it like that too
   int sync_error_out_of_bounds = 0; // number of times in a row that there's been a serious sync error
+
+  if (config.statistics_requested) {
+    if ((config.output->delay)) {
+      if (config.no_sync==0) {
+        inform("sync error in frames, "
+               "net correction in ppm, "
+               "corrections in ppm, "
+               "total packets, "
+               "missing packets, "
+               "late packets, "
+               "too late packets, "
+               "resend requests, "
+               "min DAC queue size, "
+               "min buffer occupancy, "
+               "max buffer occupancy");
+      } else {
+        inform("sync error in frames, "
+               "total packets, "
+               "missing packets, "
+               "late packets, "
+               "too late packets, "
+               "resend requests, "
+               "min DAC queue size, "
+               "min buffer occupancy, "
+               "max buffer occupancy");
+      }
+    } else {
+      inform("total packets, "
+             "missing packets, "
+             "late packets, "
+             "too late packets, "
+             "resend requests, "
+             "min buffer occupancy, "
+             "max buffer occupancy");
+    }
+  }
 
   uint64_t tens_of_seconds = 0;
   while (!please_stop) {
@@ -1003,7 +1074,14 @@ static void *player_thread_func(void *arg) {
           // debug(1,"Player has a supplied silent frame.");
           last_seqno_read =
               (SUCCESSOR(last_seqno_read) & 0xffff); // manage the packet out of sequence minder
-          config.output->play(inbuf, frame_size);
+          if (inbuf==NULL)
+            debug(1,"NULL inbuf to play -- skipping it.");
+          else {
+            if (frame_size==0)
+              debug(1,"empty frame to play -- skipping it (1).");
+            else
+              config.output->play(inbuf, frame_size);
+          }
         } else {
           // We have a frame of data. We need to see if we want to add or remove a frame from it to
           // keep in sync.
@@ -1145,7 +1223,14 @@ static void *player_thread_func(void *arg) {
               // if no stuffing needed and no volume adjustment, then
               // don't send to stuff_buffer_* and don't copy to outbuf; just send directly to the
               // output device...
-              config.output->play(inbuf, frame_size);
+              if (inbuf==NULL)
+                debug(1,"NULL inbuf to play -- skipping it.");
+              else {
+                if (frame_size==0)
+                  debug(1,"empty frame to play -- skipping it (2).");
+                else
+                  config.output->play(inbuf, frame_size);
+              }
             } else {
 #ifdef HAVE_LIBSOXR
               switch (config.packet_stuffing) {
@@ -1177,8 +1262,16 @@ static void *player_thread_func(void *arg) {
                   debug(1,"Silence!");
               }
               */
-
-              config.output->play(outbuf, play_samples);
+              
+              
+              if (outbuf==NULL)
+                debug(1,"NULL outbuf to play -- skipping it.");
+              else {
+                if (play_samples==0)
+                  debug(1,"play_samples==0 skipping it (1).");
+                else
+                  config.output->play(outbuf, play_samples);
+              }
             }
 
             // check for loss of sync
@@ -1209,10 +1302,26 @@ static void *player_thread_func(void *arg) {
             // if there is no delay procedure, or it's not working or not allowed, there can be no synchronising
             
             if (fix_volume == 0x10000)
-              config.output->play(inbuf, frame_size);
+            
+              if (inbuf==NULL)
+                debug(1,"NULL inbuf to play -- skipping it.");
+              else {
+                if (frame_size==0)
+                  debug(1,"empty frame to play -- skipping it (3).");
+                else
+                  config.output->play(inbuf, frame_size);
+              }
             else {
               play_samples = stuff_buffer_basic(inbuf, outbuf, 0); // no stuffing, but volume adjustment
-              config.output->play(outbuf, frame_size);
+
+              if (outbuf==NULL)
+                debug(1,"NULL outbuf to play -- skipping it.");
+              else {
+                if (frame_size==0)
+                  debug(1,"empty frame to play -- skipping it (4).");
+                else
+                  config.output->play(outbuf, frame_size);
+              }
             }
           }
 
@@ -1281,31 +1390,66 @@ static void *player_thread_func(void *arg) {
             if (at_least_one_frame_seen) {
             	if ((config.output->delay)) {
                 if (config.no_sync==0) {
-                  inform("Sync error: %.1f (frames); net correction: %.1f (ppm); corrections: %.1f "
-                         "(ppm); total packets %d; missing packets %llu; late packets %llu; too late packets %llu; "
-                         "resend requests %llu; min DAC queue size %lli, min and max buffer occupancy "
-                         "%d and %d.",
-                         moving_average_sync_error, moving_average_correction * 1000000 / 352,
-                         moving_average_insertions_plus_deletions * 1000000 / 352, play_number, missing_packets,
-                         late_packets, too_late_packets, resend_requests, minimum_dac_queue_size,
-                         minimum_buffer_occupancy, maximum_buffer_occupancy);
+                  inform("%*.1f,"  /* Sync error inf frames */
+                         "%*.1f,"  /* net correction in ppm */
+                         "%*.1f,"  /* corrections in ppm */
+                         "%*d,"    /* total packets */
+                         "%*llu,"  /* missing packets */
+                         "%*llu,"  /* late packets */
+                         "%*llu,"  /* too late packets */
+                         "%*llu,"  /* resend requests */
+                         "%*lli,"  /* min DAC queue size */
+                         "%*d,"    /* min buffer occupancy */
+                         "%*d",    /* max buffer occupancy */
+                         10, moving_average_sync_error,
+                         10, moving_average_correction * 1000000 / 352,
+                         10, moving_average_insertions_plus_deletions * 1000000 / 352,
+                         12, play_number,
+                         7, missing_packets,
+                         7, late_packets,
+                         7, too_late_packets,
+                         7, resend_requests,
+                         7, minimum_dac_queue_size,
+                         5, minimum_buffer_occupancy,
+                         5, maximum_buffer_occupancy);
                 } else {
-                  inform("Synchronisation disabled. Sync error: %.1f (frames); total packets %d; "
-                         "missing packets %llu; late packets %llu; too late packets %llu; "
-                         "resend requests %llu; min DAC queue size %lli, min and max buffer occupancy "
-                         "%d and %d.",
-                         moving_average_sync_error, play_number, missing_packets,
-                         late_packets, too_late_packets, resend_requests, minimum_dac_queue_size,
-                         minimum_buffer_occupancy, maximum_buffer_occupancy);
+                  inform("%*.1f,"  /* Sync error inf frames */
+                         "%*d,"    /* total packets */
+                         "%*llu,"  /* missing packets */
+                         "%*llu,"  /* late packets */
+                         "%*llu,"  /* too late packets */
+                         "%*llu,"  /* resend requests */
+                         "%*lli,"  /* min DAC queue size */
+                         "%*d,"    /* min buffer occupancy */
+                         "%*d",    /* max buffer occupancy */
+                         10, moving_average_sync_error,
+                         12, play_number,
+                         7, missing_packets,
+                         7, late_packets,
+                         7, too_late_packets,
+                         7, resend_requests,
+                         7, minimum_dac_queue_size,
+                         5, minimum_buffer_occupancy,
+                         5, maximum_buffer_occupancy);
                 } 
               } else {
-								inform("Synchronisation disabled. Total packets %d; missing packets %llu; late packets %llu; too late packets %llu; "
-										 "resend requests %llu; min and max buffer occupancy "
-										 "%d and %d.",
-										 play_number, missing_packets,
-										 late_packets, too_late_packets, resend_requests,
-										 minimum_buffer_occupancy, maximum_buffer_occupancy);
-							}            
+                inform("%*.1f,"  /* Sync error inf frames */
+                       "%*d,"    /* total packets */
+                       "%*llu,"  /* missing packets */
+                       "%*llu,"  /* late packets */
+                       "%*llu,"  /* too late packets */
+                       "%*llu,"  /* resend requests */
+                       "%*d,"    /* min buffer occupancy */
+                       "%*d",    /* max buffer occupancy */
+                       10, moving_average_sync_error,
+                       12, play_number,
+                       7, missing_packets,
+                       7, late_packets,
+                       7, too_late_packets,
+                       7, resend_requests,
+                       5, minimum_buffer_occupancy,
+                       5, maximum_buffer_occupancy);
+              }
             } else {
               inform("No frames received in the last sampling interval.");
             }
