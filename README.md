@@ -51,15 +51,15 @@ Note: Historically, Shairport Sync has taken its settings from command line argu
 
 Building And Installing
 ---------------------
-If you wish to install Shairport Sync on OpenWrt, Arch or Fedora platforms, please follow the appropriate instructions below. Limited support is also available for Mac OS X. Otherwise follow the General Build Instructions. Then, when the program has been installed, refer to the section on Configuring Shairport Sync that follows.
+Shairport Sync may already be available as a package in your Linux distribution (search for `shairport-sync` – the package named `shairport` is a different program). Packages are available on recent versions of Debian, Ubuntu, Arch, OpenWrt and possibly more. If you wish to build and install the latest version of Shairport Sync on OpenWrt, Arch or Fedora platforms, please follow the appropriate instructions below. Limited support is also available for Mac OS X. Otherwise follow the General Build Instructions. Then, when the program has been installed, refer to the section on Configuring Shairport Sync that follows.
 
 **Note**
 
-The following procedures will install the shairport-sync application into your system. Before continuing, you should check to see if shairport-sync is already installed – you can use `which shairport-sync` to find where it is located, if installed. If it is installed you should delete it – you may need superuser privileges. After deleting, check again in case further copies are installed elsewhere.
-(If the existing installation of shairport-sync is where the new copy will be installed into, it will be overwritten;  sometimes, however, the installation is to another location, so it is safer, initially, to delete previous versions manually.)
+The following procedures will install the `shairport-sync` application into your system. Before continuing, you should check to see if `shairport-sync` is already installed – you can use `which shairport-sync` to find where it is located, if installed. If it is installed you should delete it – you may need superuser privileges. After deleting, check again in case further copies are installed elsewhere.
+(If the existing installation of `shairport-sync` is where the new copy will be installed into, it will be overwritten;  sometimes, however, the installation is to another location, so it is safer, initially, to delete previous versions manually.)
 
 **Ubuntu:**
-Personal Package Archives for Shairport Sync master and development branches are available at https://launchpad.net/~dantheperson. A `shairport-sync` installer package is available in Ubuntu 16.04, currently in its late beta phase.
+Personal Package Archives for Shairport Sync master and development branches are available at https://launchpad.net/~dantheperson. A `shairport-sync` installer package is available in Ubuntu 16.04.
 
 **Debian:**
 `shairport-sync` is in the Debian archive and is scheduled for release with Debian Stretch (9): https://tracker.debian.org/shairport-sync. A backport for Debian Jessie (8) may be provided given enough demand.
@@ -114,7 +114,7 @@ Debian, Ubuntu and Raspbian users can get the basics with:
 
 Download Shairport Sync:
 
-`git clone https://github.com/mikebrady/shairport-sync.git`
+`$ git clone https://github.com/mikebrady/shairport-sync.git`
 
 Next, `cd` into the shairport-sync directory and execute the following command:
 
@@ -142,7 +142,7 @@ Choose the appropriate `--with-*` options:
 
 At the time of writing, there are two widely-used systems for starting programs automatically at startup: `systemd` and "System V" . (There are others, but they are not considered here.) To see if the `systemd` process is running on your system, enter the following command:
 
-`ps aux | grep systemd | grep -v grep`
+`$ ps aux | grep systemd | grep -v grep`
 
 On a system using `systemd` (this is from a Raspberry Pi running Raspbian Jessie) you'll get many lines containing `systemd`, for example:
 ```
@@ -178,34 +178,34 @@ to build the application.
 To complete the installation, you need to define a `shairport-sync` group and user. This is a security measure – the user and group are relatively unprivileged, and the user does not have login priviliges. The user must be a member of the `audio` group to be able to access the audio hardware. The following commands define the group and user correctly if they do not already exist (note the use of `sudo` – omit this if you already have superuser privileges:
 
 ```
-$getent group shairport-sync &>/dev/null || sudo groupadd -r shairport-sync >/dev/null
-$getent passwd shairport-sync &> /dev/null || sudo useradd -r -M -g shairport-sync -s /usr/bin/nologin -G audio shairport-sync >/dev/null
+$ getent group shairport-sync &>/dev/null || sudo groupadd -r shairport-sync >/dev/null
+$ getent passwd shairport-sync &> /dev/null || sudo useradd -r -M -g shairport-sync -s /usr/bin/nologin -G audio shairport-sync >/dev/null
 ```
 
 Next, enter:
 
 ```
-$sudo make install
+$ sudo make install
 ```
 
 to install `shairport-sync` along with a `man` page, a default configuration file and a `systemd` configuration file called `shairport-sync.service` to launch it automatically at system startup.
 
 To enable Shairport Sync to start automatically at system startup, enter:
 
-`$sudo systemctl enable shairport-sync`
+`$ sudo systemctl enable shairport-sync`
 
 **Installation to a System V system**
 If you are installing onto a System V system:
 
 ```
-$sudo make install
+$ sudo make install
 ```
 
 to install `shairport-sync` along with a `man` page, a default configuration file and a System V startup script to launch it automatically at system startup.
 
 To complete the installation, enter:
 ```
-$sudo update-rc.d shairport-sync defaults 90 10
+$ sudo update-rc.d shairport-sync defaults 90 10
 ```
 
 **Man Page**
