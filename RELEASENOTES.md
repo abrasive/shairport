@@ -1,4 +1,4 @@
-Version 2.8.4 – Stable Version (Candidate Release)
+Version 2.8.4 – Stable Version
 ----
 This release includes important bug fixes and minor enhancements and is recommended for all users. No settings need to be changed. For advice on updating an installation you built yourself, please visit the [UPDATING](https://github.com/mikebrady/shairport-sync/blob/master/UPDATING.md) page.
 
