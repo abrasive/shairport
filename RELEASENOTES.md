@@ -1,3 +1,10 @@
+Version 2.8.4.1 – Development Version
+----
+**Bug Fixes**
+
+* Fixed two issues when including support for `pulseaudio`.
+* Corrected two small errors in sample parameters for the UDP metadata stream settings, thanks to [rkam](https://github.com/rkam).
+
 Version 2.8.4 – Stable Version (Candidate Release)
 ----
 This release includes important bug fixes and minor enhancements and is recommended for all users. No settings need to be changed. For advice on updating an installation you built yourself, please visit the [UPDATING](https://github.com/mikebrady/shairport-sync/blob/master/UPDATING.md) page.
