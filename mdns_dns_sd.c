@@ -27,15 +27,16 @@
 #include <dns_sd.h>
 #include <string.h>
 #include <stdlib.h>
+#include <arpa/inet.h>
 #include "mdns.h"
 #include "common.h"
 
 static DNSServiceRef service;
 
 static int mdns_dns_sd_register(char *apname, int port) {
-  const char *recordwithoutmetadata[] = {MDNS_RECORD_WITHOUT_METADATA, NULL};
+  char *recordwithoutmetadata[] = {MDNS_RECORD_WITHOUT_METADATA, NULL};
 #ifdef CONFIG_METADATA
-  const char *recordwithmetadata[] = {MDNS_RECORD_WITH_METADATA, NULL};
+  char *recordwithmetadata[] = {MDNS_RECORD_WITH_METADATA, NULL};
 #endif
   char **record;
 #ifdef CONFIG_METADATA
@@ -46,7 +47,7 @@ static int mdns_dns_sd_register(char *apname, int port) {
     record = recordwithoutmetadata;
 
   uint16_t length = 0;
-  const char **field;
+  char **field;
 
   // Concatenate string contained i record into buf.
 
