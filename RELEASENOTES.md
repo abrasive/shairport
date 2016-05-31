@@ -1,3 +1,9 @@
+HEAD
+----
+**Bug Fixes**
+
+* Fixed a few small issues causing compiler warnings in `mdns_dns_sd.c`.
+
 Version 2.8.4.1 – Development Version
 ----
 **Bug Fixes**
