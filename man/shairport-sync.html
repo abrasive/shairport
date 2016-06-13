@@ -44,16 +44,16 @@
   <h2>Description</h2>
 
     <p>shairport-sync  plays  audio  streamed  from  iTunes or from an AirPlay
-    device to an ALSA-compatible audio output device.</p>
+    device to an Advanced Linux Sound Architecture (ALSA) compatible audio output device.</p>
 
-    <p> A feature of shairport-sync is that the audio is played synchronously.
+    <p>A feature of shairport-sync is that the audio is played synchronously.
     This means that if many devices are playing the same stream at the same
     time, all the outputs will stay in step with one another.
-    This allows multiple devices play the same source without getting out of phase with one another,
+    This allows multiple devices to play the same source without getting out of phase with one another,
     enabling, for example, simultaneous multi-room operation.
     </p>
     
-    <p>shairport-sync can additionally be compiled and configured to stream raw audio to a pipe or to stdout.</p>
+    <p>shairport-sync can be compiled to stream audio, without synchronisation, to a pipe, to stdout or to a libao output device (an &quot;AO&quot; device). It can also be compiled to stream metadata to a pipe or socket.</p>
     
     <p>Settings can be made using the configuration file (recommended for all new installations) or by using command-line options.</p>
  
@@ -103,8 +103,8 @@
 		<p>The following substitutions are allowed:
 		<b>%h</b> for the computer's hostname,
 		<b>%H</b> for the computer's hostname with the first letter capitalised (ASCII only),
-		<b>%v</b> for the Shairport Sync version number, e.g. &quot;2.8.4&quot; and
-		<b>%V</b> for the Shairport Sync version string, e.g. &quot;2.8.4-OpenSSL-Avahi-ALSA-soxr-metadata&quot;.</p>
+		<b>%v</b> for the shairport-sync version number, e.g. &quot;2.8.4&quot; and
+		<b>%V</b> for the shairport-sync version string, e.g. &quot;2.8.4-OpenSSL-Avahi-ALSA-soxr-metadata&quot;.</p>
     <p>The default is &quot;%H&quot;, which is replaced by the hostname with the first letter capitalised.</p>
     
 	  
@@ -185,9 +185,9 @@
     This might be because the sound becomes inaudible at the lowest setting and unbearably loud at the highest setting --
     indeed, many domestic HiFi systems have a volume control range of just 60 to 80dB.</p>
     <p>Another potential use might be where the range specified by the mixer does not match the capabilities of the device.
-    For example, the Raspberry Pi's DAC that feeds the built-in audio jack claims a range of 106 dB but has a useful range of only about 35dB.
+    For example, the Raspberry Pi's DAC that feeds the built-in audio jack claims a range of 106 dB but has a useful range of only about 30 dB.
     The setting allows you to specify the maximum range from highest to lowest.
-    The range suggested for the Raspberry Pi's built-in audio DAC, which feeds the headphone jack, is 35.
+    The range suggested for the Raspberry Pi's built-in audio DAC, which feeds the headphone jack, is 30.
     Using it in this case gives the volume control a much more useful range of settings.</p>
     <p>As a third example, you can actually extend the range provided by a mixer.
     Many cheaper DACs have hardware mixers that offer a restricted attenuation range.
@@ -250,7 +250,7 @@
     
     <p><b>disable_synchronization=</b><em>&quot;no&quot;</em><b>;</b></p>
     This is an advanced setting and is for debugging only. Set to &quot;yes&quot; to disable synchronization. Default is &quot;no&quot;.
-    If you use it to disable synchronisation, then soner or later you'll experience audio glitches due to
+    If you use it to disable synchronisation, then sooner or later you'll experience audio glitches due to
     audio buffer overflow or underflow.
     
     
@@ -265,16 +265,18 @@
     
     <p><b>&quot;PIPE&quot; SETTINGS</b></p>
     <p>These settings are for the PIPE backend, used to route audio to a named unix pipe. The audio is in raw CD audio format: PCM 16 bit little endian, 44,100 samples per second,
-    stereo.</p>
+    interleaved stereo.</p>
     <p>Use the <em>name</em> setting to set the name and location of the pipe.</p>
     <p>There are two further settings affecting timing that might be useful if the pipe reader is, for example,
-    a program to play an audio stream such as <b>aplay</b>. The <em>audio_backend_latency_offset</em> affects precisely when the first audio packet is sent
+    a program to play an audio stream such as <b>aplay</b>. The <em>audio_backend_latency_offset</em> affects precisely
+    when the first audio packet is sent
     and the <em>audio_backend_buffer_desired_length</em> setting affects the nominal output buffer size.</p>
     <p>These are the settings available within the <b>pipe</b> group:</p>
 
     
     <p><b>name=</b><em>&quot;/path/to/pipe&quot;</em><b>;</b></p>
-    Use this to specify the name and location of the pipe. The pipe will be created and opened when shairport-sync starts up and will be closed upon shutdown.
+    Use this to specify the name and location of the pipe. The pipe will be created and opened when shairport-sync starts up
+    and will be closed upon shutdown.
     Frames of audio will be sent to the pipe in packets of 352 frames and will be discarded if the pipe has not have a reader attached.
     The sender will wait for up to five seconds for a packet to be written before discarding it.
     
@@ -282,7 +284,7 @@
     
     <p><b>audio_backend_latency_offset=</b><em>offset_in_frames</em><b>;</b></p>
     
-    Packets of audio frames are written to the pipe synchronously -- that is, they are written to at exactly the time they should be played.
+    Packets of audio frames are written to the pipe synchronously -- that is, they are written at exactly the time they should be played.
     You can offset the time of initial audio output relative to its nominal time using this setting.
     For example to send an audio stream to the pipe 100 milliseconds before it is due to be played, set this to -4410. Default setting is 0.
     
@@ -300,7 +302,7 @@
      
     <p><b>&quot;STDOUT&quot; SETTINGS</b></p>
     <p>These settings are for the STDOUT backend, used to route audio to standard output (&quot;stdout&quot;).
-    The audio is in raw CD audio format: PCM 16 bit little endian, 44,100 samples per second, stereo.</p>
+    The audio is in raw CD audio format: PCM 16 bit little endian, 44,100 samples per second, interleaved stereo.</p>
     <p>There are two settings affecting timing that might be useful if the stdout reader is, for example,
     a program to play an audio stream such as <b>aplay</b>. The <em>audio_backend_latency_offset</em> affects precisely when the first audio packet is sent
     and the <em>audio_backend_buffer_desired_length</em> setting affects the nominal output buffer size.</p>
@@ -344,7 +346,7 @@
     <p><b>audio_backend_buffer_desired_length=</b><em>buffer_length_in_frames</em><b>;</b></p>
         
     Use this setting, in frames, to set the size of the output buffer. It works by determining how soon the second and subsequent packets of
-    audio frames are sent to to the libao system.
+    audio frames are sent to the libao system.
     For example, if you send the first packet of audio exactly when it is due and, using a <em>audio_backend_buffer_desired_length</em> setting of 44100,
     send subsequent packets of audio a second before they are due to be played, they will be buffered in the stdout reader's buffer, giving it a nominal buffer size of 44,100 frames.
     Note that if the libao system consumes audio packets faster or slower than they are supplied, the buffer will eventually empty or overflow --
@@ -356,7 +358,7 @@
     <p>shairport-sync can process metadata provided by the source, such as Track Number, Album Name, cover art, etc. and can provide additional metadata such as volume level,
     pause/resume, etc. It sends the metadata to a pipe, by default <em>/tmp/shairport-sync-metadata</em>.
     To process metadata, shairport-sync must have been compiled with metadata support included.
-    You can check that this is so by running <b>shairport-sync -V</b>; the identification string will contain the word <b>metadata</b>.</p>
+    You can check that this is so by running the command <b>$ shairport-sync -V</b>; the identification string will contain the word <b>metadata</b>.</p>
     <p>Please note that different sources provide different levels of metadata. Some provide a lot; some provide almost none.</p>
     <p>The <b>metadata</b> group of settings allow you to enable metadata handling and to control certain aspects of it:</p>
 
@@ -375,13 +377,13 @@
     
     
     <p><b>pipe_name=</b><em>&quot;filepathname&quot;</em><b>;</b></p>
-    Specify the absolute path name of the pipe through which metadata should be sent The default is <em>/tmp/shairport-sync-metadata</em>&quot;.
+    Specify the absolute path name of the pipe through which metadata should be sent The default is <em>/tmp/shairport-sync-metadata</em>.
     
     
     
     <p><b>socket_address=</b><em>&quot;hostnameOrIP&quot;</em><b>;</b></p>
     If <em>hostnameOrIP</em> is set to a host name or and IP address, UDP packets containing metadata will be sent to this address.
-    May be a multicast address. &quot;socket-port&quot; must be non-zero and &quot;enabled&quot; must be set to &quot;yes&quot;.
+    May be a multicast address. Additionally, <em>socket-port</em> must be non-zero and <em>enabled</em> must be set to &quot;yes&quot;.
     
     
     <p><b>socket_port=</b><em>port</em><b>;</b></p>
@@ -392,11 +394,9 @@
     The maximum packet size for any UDP metadata. This must be between 500 or 65000. The default is 500.
     
 
-    
     <p><b>&quot;SESSIONCONTROL&quot; SETTINGS</b></p>
     <p>shairport-sync can run programs just before it starts to play an audio stream and just after it finishes.
     You specify them using the sessioncontrol group settings run_this_before_play_begins and run_this_after_play_ends.</p>
-
 
     
     <p><b>run_this_before_play_begins=</b><em>&quot;/path/to/application and args&quot;</em><b>;</b></p>
@@ -426,11 +426,11 @@
     
 
      <p><b>&quot;LATENCIES&quot; SETTINGS</b></p>
-     <p>The latencies settings are now deprecated. Do not use them for new installations. They will be removed from a future version of Shairport Sync.</p>
+     <p>The latencies settings are now deprecated. Do not use them for new installations. They will be removed from a future version of shairport-sync.</p>
      <p>Latency is the exact time from a sound signal's original timestamp until that signal actually &quot;appears&quot; on the output of the audio output device,
      usually a Digital to Audio Converter (DAC), irrespective of any internal delays, processing times, etc. in the computer.</p>
      
-     <p>Shairport Sync now sets latencies automatically using information supplied by the source, typically either 88,200 or 99,577 frames.</p>
+     <p>shairport-sync now sets latencies automatically using information supplied by the source, typically either 88,200 or 99,577 frames.</p>
           
     <p>The following relates to the old scheme of using fixed latencies, which ignored the latency information supplied by the source.
     There are four default latency settings. One latency matches the latency used by recent versions of
@@ -440,7 +440,6 @@
     <p>Note: If you are thinking of changing latencies to compensate for a delay in the audio output device, then
     instead of changing these individual latencies, use the <b>audio_backend_latency_offset</b> setting in the <b>alsa</b> group
     (or the appropriate other group if you're not outputing through the alsa backend).</p>
-
 
     
     <p><b>itunes=</b><em>latency</em><b>;</b></p>
@@ -458,22 +457,22 @@
     <p><b>default=</b><em>latency</em><b>;</b></p>
    This is the <em>latency</em>, in frames, used when the source is unrecognised. Default is 88,200.
    
-
-     
+    
 	
 
 
 	<h2>Options</h2>
 
+	  <p>This section is about the command-line options available in shairport-sync.</p>
 
-    <p>Note: if you are setting up Shairport Sync for the first time or are updating an existing installation,
-    you are encouraged to use the configuration file settings described above. Most of the options described below
-    simply replicate the configuration settings and are retained to provide backward compatibility with older installations of Shairport Sync.</p>
+    <p>Note: if you are setting up shairport-sync for the first time or are updating an existing installation,
+    you are encouraged to use the configuration file settings described above. Most of the command-line options described below
+    simply replicate the configuration settings and are retained to provide backward compatibility with older installations of shairport-sync.</p>
     
-    <p>Many  of  the options take sensible default values, so you can normally
+    <p>Many  command-line options take sensible default values, so you can normally
     ignore most of them. See the EXAMPLES section for typical usages.</p>
 
-    <p>The command line for shairport-sync can take two kinds of options:
+    <p>There are two kinds of command-line options for shairport-sync:
     regular <b>program options</b> and <b>audio backend options</b>.
     Program options are
     always listed first, followed by any audio backend options, preceded by
@@ -481,7 +480,7 @@
     
   <h2>Program Options</h2>
 
-  <p>These options are used by shairport-sync itself.</p>
+  <p>These command-line options are used by shairport-sync itself.</p>
   
 
   
@@ -493,8 +492,8 @@
 		<p>The following substitutions are allowed:
 		<b>%h</b> for the computer's hostname,
 		<b>%H</b> for the computer's hostname with the first letter capitalised (ASCII only),
-		<b>%v</b> for the Shairport Sync version number, e.g. &quot;2.8.4&quot; and
-		<b>%V</b> for the Shairport Sync version string, e.g. &quot;2.8.4-OpenSSL-Avahi-ALSA-soxr-metadata&quot;.</p> 
+		<b>%v</b> for the shairport-sync version number, e.g. &quot;2.8.4&quot; and
+		<b>%V</b> for the shairport-sync version string, e.g. &quot;2.8.4-OpenSSL-Avahi-ALSA-soxr-metadata&quot;.</p> 
     <p>The default is &quot;%H&quot;, which is replaced by the hostname with the first letter capitalised.</p>
     </p>
 	  
@@ -506,7 +505,7 @@
     device. The default is 88,200 frames, where there are 44,100
     frames to the second.
     </p>
-    <p>Please note that this feature is deprecated and will be removed in a future version of Shairport Sync.</p>
+    <p>Please note that this feature is deprecated and will be removed in a future version of shairport-sync.</p>
     
 	  
 
@@ -537,7 +536,7 @@
     exit. (Requires that the daemon has written its PID to an agreed
     file -- see the <b>-d</b> option).
 		</p>
-		<p>Please note that this feature is deprecated and will be removed in a future version of Shairport Sync.</p>
+		<p>Please note that this feature is deprecated and will be removed in a future version of shairport-sync.</p>
 		
 	  
 
@@ -571,7 +570,7 @@
     source. The default is 99,400 frames, where there are 44,100
     frames to the second.
     </p>
-    <p>Please note that this feature is deprecated and will be removed in a future version of Shairport Sync.</p>
+    <p>Please note that this feature is deprecated and will be removed in a future version of shairport-sync.</p>
     
 	  
 	  
@@ -600,7 +599,7 @@
     source, where iTunes is Version 10 or later. The default is 99,400 frames, where there are 44,100
     frames to the second. If the source is iTunes but is earler than Version 10, the <em>default latency</em> is used (see the <b>-L</b> option). Some third party programs masquerade as older versions of iTunes.
     </p>
-    <p>Please note that this feature is deprecated and will be removed in a future version of Shairport Sync.</p>
+    <p>Please note that this feature is deprecated and will be removed in a future version of shairport-sync.</p>
     
 	  
 
@@ -618,7 +617,7 @@
 		Use this to set the <em>default latency</em>, in frames, for audio coming from an unidentified source or from an iTunes Version 9 or earlier source. The standard value for the <em>default latency</em> is 88,200 frames, where there are 44,100
     frames to the second.
     </p>
-    <p>Please note that this feature is deprecated and will be removed in a future version of Shairport Sync.</p>
+    <p>Please note that this feature is deprecated and will be removed in a future version of shairport-sync.</p>
     
 	  
 
@@ -674,7 +673,7 @@
     the daemon has written its PID to an agreed file -- see the <b>-d</b>
     option).
 		</p>
-    <p>Please note that this feature is deprecated and will be removed in a future version of Shairport Sync.</p>
+    <p>Please note that this feature is deprecated and will be removed in a future version of shairport-sync.</p>
 		
 	  
 
@@ -761,10 +760,11 @@
 
   <h2>Audio Backend Options</h2>
 
-  <p>These  options are passed to the chosen audio backend. The audio  backend  options  are
+  <p>These  command-line options are passed to the chosen audio backend. The audio  backend  options  are
   preceded by a <b>--</b> symbol to introduce them and to separate them from any
   program options. In this way, option letters can be used  as  program
   options and also as audio backend options without ambiguity.</p>
+  
   <p>In the ALSA backend, audio is sent to an output device
   which you can specify using the <b>-d</b> option.
   The output level (the &quot;volume&quot;) is controlled using a level control associated with a mixer.
@@ -855,8 +855,8 @@
 
 	<h2>Credits</h2>
 
-	<p>Mike Brady developed Shairport Sync from the original Shairport by James Laird.</p>
-	<p>Shairport Sync can be found at  <a href = "https://github.com/mikebrady/shairport-sync.">https://github.com/mikebrady/shairport-sync.</a></p>
+	<p>Mike Brady developed shairport-sync from the original Shairport by James Laird.</p>
+	<p>shairport-sync can be found at  <a href = "https://github.com/mikebrady/shairport-sync.">https://github.com/mikebrady/shairport-sync.</a></p>
   <p>Shairport can be found at <a href = "https://github.com/abrasive/shairport.">https://github.com/abrasive/shairport.</a></p>
 	
 
