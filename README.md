@@ -55,7 +55,7 @@ Shairport Sync may already be available as a package in your Linux distribution 
 
 **Note**
 
-The following procedures will install the `shairport-sync` application into your system. Before continuing, you should check to see if `shairport-sync` is already installed – you can use `which shairport-sync` to find where it is located, if installed. If it is installed you should delete it – you may need superuser privileges. After deleting, check again in case further copies are installed elsewhere.
+The following procedures will install the `shairport-sync` application into your system. Before continuing, you should check to see if `shairport-sync` is already installed – you can use the command `$ which shairport-sync` to find where it is located, if installed. If it is installed you should delete it – you may need superuser privileges. After deleting, check again in case further copies are installed elsewhere.
 (If the existing installation of `shairport-sync` is where the new copy will be installed into, it will be overwritten;  sometimes, however, the installation is to another location, so it is safer, initially, to delete previous versions manually.)
 
 **Ubuntu:**
