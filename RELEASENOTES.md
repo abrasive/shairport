@@ -1,8 +1,13 @@
-HEAD
+Version 2.8.4.2 – Development Version
 ----
 **Bug Fixes**
 
+* Fixed an issue where you could not compile the audio_pipe back end without enabling metadata support (thanks to [busa-projects](https://github.com/busa-projects) for reporting the issue).
 * Fixed a few small issues causing compiler warnings in `mdns_dns_sd.c`.
+
+
+**Other**
+* Removed the INSTALL file – it's generated automatically by `autoreconf -fi` anyway – added it to the files to be ignored in `.gitignore` and added a simple `INSTALL.md` file.
 
 Version 2.8.4.1 – Development Version
 ----
