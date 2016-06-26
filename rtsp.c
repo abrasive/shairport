@@ -1838,7 +1838,6 @@ void rtsp_listen_loop(void) {
       // strerror(errno));
       continue;
     }
-
     ret = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
 
 #ifdef IPV6_V6ONLY

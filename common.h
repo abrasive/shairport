@@ -54,7 +54,6 @@ typedef struct {
   char *service_name; // the name for the shairport service, e.g. "Shairport Sync Version %v running on host %h"
 #ifdef CONFIG_METADATA
   int metadata_enabled;
-  int metadata_pipe_timeout; // in milliseconds
   char *metadata_pipename;
   char *metadata_sockaddr;
   int metadata_sockport;
