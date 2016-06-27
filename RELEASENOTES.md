@@ -1,3 +1,9 @@
+Version 2.8.4.3 – Development Version
+----
+**Bug Fixes**
+
+* Set the RTSP socket to close on `exec()` of child processes otherwise background `run_this_before_play_begins` or `run_this_after_play_ends` commands that are sleeping prevent the daemon from being restarted because the listening RTSP port is still in use. Fixes [#329](https://github.com/mikebrady/shairport-sync/issues/329).
+
 Version 2.8.4.2 – Development Version
 ----
 **Bug Fixes**
