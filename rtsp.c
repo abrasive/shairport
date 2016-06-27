@@ -1838,6 +1838,12 @@ void rtsp_listen_loop(void) {
       // strerror(errno));
       continue;
     }
+    // Set the RTSP socket to close on exec() of child processes
+    // otherwise background run_this_before_play_begins or run_this_after_play_ends commands
+    // that are sleeping prevent the daemon from being restarted because
+    // the listening RTSP port is still in use.
+    // See: https://github.com/mikebrady/shairport-sync/issues/329
+    fcntl(fd, F_SETFD, FD_CLOEXEC);
     ret = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
 
 #ifdef IPV6_V6ONLY
