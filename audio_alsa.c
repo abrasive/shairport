@@ -48,6 +48,7 @@ static void linear_volume(double vol);
 static void parameters(audio_parameters *info);
 static void mute(int do_mute);
 static double set_volume;
+static int output_method_signalled = 0;
 
 audio_output audio_alsa = {
     .name = "alsa",
@@ -393,9 +394,17 @@ int open_alsa_device(void) {
   }
 
   if (snd_pcm_hw_params_set_access(alsa_handle, alsa_params, SND_PCM_ACCESS_MMAP_INTERLEAVED) >= 0) {
+  	if (output_method_signalled==0) {
+  		debug(1,"Output written using MMAP");
+  		output_method_signalled=1;
+  	}
     access = SND_PCM_ACCESS_MMAP_INTERLEAVED;
     alsa_pcm_write = snd_pcm_mmap_writei;
   } else {
+  	if (output_method_signalled==0) {
+  		debug(1,"Output written with RW");
+  		output_method_signalled=1;
+  	}
     access = SND_PCM_ACCESS_RW_INTERLEAVED;
     alsa_pcm_write = snd_pcm_writei;
   }
