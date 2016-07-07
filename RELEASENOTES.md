@@ -1,3 +1,8 @@
+HEAD
+----
+**Enhancement**
+* Use alsa direct access (mmap) feature to improve performance if mmap is supported. Thanks to [Yihui Xiong](https://github.com/xiongyihui).
+
 Version 2.8.4.3 – Development Version
 ----
 **Bug Fix**
