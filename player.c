@@ -890,7 +890,11 @@ static int stuff_buffer_basic(short *inptr, int length, short *outptr, int stuff
     }
     
     // if you're removing, i.e. stuff < 0, copy that much less over. If you're adding, do all the rest.
-    for (i = stuffsamp; i < (stuff>0) ? length : length+stuff; i++) {
+    int remainder = length;
+    if (stuff<0)
+      remainder = remainder+stuff; // don't run over the correct end of the output buffer
+
+    for (i = stuffsamp; i < remainder; i++) {
       *outptr++ = dithered_vol(*inptr++);
       *outptr++ = dithered_vol(*inptr++);
     }
