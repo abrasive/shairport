@@ -1,7 +1,12 @@
+Version 2.8.4.6 – Development Version
+----
+**Enhancement**
+* Add a new `alsa` configuration setting: `use_mmap_if_available` to control the use of mmap. The default is `"yes"` -- see [#351](https://github.com/mikebrady/shairport-sync/issues/351).
+
 Version 2.8.4.5 – Development Version
 ----
 **Enhancement**
-* Add a new `alsa` configuration setting: `use_mmap_if_available` to control the use of mmap. The default is `"yes"`.  Thanks to [mistepien](https://github.com/mistepien).
+* Handle varying packet lengths -- this makes it compatible with the HTC Connect, HTCs AirPlay implementation. Thanks to [Jörg Krause](https://github.com/joerg-krause) for his detective work, and see [#338](https://github.com/mikebrady/shairport-sync/issues/338).
 
 Version 2.8.4.4 – Development Version
 ----
