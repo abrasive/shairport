@@ -1,3 +1,8 @@
+Version 2.8.4.5 – Development Version
+----
+**Enhancement**
+* Add a new `alsa` configuration setting: `use_mmap_if_available` to control the use of mmap. The default is `"yes"`.  Thanks to [mistepien](https://github.com/mistepien).
+
 Version 2.8.4.4 – Development Version
 ----
 **Enhancement**
