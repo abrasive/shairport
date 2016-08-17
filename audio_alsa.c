@@ -205,6 +205,15 @@ static int init(int argc, char **argv) {
         die("Invalid disable_synchronization option choice \"%s\". It should be \"yes\" or \"no\"");
     }
     
+    /* Get the use_mmap_if_available setting. */
+    if (config_lookup_string(config.cfg, "alsa.use_mmap_if_available", &str)) {
+      if (strcasecmp(str, "no") == 0)
+        config.no_mmap = 1;
+      else if (strcasecmp(str, "yes") == 0)
+        config.no_mmap = 0;
+      else
+        die("Invalid use_mmap_if_available option choice \"%s\". It should be \"yes\" or \"no\"");
+    }
     /* Get the optional period size value */
     if (config_lookup_int(config.cfg, "alsa.period_size",
                           &value)) {
@@ -393,7 +402,7 @@ int open_alsa_device(void) {
         alsa_out_dev);
   }
 
-  if (snd_pcm_hw_params_set_access(alsa_handle, alsa_params, SND_PCM_ACCESS_MMAP_INTERLEAVED) >= 0) {
+  if ((config.no_mmap == 0) && (snd_pcm_hw_params_set_access(alsa_handle, alsa_params, SND_PCM_ACCESS_MMAP_INTERLEAVED) >= 0)) {
   	if (output_method_signalled==0) {
   		debug(1,"Output written using MMAP");
   		output_method_signalled=1;
