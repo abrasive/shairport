@@ -2,8 +2,11 @@ Version 2.8.4.7 – Development Version
 ----
 **Pesky Changes You Cannot Ignore**
 
-* This update means the build process now uses the directory path `sysconfdir` to determine where to place the configuration file `shairport-sync.conf`. The default value for `sysconfdir` is `/usr/local/etc` which is used in the BSD family, but `/etc` is normally used in Linux, so, to retain the present behaviour of Shairport Sync, you must add an extra parameter to the `./configure... ` command – the parameter you must add is `--sysconfdir=/etc`
-(This is one component of the updates needed to use `sysconfdir` properly. The others will be part of a subsequent commit. The README.md instructions have been updated.)
+* This update means the build process now uses the directory path `sysconfdir` to determine where to place the configuration file `shairport-sync.conf`. The default value for `sysconfdir` is `/usr/local/etc` which is used in the BSD family, whereas `/etc` is normally used in Linux. So, to retain the present behaviour of Shairport Sync, you must add an extra parameter to the `./configure... ` command. The parameter you must add is `--sysconfdir=/etc`. (This has been added to the sample configuration command line in README.md.)
+* Shairport Sync has been updated to use the value of `sysconfdir` to determine where to look for the configuration file. If `sysconfdir` has been left with its default value of `/usr/local/etc`, then Shairport Sync will look for `/usr/local/etc/shairport-sync.conf`. If, as recommended for Linux, `sysconfdir` has been set to `/etc`, then Shairport Sync will look, as before, for `/etc/shairport-sync.conf`.
+
+**Enhancement**
+* The version string output when you use the command-line option `-V` now includes the value of the `sysconfdir`, e.g. `2.8.4.7-OpenSSL-Avahi-ALSA-soxr-sysconfdir:/etc`.
 
 Version 2.8.4.6 – Development Version
 ----
