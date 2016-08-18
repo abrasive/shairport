@@ -81,7 +81,7 @@ Debian, Ubuntu and Raspbian users can get the basics with:
 - `apt-get install libpolarssl-dev` if you want to use PolarSSL, or use OpenSSL/libcrypto otherwise.
 - `apt-get install libsoxr-dev` if you want support for libsoxr-based resampling. This library is in many recent distributions, including Jessie and Raspbian Jessie; if not, instructions for how to build it from source for Rasbpian/Debian Wheezy are available at [LIBSOXR.md](https://github.com/mikebrady/shairport-sync/blob/development/LIBSOXR.md).
 
-Download Shairport Sync:
+**Download Shairport Sync:**
 
 `git clone https://github.com/mikebrady/shairport-sync.git`
 
@@ -93,7 +93,7 @@ $ autoreconf -i -f
 ```
 (Note that the `autoreconf...` step may take some time on less powerful machines.)
 
-Choose the appropriate `--with-*` options:
+**Choose the appropriate `--with-*` options:**
 
 - `--with-alsa` for the ALSA audio back end. This is required.
 - `--with-stdout` include an optional backend module to enable raw audio to be output through standard output (stdout).
@@ -108,7 +108,7 @@ Choose the appropriate `--with-*` options:
 - `--with-configfile` to install a configuration file and a separate sample file at the `make install` stage. Default is to install. An existing `/etc/shairport-sync.conf` will not be overwritten.
 - `--with-pkg-config` to use pkg-config to find libraries. Default is to use pkg-config — this option is for special purpose use.
 
-**`systemd` and "System V"**
+**Determine if it's a `systemd` or a "System V" installation:**
 
 At the time of writing, there are two widely-used systems for starting programs automatically at startup: `systemd` and "System V" . (There are others, but they are not considered here.) To see if the `systemd` process is running on your system, enter the following command:
 
@@ -131,8 +131,11 @@ pi@raspberrypi ~ $
 ```
 Choose `--with-systemd` or `--with-systemv` on the basis of the outcome.
 
-**Specify the location of the configuration file**
+**Choose the location of the configuration file**
+
 A final consideration is the location of the configuration file `shairport-sync.conf`. This will be placed in the directory specified by the `sysconfdir` configuration variable, which defaults to `/usr/local/etc`. This is normal in BSD Unixes, but is unusual in Linux. Hence, for Linux installations, you need to set the `sysconfdir` variable to `/etc` using the configuration setting `--sysconfdir=/etc`.
+
+**Sample `./configure` command with parameters for a typical Linux `systemd` installation:**
 
 Here is an example, suitable for Linux installations that use `systemd`, such as Ubuntu 15.10 and Raspbian Jessie:
 
@@ -141,13 +144,15 @@ Here is an example, suitable for Linux installations that use `systemd`, such as
 * Omit the `--with-soxr` if the libsoxr library is not available.
 * For installation into a System V system, replace the `--with-systemd` with `--with-systemv`.
 
+**Build the application:**
+
 Enter:
 
 `$ make` 
 
 to build the application.
 
-**Installation to a `systemd` system**
+**Install into to a `systemd` system**
 To complete the installation, you need to define a `shairport-sync` group and user. This is a security measure – the user and group are relatively unprivileged, and the user does not have login priviliges. The user must be a member of the `audio` group to be able to access the audio hardware. The following commands define the group and user correctly if they do not already exist (note the use of `sudo` – omit this if you already have superuser privileges:
 
 ```
@@ -167,7 +172,7 @@ To enable Shairport Sync to start automatically at system startup, enter:
 
 `$sudo systemctl enable shairport-sync`
 
-**Installation to a System V system**
+**Install into a System V system**
 If you are installing onto a System V system:
 
 ```
