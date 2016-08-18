@@ -151,7 +151,7 @@ char* get_version_string() {
   #ifdef CONFIG_METADATA
     strcat(version_string, "-metadata");
   #endif
-    strcat(version_string, "-settingsdir:");
+    strcat(version_string, "-configdir:");
     strcat(version_string, SYSCONFDIR);
   }
   return version_string;
