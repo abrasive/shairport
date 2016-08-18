@@ -1,3 +1,10 @@
+Version 2.8.4.7 – Development Version
+----
+**Pesky Changes You Cannot Ignore**
+
+* This update means the build process now uses the directory path `sysconfdir` to determine where to place the configuration file `shairport-sync.conf`. The default value for `sysconfdir` is `/usr/local/etc` which is used in the BSD family, but `/etc` is normally used in Linux, so, to retain the present behaviour of Shairport Sync, you must add an extra parameter to the `./configure... ` command – the parameter you must add is `--sysconfdir=/etc`
+(This is one component of the updates needed to use `sysconfdir` properly. The others will be part of a subsequent commit. The README.md instructions have been updated.)
+
 Version 2.8.4.6 – Development Version
 ----
 **Enhancement**
