@@ -3,7 +3,7 @@ SUBDIRS = man
 bin_PROGRAMS = shairport-sync
 shairport_sync_SOURCES = shairport.c rtsp.c mdns.c mdns_external.c common.c rtp.c player.c alac.c audio.c 
 
-AM_CFLAGS = -Wno-multichar
+AM_CFLAGS = -Wno-multichar -DSYSCONFDIR=\"$(sysconfdir)\"
 
 if USE_CUSTOMPIDDIR
 AM_CFLAGS+= \

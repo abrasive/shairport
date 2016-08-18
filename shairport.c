@@ -151,6 +151,8 @@ char* get_version_string() {
   #ifdef CONFIG_METADATA
     strcat(version_string, "-metadata");
   #endif
+    strcat(version_string, "-settingsdir:");
+    strcat(version_string, SYSCONFDIR);
   }
   return version_string;
 }
@@ -729,7 +731,8 @@ int main(int argc, char **argv) {
     endianness = SS_BIG_ENDIAN;
   else die("Can not recognise the endianness of the processor.");
   
-  strcpy(configuration_file_path, "/etc/");
+  strcpy(configuration_file_path, SYSCONFDIR);
+  strcat(configuration_file_path, "/");
   strcat(configuration_file_path, appName);
   strcat(configuration_file_path, ".conf");
   config.configfile = configuration_file_path;
