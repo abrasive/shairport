@@ -131,9 +131,12 @@ pi@raspberrypi ~ $
 ```
 Choose `--with-systemd` or `--with-systemv` on the basis of the outcome.
 
-Here is an example, suitable for installations that use `systemd`, such as Ubuntu 15.10 and Raspbian Jessie:
+**Specify the location of the configuration file**
+A final consideration is the location of the configuration file `shairport-sync.conf`. This will be placed in the directory specified by the `sysconfdir` configuration variable, which defaults to `/usr/local/etc`. This is normal in BSD Unixes, but is unusual in Linux. Hence, for Linux installations, you need to set the `sysconfdir` variable to `/etc` using the configuration setting `--sysconfdir=/etc`.
 
-`$ ./configure --with-alsa --with-avahi --with-ssl=openssl --with-metadata --with-soxr --with-systemd`
+Here is an example, suitable for Linux installations that use `systemd`, such as Ubuntu 15.10 and Raspbian Jessie:
+
+`$ ./configure --sysconfdir=/etc --with-alsa --with-avahi --with-ssl=openssl --with-metadata --with-soxr --with-systemd`
 
 * Omit the `--with-soxr` if the libsoxr library is not available.
 * For installation into a System V system, replace the `--with-systemd` with `--with-systemv`.
