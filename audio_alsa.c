@@ -38,7 +38,7 @@
 static void help(void);
 static int init(int argc, char **argv);
 static void deinit(void);
-static void start(int sample_rate);
+static void start(int i_sample_rate, int i_sample_format);
 static void play(short buf[], int samples);
 static void stop(void);
 static void flush(void);
@@ -68,6 +68,7 @@ audio_output audio_alsa = {
 static pthread_mutex_t alsa_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static unsigned int desired_sample_rate;
+static snd_pcm_format_t sample_format;
 
 static snd_pcm_t *alsa_handle = NULL;
 static snd_pcm_hw_params_t *alsa_params = NULL;
@@ -205,6 +206,35 @@ static int init(int argc, char **argv) {
         die("Invalid disable_synchronization option choice \"%s\". It should be \"yes\" or \"no\"");
     }
     
+    /* Get the output format, using the same names as aplay does -- S16_LE, S32_LE to begin with*/
+    if (config_lookup_string(config.cfg, "alsa.output_format", &str)) {
+      if (strcasecmp(str, "S16_LE") == 0)
+        config.output_format = SND_PCM_FORMAT_S16_LE;
+      else if (strcasecmp(str, "S24_LE") == 0)
+        config.output_format = SND_PCM_FORMAT_S24_LE;
+      else if (strcasecmp(str, "S32_LE") == 0)
+        config.output_format = SND_PCM_FORMAT_S32_LE;
+      else
+        die("Invalid output format \"%s\". It should be \"S16_LE\", \"S24_LE\" or \"S32_LE\"",str);
+    }
+
+    /* Get the output rate, which must be a multiple of 44,100*/
+    if (config_lookup_int(config.cfg, "alsa.output_rate",
+                          &value)) {
+      debug(1,"Value read for output rate is %d.",value);
+      switch(value) {
+        case 44100:
+        case 88200:
+        case 176400:
+        case 352800:
+          config.output_rate = value;
+          break;
+        default :
+          die("Invalid output rate \"%d\". It should be a multiple of 44,100 up to 352,800",value);
+      }      
+    }
+
+
     /* Get the use_mmap_if_available setting. */
     if (config_lookup_string(config.cfg, "alsa.use_mmap_if_available", &str)) {
       if (strcasecmp(str, "no") == 0)
@@ -424,11 +454,10 @@ int open_alsa_device(void) {
         alsa_out_dev, snd_strerror(ret));
   }
 
-  ret = snd_pcm_hw_params_set_format(alsa_handle, alsa_params,
-                                     SND_PCM_FORMAT_S16);
+  ret = snd_pcm_hw_params_set_format(alsa_handle, alsa_params, sample_format);
   if (ret < 0) {
-    die("audio_alsa: Sample format not available for device \"%s\": %s",
-        alsa_out_dev, snd_strerror(ret));
+    die("audio_alsa: Sample format %d not available for device \"%s\": %s",
+        sample_format, alsa_out_dev, snd_strerror(ret));
   }
 
   ret = snd_pcm_hw_params_set_channels(alsa_handle, alsa_params, 2);
@@ -640,11 +669,18 @@ int open_alsa_device(void) {
   return (0);
 }
 
-static void start(int sample_rate) {
+static void start(int i_sample_rate, int i_sample_format) {
   // debug(2,"audio_alsa start called.");
-  if (sample_rate != 44100)
-    die("Unexpected sample rate %d -- only 44,100 supported!", sample_rate);
-  desired_sample_rate = sample_rate; // must be a variable
+  if (i_sample_rate==0)
+    desired_sample_rate = 44100; // default
+  else
+    desired_sample_rate = i_sample_rate; // must be a variable
+  
+  if (i_sample_format==0)
+    sample_format = SND_PCM_FORMAT_S16_LE; // default 
+  else
+    sample_format = i_sample_format;
+    
 }
 
 int delay(long* the_delay) {

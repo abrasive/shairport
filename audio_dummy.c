@@ -41,7 +41,7 @@ static int init(int argc, char **argv) { return 0; }
 
 static void deinit(void) {}
 
-static void start(int sample_rate) {
+static void start(int sample_rate, int sample_format) {
   Fs = sample_rate;
   starttime = 0;
   samples_played = 0;

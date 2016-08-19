@@ -19,7 +19,7 @@ typedef struct {
   // at end of program
   void (*deinit)(void);
 
-  void (*start)(int sample_rate);
+  void (*start)(int sample_rate, int sample_format);
 
   // block of samples
   void (*play)(short buf[], int samples);

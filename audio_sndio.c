@@ -56,6 +56,8 @@ static void deinit(void) { sio_close(sio); }
 static void start(int sample_rate) {
   if (sample_rate != par.rate)
     die("unexpected sample rate!");
+  if (sample_format != 0)
+    die("unexpected sample format!");
   sio_start(sio);
 }
 

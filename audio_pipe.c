@@ -43,7 +43,7 @@ static int fd = -1;
 
 char *pipename = NULL;
 
-static void start(int sample_rate) {
+static void start(int sample_rate, int sample_format) {
   // this will leave fd as -1 if a reader hasn't been attached
   fd = open(pipename, O_WRONLY | O_NONBLOCK);
 }

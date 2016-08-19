@@ -1716,7 +1716,7 @@ int player_play(stream_cfg *stream, pthread_t *player_thread) {
 #endif
   if (rc)
     debug(1, "Error initialising condition variable.");
-  config.output->start(sampling_rate);
+  config.output->start(config.output_rate,config.output_format);
   size_t size = (PTHREAD_STACK_MIN + 256 * 1024);
   pthread_attr_t tattr;
   pthread_attr_init(&tattr);

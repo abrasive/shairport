@@ -1016,6 +1016,8 @@ int main(int argc, char **argv) {
   debug(1, "playback_mode is %d (0-stereo, 1-mono).", config.playback_mode);
   debug(1, "disable_synchronization is %d.", config.no_sync);
   debug(1, "use_mmap_if_available is %d.", config.no_mmap ? 0 : 1);
+  debug(1, "output_rate is %d (0 means 44,100).", config.output_rate);
+  debug(1, "output_format is %d (0 means S16_LE).", config.output_format);
   debug(1, "audio backend desired buffer length is %d.",
         config.audio_backend_buffer_desired_length);
   debug(1, "audio backend latency offset is %d.", config.audio_backend_latency_offset);

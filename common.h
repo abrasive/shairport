@@ -100,6 +100,8 @@ typedef struct {
                                             // audio backend buffer -- the DAC buffer for ALSA
   long audio_backend_latency_offset; // this will be the offset to compensate for any fixed latency there might be in the audio path
   uint32_t volume_range_db; // the range, in dB, from max dB to min dB. Zero means use the mixer's native range.
+  int output_format;
+  int output_rate;
 } shairport_cfg;
 
 // true if Shairport Sync is supposed to be sending output to the output device, false otherwise
