@@ -66,6 +66,7 @@
 #include "rtsp.h"
 
 #include "alac.h"
+#include <alsa/pcm.h>
 
 // parameters from the source
 static unsigned char *aesiv;
@@ -75,9 +76,11 @@ static AES_KEY aes;
 static int sampling_rate, frame_size;
 
 static int bytes_per_audio_frame = 4;
+static int bytes_per_output_audio_frame;
+
 
 // The maximum frame size change there can be is +/- 1;
-static int max_frame_size_change = 1;
+static int max_frame_size_change;
 // #define FRAME_BYTES(frame_size) (4 * frame_size)
 // maximal resampling shift - conservative
 //#define OUTFRAME_BYTES(frame_size) (4 * (frame_size + 3))
@@ -994,8 +997,28 @@ static void *player_thread_func(void *arg) {
   pthread_create(&rtp_control_thread, NULL, &rtp_control_receiver, (void *)&itr);
   pthread_create(&rtp_timing_thread, NULL, &rtp_timing_receiver, (void *)&itr);
 
-		session_corrections = 0;
-		play_segment_reference_frame = 0; // zero signals that we are not in a play segment
+	session_corrections = 0;
+	play_segment_reference_frame = 0; // zero signals that we are not in a play segment
+	
+	int output_sample_ratio = 1;
+	if (config.output_rate!=0)
+		output_sample_ratio = config.output_rate/44100;
+	
+	max_frame_size_change = 1*sample_ratio;
+	bytes_per_output_audio_frame = 4;
+	
+	
+
+	switch (config.output_format) {
+		case SND_PCM_FORMAT_S24_LE:
+			bytes_per_output_audio_frame=6;
+			break;
+		case SND_PCM_FORMAT_S32_LE:
+			bytes_per_output_audio_frame=8;
+			break;		
+	}
+		
+	
 	// check that there are enough buffers to accommodate the desired latency and the latency offset
 	
 	int maximum_latency = config.latency+config.audio_backend_latency_offset;
@@ -1034,13 +1057,16 @@ static void *player_thread_func(void *arg) {
   initstate(time(NULL), rnstate, 256);
 
   signed short *inbuf, *outbuf, *silence;
-  outbuf = malloc(bytes_per_audio_frame*(frame_size+max_frame_size_change));
+  
+  // We might need an output buffer and a buffer of silence.
+  // The size of these dependents on the number of frames, the size of each frame and the maximum size change
+  outbuf = malloc(bytes_per_audio_frame*(frame_size*output_sample_ratio+max_frame_size_change));
   if (outbuf==NULL)
     debug(1,"Failed to allocate memory for an output buffer.");
   silence = malloc(bytes_per_audio_frame*frame_size);
   if (silence==NULL)
     debug(1,"Failed to allocate memory for a silence buffer.");
-  memset(silence, 0, bytes_per_audio_frame*frame_size);
+  memset(silence, 0, bytes_per_audio_frame*frame_size*output_sample_ratio);
   late_packet_message_sent = 0;
   first_packet_timestamp = 0;
   missing_packets = late_packets = too_late_packets = resend_requests = 0;
@@ -1242,7 +1268,7 @@ static void *player_thread_func(void *arg) {
             if (config.no_sync!=0)
               amount_to_stuff = 0 ; // no stuffing if it's been disabled
                         
-            if ((amount_to_stuff == 0) && (fix_volume == 0x10000)) {
+            if ((amount_to_stuff == 0) && (fix_volume == 0x10000) && ((config.output_rate==0) || (config.output_rate==44100)) && ((config.output_format==0) || (config.output_format==SND_PCM_FORMAT_S16_LE))) {
               // if no stuffing needed and no volume adjustment, then
               // don't send to stuff_buffer_* and don't copy to outbuf; just send directly to the
               // output device...
@@ -1255,6 +1281,8 @@ static void *player_thread_func(void *arg) {
                   config.output->play(inframe->data, inframe->length);
               }
             } else {
+            
+            
 #ifdef HAVE_LIBSOXR
               switch (config.packet_stuffing) {
               case ST_basic:
