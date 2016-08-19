@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.50])
-AC_INIT([shairport-sync], [2.8.4.7], [mikebrady@eircom.net])
+AC_INIT([shairport-sync], [2.8.4.8], [mikebrady@eircom.net])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([shairport.c])
 AC_CONFIG_HEADERS([config.h])
@@ -194,7 +194,7 @@ AC_ARG_WITH(ao, [  --with-ao = choose AO (Audio Output?) API support. N.B. no sy
   AC_MSG_RESULT(>>Including an AO back end. N.B. no synchronisation -- so underflow or overflow is inevitable!)
   HAS_AO=1
   AC_DEFINE([CONFIG_AO], 1, [Needed by the compiler.])
-  AC_CHECK_LIB([ao], [ao_initialize], , AC_MSG_ERROR(AO support requires the ao library!))], )
+  AC_CHECK_LIB([ao], [ao_initialize], , AC_MSG_ERROR(AO support requires the ao library -- libao-dev suggested))], )
 AM_CONDITIONAL([USE_AO], [test "x$HAS_AO" = "x1"])
 
 # Look for pulseaudio flag
