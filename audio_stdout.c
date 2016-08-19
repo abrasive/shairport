@@ -38,7 +38,7 @@
 
 static int fd = -1;
 
-static void start(int sample_rate int sample_format) {
+static void start(int sample_rate, int sample_format) {
   fd = STDOUT_FILENO;
 }
 
