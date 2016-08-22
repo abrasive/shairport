@@ -507,6 +507,7 @@ static abuf_t *buffer_get_frame(void) {
         shutdown_requested = 1;
       }
     }
+
     int rco = get_requested_connection_state_to_output();
 
     if (connection_state_to_output != rco) {
@@ -530,6 +531,7 @@ static abuf_t *buffer_get_frame(void) {
       flush_requested = 0;
     }
     pthread_mutex_unlock(&flush_mutex);
+
     uint32_t flush_limit = 0;
     if (ab_synced) {
       do {
@@ -575,7 +577,7 @@ static abuf_t *buffer_get_frame(void) {
       if (curframe->ready) {
         notified_buffer_empty=0; // at least one buffer now -- diagnostic only.
         if (ab_buffering) { // if we are getting packets but not yet forwarding them to the player
-          int have_sent_prefiller_silence; // set true when we have send some silent frames to the DAC
+          int have_sent_prefiller_silence; // set true when we have sent some silent frames to the DAC
           uint32_t reference_timestamp;
           uint64_t reference_timestamp_time,remote_reference_timestamp_time;
           get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time, &remote_reference_timestamp_time);
