@@ -66,7 +66,6 @@
 #include "rtsp.h"
 
 #include "alac.h"
-#include <alsa/pcm.h>
 
 // parameters from the source
 static unsigned char *aesiv;
@@ -1006,21 +1005,18 @@ static void *player_thread_func(void *arg) {
 	if (config.output_rate!=0)
 		output_sample_ratio = config.output_rate/44100;
 	
-	max_frame_size_change = 1*sample_ratio;
+	max_frame_size_change = 1*output_sample_ratio; // we add or subtract one frame at the nominal rate, multiply it by the frame ratio.
 	bytes_per_output_audio_frame = 4;
 	
-	
-
 	switch (config.output_format) {
-		case SND_PCM_FORMAT_S24_LE:
+		case SPS_FORMAT_S24_LE:
 			bytes_per_output_audio_frame=6;
 			break;
-		case SND_PCM_FORMAT_S32_LE:
+		case SPS_FORMAT_S32_LE:
 			bytes_per_output_audio_frame=8;
 			break;		
 	}
-		
-	
+
 	// check that there are enough buffers to accommodate the desired latency and the latency offset
 	
 	int maximum_latency = config.latency+config.audio_backend_latency_offset;
@@ -1270,7 +1266,7 @@ static void *player_thread_func(void *arg) {
             if (config.no_sync!=0)
               amount_to_stuff = 0 ; // no stuffing if it's been disabled
                         
-            if ((amount_to_stuff == 0) && (fix_volume == 0x10000) && ((config.output_rate==0) || (config.output_rate==44100)) && ((config.output_format==0) || (config.output_format==SND_PCM_FORMAT_S16_LE))) {
+            if ((amount_to_stuff == 0) && (fix_volume == 0x10000) && ((config.output_rate==0) || (config.output_rate==44100)) && ((config.output_format==0) || (config.output_format==SPS_FORMAT_S16_LE))) {
               // if no stuffing needed and no volume adjustment, then
               // don't send to stuff_buffer_* and don't copy to outbuf; just send directly to the
               // output device...

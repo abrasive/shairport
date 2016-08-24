@@ -48,6 +48,27 @@ enum playback_mode_type {
   ST_mono,
 } playback_mode_type;
 
+
+// the following enum must _exactly match the snd_pcm_format_t definition in the alsa pcm.h file.
+
+enum  	sps_format_t { 
+  SPS_FORMAT_UNKNOWN = -1, SPS_FORMAT_S8 = 0, SPS_FORMAT_U8, SPS_FORMAT_S16_LE, 
+  SPS_FORMAT_S16_BE, SPS_FORMAT_U16_LE, SPS_FORMAT_U16_BE, SPS_FORMAT_S24_LE, 
+  SPS_FORMAT_S24_BE, SPS_FORMAT_U24_LE, SPS_FORMAT_U24_BE, SPS_FORMAT_S32_LE, 
+  SPS_FORMAT_S32_BE, SPS_FORMAT_U32_LE, SPS_FORMAT_U32_BE, SPS_FORMAT_FLOAT_LE, 
+  SPS_FORMAT_FLOAT_BE, SPS_FORMAT_FLOAT64_LE, SPS_FORMAT_FLOAT64_BE, SPS_FORMAT_IEC958_SUBFRAME_LE, 
+  SPS_FORMAT_IEC958_SUBFRAME_BE, SPS_FORMAT_MU_LAW, SPS_FORMAT_A_LAW, SPS_FORMAT_IMA_ADPCM, 
+  SPS_FORMAT_MPEG, SPS_FORMAT_GSM, SPS_FORMAT_SPECIAL = 31, SPS_FORMAT_S24_3LE = 32, 
+  SPS_FORMAT_S24_3BE, SPS_FORMAT_U24_3LE, SPS_FORMAT_U24_3BE, SPS_FORMAT_S20_3LE, 
+  SPS_FORMAT_S20_3BE, SPS_FORMAT_U20_3LE, SPS_FORMAT_U20_3BE, SPS_FORMAT_S18_3LE, 
+  SPS_FORMAT_S18_3BE, SPS_FORMAT_U18_3LE, SPS_FORMAT_U18_3BE, SPS_FORMAT_G723_24, 
+  SPS_FORMAT_G723_24_1B, SPS_FORMAT_G723_40, SPS_FORMAT_G723_40_1B, SPS_FORMAT_DSD_U8, 
+  SPS_FORMAT_DSD_U16_LE, SPS_FORMAT_DSD_U32_LE, SPS_FORMAT_DSD_U16_BE, SPS_FORMAT_DSD_U32_BE, 
+  SPS_FORMAT_LAST = SPS_FORMAT_DSD_U32_BE, SPS_FORMAT_S16 = SPS_FORMAT_S16_LE, SPS_FORMAT_U16 = SPS_FORMAT_U16_LE, SPS_FORMAT_S24 = SPS_FORMAT_S24_LE, 
+  SPS_FORMAT_U24 = SPS_FORMAT_U24_LE, SPS_FORMAT_S32 = SPS_FORMAT_S32_LE, SPS_FORMAT_U32 = SPS_FORMAT_U32_LE, SPS_FORMAT_FLOAT = SPS_FORMAT_FLOAT_LE, 
+  SPS_FORMAT_FLOAT64 = SPS_FORMAT_FLOAT64_LE, SPS_FORMAT_IEC958_SUBFRAME = SPS_FORMAT_IEC958_SUBFRAME_LE 
+} sps_format_t;
+
 typedef struct {
   config_t *cfg;
   char *password;
@@ -100,7 +121,7 @@ typedef struct {
                                             // audio backend buffer -- the DAC buffer for ALSA
   long audio_backend_latency_offset; // this will be the offset to compensate for any fixed latency there might be in the audio path
   uint32_t volume_range_db; // the range, in dB, from max dB to min dB. Zero means use the mixer's native range.
-  int output_format;
+  enum sps_format_t output_format;
   int output_rate;
 } shairport_cfg;
 
