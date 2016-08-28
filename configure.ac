@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.50])
-AC_INIT([shairport-sync], [3.0PB1], [mikebrady@eircom.net])
+AC_INIT([shairport-sync], [3.0PB2], [mikebrady@eircom.net])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([shairport.c])
 AC_CONFIG_HEADERS([config.h])
@@ -20,6 +20,7 @@ with_os_type=`echo ${with_os_type} | tr '[[:upper:]]' '[[:lower:]]' `
 
 # Checks for programs.
 AC_PROG_CC
+AC_PROG_CXX
 AC_PROG_INSTALL
 
 PKG_PROG_PKG_CONFIG([0.9.0])
@@ -93,6 +94,22 @@ AC_ARG_WITH([configfiles],
 [  --with-configfiles = install configuration files during a make install ], ,[with_configfiles=yes])
 AM_CONDITIONAL([INSTALL_CONFIG_FILES], [test "x$with_configfiles" = "xyes"])
 
+# Look for Apple ALAC flag
+AC_ARG_WITH(apple-alac, [  --with-apple-alac = include support for the Apple ALAC decoder],
+  [AC_MSG_RESULT(>>Including the Apple ALAC Decoder)
+  HAS_APPLE_ALAC=1
+  AM_CONDITIONAL([USE_APPLE_ALAC], [test 0])
+  AC_DEFINE([CONFIG_APPLE_ALAC], 1, [Needed by the compiler.])
+  if  test "x${with_pkg_config}" = xyes ; then
+    PKG_CHECK_MODULES(
+      [ALAC], [alac],
+      [LIBS="${ALAC_LIBS} ${LIBS}"
+       AC_DEFINE([HAVE_APPLE_ALAC],[1],[Define to 1 if you are using the Apple ALAC Decoder])])
+  else
+    AC_CHECK_LIB([alac], [BitBufferInit], , AC_MSG_ERROR(Apple ALAC Decoder support requires the alac library!))
+    AC_DEFINE([HAVE_APPLE_ALAC],[1],[Define to 1 if you have the Apple ALAC library])
+  fi ])
+AM_CONDITIONAL([USE_APPLE_ALAC], [test "x$HAS_APPLE_ALAC" = "x1"])
 
 # Look for piddir flag
 AC_ARG_WITH(piddir, [ --with-piddir=<pathname> Specify a pathname to a directory in which to write the PID file.], [

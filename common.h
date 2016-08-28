@@ -46,8 +46,15 @@ enum stuffing_type {
 enum playback_mode_type {
   ST_stereo = 0,
   ST_mono,
+  ST_reverse_stereo,
+  ST_left_only,
+  ST_right_only,
 } playback_mode_type;
 
+enum decoders_supported_type {
+  decoder_hammerton = 0,
+  decoder_apple_alac,
+} decoders_supported_type;
 
 // the following enum must _exactly match the snd_pcm_format_t definition in the alsa pcm.h file.
 
@@ -112,6 +119,8 @@ typedef struct {
   int cmd_blocking;
   int tolerance; // allow this much drift before attempting to correct it
   enum stuffing_type packet_stuffing;
+  int decoders_supported;
+  int use_apple_decoder; // set to 1 if you want to use the apple decoder instead of the original by David Hammerton
   char *pidfile;
   // char *logfile;
   // char *errfile;

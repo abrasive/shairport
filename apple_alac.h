@@ -1,0 +1,21 @@
+#ifndef __APPLE_ALAC_H
+#define __APPLE_ALAC_H
+
+#include <stdint.h>
+#include "config.h"
+
+#ifdef __cplusplus
+  #define EXTERNC extern "C"
+#else
+  #define EXTERNC
+#endif
+
+
+EXTERNC int apple_alac_init(int frame_size,int sample_size,int sample_rate);
+EXTERNC int apple_alac_terminate();
+EXTERNC int apple_alac_decode_frame(unsigned char *sampleBuffer, uint32_t bufferLength, unsigned char *dest, int *outsize);
+
+#undef EXTERNC
+
+#endif /* __APPLE_ALAC_H */
+

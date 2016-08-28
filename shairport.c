@@ -441,6 +441,19 @@ int parse_options(int argc, char **argv) {
           config.volume_range_db = value;
       }
 
+      /* Get the use_apple_decoder setting. */
+      if (config_lookup_string(config.cfg, "general.use_apple_decoder", &str)) {
+        if (strcasecmp(str, "no") == 0)
+          config.use_apple_decoder = 0;
+        else if (strcasecmp(str, "yes") == 0) {
+          if ((config.decoders_supported & 1<<decoder_apple_alac)!=0)
+            config.use_apple_decoder = 1;
+          else
+            inform("Support for the Apple ALAC decoder has not been comiled into this version of Shairport Sync. The default decoder will be used.");
+        } else
+          die("Invalid use_apple_decoder option choice \"%s\". It should be \"yes\" or \"no\"");
+      }
+
 /* Get the default latency. Deprecated! */
       if (config_lookup_int(config.cfg, "latencies.default", &value))
         config.userSuppliedLatency = value;
@@ -760,6 +773,10 @@ int main(int argc, char **argv) {
   config.audio_backend_buffer_desired_length = 6615; // 0.15 seconds.
   config.udp_port_base = 6001;
   config.udp_port_range = 100;
+  config.decoders_supported = 1<<decoder_hammerton; // David Hammerton's decoder supported by default
+ #ifdef HAVE_APPLE_ALAC
+  config.decoders_supported += 1<<decoder_apple_alac;
+ #endif
 
   /* Check if we are called with -V or --version parameter */
   if (argc >= 2 && ((strcmp(argv[1], "-V") == 0) || (strcmp(argv[1], "--version") == 0))) {
@@ -1023,6 +1040,8 @@ int main(int argc, char **argv) {
   debug(1, "audio backend latency offset is %d.", config.audio_backend_latency_offset);
   debug(1, "volume range in dB (zero means use the range specified by the mixer): %u.", config.volume_range_db);
   debug(1, "zeroconf regtype is \"%s\".", config.regtype);
+  debug(1, "decoders_supported field is %d.", config.decoders_supported);
+  debug(1, "use_apple_decoder is %d.", config.use_apple_decoder);
   
   char *realConfigPath = realpath(config.configfile,NULL);
   if (realConfigPath) {

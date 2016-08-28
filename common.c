@@ -67,7 +67,6 @@
 #endif
 #endif
 
-#include "common.h"
 #include <libdaemon/dlog.h>
 
 // true if Shairport Sync is supposed to be sending output to the output device, false otherwise

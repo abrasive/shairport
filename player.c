@@ -67,6 +67,8 @@
 
 #include "alac.h"
 
+#include "apple_alac.h"
+
 // parameters from the source
 static unsigned char *aesiv;
 #ifdef HAVE_LIBSSL
@@ -100,6 +102,7 @@ static alac_file *decoder_info;
 static int late_packet_message_sent;
 static uint64_t packet_count = 0;
 static int32_t last_seqno_read;
+static int decoder_in_use = 0;
 
 // interthread variables
 static int fix_volume = 0x10000;
@@ -240,7 +243,7 @@ static int alac_decode(short *dest, int *destlen, uint8_t *buf, int len) {
   }
   unsigned char packet[MAX_PACKET];
   unsigned char packetp[MAX_PACKET];
-  // assert(len <= MAX_PACKET);
+  assert(len <= MAX_PACKET);
   int reply = 0; //everything okay
   int outsize=bytes_per_audio_frame*(*destlen); // the size the output should be, in bytes
   int toutsize = outsize;
@@ -256,15 +259,49 @@ static int alac_decode(short *dest, int *destlen, uint8_t *buf, int len) {
     AES_cbc_encrypt(buf, packet, aeslen, &aes, iv, AES_DECRYPT);
 #endif
     memcpy(packet + aeslen, buf + aeslen, len - aeslen);
-    alac_decode_frame(decoder_info, packet, dest, &outsize);
+#ifdef HAVE_APPLE_ALAC
+    if (config.use_apple_decoder) {
+      if (decoder_in_use!=1<<decoder_apple_alac) {
+        debug(1,"Apple ALAC Decoder used on encrypted audio.");
+        decoder_in_use=1<<decoder_apple_alac;
+      }
+      apple_alac_decode_frame(packet, len, (unsigned char *) dest, &outsize);
+      outsize=outsize*4; // bring the size to bytes
+    } else
+#endif
+    {
+      if (decoder_in_use!=1<<decoder_hammerton) {
+        debug(1,"Hammerton Decoder used on encrypted audio.");
+        decoder_in_use=1<<decoder_hammerton;
+      }
+      alac_decode_frame(decoder_info, packet, (unsigned char *) dest, &outsize);
+    }
   } else {
-    alac_decode_frame(decoder_info, buf, dest, &outsize);
+    // not encrypted
+#ifdef HAVE_APPLE_ALAC
+    if (config.use_apple_decoder) {
+      if (decoder_in_use!=1<<decoder_apple_alac) {
+        debug(1,"Apple ALAC Decoder used on unencrypted audio.");
+        decoder_in_use=1<<decoder_apple_alac;
+      }
+      apple_alac_decode_frame(buf, len, (unsigned char *) dest, &outsize);
+      outsize=outsize*4; // bring the size to bytes
+    } else
+#endif
+    {
+      if (decoder_in_use!=1<<decoder_hammerton) {
+        debug(1,"Hammerton Decoder used on unencrypted audio.");
+        decoder_in_use=1<<decoder_hammerton;
+      }
+      alac_decode_frame(decoder_info, buf, dest, &outsize);
+    }
   }
 
   if(outsize>toutsize) {
     debug(2,"Output from alac_decode larger (%d bytes, not frames) than expected (%d bytes) -- truncated, but buffer overflow possible! Encrypted = %d.",outsize, toutsize, encrypted);
     reply = -1; // output packet is the wrong size
- }
+  }
+
   *destlen = outsize / bytes_per_audio_frame;
   if ((outsize % bytes_per_audio_frame)!=0)
     debug(1,"Number of audio frames (%d) does not correspond exactly to the number of bytes (%d) and the audio frame size (%d).",*destlen,outsize,bytes_per_audio_frame);
@@ -298,10 +335,20 @@ static int init_decoder(int32_t fmtp[12]) {
   alac->setinfo_86 = fmtp[10];
   alac->setinfo_8a_rate = fmtp[11];
   alac_allocate_buffers(alac);
+
+#ifdef HAVE_APPLE_ALAC
+  apple_alac_init(frame_size,sample_size,sampling_rate);
+#endif
+
   return 0;
 }
 
-static void free_decoder(void) { alac_free(decoder_info); }
+static void terminate_decoders(void) {
+  alac_free(decoder_info);
+#ifdef HAVE_APPLE_ALAC
+  apple_alac_terminate();
+#endif
+}
 
 static void init_buffer(void) {
   int i;
@@ -506,7 +553,6 @@ static abuf_t *buffer_get_frame(void) {
         shutdown_requested = 1;
       }
     }
-
     int rco = get_requested_connection_state_to_output();
 
     if (connection_state_to_output != rco) {
@@ -530,7 +576,6 @@ static abuf_t *buffer_get_frame(void) {
       flush_requested = 0;
     }
     pthread_mutex_unlock(&flush_mutex);
-
     uint32_t flush_limit = 0;
     if (ab_synced) {
       do {
@@ -1000,7 +1045,7 @@ static void *player_thread_func(void *arg) {
 
 	session_corrections = 0;
 	play_segment_reference_frame = 0; // zero signals that we are not in a play segment
-	
+
 	int output_sample_ratio = 1;
 	if (config.output_rate!=0)
 		output_sample_ratio = config.output_rate/44100;
@@ -1112,20 +1157,21 @@ static void *player_thread_func(void *arg) {
   while (!please_stop) {
     abuf_t *inframe = buffer_get_frame();
     if (inframe) {
-      if (inframe->data) {
+      inbuf = inframe->data;
+      if (inbuf) {
         play_number++;
         // if it's a supplied silent frame, let us know...
         if (inframe->timestamp == 0) {
           // debug(1,"Player has a supplied silent frame.");
           last_seqno_read =
               (SUCCESSOR(last_seqno_read) & 0xffff); // manage the packet out of sequence minder
-          if (inframe->data==NULL)
-            debug(1,"NULL inframe->data to play -- skipping it.");
+          if (inbuf==NULL)
+            debug(1,"NULL inbuf to play -- skipping it.");
           else {
             if (inframe->length==0)
-              debug(1,"empty frame to play -- skipping it.");
+              debug(1,"empty frame to play -- skipping it (1).");
             else
-              config.output->play(inframe->data, inframe->length);
+              config.output->play(inbuf, inframe->length);
           }
         } else {
           // We have a frame of data. We need to see if we want to add or remove a frame from it to
@@ -1279,8 +1325,8 @@ static void *player_thread_func(void *arg) {
                   config.output->play(inframe->data, inframe->length);
               }
             } else {
-            
-            
+
+
 #ifdef HAVE_LIBSOXR
               switch (config.packet_stuffing) {
               case ST_basic:
@@ -1766,7 +1812,7 @@ void player_stop(pthread_t *player_thread) {
 	#endif
 		command_stop();
 		free_buffer();
-		free_decoder();
+		terminate_decoders();
 		int rc = pthread_cond_destroy(&flowcontrol);
 		if (rc)
 			debug(1, "Error destroying condition variable.");
