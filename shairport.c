@@ -441,17 +441,17 @@ int parse_options(int argc, char **argv) {
           config.volume_range_db = value;
       }
 
-      /* Get the use_apple_decoder setting. */
-      if (config_lookup_string(config.cfg, "general.use_apple_decoder", &str)) {
-        if (strcasecmp(str, "no") == 0)
+      /* Get the alac_decoder setting. */
+      if (config_lookup_string(config.cfg, "alac_decoder", &str)) {
+        if (strcasecmp(str, "hammerton") == 0)
           config.use_apple_decoder = 0;
-        else if (strcasecmp(str, "yes") == 0) {
+        else if (strcasecmp(str, "apple") == 0) {
           if ((config.decoders_supported & 1<<decoder_apple_alac)!=0)
             config.use_apple_decoder = 1;
           else
-            inform("Support for the Apple ALAC decoder has not been comiled into this version of Shairport Sync. The default decoder will be used.");
+            inform("Support for the Apple ALAC decoder has not been compiled into this version of Shairport Sync. The default decoder will be used.");
         } else
-          die("Invalid use_apple_decoder option choice \"%s\". It should be \"yes\" or \"no\"");
+          die("Invalid alac_decoder option choice \"%s\". It should be \"hammerton\" or \"apple\"");
       }
 
 /* Get the default latency. Deprecated! */

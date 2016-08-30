@@ -74,17 +74,17 @@ static unsigned char *aesiv;
 #ifdef HAVE_LIBSSL
 static AES_KEY aes;
 #endif
-static int sampling_rate, frame_size;
+static int input_sample_rate, input_bit_depth, input_num_channels, max_frames_per_packet;
 
-static int bytes_per_audio_frame = 4;
-static int bytes_per_output_audio_frame;
+static int input_bytes_per_frame = 4;
+static int output_bytes_per_frame;
 
 
 // The maximum frame size change there can be is +/- 1;
 static int max_frame_size_change;
-// #define FRAME_BYTES(frame_size) (4 * frame_size)
+// #define FRAME_BYTES(max_frames_per_packet) (4 * max_frames_per_packet)
 // maximal resampling shift - conservative
-//#define OUTFRAME_BYTES(frame_size) (4 * (frame_size + 3))
+//#define OUTFRAME_BYTES(max_frames_per_packet) (4 * (max_frames_per_packet + 3))
 
 #ifdef HAVE_LIBPOLARSSL
 static aes_context dctx;
@@ -245,7 +245,7 @@ static int alac_decode(short *dest, int *destlen, uint8_t *buf, int len) {
   unsigned char packetp[MAX_PACKET];
   assert(len <= MAX_PACKET);
   int reply = 0; //everything okay
-  int outsize=bytes_per_audio_frame*(*destlen); // the size the output should be, in bytes
+  int outsize=input_bytes_per_frame*(*destlen); // the size the output should be, in bytes
   int toutsize = outsize;
 
   if (encrypted) {
@@ -302,30 +302,79 @@ static int alac_decode(short *dest, int *destlen, uint8_t *buf, int len) {
     reply = -1; // output packet is the wrong size
   }
 
-  *destlen = outsize / bytes_per_audio_frame;
-  if ((outsize % bytes_per_audio_frame)!=0)
-    debug(1,"Number of audio frames (%d) does not correspond exactly to the number of bytes (%d) and the audio frame size (%d).",*destlen,outsize,bytes_per_audio_frame);
+  *destlen = outsize / input_bytes_per_frame;
+  if ((outsize % input_bytes_per_frame)!=0)
+    debug(1,"Number of audio frames (%d) does not correspond exactly to the number of bytes (%d) and the audio frame size (%d).",*destlen,outsize,input_bytes_per_frame);
   return reply;
 }
 
 static int init_decoder(int32_t fmtp[12]) {
+
+// This is a guess, but the format of the fmtp looks identical to the format of an ALACSpecificCOnfig
+// which is detailed in the file ALACMagicCookieDescription.txt in the Apple ALAC sample implementation
+// Here it is:
+
+/*
+    struct	ALACSpecificConfig (defined in ALACAudioTypes.h)
+    abstract   	This struct is used to describe codec provided information about the encoded Apple Lossless bitstream. 
+		It must accompany the encoded stream in the containing audio file and be provided to the decoder.
+
+    field      	frameLength 		uint32_t	indicating the frames per packet when no explicit frames per packet setting is 
+							  present in the packet header. The encoder frames per packet can be explicitly set 
+							  but for maximum compatibility, the default encoder setting of 4096 should be used.
+
+    field      	compatibleVersion 	uint8_t 	indicating compatible version, 
+							  value must be set to 0
+
+    field      	bitDepth 		uint8_t 	describes the bit depth of the source PCM data (maximum value = 32)
+
+    field      	pb 			uint8_t 	currently unused tuning parameter. 
+						 	  value should be set to 40
+
+    field      	mb 			uint8_t 	currently unused tuning parameter. 
+						 	  value should be set to 14
+
+    field      	kb			uint8_t 	currently unused tuning parameter. 
+						 	  value should be set to 10
+
+    field      	numChannels 		uint8_t 	describes the channel count (1 = mono, 2 = stereo, etc...)
+							  when channel layout info is not provided in the 'magic cookie', a channel count > 2
+							  describes a set of discreet channels with no specific ordering
+
+    field      	maxRun			uint16_t 	currently unused. 
+   						  value should be set to 255
+
+    field      	maxFrameBytes 		uint32_t 	the maximum size of an Apple Lossless packet within the encoded stream. 
+						  	value of 0 indicates unknown
+
+    field      	avgBitRate 		uint32_t 	the average bit rate in bits per second of the Apple Lossless stream. 
+						  	value of 0 indicates unknown
+
+    field      	sampleRate 		uint32_t 	sample rate of the encoded stream
+ */
+
+// We are going to go on that basis
+
+
+
   alac_file *alac;
 
-  frame_size = fmtp[1]; // stereo samples
-  sampling_rate = fmtp[11];
+  max_frames_per_packet = fmtp[1]; // number of audio frames per packet.
 
-  int sample_size = fmtp[3];
-  if (sample_size != 16)
-    die("only 16-bit samples supported!");
+  input_sample_rate = fmtp[11];
+  input_num_channels = fmtp[7];
+  input_bit_depth = fmtp[3];
+  
+  input_bytes_per_frame = input_num_channels*(input_bit_depth+7)/8;
 
-  alac = alac_create(sample_size, 2);
+  alac = alac_create(input_bit_depth, input_num_channels);
   if (!alac)
     return 1;
   decoder_info = alac;
 
-  alac->setinfo_max_samples_per_frame = frame_size;
+  alac->setinfo_max_samples_per_frame = max_frames_per_packet;
   alac->setinfo_7a = fmtp[2];
-  alac->setinfo_sample_size = sample_size;
+  alac->setinfo_sample_size = input_bit_depth;
   alac->setinfo_rice_historymult = fmtp[4];
   alac->setinfo_rice_initialhistory = fmtp[5];
   alac->setinfo_rice_kmodifier = fmtp[6];
@@ -337,7 +386,7 @@ static int init_decoder(int32_t fmtp[12]) {
   alac_allocate_buffers(alac);
 
 #ifdef HAVE_APPLE_ALAC
-  apple_alac_init(frame_size,sample_size,sampling_rate);
+  apple_alac_init(max_frames_per_packet,input_bit_depth,input_sample_rate);
 #endif
 
   return 0;
@@ -353,7 +402,7 @@ static void terminate_decoders(void) {
 static void init_buffer(void) {
   int i;
   for (i = 0; i < BUFFER_FRAMES; i++)
-    audio_buffer[i].data = malloc(bytes_per_audio_frame*(frame_size+max_frame_size_change));
+    audio_buffer[i].data = malloc(input_bytes_per_frame*(max_frames_per_packet+max_frame_size_change));
   ab_resync();
 }
 
@@ -438,7 +487,7 @@ void player_put_packet(seq_t seqno, uint32_t timestamp, uint8_t *data, int len) 
       // pthread_mutex_unlock(&ab_mutex);
 
       if (abuf) {
-        int datalen = frame_size;
+        int datalen = max_frames_per_packet;
         if (alac_decode(abuf->data, &datalen, data, len)==0) {
 					abuf->ready = 1;
 					abuf->length = datalen;
@@ -449,7 +498,7 @@ void player_put_packet(seq_t seqno, uint32_t timestamp, uint8_t *data, int len) 
             signed short *v = abuf->data;
             int i;
             int both;
-            for (i=frame_size;i;i--) {
+            for (i=max_frames_per_packet;i;i--) {
               int both = *v + *(v+1);
               if (both > INT16_MAX) {
                 both = INT16_MAX;
@@ -738,7 +787,7 @@ static abuf_t *buffer_get_frame(void) {
                   debug(2,"frame size (fs) < 0 with max_dac_delay of %lld and dac_delay of %ld",max_dac_delay, dac_delay);
                   fs=0;
                 }
-                if ((exact_frame_gap <= fs) || (exact_frame_gap <= frame_size * 2)) {
+                if ((exact_frame_gap <= fs) || (exact_frame_gap <= max_frames_per_packet * 2)) {
                   fs = exact_frame_gap;
                   // debug(1,"Exact frame gap is %llu; play %d frames of silence. Dac_delay is %d,
                   // with %d packets, ab_read is %04x, ab_write is
@@ -751,11 +800,11 @@ static abuf_t *buffer_get_frame(void) {
                 //  debug(2,"Zero length silence buffer needed with gross_frame_gap of %lld and dac_delay of %lld.",gross_frame_gap,dac_delay);
                 // the fs (number of frames of silence to play) can be zero in the DAC doesn't start ouotputting frames for a while -- it could get loaded up but not start responding for many milliseconds.
                 if (fs!=0) {
-                  silence = malloc(bytes_per_audio_frame*fs);
+                  silence = malloc(input_bytes_per_frame*fs);
                   if (silence==NULL)
                     debug(1,"Failed to allocate %d byte silence buffer.",fs);
                   else {
-                    memset(silence, 0, bytes_per_audio_frame*fs);
+                    memset(silence, 0, input_bytes_per_frame*fs);
                     // debug(1,"Exact frame gap is %llu; play %d frames of silence. Dac_delay is %d,
                     // with %d packets.",exact_frame_gap,fs,dac_delay,seq_diff(ab_read, ab_write));
                     config.output->play(silence, fs);
@@ -887,7 +936,7 @@ static abuf_t *buffer_get_frame(void) {
   if (!curframe->ready) {
     // debug(1, "Supplying a silent frame for frame %u", read);
     missing_packets++;
-    memset(curframe->data, 0, bytes_per_audio_frame*frame_size);
+    memset(curframe->data, 0, input_bytes_per_frame*max_frames_per_packet);
     curframe->timestamp = 0;
   }
   curframe->ready = 0;
@@ -1051,14 +1100,14 @@ static void *player_thread_func(void *arg) {
 		output_sample_ratio = config.output_rate/44100;
 	
 	max_frame_size_change = 1*output_sample_ratio; // we add or subtract one frame at the nominal rate, multiply it by the frame ratio.
-	bytes_per_output_audio_frame = 4;
+	output_bytes_per_frame = 4;
 	
 	switch (config.output_format) {
 		case SPS_FORMAT_S24_LE:
-			bytes_per_output_audio_frame=6;
+			output_bytes_per_frame=6;
 			break;
 		case SPS_FORMAT_S32_LE:
-			bytes_per_output_audio_frame=8;
+			output_bytes_per_frame=8;
 			break;		
 	}
 
@@ -1103,13 +1152,13 @@ static void *player_thread_func(void *arg) {
   
   // We might need an output buffer and a buffer of silence.
   // The size of these dependents on the number of frames, the size of each frame and the maximum size change
-  outbuf = malloc(bytes_per_audio_frame*(frame_size*output_sample_ratio+max_frame_size_change));
+  outbuf = malloc(input_bytes_per_frame*(max_frames_per_packet*output_sample_ratio+max_frame_size_change));
   if (outbuf==NULL)
     debug(1,"Failed to allocate memory for an output buffer.");
-  silence = malloc(bytes_per_audio_frame*frame_size);
+  silence = malloc(input_bytes_per_frame*max_frames_per_packet);
   if (silence==NULL)
     debug(1,"Failed to allocate memory for a silence buffer.");
-  memset(silence, 0, bytes_per_audio_frame*frame_size*output_sample_ratio);
+  memset(silence, 0, input_bytes_per_frame*max_frames_per_packet*output_sample_ratio);
   late_packet_message_sent = 0;
   first_packet_timestamp = 0;
   missing_packets = late_packets = too_late_packets = resend_requests = 0;
