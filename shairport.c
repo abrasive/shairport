@@ -442,7 +442,7 @@ int parse_options(int argc, char **argv) {
       }
 
       /* Get the alac_decoder setting. */
-      if (config_lookup_string(config.cfg, "alac_decoder", &str)) {
+      if (config_lookup_string(config.cfg, "general.alac_decoder", &str)) {
         if (strcasecmp(str, "hammerton") == 0)
           config.use_apple_decoder = 0;
         else if (strcasecmp(str, "apple") == 0) {

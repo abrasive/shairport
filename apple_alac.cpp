@@ -16,25 +16,23 @@ typedef struct magicCookie {
 magicCookie cookie;
 ALACDecoder * theDecoder;
 
-extern "C" int apple_alac_init(int frame_size,int sample_size,int sample_rate) {
+extern "C" int apple_alac_init(int32_t fmtp[12]) {
 
   memset(&cookie,0,sizeof(magicCookie));
   
-  #define CHANNELS_PER_FRAME  2
-
-  //create a magic cookie for the decoder
+  //create a magic cookie for the decoder from the fmtp information. It seems to be in the same format as a simple magic cookie
   
-  cookie.config.frameLength = Swap32NtoB(frame_size);
-  cookie.config.compatibleVersion = 0;
-  cookie.config.bitDepth = sample_size;
-  cookie.config.pb = 40;
-  cookie.config.mb = 10;
-  cookie.config.kb = 14;
-  cookie.config.numChannels = CHANNELS_PER_FRAME;
-  cookie.config.maxRun = Swap16NtoB(255);
-  cookie.config.maxFrameBytes = 0;
-  cookie.config.avgBitRate = 0;
-  cookie.config.sampleRate = Swap32NtoB(sample_rate);
+  cookie.config.frameLength = Swap32NtoB(352);
+  cookie.config.compatibleVersion = fmtp[2]; // should be zero, uint8_t
+  cookie.config.bitDepth = fmtp[3]; // uint8_t expected to be 16
+  cookie.config.pb = fmtp[4]; // uint8_t should be 40;
+  cookie.config.mb = fmtp[5]; // uint8_t should be 10;
+  cookie.config.kb = fmtp[6]; // uint8_t should be 14;
+  cookie.config.numChannels = fmtp[7]; // uint8_t expected to be 2
+  cookie.config.maxRun = Swap16NtoB(fmtp[8]); // uint16_t expected to be 255
+  cookie.config.maxFrameBytes = Swap32NtoB(fmtp[9]); // uint32_t should be 0;
+  cookie.config.avgBitRate = Swap32NtoB(fmtp[10]); // uint32_t should be 0;;
+  cookie.config.sampleRate = Swap32NtoB(fmtp[11]); // uint32_t expected to be 44100;
   
   theDecoder = new ALACDecoder;
   theDecoder->Init(&cookie, sizeof(magicCookie));  
@@ -47,7 +45,7 @@ extern "C" int apple_alac_decode_frame(unsigned char *sampleBuffer, uint32_t buf
   uint32_t numFrames = 0;
   BitBuffer theInputBuffer;
   BitBufferInit(&theInputBuffer, sampleBuffer, bufferLength);
-  theDecoder->Decode(&theInputBuffer, dest, Swap32BtoN(cookie.config.frameLength), CHANNELS_PER_FRAME, &numFrames);
+  theDecoder->Decode(&theInputBuffer, dest, Swap32BtoN(cookie.config.frameLength), cookie.config.numChannels, &numFrames);
   *outsize = numFrames;
   return 0;
 }

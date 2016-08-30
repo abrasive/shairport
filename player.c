@@ -365,7 +365,7 @@ static int init_decoder(int32_t fmtp[12]) {
   input_num_channels = fmtp[7];
   input_bit_depth = fmtp[3];
   
-  input_bytes_per_frame = input_num_channels*(input_bit_depth+7)/8;
+  input_bytes_per_frame = input_num_channels*((input_bit_depth+7)/8);
 
   alac = alac_create(input_bit_depth, input_num_channels);
   if (!alac)
@@ -386,7 +386,7 @@ static int init_decoder(int32_t fmtp[12]) {
   alac_allocate_buffers(alac);
 
 #ifdef HAVE_APPLE_ALAC
-  apple_alac_init(max_frames_per_packet,input_bit_depth,input_sample_rate);
+  apple_alac_init(fmtp);
 #endif
 
   return 0;

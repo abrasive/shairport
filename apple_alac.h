@@ -11,7 +11,7 @@
 #endif
 
 
-EXTERNC int apple_alac_init(int frame_size,int sample_size,int sample_rate);
+EXTERNC int apple_alac_init(int32_t fmtp[12]);
 EXTERNC int apple_alac_terminate();
 EXTERNC int apple_alac_decode_frame(unsigned char *sampleBuffer, uint32_t bufferLength, unsigned char *dest, int *outsize);
 
