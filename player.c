@@ -122,7 +122,7 @@ static pthread_mutex_t vol_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 typedef struct audio_buffer_entry { // decoded audio packets
   int ready;
-  uint32_t timestamp;
+  int64_t timestamp;
   seq_t sequence_number;
   signed short *data;
   int length; // the length of the decoded data
@@ -133,9 +133,9 @@ static abuf_t audio_buffer[BUFFER_FRAMES];
 // mutex-protected variables
 static seq_t ab_read, ab_write;
 static int ab_buffering = 1, ab_synced = 0;
-static uint32_t first_packet_timestamp = 0;
+static int64_t first_packet_timestamp = 0;
 static int flush_requested = 0;
-static uint32_t flush_rtp_timestamp;
+static int64_t flush_rtp_timestamp;
 static uint64_t time_of_last_audio_packet;
 static int shutdown_requested;
 
@@ -153,12 +153,13 @@ static uint64_t missing_packets, late_packets, too_late_packets, resend_requests
 
 // make timestamps and seqnos definitely monotonic
 
-// add an epoch to the timestamp. The monotonic timestamp guaranteed to start between 2^32 and 2^33 frames and continue up to 2^64 frames
-// which is about 4*10^8 * 1,000 seconds at 384,000 frames per second -- about 4 trillion seconds or over 100,000 years.
+// add an epoch to the timestamp. The monotonic timestamp guaranteed to start between 2^32 and 2^33 frames and continue up to 2^63-1 frames
+// if should never get into the negative range
+// which is about 2*10^8 * 1,000 seconds at 384,000 frames per second -- about 2 trillion seconds or over 50,000 years.
 // also, it won't reach zero until then, if ever, so we can safely say that a null monotonic timestamp can mean something special
-uint64_t monotonic_timestamp(uint32_t timestamp) {
-  uint64_t previous_value;
-  uint64_t return_value;
+int64_t monotonic_timestamp(uint32_t timestamp) {
+  int64_t previous_value;
+  int64_t return_value;
   if (timestamp_epoch==0) {
     if (timestamp>maximum_timestamp_interval)
       timestamp_epoch=1;
@@ -194,6 +195,8 @@ uint64_t monotonic_timestamp(uint32_t timestamp) {
     if ((return_value-previous_value)>maximum_timestamp_interval)
     debug(1,"interval between successive rtptimes greater than allowed!");
   }
+  if (return_value<0)
+  	debug(1,"monotonic rtptime is negative!");
   return return_value;
 }
 
@@ -466,7 +469,7 @@ static void free_buffer(void) {
     free(audio_buffer[i].data);
 }
 
-void player_put_packet(seq_t seqno, uint32_t timestamp, uint8_t *data, int len) {
+void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len) {
 
   // ignore a request to flush that has been made before the first packet...
   if (packet_count==0) {
@@ -485,14 +488,13 @@ void player_put_packet(seq_t seqno, uint32_t timestamp, uint8_t *data, int len) 
 //    	debug(1,"Flush_rtp_timestamp is %u",flush_rtp_timestamp);
 
     if ((flush_rtp_timestamp != 0) &&
-        ((timestamp == flush_rtp_timestamp) || seq32_order(timestamp, flush_rtp_timestamp))) {
-      debug(3, "Dropping flushed packet in player_put_packet, seqno %u, timestamp %u, flushing to "
-               "timestamp: %u.",
+        (timestamp <= flush_rtp_timestamp)) {
+      debug(3, "Dropping flushed packet in player_put_packet, seqno %u, timestamp %lld, flushing to "
+               "timestamp: %lld.",
             seqno, timestamp, flush_rtp_timestamp);
     } else {
       if ((flush_rtp_timestamp != 0x0) &&
-          (!seq32_order(timestamp,
-                        flush_rtp_timestamp))) // if we have gone past the flush boundary time
+          (timestamp>flush_rtp_timestamp)) // if we have gone past the flush boundary time
         flush_rtp_timestamp = 0x0;
 
       abuf_t *abuf = 0;
@@ -699,17 +701,14 @@ static abuf_t *buffer_get_frame(void) {
           }
 
           if ((flush_rtp_timestamp != 0) &&
-              ((curframe->timestamp == flush_rtp_timestamp) ||
-               seq32_order(curframe->timestamp, flush_rtp_timestamp))) {
-            debug(1, "Dropping flushed packet seqno %u, timestamp %u", curframe->sequence_number,
+              (curframe->timestamp <= flush_rtp_timestamp)) {
+            debug(1, "Dropping flushed packet seqno %u, timestamp %lld", curframe->sequence_number,
                   curframe->timestamp);
             curframe->ready = 0;
             flush_limit++;
             ab_read = SUCCESSOR(ab_read);
           }
-          if ((flush_rtp_timestamp != 0) &&
-              (!seq32_order(curframe->timestamp,
-                            flush_rtp_timestamp))) // if we have gone past the flush boundary time
+          if (curframe->timestamp>flush_rtp_timestamp) 
             flush_rtp_timestamp = 0;
         }
       } while ((flush_rtp_timestamp != 0) && (flush_limit <= 8820) && (curframe->ready == 0));
@@ -725,7 +724,7 @@ static abuf_t *buffer_get_frame(void) {
         notified_buffer_empty=0; // at least one buffer now -- diagnostic only.
         if (ab_buffering) { // if we are getting packets but not yet forwarding them to the player
           int have_sent_prefiller_silence; // set true when we have sent some silent frames to the DAC
-          uint32_t reference_timestamp;
+          int64_t reference_timestamp;
           uint64_t reference_timestamp_time,remote_reference_timestamp_time;
           get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time, &remote_reference_timestamp_time);
           if (first_packet_timestamp == 0) { // if this is the very first packet
@@ -760,14 +759,14 @@ static abuf_t *buffer_get_frame(void) {
               // if would be in sync. To do this, we would give it a latency offset of -100 ms, i.e.
               // -4410 frames.
 
-              int64_t delta = ((int64_t)first_packet_timestamp - (int64_t)reference_timestamp)+config.latency+config.audio_backend_latency_offset; // uint32_t to int64_t is okay and int32t to int64t promotion is okay.
+              int64_t delta = (first_packet_timestamp - reference_timestamp)+config.latency+config.audio_backend_latency_offset;
               
               if (delta>=0) {
-                uint64_t delta_fp_sec = (delta << 32) / 44100; // int64_t which is positive
+                int64_t delta_fp_sec = (delta << 32) / 44100; // int64_t which is positive
                 first_packet_time_to_play=reference_timestamp_time+delta_fp_sec;
               } else {
                 int64_t abs_delta = -delta;
-                uint64_t delta_fp_sec = (abs_delta << 32) / 44100; // int64_t which is positive
+                int64_t delta_fp_sec = (abs_delta << 32) / 44100; // int64_t which is positive
                 first_packet_time_to_play=reference_timestamp_time-delta_fp_sec;              
               }
 
@@ -782,14 +781,14 @@ static abuf_t *buffer_get_frame(void) {
 
           if (first_packet_time_to_play != 0) {
             // recalculate first_packet_time_to_play -- the latency might change
-            int64_t delta = ((int64_t)first_packet_timestamp - (int64_t)reference_timestamp)+config.latency+config.audio_backend_latency_offset; // uint32_t to int64_t is okay and int32t to int64t promotion is okay.
+            int64_t delta = (first_packet_timestamp - reference_timestamp)+config.latency+config.audio_backend_latency_offset;
             
             if (delta>=0) {
-              uint64_t delta_fp_sec = (delta << 32) / 44100; // int64_t which is positive
+              int64_t delta_fp_sec = (delta << 32) / 44100; // int64_t which is positive
               first_packet_time_to_play=reference_timestamp_time+delta_fp_sec;
             } else {
               int64_t abs_delta = -delta;
-              uint64_t delta_fp_sec = (abs_delta << 32) / 44100; // int64_t which is positive
+              int64_t delta_fp_sec = (abs_delta << 32) / 44100; // int64_t which is positive
               first_packet_time_to_play=reference_timestamp_time-delta_fp_sec;              
             }
 
@@ -896,12 +895,12 @@ static abuf_t *buffer_get_frame(void) {
     int do_wait = 0; // don't wait unless we can really prove we must
     if ((ab_synced) && (curframe) && (curframe->ready) && (curframe->timestamp)) {
     	do_wait = 1; // if the current frame exists and is ready, then wait unless it's time to let it go...
-      uint32_t reference_timestamp;
+      int64_t reference_timestamp;
       uint64_t reference_timestamp_time,remote_reference_timestamp_time;
       get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time, &remote_reference_timestamp_time); // all types okay
       if (reference_timestamp) { // if we have a reference time
-        uint32_t packet_timestamp = curframe->timestamp; // types okay
-        int64_t delta = (int64_t)packet_timestamp - (int64_t)reference_timestamp; // uint32_t to int64_t is okay.
+        int64_t packet_timestamp = curframe->timestamp; // types okay
+        int64_t delta = packet_timestamp - reference_timestamp;
         int64_t offset = config.latency + config.audio_backend_latency_offset -
                          config.audio_backend_buffer_desired_length; // all arguments are int32_t, so expression promotion okay
         int64_t net_offset = delta + offset; // okay
@@ -954,7 +953,6 @@ static abuf_t *buffer_get_frame(void) {
 #endif
 #ifdef COMPILE_FOR_OSX
       uint64_t sec = time_to_wait_for_wakeup_fp >> 32;
-      ;
       uint64_t nsec = ((time_to_wait_for_wakeup_fp & 0xffffffff) * 1000000000) >> 32;
       struct timespec time_to_wait;
       time_to_wait.tv_sec = sec;
@@ -1288,7 +1286,7 @@ static void *player_thread_func(void *arg) {
 
           at_least_one_frame_seen = 1;
 
-          uint32_t reference_timestamp;
+          int64_t reference_timestamp;
           uint64_t reference_timestamp_time,remote_reference_timestamp_time;
           get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time, &remote_reference_timestamp_time); // types okay
 
@@ -1840,7 +1838,7 @@ void player_volume(double airplay_volume) {
 #endif
 }
 
-void player_flush(uint32_t timestamp) {
+void player_flush(int64_t timestamp) {
   debug(3,"Flush requested up to %u. It seems as if 0 is special.",timestamp);
   pthread_mutex_lock(&flush_mutex);
   flush_requested = 1;

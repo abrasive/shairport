@@ -107,11 +107,11 @@ typedef struct {
   char *mdns_name;
   mdns_backend *mdns;
   int buffer_start_fill;
-  int32_t latency;
-  int32_t userSuppliedLatency; // overrides all other latencies -- use with caution
-  int32_t iTunesLatency;       // supplied with --iTunesLatency option
-  int32_t AirPlayLatency; // supplied with --AirPlayLatency option
-  int32_t ForkedDaapdLatency; // supplied with --ForkedDaapdLatency option
+  int64_t latency;
+  int64_t userSuppliedLatency; // overrides all other latencies -- use with caution
+  int64_t iTunesLatency;       // supplied with --iTunesLatency option
+  int64_t AirPlayLatency; // supplied with --AirPlayLatency option
+  int64_t ForkedDaapdLatency; // supplied with --ForkedDaapdLatency option
   int daemonise;
   int statistics_requested,use_negotiated_latencies;
   enum playback_mode_type playback_mode;
@@ -176,7 +176,7 @@ config_t config_file_stuff;
 
 int32_t buffer_occupancy; // allow it to be negative because seq_diff may be negative
 int64_t session_corrections;
-uint32_t play_segment_reference_frame;
+int64_t play_segment_reference_frame;
 uint64_t play_segment_reference_frame_remote_time;
 
 void command_start(void);

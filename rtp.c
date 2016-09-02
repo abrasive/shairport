@@ -71,7 +71,7 @@ static int control_socket;                 // our local [server] control socket
 static int timing_socket;                  // local timing socket
 //static pthread_t rtp_audio_thread, rtp_control_thread, rtp_timing_thread;
 
-static uint32_t reference_timestamp;
+static int64_t reference_timestamp;
 static uint64_t reference_timestamp_time;
 static uint64_t remote_reference_timestamp_time;
 
@@ -159,7 +159,7 @@ void *rtp_audio_receiver(void *arg) {
         //  debug(3, "RTP: Packets out of sequence: expected: %d, got %d.", last_seqno, seqno);
         last_seqno = seqno; // reset warning...
       }
-      uint32_t timestamp = ntohl(*(unsigned long *)(pktp + 4));
+      int64_t timestamp = monotonic_timestamp(ntohl(*(unsigned long *)(pktp + 4)));
 
       // if (packet[1]&0x10)
       //	debug(1,"Audio packet Extension bit set.");
@@ -198,7 +198,7 @@ void *rtp_control_receiver(void *arg) {
   uint8_t packet[2048], *pktp;
   struct timespec tn;
   uint64_t remote_time_of_sync, local_time_now, remote_time_now;
-  uint32_t sync_rtp_timestamp, rtp_timestamp_less_latency;
+  int64_t sync_rtp_timestamp, rtp_timestamp_less_latency;
   ssize_t nread;
   while (itr->please_stop==0) {
     nread = recv(control_socket, packet, sizeof(packet), 0);
@@ -229,11 +229,11 @@ void *rtp_control_receiver(void *arg) {
 
         // debug(1,"Remote Sync Time: %0llx.",remote_time_of_sync);
 
-        rtp_timestamp_less_latency = ntohl(*((uint32_t *)&packet[4]));
-        sync_rtp_timestamp = ntohl(*((uint32_t *)&packet[16]));
+        rtp_timestamp_less_latency = monotonic_timestamp(ntohl(*((uint32_t *)&packet[4])));
+        sync_rtp_timestamp = monotonic_timestamp(ntohl(*((uint32_t *)&packet[16])));
         
         if (config.use_negotiated_latencies) {
-          uint32_t la = sync_rtp_timestamp-rtp_timestamp_less_latency+11025;
+          int64_t la = sync_rtp_timestamp-rtp_timestamp_less_latency+11025;
           if (la!=config.latency) {
             config.latency = la;
             // debug(1,"Using negotiated latency of %u frames.",config.latency);
@@ -269,7 +269,7 @@ void *rtp_control_receiver(void *arg) {
       plen -= 4;
       seq_t seqno = ntohs(*(unsigned short *)(pktp + 2));
 
-      uint32_t timestamp = ntohl(*(unsigned long *)(pktp + 4));
+      int64_t timestamp = monotonic_timestamp(ntohl(*(unsigned long *)(pktp + 4)));
 
       pktp += 12;
       plen -= 12;
@@ -494,7 +494,7 @@ void *rtp_timing_receiver(void *arg) {
      
      int64_t source_drift_usec;
      if (play_segment_reference_frame!=0) {
-      uint32_t reference_timestamp;
+      int64_t reference_timestamp;
       uint64_t reference_timestamp_time,remote_reference_timestamp_time;
       get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time, &remote_reference_timestamp_time);
       uint64_t frame_difference = 0;
@@ -708,7 +708,7 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
   request_sent = 0;
 }
 
-void get_reference_timestamp_stuff(uint32_t *timestamp, uint64_t *timestamp_time, uint64_t *remote_timestamp_time) {
+void get_reference_timestamp_stuff(int64_t *timestamp, uint64_t *timestamp_time, uint64_t *remote_timestamp_time) {
   // types okay
   pthread_mutex_lock(&reference_time_mutex);
   *timestamp = reference_timestamp;
