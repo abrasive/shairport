@@ -76,7 +76,8 @@ static AES_KEY aes;
 #endif
 static int input_sample_rate, input_bit_depth, input_num_channels, max_frames_per_packet;
 
-static uint32_t timestamp_epoch; // zero means not initialised, could start at 2 or 1.
+static uint32_t timestamp_epoch, last_timestamp, maximum_timestamp_interval;// timestamp_epoch of zero means not initialised, could start at 2 or 1.
+
 
 
 static int input_bytes_per_frame = 4;
@@ -156,10 +157,47 @@ static uint64_t missing_packets, late_packets, too_late_packets, resend_requests
 // which is about 4*10^8 * 1,000 seconds at 384,000 frames per second -- about 4 trillion seconds or over 100,000 years.
 // also, it won't reach zero until then, if ever, so we can safely say that a null monotonic timestamp can mean something special
 uint64_t monotonic_timestamp(uint32_t timestamp) {
-
+  uint64_t previous_value;
+  uint64_t return_value;
+  if (timestamp_epoch==0) {
+    if (timestamp>maximum_timestamp_interval)
+      timestamp_epoch=1;
+    else
+      timestamp_epoch=2;
+    previous_value = timestamp_epoch;
+    previous_value<<=32;
+    previous_value+=timestamp;
+  } else {
+    previous_value = timestamp_epoch;
+    previous_value<<=32;
+    previous_value+=last_timestamp;  
+    if (timestamp<last_timestamp) {
+      // the incoming timestamp is less than the last one.
+      // if the difference is more than a minute, assume it's really from the next epoch
+      if ((last_timestamp-timestamp)>maximum_timestamp_interval)
+        timestamp_epoch++;      
+    } else {
+      // the incoming timestamp is greater than the last one.
+      // if the difference is more than a minute, assume it's really from the previous epoch
+      if ((timestamp-last_timestamp)>maximum_timestamp_interval)
+        timestamp_epoch--;
+    }
+  }
+  last_timestamp=timestamp;
+  return_value = timestamp_epoch;
+  return_value<<=32;
+  return_value+=timestamp;
+  if (previous_value>return_value) {
+   if ((previous_value-return_value)>maximum_timestamp_interval)
+    debug(1,"interval between successive rtptimes greater than allowed!");
+  } else {
+    if ((return_value-previous_value)>maximum_timestamp_interval)
+    debug(1,"interval between successive rtptimes greater than allowed!");
+  }
+  return return_value;
 }
 
-// add an epoch to the seq_no. Uses the accompanying timstamp to detemine the correct epoch
+// add an epoch to the seq_no. Uses the accompanying timestamp to determine the correct epoch
 uint64_t monotonic_seqno(uint16_t seq_no) { 
 }
 
@@ -1103,6 +1141,7 @@ static void *player_thread_func(void *arg) {
 	struct inter_threads_record itr;
 	itr.please_stop = 0;
 	timestamp_epoch = 0; // indicate that the next timestamp will be the first one.
+	maximum_timestamp_interval = input_sample_rate * 60; // actually there shouldn't be more than about 13v seconds of a gap between successive rtptimes, at worst
 	// create and start the timing, control and audio receiver threads
 	pthread_t rtp_audio_thread, rtp_control_thread, rtp_timing_thread;
 	pthread_create(&rtp_audio_thread, NULL, &rtp_audio_receiver, (void *)&itr);
@@ -1861,7 +1900,6 @@ int player_play(stream_cfg *stream, pthread_t *player_thread) {
   rc = pthread_attr_setstacksize(&tattr, size);
   if (rc)
     debug(1, "Error setting stack size for player_thread: %s", strerror(errno));
-  timestamp_epoch = 0;
   pthread_create(player_thread, &tattr, player_thread_func, NULL);
   pthread_attr_destroy(&tattr);
   return 0;
