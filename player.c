@@ -82,6 +82,7 @@ static uint32_t timestamp_epoch, last_timestamp, maximum_timestamp_interval;// t
 
 static int input_bytes_per_frame = 4;
 static int output_bytes_per_frame;
+static int output_sample_ratio;
 
 
 // The maximum frame size change there can be is +/- 1;
@@ -197,7 +198,7 @@ int64_t monotonic_timestamp(uint32_t timestamp) {
   }
   if (return_value<0)
   	debug(1,"monotonic rtptime is negative!");
-  return return_value;
+  return return_value*output_sample_ratio;
 }
 
 // add an epoch to the seq_no. Uses the accompanying timestamp to determine the correct epoch
@@ -1140,6 +1141,25 @@ static void *player_thread_func(void *arg) {
 	itr.please_stop = 0;
 	timestamp_epoch = 0; // indicate that the next timestamp will be the first one.
 	maximum_timestamp_interval = input_sample_rate * 60; // actually there shouldn't be more than about 13v seconds of a gap between successive rtptimes, at worst
+
+	output_sample_ratio = 1;
+	if (config.output_rate!=0)
+		output_sample_ratio = config.output_rate/44100;
+
+	debug(1,"Output sample ratio is %d.",output_sample_ratio);
+	
+	max_frame_size_change = 1*output_sample_ratio; // we add or subtract one frame at the nominal rate, multiply it by the frame ratio.
+
+	output_bytes_per_frame = 4;	
+	switch (config.output_format) {
+		case SPS_FORMAT_S24_LE:
+			output_bytes_per_frame=6;
+			break;
+		case SPS_FORMAT_S32_LE:
+			output_bytes_per_frame=8;
+			break;		
+	}
+
 	// create and start the timing, control and audio receiver threads
 	pthread_t rtp_audio_thread, rtp_control_thread, rtp_timing_thread;
 	pthread_create(&rtp_audio_thread, NULL, &rtp_audio_receiver, (void *)&itr);
@@ -1149,21 +1169,6 @@ static void *player_thread_func(void *arg) {
 	session_corrections = 0;
 	play_segment_reference_frame = 0; // zero signals that we are not in a play segment
 
-	int output_sample_ratio = 1;
-	if (config.output_rate!=0)
-		output_sample_ratio = config.output_rate/44100;
-	
-	max_frame_size_change = 1*output_sample_ratio; // we add or subtract one frame at the nominal rate, multiply it by the frame ratio.
-	output_bytes_per_frame = 4;
-	
-	switch (config.output_format) {
-		case SPS_FORMAT_S24_LE:
-			output_bytes_per_frame=6;
-			break;
-		case SPS_FORMAT_S32_LE:
-			output_bytes_per_frame=8;
-			break;		
-	}
 
 	// check that there are enough buffers to accommodate the desired latency and the latency offset
 	
@@ -1209,7 +1214,7 @@ static void *player_thread_func(void *arg) {
   outbuf = malloc(input_bytes_per_frame*(max_frames_per_packet*output_sample_ratio+max_frame_size_change));
   if (outbuf==NULL)
     debug(1,"Failed to allocate memory for an output buffer.");
-  silence = malloc(input_bytes_per_frame*max_frames_per_packet);
+  silence = malloc(input_bytes_per_frame*max_frames_per_packet*output_sample_ratio);
   if (silence==NULL)
     debug(1,"Failed to allocate memory for a silence buffer.");
   memset(silence, 0, input_bytes_per_frame*max_frames_per_packet*output_sample_ratio);
