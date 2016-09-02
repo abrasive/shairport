@@ -22,4 +22,10 @@ void player_flush(uint32_t timestamp);
 
 void player_put_packet(seq_t seqno, uint32_t timestamp, uint8_t *data, int len);
 
+uint64_t monotonic_timestamp(uint32_t timestamp); // add an epoch to the timestamp. The monotonic timestamp guaranteed to start between 2^32 2^33 frames and continue up to 2^64 frames
+// which is about 4*10^8 * 1,000 seconds at 384,000 frames per second -- about 4 trillion seconds.
+// assumes, without checking, that successive timestamps in a series always span an interval of less than one minute.
+
+uint64_t monotonic_seqno(uint16_t seq_no); // add an epoch to the seq_no. Uses the accompanying timstamp to detemine the correct epoch
+
 #endif //_PLAYER_H

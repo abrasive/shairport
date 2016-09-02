@@ -76,6 +76,9 @@ static AES_KEY aes;
 #endif
 static int input_sample_rate, input_bit_depth, input_num_channels, max_frames_per_packet;
 
+static uint32_t timestamp_epoch; // zero means not initialised, could start at 2 or 1.
+
+
 static int input_bytes_per_frame = 4;
 static int output_bytes_per_frame;
 
@@ -146,6 +149,19 @@ static audio_parameters audio_information;
 
 // stats
 static uint64_t missing_packets, late_packets, too_late_packets, resend_requests;
+
+// make timestamps and seqnos definitely monotonic
+
+// add an epoch to the timestamp. The monotonic timestamp guaranteed to start between 2^32 and 2^33 frames and continue up to 2^64 frames
+// which is about 4*10^8 * 1,000 seconds at 384,000 frames per second -- about 4 trillion seconds or over 100,000 years.
+// also, it won't reach zero until then, if ever, so we can safely say that a null monotonic timestamp can mean something special
+uint64_t monotonic_timestamp(uint32_t timestamp) {
+
+}
+
+// add an epoch to the seq_no. Uses the accompanying timstamp to detemine the correct epoch
+uint64_t monotonic_seqno(uint16_t seq_no) { 
+}
 
 static void ab_resync(void) {
   int i;
@@ -1086,6 +1102,7 @@ typedef struct stats { // statistics for running averages
 static void *player_thread_func(void *arg) {
 	struct inter_threads_record itr;
 	itr.please_stop = 0;
+	timestamp_epoch = 0; // indicate that the next timestamp will be the first one.
 	// create and start the timing, control and audio receiver threads
 	pthread_t rtp_audio_thread, rtp_control_thread, rtp_timing_thread;
 	pthread_create(&rtp_audio_thread, NULL, &rtp_audio_receiver, (void *)&itr);
@@ -1816,7 +1833,7 @@ int player_play(stream_cfg *stream, pthread_t *player_thread) {
 #endif
     aesiv = stream->aesiv;
   }
-  init_decoder(stream->fmtp);
+  init_decoder(stream->fmtp); // this sets up incoming rate, bit depth, channels
   // must be after decoder init
   init_buffer();
   please_stop = 0;
@@ -1844,6 +1861,7 @@ int player_play(stream_cfg *stream, pthread_t *player_thread) {
   rc = pthread_attr_setstacksize(&tattr, size);
   if (rc)
     debug(1, "Error setting stack size for player_thread: %s", strerror(errno));
+  timestamp_epoch = 0;
   pthread_create(player_thread, &tattr, player_thread_func, NULL);
   pthread_attr_destroy(&tattr);
   return 0;
