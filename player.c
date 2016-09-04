@@ -83,6 +83,7 @@ static uint32_t timestamp_epoch, last_timestamp, maximum_timestamp_interval;// t
 static int input_bytes_per_frame = 4;
 static int output_bytes_per_frame;
 static int output_sample_ratio;
+static int output_sample_rate;
 
 
 // The maximum frame size change there can be is +/- 1;
@@ -550,24 +551,6 @@ void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len) {
 					abuf->length = datalen;
 					abuf->timestamp = timestamp;
 					abuf->sequence_number = seqno;
-
-          if (config.playback_mode==ST_mono) {
-            signed short *v = abuf->data;
-            int i;
-            int both;
-            for (i=max_frames_per_packet;i;i--) {
-              int both = *v + *(v+1);
-              if (both > INT16_MAX) {
-                both = INT16_MAX;
-              } else if (both < INT16_MIN) {
-                both = INT16_MIN;
-              }
-              short sboth = (short)both;
-              *v++ = sboth;
-              *v++ = sboth;
-            }
-          }
-
         } else {
         	debug(1,"Bad audio packet detected and discarded.");
 					abuf->ready = 0;
@@ -1142,9 +1125,12 @@ static void *player_thread_func(void *arg) {
 	timestamp_epoch = 0; // indicate that the next timestamp will be the first one.
 	maximum_timestamp_interval = input_sample_rate * 60; // actually there shouldn't be more than about 13v seconds of a gap between successive rtptimes, at worst
 
-	output_sample_ratio = 1;
+	output_sample_rate = input_sample_rate;
+
 	if (config.output_rate!=0)
-		output_sample_ratio = config.output_rate/44100;
+	  output_sample_rate = config.output_rate;
+	  
+	output_sample_ratio = output_sample_rate/input_sample_rate;
 
 	debug(1,"Output sample ratio is %d.",output_sample_ratio);
 	
@@ -1153,7 +1139,7 @@ static void *player_thread_func(void *arg) {
 	output_bytes_per_frame = 4;	
 	switch (config.output_format) {
 		case SPS_FORMAT_S24_LE:
-			output_bytes_per_frame=6;
+			output_bytes_per_frame=8;
 			break;
 		case SPS_FORMAT_S32_LE:
 			output_bytes_per_frame=8;
@@ -1207,17 +1193,44 @@ static void *player_thread_func(void *arg) {
   char rnstate[256];
   initstate(time(NULL), rnstate, 256);
 
-  signed short *inbuf, *outbuf, *silence;
+  signed short *inbuf, *outbuf, *tbuf, *silence;
+  int inbuflength;
+  
+  int output_bit_depth = 16; // default;
+  
+  switch (config.output_format) {
+    case SPS_FORMAT_S16_LE:
+      output_bit_depth = 16;
+      break;
+    case SPS_FORMAT_S24_LE:
+      output_bit_depth = 24;
+      break;
+    case SPS_FORMAT_S32_LE:
+      output_bit_depth = 32;
+      break;
+  }
+  
+  
+  // if we are changing any of the parameters of the input, like sample rate or sample depth, then we
+  // need an intermediate "transition" buffer
+  
+//  if ((config.output_rate!=0 && (input_sample_rate!=config.output_rate)) || (input_bit_depth!=output_bit_depth)) {
+    tbuf = malloc(output_bytes_per_frame*(max_frames_per_packet*output_sample_ratio+max_frame_size_change));
+    if (tbuf==NULL)
+      debug(1,"Failed to allocate memory for the transition buffer.");
+//  } else {
+//    tbuf = 0;
+//  }  
   
   // We might need an output buffer and a buffer of silence.
   // The size of these dependents on the number of frames, the size of each frame and the maximum size change
-  outbuf = malloc(input_bytes_per_frame*(max_frames_per_packet*output_sample_ratio+max_frame_size_change));
+  outbuf = malloc(output_bytes_per_frame*(max_frames_per_packet*output_sample_ratio+max_frame_size_change));
   if (outbuf==NULL)
     debug(1,"Failed to allocate memory for an output buffer.");
-  silence = malloc(input_bytes_per_frame*max_frames_per_packet*output_sample_ratio);
+  silence = malloc(output_bytes_per_frame*max_frames_per_packet*output_sample_ratio);
   if (silence==NULL)
     debug(1,"Failed to allocate memory for a silence buffer.");
-  memset(silence, 0, input_bytes_per_frame*max_frames_per_packet*output_sample_ratio);
+  memset(silence, 0, output_bytes_per_frame*max_frames_per_packet*output_sample_ratio);
   late_packet_message_sent = 0;
   first_packet_timestamp = 0;
   missing_packets = late_packets = too_late_packets = resend_requests = 0;
@@ -1266,6 +1279,7 @@ static void *player_thread_func(void *arg) {
     abuf_t *inframe = buffer_get_frame();
     if (inframe) {
       inbuf = inframe->data;
+      inbuflength = inframe->length;
       if (inbuf) {
         play_number++;
         // if it's a supplied silent frame, let us know...
@@ -1276,12 +1290,85 @@ static void *player_thread_func(void *arg) {
           if (inbuf==NULL)
             debug(1,"NULL inbuf to play -- skipping it.");
           else {
-            if (inframe->length==0)
+            if (inbuflength==0)
               debug(1,"empty frame to play -- skipping it (1).");
             else
-              config.output->play(inbuf, inframe->length);
+              config.output->play(inbuf, inbuflength);
           }
         } else {
+          // here, let's transform the frame of data, if necessary
+          
+          if (tbuf!=NULL) { //this will be null if no changes are needed
+            switch (input_bit_depth) {
+              case 16: {
+                  int i,j;
+                  int16_t ls,rs;
+                  int16_t *inps=inbuf;
+                  int16_t *outps=tbuf;
+                  int32_t *outpl=(int32_t*)tbuf;
+                  for (i=0;i<inbuflength;i++) {
+                    ls=*inps++;
+                    rs=*inps++;
+                    
+                    // here, do the mode stuff -- mono / reverse stereo / leftonly / rightonly
+                    
+                    switch (config.playback_mode) {
+                      case ST_mono: {
+                        int both = ls+rs;
+                        // Note -- this is assuming 16 bit signed.
+                        if (both > INT16_MAX) {
+                          both = INT16_MAX;
+                        } else if (both < INT16_MIN) {
+                          both = INT16_MIN;
+                        }
+                        uint16_t sboth = (uint16_t)both;
+                        ls = sboth;
+                        rs = sboth;
+                        } break;
+                      case ST_reverse_stereo: {
+                        uint16_t t = ls;
+                        ls = rs;
+                        rs = t;
+                        } break;
+                      case ST_left_only:
+                        rs = ls;
+                        break;
+                      case ST_right_only:
+                        ls = rs;
+                        break;
+                    }
+                    
+                    // here, replicate the samples if you're upsampling
+                    for (j=0;j<output_sample_ratio;j++) {
+                      switch (output_bit_depth) {
+                        case 16:
+                          *outps++=ls;
+                          *outps++=rs;
+                          break;
+                        case 24: {
+                          uint32_t t = ls<<8;
+                          *outpl++=t;
+                          uint32_t u = rs<<8;
+                          *outpl++=u;
+                          } break;
+                        case 32: {
+                          uint32_t t = ls<<16;
+                          *outpl++=t;
+                          uint32_t u = rs<<16;
+                          *outpl++=u;
+                          } break;
+                      }
+                    }
+                  }
+
+                }
+                break;
+              default:
+                die("Shairport Sync only supports 16 bit input");
+            }
+            inbuf = tbuf;
+          }
+          
           // We have a frame of data. We need to see if we want to add or remove a frame from it to
           // keep in sync.
           // So we calculate the timing error for the first frame in the DAC.
