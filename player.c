@@ -743,7 +743,7 @@ static abuf_t *buffer_get_frame(void) {
               // if would be in sync. To do this, we would give it a latency offset of -100 ms, i.e.
               // -4410 frames.
 
-              int64_t delta = (first_packet_timestamp - reference_timestamp)+config.latency+config.audio_backend_latency_offset;
+              int64_t delta = (first_packet_timestamp - reference_timestamp)+config.latency+config.audio_backend_latency_offset*output_sample_rate;
               
               if (delta>=0) {
                 int64_t delta_fp_sec = (delta << 32) / output_sample_rate; // int64_t which is positive
@@ -765,7 +765,7 @@ static abuf_t *buffer_get_frame(void) {
 
           if (first_packet_time_to_play != 0) {
             // recalculate first_packet_time_to_play -- the latency might change
-            int64_t delta = (first_packet_timestamp - reference_timestamp)+config.latency+config.audio_backend_latency_offset;
+            int64_t delta = (first_packet_timestamp - reference_timestamp)+config.latency+config.audio_backend_latency_offset*output_sample_rate;
             
             if (delta>=0) {
               int64_t delta_fp_sec = (delta << 32) / output_sample_rate; // int64_t which is positive
@@ -885,8 +885,8 @@ static abuf_t *buffer_get_frame(void) {
       if (reference_timestamp) { // if we have a reference time
         int64_t packet_timestamp = curframe->timestamp; // types okay
         int64_t delta = packet_timestamp - reference_timestamp;
-        int64_t offset = config.latency + config.audio_backend_latency_offset -
-                         config.audio_backend_buffer_desired_length; // all arguments are int32_t, so expression promotion okay
+        int64_t offset = config.latency + config.audio_backend_latency_offset*output_sample_rate -
+                         config.audio_backend_buffer_desired_length*output_sample_rate; // all arguments are int32_t, so expression promotion okay
         int64_t net_offset = delta + offset; // okay
         uint64_t time_to_play = reference_timestamp_time; // type okay
         if (net_offset >= 0) {
@@ -1160,7 +1160,7 @@ static void *player_thread_func(void *arg) {
 
 	// check that there are enough buffers to accommodate the desired latency and the latency offset
 	
-	int maximum_latency = config.latency+config.audio_backend_latency_offset;
+	int maximum_latency = config.latency+config.audio_backend_latency_offset*output_sample_rate;
 	if ((maximum_latency+(352-1))/352 + 10 > BUFFER_FRAMES)
 		die("Not enough buffers available for a total latency of %d frames. A maximum of %d 352-frame packets may be accommodated.",maximum_latency,BUFFER_FRAMES);
   connection_state_to_output = get_requested_connection_state_to_output();
@@ -1243,7 +1243,7 @@ static void *player_thread_func(void *arg) {
   if (config.statistics_requested) {
     if ((config.output->delay)) {
       if (config.no_sync==0) {
-        inform("sync error in frames, "
+        inform("sync error in milliseconds, "
                "net correction in ppm, "
                "corrections in ppm, "
                "total packets, "
@@ -1255,7 +1255,7 @@ static void *player_thread_func(void *arg) {
                "min buffer occupancy, "
                "max buffer occupancy");
       } else {
-        inform("sync error in frames, "
+        inform("sync error in milliseconds, "
                "total packets, "
                "missing packets, "
                "late packets, "
@@ -1266,7 +1266,8 @@ static void *player_thread_func(void *arg) {
                "max buffer occupancy");
       }
     } else {
-      inform("total packets, "
+      inform("sync error in milliseconds, "
+             "total packets, "
              "missing packets, "
              "late packets, "
              "too late packets, "
@@ -1477,10 +1478,10 @@ static void *player_thread_func(void *arg) {
             // before we finally commit to this frame, check its sequencing and timing
 
             // require a certain error before bothering to fix it...
-            if (sync_error > config.tolerance) { // int64_t > int, okay
+            if (sync_error > config.tolerance*output_sample_rate) { // int64_t > int, okay
               amount_to_stuff = -1;
             }
-            if (sync_error < -config.tolerance) {
+            if (sync_error < -config.tolerance*output_sample_rate) {
               amount_to_stuff = 1;
             }
 
@@ -1576,8 +1577,8 @@ static void *player_thread_func(void *arg) {
             if (abs_sync_error<0)
               abs_sync_error = -abs_sync_error;
             
-            if ((config.no_sync==0) && (inframe->timestamp != 0) && (!please_stop) && (config.resyncthreshold != 0) &&
-                (abs_sync_error > config.resyncthreshold)) {
+            if ((config.no_sync==0) && (inframe->timestamp != 0) && (!please_stop) && (config.resyncthreshold > 0.0) &&
+                (abs_sync_error > config.resyncthreshold*output_sample_rate)) {
               sync_error_out_of_bounds++;
               // debug(1,"Sync error out of bounds: Error: %lld; previous error: %lld; DAC: %lld;
               // timestamp: %llx, time now
@@ -1684,7 +1685,7 @@ static void *player_thread_func(void *arg) {
             if (at_least_one_frame_seen) {
             	if ((config.output->delay)) {
                 if (config.no_sync==0) {
-                  inform("%*.1f,"  /* Sync error inf frames */
+                  inform("%*.1f,"  /* Sync error in milliseconds */
                          "%*.1f,"  /* net correction in ppm */
                          "%*.1f,"  /* corrections in ppm */
                          "%*d,"    /* total packets */
@@ -1695,7 +1696,7 @@ static void *player_thread_func(void *arg) {
                          "%*lli,"  /* min DAC queue size */
                          "%*d,"    /* min buffer occupancy */
                          "%*d",    /* max buffer occupancy */
-                         10, moving_average_sync_error,
+                         10, 1000*moving_average_sync_error/output_sample_rate,
                          10, moving_average_correction * 1000000 / (352*output_sample_ratio),
                          10, moving_average_insertions_plus_deletions * 1000000 / (352*output_sample_ratio),
                          12, play_number,
@@ -1707,7 +1708,7 @@ static void *player_thread_func(void *arg) {
                          5, minimum_buffer_occupancy,
                          5, maximum_buffer_occupancy);
                 } else {
-                  inform("%*.1f,"  /* Sync error inf frames */
+                  inform("%*.1f,"  /* Sync error in milliseconds */
                          "%*d,"    /* total packets */
                          "%*llu,"  /* missing packets */
                          "%*llu,"  /* late packets */
@@ -1716,7 +1717,7 @@ static void *player_thread_func(void *arg) {
                          "%*lli,"  /* min DAC queue size */
                          "%*d,"    /* min buffer occupancy */
                          "%*d",    /* max buffer occupancy */
-                         10, moving_average_sync_error,
+                         10, 1000*moving_average_sync_error/output_sample_rate,
                          12, play_number,
                          7, missing_packets,
                          7, late_packets,
@@ -1727,7 +1728,7 @@ static void *player_thread_func(void *arg) {
                          5, maximum_buffer_occupancy);
                 } 
               } else {
-                inform("%*.1f,"  /* Sync error inf frames */
+                inform("%*.1f,"  /* Sync error in milliseconds */
                        "%*d,"    /* total packets */
                        "%*llu,"  /* missing packets */
                        "%*llu,"  /* late packets */
@@ -1735,7 +1736,7 @@ static void *player_thread_func(void *arg) {
                        "%*llu,"  /* resend requests */
                        "%*d,"    /* min buffer occupancy */
                        "%*d",    /* max buffer occupancy */
-                       10, moving_average_sync_error,
+                       10, 1000*moving_average_sync_error/output_sample_rate,
                        12, play_number,
                        7, missing_packets,
                        7, late_packets,

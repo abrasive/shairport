@@ -136,40 +136,40 @@ static int init(int argc, char **argv) {
   // debug(2,"audio_alsa init called.");
   const char *str;
   int value;
+  double dvalue;
 
 	set_period_size_request = 0;
 	set_buffer_size_request = 0;
 	
-  config.audio_backend_latency_offset = 0; // this is the default for ALSA
-  config.audio_backend_buffer_desired_length =
-      6615; // default for alsa with a software mixer
+  config.audio_backend_latency_offset = 0;
+  config.audio_backend_buffer_desired_length = 0.15;
 
   // get settings from settings file first, allow them to be overridden by
   // command line options
 
   if (config.cfg != NULL) {
     /* Get the desired buffer size setting. */
-    if (config_lookup_int(config.cfg,
-                          "alsa.audio_backend_buffer_desired_length", &value)) {
-      if ((value < 0) || (value > 66150))
-        die("Invalid alsa audio backend buffer desired length \"%d\". It "
+    if (config_lookup_float(config.cfg,
+                          "alsa.audio_backend_buffer_desired_length", &dvalue)) {
+      if ((dvalue < 0) || (value > 1.5))
+        die("Invalid alsa audio backend buffer desired length \"%f\". It "
             "should be between 0 and "
-            "66150, default is 6615",
-            value);
+            "1.5, default is 0.15 seconds",
+            dvalue);
       else {
-        config.audio_backend_buffer_desired_length = value;
+        config.audio_backend_buffer_desired_length = dvalue;
       }
     }
 
     /* Get the latency offset. */
-    if (config_lookup_int(config.cfg, "alsa.audio_backend_latency_offset",
-                          &value)) {
-      if ((value < -66150) || (value > 66150))
-        die("Invalid alsa audio backend buffer latency offset \"%d\". It "
-            "should be between -66150 and +66150, default is 0",
-            value);
+    if (config_lookup_float(config.cfg, "alsa.audio_backend_latency_offset",
+                          &dvalue)) {
+      if ((dvalue < -1.0) || (value > 1.5))
+        die("Invalid alsa audio backend buffer latency offset \"%f\". It "
+            "should be between -1.0 and +1.5, default is 0 seconds",
+            dvalue);
       else
-        config.audio_backend_latency_offset = value;
+        config.audio_backend_latency_offset = dvalue;
     }
 
     /* Get the Output Device Name. */

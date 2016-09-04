@@ -95,8 +95,8 @@ typedef struct {
   int ignore_volume_control;
   int no_sync; // disable synchronisation, even if it's available
   int no_mmap; // disable use of mmap-based output, even if it's available
-  int resyncthreshold; // if it get's out of whack my more than this, resync. Zero means never
-                       // resync.
+  double resyncthreshold; // if it get's out of whack my more than this number of seconds, resync. Zero means never
+                          // resync.
   int allow_session_interruption;
   int timeout; // while in play mode, exit if no packets of audio come in for more than this number
                // of seconds . Zero means never exit.
@@ -117,7 +117,7 @@ typedef struct {
   enum playback_mode_type playback_mode;
   char *cmd_start, *cmd_stop;
   int cmd_blocking;
-  int tolerance; // allow this much drift before attempting to correct it
+  double tolerance; // allow this much drift before attempting to correct it
   enum stuffing_type packet_stuffing;
   int decoders_supported;
   int use_apple_decoder; // set to 1 if you want to use the apple decoder instead of the original by David Hammerton
@@ -126,9 +126,9 @@ typedef struct {
   // char *errfile;
   char *configfile;
   char *regtype; // The regtype is the service type followed by the protocol, separated by a dot, by default “_raop._tcp.”.
-  long audio_backend_buffer_desired_length; // this will be the desired number of frames in the
-                                            // audio backend buffer -- the DAC buffer for ALSA
-  long audio_backend_latency_offset; // this will be the offset to compensate for any fixed latency there might be in the audio path
+  double audio_backend_buffer_desired_length; // this will be the length in seconds of the
+                                              // audio backend buffer -- the DAC buffer for ALSA
+  double audio_backend_latency_offset; // this will be the offset in seconds to compensate for any fixed latency there might be in the audio path
   uint32_t volume_range_db; // the range, in dB, from max dB to min dB. Zero means use the mixer's native range.
   enum sps_format_t output_format;
   int output_rate;

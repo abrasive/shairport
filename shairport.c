@@ -214,14 +214,14 @@ void usage(char *progname) {
   printf("    -m, --mdns=BACKEND      force the use of BACKEND to advertize the service.\n");
   printf("                            if no mdns provider is specified,\n");
   printf("                            shairport tries them all until one works.\n");
-  printf("    -r, --resync=THRESHOLD  resync if error exceeds this number of frames. Set to 0 to "
+  printf("    -r, --resync=THRESHOLD  resync if timing error exceeds this number of seconds. Set to 0 to "
          "stop resyncing.\n");
   printf("    -t, --timeout=SECONDS   go back to idle mode from play mode after a break in "
          "communications of this many seconds (default 120). Set to 0 never to exit play mode.\n");
   printf("    --statistics            print some interesting statistics -- output to the logfile "
          "if running as a daemon.\n");
-  printf("    --tolerance=TOLERANCE   allow a synchronization error of TOLERANCE frames (default "
-         "88) before trying to correct it.\n");
+  printf("    --tolerance=TOLERANCE   allow a synchronization error of TOLERANCE seconds (default "
+         "0.002) before trying to correct it.\n");
   printf("    --password=PASSWORD     require PASSWORD to connect. Default is not to require a "
          "password.\n");
 #ifdef CONFIG_METADATA
@@ -264,10 +264,10 @@ int parse_options(int argc, char **argv) {
       {"iTunesLatency", 'i', POPT_ARG_INT, &config.iTunesLatency, 0, NULL},
       {"forkedDaapdLatency", 0, POPT_ARG_INT, &config.ForkedDaapdLatency, 0, NULL},
       {"stuffing", 'S', POPT_ARG_STRING, &stuffing, 'S', NULL},
-      {"resync", 'r', POPT_ARG_INT, &config.resyncthreshold, 0, NULL},
+      {"resync", 'r', POPT_ARG_DOUBLE, &config.resyncthreshold, 0, NULL},
       {"timeout", 't', POPT_ARG_INT, &config.timeout, 't', NULL},
       {"password", 0, POPT_ARG_STRING, &config.password, 0, NULL},
-      {"tolerance", 0, POPT_ARG_INT, &config.tolerance, 0, NULL},
+      {"tolerance", 0, POPT_ARG_DOUBLE, &config.tolerance, 0, NULL},
 #ifdef CONFIG_METADATA
       {"metadata-pipename", 'M', POPT_ARG_STRING, &config.metadata_pipename, 'M', NULL},
       {"get-coverart", 'g', POPT_ARG_NONE, &config.get_coverart, 'g', NULL},
@@ -302,6 +302,7 @@ int parse_options(int argc, char **argv) {
   config_setting_t *setting;
   const char *str=0;
   int value=0;
+  double dvalue = 0.0;
   
   debug(1,"Looking for the configuration file \"%s\".",config.configfile);
   
@@ -390,12 +391,12 @@ int parse_options(int argc, char **argv) {
       }
 
       /* Get the drift tolerance setting. */
-      if (config_lookup_int(config.cfg, "general.drift", &value))
-        config.tolerance = value;
+      if (config_lookup_float(config.cfg, "general.drift", &dvalue))
+        config.tolerance = dvalue;
 
       /* Get the resync setting. */
-      if (config_lookup_int(config.cfg, "general.resync_threshold", &value))
-        config.resyncthreshold = value;
+      if (config_lookup_float(config.cfg, "general.resync_threshold", &dvalue))
+        config.resyncthreshold = dvalue;
 
       /* Get the verbosity setting. */
       if (config_lookup_int(config.cfg, "general.log_verbosity", &value)) {
@@ -759,9 +760,9 @@ int main(int argc, char **argv) {
   config.AirPlayLatency = -1;      // -1 means not set. 88200 seems to work well for AirPlay -- Syncs sound and
                                    // vision on AppleTV, but also used for iPhone/iPod/iPad sources
   config.ForkedDaapdLatency = -1;  // -1 means not set. 99400 seems to be right
-  config.resyncthreshold = 441 * 5;  // this number of frames is 50 ms
+  config.resyncthreshold = 0.05;   // 50 ms
   config.timeout = 120; // this number of seconds to wait for [more] audio before switching to idle.
-  config.tolerance = 88; // this number of frames of error before attempting to correct it.
+  config.tolerance = 0.002; // this number of seconds of timing error before attempting to correct it.
   config.buffer_start_fill = 220;
   config.port = 5000;
   config.packet_stuffing = ST_basic; // simple interpolation or deletion
@@ -1024,10 +1025,10 @@ int main(int argc, char **argv) {
   debug(2, "iTunesLatency is %d.", config.iTunesLatency);
   debug(2, "forkedDaapdLatency is %d.", config.ForkedDaapdLatency);
   debug(1, "stuffing option is \"%d\" (0-basic, 1-soxr).", config.packet_stuffing);
-  debug(1, "resync time is %d.", config.resyncthreshold);
+  debug(1, "resync time is %f seconds.", config.resyncthreshold);
   debug(1, "allow a session to be interrupted: %d.", config.allow_session_interruption);
   debug(1, "busy timeout time is %d.", config.timeout);
-  debug(1, "drift tolerance is %d frames.", config.tolerance);
+  debug(1, "drift tolerance is %f seconds.", config.tolerance);
   debug(1, "password is \"%s\".", config.password);
   debug(1, "ignore_volume_control is %d.", config.ignore_volume_control);
   debug(1, "playback_mode is %d (0-stereo, 1-mono).", config.playback_mode);
@@ -1035,9 +1036,9 @@ int main(int argc, char **argv) {
   debug(1, "use_mmap_if_available is %d.", config.no_mmap ? 0 : 1);
   debug(1, "output_rate is %d (0 means 44,100).", config.output_rate);
   debug(1, "output_format is %d (0 means S16_LE).", config.output_format);
-  debug(1, "audio backend desired buffer length is %d.",
+  debug(1, "audio backend desired buffer length is %f seconds.",
         config.audio_backend_buffer_desired_length);
-  debug(1, "audio backend latency offset is %d.", config.audio_backend_latency_offset);
+  debug(1, "audio backend latency offset is %f seconds.", config.audio_backend_latency_offset);
   debug(1, "volume range in dB (zero means use the range specified by the mixer): %u.", config.volume_range_db);
   debug(1, "zeroconf regtype is \"%s\".", config.regtype);
   debug(1, "decoders_supported field is %d.", config.decoders_supported);

@@ -53,27 +53,34 @@ static void stop(void) {
 static int init(int argc, char **argv) {
   const char *str;
   int value;
+  double dvalue;
 
-  config.audio_backend_buffer_desired_length = 44100; // one second.
+  config.audio_backend_buffer_desired_length = 1.0;
   config.audio_backend_latency_offset = 0;
 
   if (config.cfg != NULL) {
     /* Get the desired buffer size setting. */
-    if (config_lookup_int(config.cfg, "stdout.audio_backend_buffer_desired_length", &value)) {
-      if ((value < 0) || (value > 132300))
-        die("Invalid stdout audio backend buffer desired length \"%d\". It should be between 0 and 132300, default is 44100",
-            value);
-      else
-        config.audio_backend_buffer_desired_length = value;
+    if (config_lookup_float(config.cfg,
+                          "stdout.audio_backend_buffer_desired_length", &dvalue)) {
+      if ((dvalue < 0) || (dvalue > 1.5))
+        die("Invalid stdout audio backend buffer desired length \"%f\". It "
+            "should be between 0 and "
+            "1.5, default is 1.0 second",
+            dvalue);
+      else {
+        config.audio_backend_buffer_desired_length = dvalue;
+      }
     }
 
     /* Get the latency offset. */
-    if (config_lookup_int(config.cfg, "stdout.audio_backend_latency_offset", &value)) {
-      if ((value < -66150) || (value > 66150))
-        die("Invalid stdout audio backend buffer latency offset \"%d\". It should be between -66150 and +66150, default is 0",
-            value);
+    if (config_lookup_float(config.cfg, "stdout.audio_backend_latency_offset",
+                          &dvalue)) {
+      if ((dvalue < -1.0) || (value > 1.5))
+        die("Invalid stdout audio backend buffer latency offset \"%f\". It "
+            "should be between -1.0 and +1.5, default is 0 seconds",
+            dvalue);
       else
-        config.audio_backend_latency_offset = value;
+        config.audio_backend_latency_offset = dvalue;
     }
   }
   return 0;
