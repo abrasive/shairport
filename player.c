@@ -387,7 +387,7 @@ static int init_decoder(int32_t fmtp[12]) {
 
     field      	bitDepth 		uint8_t 	describes the bit depth of the source PCM data (maximum value = 32)
 
-    field      	pb 			uint8_t 	currently unused tuning parameter. 
+    field      	pb 			uint8_t 	currently unused tuning parametetbugr. 
 						 	  value should be set to 40
 
     field      	mb 			uint8_t 	currently unused tuning parameter. 
@@ -746,11 +746,11 @@ static abuf_t *buffer_get_frame(void) {
               int64_t delta = (first_packet_timestamp - reference_timestamp)+config.latency+config.audio_backend_latency_offset;
               
               if (delta>=0) {
-                int64_t delta_fp_sec = (delta << 32) / 44100; // int64_t which is positive
+                int64_t delta_fp_sec = (delta << 32) / output_sample_rate; // int64_t which is positive
                 first_packet_time_to_play=reference_timestamp_time+delta_fp_sec;
               } else {
                 int64_t abs_delta = -delta;
-                int64_t delta_fp_sec = (abs_delta << 32) / 44100; // int64_t which is positive
+                int64_t delta_fp_sec = (abs_delta << 32) / output_sample_rate; // int64_t which is positive
                 first_packet_time_to_play=reference_timestamp_time-delta_fp_sec;              
               }
 
@@ -768,22 +768,22 @@ static abuf_t *buffer_get_frame(void) {
             int64_t delta = (first_packet_timestamp - reference_timestamp)+config.latency+config.audio_backend_latency_offset;
             
             if (delta>=0) {
-              int64_t delta_fp_sec = (delta << 32) / 44100; // int64_t which is positive
+              int64_t delta_fp_sec = (delta << 32) / output_sample_rate; // int64_t which is positive
               first_packet_time_to_play=reference_timestamp_time+delta_fp_sec;
             } else {
               int64_t abs_delta = -delta;
-              int64_t delta_fp_sec = (abs_delta << 32) / 44100; // int64_t which is positive
+              int64_t delta_fp_sec = (abs_delta << 32) / output_sample_rate; // int64_t which is positive
               first_packet_time_to_play=reference_timestamp_time-delta_fp_sec;              
             }
 
-            int64_t max_dac_delay = 4410;
+            int64_t max_dac_delay = output_sample_rate/10;
             int64_t filler_size = max_dac_delay; // 0.1 second -- the maximum we'll add to the DAC
 
             if (local_time_now >= first_packet_time_to_play) {
               // we've gone past the time...
               // debug(1,"Run past the exact start time by %llu frames, with time now of %llx, fpttp
               // of %llx and dac_delay of %d and %d packets;
-              // flush.",(((tn-first_packet_time_to_play)*44100)>>32)+dac_delay,tn,first_packet_time_to_play,dac_delay,seq_diff(ab_read,
+              // flush.",(((tn-first_packet_time_to_play)*output_sample_rate)>>32)+dac_delay,tn,first_packet_time_to_play,dac_delay,seq_diff(ab_read,
               // ab_write));
 
               if (config.output->flush)
@@ -803,7 +803,7 @@ static abuf_t *buffer_get_frame(void) {
               } else
                 dac_delay = 0;
               int64_t gross_frame_gap =
-                  ((first_packet_time_to_play - local_time_now) * 44100) >> 32;
+                  ((first_packet_time_to_play - local_time_now) * output_sample_rate) >> 32;
               int64_t exact_frame_gap = gross_frame_gap - dac_delay;
               if (exact_frame_gap < 0) {
                 // we've gone past the time...
@@ -890,12 +890,12 @@ static abuf_t *buffer_get_frame(void) {
         int64_t net_offset = delta + offset; // okay
         uint64_t time_to_play = reference_timestamp_time; // type okay
         if (net_offset >= 0) {
-          uint64_t net_offset_fp_sec = (net_offset << 32) / 44100; // int64_t which is positive
+          uint64_t net_offset_fp_sec = (net_offset << 32) / output_sample_rate; // int64_t which is positive
           time_to_play += net_offset_fp_sec; // using the latency requested...
           // debug(2,"Net Offset: %lld, adjusted: %lld.",net_offset,net_offset_fp_sec);
         } else {
           int64_t abs_net_offset = -net_offset;
-          uint64_t net_offset_fp_sec = (abs_net_offset << 32) / 44100; // int64_t which is positive
+          uint64_t net_offset_fp_sec = (abs_net_offset << 32) / output_sample_rate; // int64_t which is positive
           time_to_play -= net_offset_fp_sec;
           // debug(2,"Net Offset: %lld, adjusted: -%lld.",net_offset,net_offset_fp_sec);
         }
@@ -917,7 +917,7 @@ static abuf_t *buffer_get_frame(void) {
 
     if (wait) {
       uint64_t time_to_wait_for_wakeup_fp =
-          ((uint64_t)1 << 32) / 44100;       // this is time period of one frame
+          ((uint64_t)1 << 32) / input_sample_rate;       // this is time period of one frame
       time_to_wait_for_wakeup_fp *= 4 * 352; // four full 352-frame packets
       time_to_wait_for_wakeup_fp /= 3; // four thirds of a packet time
 
@@ -993,13 +993,14 @@ static inline short shortmean(short a, short b) {
 
 // stuff: 1 means add 1; 0 means do nothing; -1 means remove 1
 static int stuff_buffer_basic(short *inptr, int length, short *outptr, int stuff) {
+  int tstuff = stuff;
   if ((stuff > 1) || (stuff < -1) || (length <100)) {
     // debug(1, "Stuff argument to stuff_buffer must be from -1 to +1 and length >100.");
-    return length;
+    tstuff = 0; // if any of these conditions hold, don't stuff anything/
   }
   int i;
   int stuffsamp = length;
-  if (stuff)
+  if (tstuff)
     //      stuffsamp = rand() % (length - 1);
     stuffsamp =
         (rand() % (length - 2)) + 1; // ensure there's always a sample before and after the item
@@ -1009,8 +1010,8 @@ static int stuff_buffer_basic(short *inptr, int length, short *outptr, int stuff
     *outptr++ = dithered_vol(*inptr++);
     *outptr++ = dithered_vol(*inptr++);
   };
-  if (stuff) {
-    if (stuff == 1) {
+  if (tstuff) {
+    if (tstuff == 1) {
       // debug(3, "+++++++++");
       // interpolate one sample
       //*outptr++ = dithered_vol(((long)inptr[-2] + (long)inptr[0]) >> 1);
@@ -1025,8 +1026,8 @@ static int stuff_buffer_basic(short *inptr, int length, short *outptr, int stuff
     
     // if you're removing, i.e. stuff < 0, copy that much less over. If you're adding, do all the rest.
     int remainder = length;
-    if (stuff<0)
-      remainder = remainder+stuff; // don't run over the correct end of the output buffer
+    if (tstuff<0)
+      remainder = remainder+tstuff; // don't run over the correct end of the output buffer
 
     for (i = stuffsamp; i < remainder; i++) {
       *outptr++ = dithered_vol(*inptr++);
@@ -1035,22 +1036,23 @@ static int stuff_buffer_basic(short *inptr, int length, short *outptr, int stuff
   }
   pthread_mutex_unlock(&vol_mutex);
 
-  return length + stuff;
+  return length + tstuff;
 }
 
 #ifdef HAVE_LIBSOXR
 // stuff: 1 means add 1; 0 means do nothing; -1 means remove 1
 static int stuff_buffer_soxr(short *inptr, int length, short *outptr, int stuff) {
-  if ((stuff > 1) || (stuff < -1) || (length < 100)) {
-    // debug(1, "Stuff argument to sox_stuff_buffer must be from -1 to +1 and length must be > 100.");
-    return length;
+  int tstuff = stuff;
+  if ((stuff > 1) || (stuff < -1) || (length <100)) {
+    // debug(1, "Stuff argument to stuff_buffer must be from -1 to +1 and length >100.");
+    tstuff = 0; // if any of these conditions hold, don't stuff anything/
   }
   int i;
   short *ip, *op;
   ip = inptr;
   op = outptr;
 
-  if (stuff) {
+  if (tstuff) {
     // debug(1,"Stuff %d.",stuff);
     soxr_io_spec_t io_spec;
     io_spec.itype = SOXR_INT16_I;
@@ -1061,9 +1063,9 @@ static int stuff_buffer_soxr(short *inptr, int length, short *outptr, int stuff)
 
     size_t odone;
 
-    soxr_error_t error = soxr_oneshot(length, length + stuff, 2, /* Rates and # of chans. */
+    soxr_error_t error = soxr_oneshot(length, length + tstuff, 2, /* Rates and # of chans. */
                                       inptr, length, NULL,           /* Input. */
-                                      outptr, length + stuff, &odone, /* Output. */
+                                      outptr, length + tstuff, &odone, /* Output. */
                                       &io_spec,    /* Input, output and transfer spec. */
                                       NULL, NULL); /* Default configuration.*/
 
@@ -1082,7 +1084,7 @@ static int stuff_buffer_soxr(short *inptr, int length, short *outptr, int stuff)
     }
 
     // keep the last (dpm) samples, to mitigate the Gibbs phenomenon
-    op = outptr + (length + stuff - gpm) * sizeof(short);
+    op = outptr + (length + tstuff - gpm) * sizeof(short);
     ip = inptr + (length - gpm) * sizeof(short);
     for (i = 0; i < gpm; i++) {
       *op++ = *ip++;
@@ -1093,7 +1095,7 @@ static int stuff_buffer_soxr(short *inptr, int length, short *outptr, int stuff)
     if (fix_volume != 65536.0) {
       // pthread_mutex_lock(&vol_mutex);
       op = outptr;
-      for (i = 0; i < length + stuff; i++) {
+      for (i = 0; i < length + tstuff; i++) {
         *op = dithered_vol(*op);
         op++;
         *op = dithered_vol(*op);
@@ -1111,7 +1113,7 @@ static int stuff_buffer_soxr(short *inptr, int length, short *outptr, int stuff)
     };
     // pthread_mutex_unlock(&vol_mutex);
   }
-  return length + stuff;
+  return length + tstuff;
 }
 #endif
 
@@ -1366,7 +1368,9 @@ static void *player_thread_func(void *arg) {
               default:
                 die("Shairport Sync only supports 16 bit input");
             }
+            
             inbuf = tbuf;
+            inbuflength*=output_sample_ratio;
           }
           
           // We have a frame of data. We need to see if we want to add or remove a frame from it to
@@ -1397,10 +1401,10 @@ static void *player_thread_func(void *arg) {
           if (local_time_now >= reference_timestamp_time) {
           // debug(1,"td is %lld.",td);
              td = local_time_now - reference_timestamp_time; // this is the positive value. Conversion is positive uint64_t to int64_t, thus okay
-            td_in_frames = (td * 44100) >> 32;
+            td_in_frames = (td * output_sample_rate) >> 32;
           } else {
             td = reference_timestamp_time - local_time_now; // this is the absolute value, which should be negated. Conversion is positive uint64_t to int64_t, thus okay.
-            td_in_frames = (td * 44100) >> 32; //use the absolute td value for the present. Types okay
+            td_in_frames = (td * output_sample_rate) >> 32; //use the absolute td value for the present. Types okay
             td_in_frames = -td_in_frames;
             td = -td; // should be okay, as the range of values should be very small w.r.t 64 bits
           }
@@ -1511,13 +1515,13 @@ static void *player_thread_func(void *arg) {
               // if no stuffing needed and no volume adjustment, then
               // don't send to stuff_buffer_* and don't copy to outbuf; just send directly to the
               // output device...
-              if (inframe->data==NULL)
+              if (inbuf==NULL)
                 debug(1,"NULL inframe->data to play -- skipping it.");
               else {
-                if (inframe->length==0)
+                if (inbuflength==0)
                   debug(1,"empty frame to play -- skipping it (2).");
                 else
-                  config.output->play(inframe->data, inframe->length);
+                  config.output->play(inbuf, inbuflength);
               }
             } else {
 
@@ -1526,16 +1530,16 @@ static void *player_thread_func(void *arg) {
               switch (config.packet_stuffing) {
               case ST_basic:
                 //                if (amount_to_stuff) debug(1,"Basic stuff...");
-                play_samples = stuff_buffer_basic(inframe->data, inframe->length, outbuf, amount_to_stuff);
+                play_samples = stuff_buffer_basic(inbuf, inbuflength, outbuf, amount_to_stuff);
                 break;
               case ST_soxr:
                 //                if (amount_to_stuff) debug(1,"Soxr stuff...");
-                play_samples = stuff_buffer_soxr(inframe->data, inframe->length, outbuf, amount_to_stuff);
+                play_samples = stuff_buffer_soxr(inbuf, inbuflength, outbuf, amount_to_stuff);
                 break;
               }
 #else
               //          if (amount_to_stuff) debug(1,"Standard stuff...");
-              play_samples = stuff_buffer_basic(inframe->data, inframe->length, outbuf, amount_to_stuff);
+              play_samples = stuff_buffer_basic(inbuf, inbuflength, outbuf, amount_to_stuff);
 #endif
 
               /*
@@ -1593,21 +1597,21 @@ static void *player_thread_func(void *arg) {
             
             if (fix_volume == 0x10000)
             
-              if (inframe->data==NULL)
-                debug(1,"NULL inframe->data to play -- skipping it.");
+              if (inbuf==NULL)
+                debug(1,"NULL inbuf to play -- skipping it.");
               else {
-                if (inframe->length==0)
+                if (inbuflength==0)
                   debug(1,"empty frame to play -- skipping it (3).");
                 else
-                  config.output->play(inframe->data, inframe->length);
+                  config.output->play(inbuf, inbuflength);
               }
             else {
-              play_samples = stuff_buffer_basic(inframe->data, inframe->length, outbuf, 0); // no stuffing, but volume adjustment
+              play_samples = stuff_buffer_basic(inbuf, inbuflength, outbuf, 0); // no stuffing, but volume adjustment
 
               if (outbuf==NULL)
                 debug(1,"NULL outbuf to play -- skipping it.");
               else {
-                if (inframe->length==0)
+                if (inbuf==0)
                   debug(1,"empty frame to play -- skipping it (4).");
                 else
                   config.output->play(outbuf, play_samples);
@@ -1692,8 +1696,8 @@ static void *player_thread_func(void *arg) {
                          "%*d,"    /* min buffer occupancy */
                          "%*d",    /* max buffer occupancy */
                          10, moving_average_sync_error,
-                         10, moving_average_correction * 1000000 / 352,
-                         10, moving_average_insertions_plus_deletions * 1000000 / 352,
+                         10, moving_average_correction * 1000000 / (352*output_sample_ratio),
+                         10, moving_average_insertions_plus_deletions * 1000000 / (352*output_sample_ratio),
                          12, play_number,
                          7, missing_packets,
                          7, late_packets,
