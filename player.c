@@ -845,11 +845,11 @@ debug(1,"Output sample ratio is %d",output_sample_ratio);
                 //  debug(2,"Zero length silence buffer needed with gross_frame_gap of %lld and dac_delay of %lld.",gross_frame_gap,dac_delay);
                 // the fs (number of frames of silence to play) can be zero in the DAC doesn't start ouotputting frames for a while -- it could get loaded up but not start responding for many milliseconds.
                 if (fs!=0) {
-                  silence = malloc(input_bytes_per_frame*fs);
+                  silence = malloc(output_bytes_per_frame*fs);
                   if (silence==NULL)
                     debug(1,"Failed to allocate %d byte silence buffer.",fs);
                   else {
-                    memset(silence, 0, input_bytes_per_frame*fs);
+                    memset(silence, 0, output_bytes_per_frame*fs);
                     // debug(1,"Exact frame gap is %llu; play %d frames of silence. Dac_delay is %d,
                     // with %d packets.",exact_frame_gap,fs,dac_delay,seq_diff(ab_read, ab_write));
                     config.output->play(silence, fs);
@@ -1158,6 +1158,8 @@ static void *player_thread_func(void *arg) {
 			break;		
 	}
 
+	debug(1,"Output frame bytes is %d.",output_bytes_per_frame);
+
 	// create and start the timing, control and audio receiver threads
 	pthread_t rtp_audio_thread, rtp_control_thread, rtp_timing_thread;
 	pthread_create(&rtp_audio_thread, NULL, &rtp_audio_receiver, (void *)&itr);
@@ -1223,6 +1225,8 @@ static void *player_thread_func(void *arg) {
   }
   
   
+	debug(1,"Output bit depth is %d.",output_bit_depth);
+
   // if we are changing any of the parameters of the input, like sample rate or sample depth, then we
   // need an intermediate "transition" buffer
   
@@ -1334,12 +1338,12 @@ static void *player_thread_func(void *arg) {
                         } else if (both < INT16_MIN) {
                           both = INT16_MIN;
                         }
-                        uint16_t sboth = (uint16_t)both;
+                        int16_t sboth = (int16_t)both;
                         ls = sboth;
                         rs = sboth;
                         } break;
                       case ST_reverse_stereo: {
-                        uint16_t t = ls;
+                        int16_t t = ls;
                         ls = rs;
                         rs = t;
                         } break;
@@ -1359,15 +1363,15 @@ static void *player_thread_func(void *arg) {
                           *outps++=rs;
                           break;
                         case 24: {
-                          uint32_t t = ls<<8;
+                          int32_t t = ls<<8;
                           *outpl++=t;
-                          uint32_t u = rs<<8;
+                          int32_t u = rs<<8;
                           *outpl++=u;
                           } break;
                         case 32: {
-                          uint32_t t = ls<<16;
+                          int32_t t = ls<<16;
                           *outpl++=t;
-                          uint32_t u = rs<<16;
+                          int32_t u = rs<<16;
                           *outpl++=u;
                           } break;
                       }
@@ -1522,7 +1526,8 @@ static void *player_thread_func(void *arg) {
             if (config.no_sync!=0)
               amount_to_stuff = 0 ; // no stuffing if it's been disabled
                         
-            if ((amount_to_stuff == 0) && (fix_volume == 0x10000) && ((config.output_rate==0) || (config.output_rate==44100)) && ((config.output_format==0) || (config.output_format==SPS_FORMAT_S16_LE))) {
+//            if ((amount_to_stuff == 0) && (fix_volume == 0x10000) && ((config.output_rate==0) || (config.output_rate==44100)) && ((config.output_format==0) || (config.output_format==SPS_FORMAT_S16_LE))) {
+if (1) {
               // if no stuffing needed and no volume adjustment, then
               // don't send to stuff_buffer_* and don't copy to outbuf; just send directly to the
               // output device...
