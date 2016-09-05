@@ -43,6 +43,7 @@ static void help(void) {
 static int init(int argc, char **argv) {
   const char *str;
   int value;
+  double dvalue;
   ao_initialize();
   int driver = ao_default_driver_id();
   ao_option *ao_opts = NULL;
