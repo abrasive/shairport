@@ -199,7 +199,7 @@ int64_t monotonic_timestamp(uint32_t timestamp) {
   }
   if (return_value<0)
   	debug(1,"monotonic rtptime is negative!");
-  return return_value*output_sample_ratio;
+  return return_value;
 }
 
 // add an epoch to the seq_no. Uses the accompanying timestamp to determine the correct epoch
@@ -472,6 +472,10 @@ static void free_buffer(void) {
 }
 
 void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len) {
+	
+	// all timestamps are done at the output rate
+	
+	int64_t ltimestamp = timestamp*output_sample_ratio;
 
   // ignore a request to flush that has been made before the first packet...
   if (packet_count==0) {
@@ -490,13 +494,13 @@ void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len) {
 //    	debug(1,"Flush_rtp_timestamp is %u",flush_rtp_timestamp);
 
     if ((flush_rtp_timestamp != 0) &&
-        (timestamp <= flush_rtp_timestamp)) {
+        (ltimestamp <= flush_rtp_timestamp)) {
       debug(3, "Dropping flushed packet in player_put_packet, seqno %u, timestamp %lld, flushing to "
                "timestamp: %lld.",
-            seqno, timestamp, flush_rtp_timestamp);
+            seqno, ltimestamp, flush_rtp_timestamp);
     } else {
       if ((flush_rtp_timestamp != 0x0) &&
-          (timestamp>flush_rtp_timestamp)) // if we have gone past the flush boundary time
+          (ltimestamp>flush_rtp_timestamp)) // if we have gone past the flush boundary time
         flush_rtp_timestamp = 0x0;
 
       abuf_t *abuf = 0;
@@ -549,7 +553,7 @@ void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len) {
         if (alac_decode(abuf->data, &datalen, data, len)==0) {
 					abuf->ready = 1;
 					abuf->length = datalen;
-					abuf->timestamp = timestamp;
+					abuf->timestamp = ltimestamp;
 					abuf->sequence_number = seqno;
         } else {
         	debug(1,"Bad audio packet detected and discarded.");
@@ -665,6 +669,7 @@ static abuf_t *buffer_get_frame(void) {
       flush_requested = 0;
     }
     pthread_mutex_unlock(&flush_mutex);
+    
     uint32_t flush_limit = 0;
     if (ab_synced) {
       do {
@@ -711,6 +716,7 @@ static abuf_t *buffer_get_frame(void) {
           int64_t reference_timestamp;
           uint64_t reference_timestamp_time,remote_reference_timestamp_time;
           get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time, &remote_reference_timestamp_time);
+          reference_timestamp*=output_sample_ratio;
           if (first_packet_timestamp == 0) { // if this is the very first packet
             // debug(1,"First frame seen, time %u, with %d
             // frames...",curframe->timestamp,seq_diff(ab_read, ab_write));
@@ -743,7 +749,9 @@ static abuf_t *buffer_get_frame(void) {
               // if would be in sync. To do this, we would give it a latency offset of -100 ms, i.e.
               // -4410 frames.
 
-              int64_t delta = (first_packet_timestamp - reference_timestamp)+config.latency+config.audio_backend_latency_offset*output_sample_rate;
+debug(1,"Output sample ratio is %d",output_sample_ratio);
+
+              int64_t delta = (first_packet_timestamp - reference_timestamp)+config.latency*output_sample_ratio+config.audio_backend_latency_offset*output_sample_rate;
               
               if (delta>=0) {
                 int64_t delta_fp_sec = (delta << 32) / output_sample_rate; // int64_t which is positive
@@ -758,14 +766,14 @@ static abuf_t *buffer_get_frame(void) {
                 debug(
                     1,
                     "First packet is late! It should have played before now. Flushing 0.1 seconds");
-                player_flush(first_packet_timestamp + 4410);
+                player_flush(first_packet_timestamp + 4410*output_sample_ratio);
               }
             }
           }
 
           if (first_packet_time_to_play != 0) {
             // recalculate first_packet_time_to_play -- the latency might change
-            int64_t delta = (first_packet_timestamp - reference_timestamp)+config.latency+config.audio_backend_latency_offset*output_sample_rate;
+            int64_t delta = (first_packet_timestamp - reference_timestamp)+config.latency*output_sample_ratio+config.audio_backend_latency_offset*output_sample_rate;
             
             if (delta>=0) {
               int64_t delta_fp_sec = (delta << 32) / output_sample_rate; // int64_t which is positive
@@ -856,6 +864,7 @@ static abuf_t *buffer_get_frame(void) {
             // not the time of the playing of the first frame
             uint64_t reference_timestamp_time; // don't need this...
             get_reference_timestamp_stuff(&play_segment_reference_frame, &reference_timestamp_time, &play_segment_reference_frame_remote_time);
+            play_segment_reference_frame*=output_sample_ratio;
 #ifdef CONFIG_METADATA
             send_ssnc_metadata('prsm', NULL, 0, 0); // "resume", but don't wait if the queue is locked
 #endif
@@ -882,10 +891,11 @@ static abuf_t *buffer_get_frame(void) {
       int64_t reference_timestamp;
       uint64_t reference_timestamp_time,remote_reference_timestamp_time;
       get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time, &remote_reference_timestamp_time); // all types okay
+      reference_timestamp*=output_sample_ratio;
       if (reference_timestamp) { // if we have a reference time
         int64_t packet_timestamp = curframe->timestamp; // types okay
         int64_t delta = packet_timestamp - reference_timestamp;
-        int64_t offset = config.latency + config.audio_backend_latency_offset*output_sample_rate -
+        int64_t offset = config.latency*output_sample_ratio + config.audio_backend_latency_offset*output_sample_rate -
                          config.audio_backend_buffer_desired_length*output_sample_rate; // all arguments are int32_t, so expression promotion okay
         int64_t net_offset = delta + offset; // okay
         uint64_t time_to_play = reference_timestamp_time; // type okay
@@ -1160,7 +1170,7 @@ static void *player_thread_func(void *arg) {
 
 	// check that there are enough buffers to accommodate the desired latency and the latency offset
 	
-	int maximum_latency = config.latency+config.audio_backend_latency_offset*output_sample_rate;
+	int maximum_latency = config.latency+config.audio_backend_latency_offset*input_sample_rate;
 	if ((maximum_latency+(352-1))/352 + 10 > BUFFER_FRAMES)
 		die("Not enough buffers available for a total latency of %d frames. A maximum of %d 352-frame packets may be accommodated.",maximum_latency,BUFFER_FRAMES);
   connection_state_to_output = get_requested_connection_state_to_output();
@@ -1386,7 +1396,7 @@ static void *player_thread_func(void *arg) {
           int64_t reference_timestamp;
           uint64_t reference_timestamp_time,remote_reference_timestamp_time;
           get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time, &remote_reference_timestamp_time); // types okay
-
+          reference_timestamp*=output_sample_ratio;
           int64_t rt, nt;
           rt = reference_timestamp; // uint32_t to int64_t
           nt = inframe->timestamp; // uint32_t to int64_t
@@ -1470,7 +1480,7 @@ static void *player_thread_func(void *arg) {
             
 
             // This is the timing error for the next audio frame in the DAC.
-            sync_error = delay - config.latency; // int64_t from int64_t - int32_t, so okay
+            sync_error = delay - config.latency*output_sample_ratio; // int64_t from int64_t - int32_t, so okay
 
             // if (llabs(sync_error)>352*512)
             //  debug(1,"Very large sync error: %lld",sync_error);
