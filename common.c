@@ -575,3 +575,40 @@ char *str_replace ( const char *string, const char *substr, const char *replacem
   }
   return newstr;
 }
+
+/* from http://burtleburtle.net/bob/rand/smallprng.html */
+
+typedef uint64_t u8;
+typedef struct ranctx { uint64_t a; uint64_t b; uint64_t c; uint64_t d; } ranctx;
+
+static struct ranctx rx;
+
+#define rot(x,k) (((x)<<(k))|((x)>>(64-(k))))
+inline uint64_t ranval( ranctx *x ) {
+    uint64_t e = x->a - rot(x->b, 7);
+    x->a = x->b ^ rot(x->c, 13);
+    x->b = x->c + rot(x->d, 37);
+    x->c = x->d + e;
+    x->d = e + x->a;
+    return x->d;
+}
+
+void raninit( ranctx *x, uint64_t seed ) {
+    uint64_t i;
+    x->a = 0xf1ea5eed, x->b = x->c = x->d = seed;
+    for (i=0; i<20; ++i) {
+        (void)ranval(x);
+    }
+}
+
+void r64init(uint64_t seed) {
+	raninit(&rx,seed);
+}
+
+inline uint64_t r64u() {
+	return(ranval(&rx));
+}
+
+inline int64_t r64i() {
+	return(ranval(&rx)>>1);
+}

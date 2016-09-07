@@ -145,6 +145,14 @@ ssize_t non_blocking_write(int fd, const void *buf, size_t count); // used in a 
 /* from http://coding.debuntu.org/c-implementing-str_replace-replace-all-occurrences-substring#comment-722 */
 char *str_replace ( const char *string, const char *substr, const char *replacement );
 
+
+// based on http://burtleburtle.net/bob/rand/smallprng.html
+
+void r64init(uint64_t seed);
+inline uint64_t r64u();
+inline int64_t r64i();
+
+
 int debuglev;
 void die(char *format, ...);
 void warn(char *format, ...);

@@ -778,6 +778,10 @@ int main(int argc, char **argv) {
  #ifdef HAVE_APPLE_ALAC
   config.decoders_supported += 1<<decoder_apple_alac;
  #endif
+ 
+ // initialise random number generator
+ 
+ r64init(0);
 
   /* Check if we are called with -V or --version parameter */
   if (argc >= 2 && ((strcmp(argv[1], "-V") == 0) || (strcmp(argv[1], "--version") == 0))) {

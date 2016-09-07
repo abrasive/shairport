@@ -68,7 +68,6 @@
 #include "alac.h"
 
 #include "apple_alac.h"
-#include "mt64.h"
 
 // parameters from the source
 static unsigned char *aesiv;
@@ -85,6 +84,7 @@ static int input_bytes_per_frame = 4;
 static int output_bytes_per_frame;
 static int output_sample_ratio;
 static int output_sample_rate;
+static int64_t previous_random_number = 0;
 
 
 // The maximum frame size change there can be is +/- 1;
@@ -583,15 +583,6 @@ int32_t rand_in_range(int32_t exclusive_range_limit) {
 	return sp >> 32;  
 }
 
-int64_t rand_in_range_64(int64_t exclusive_range_limit) {
- // this is a call to a 64-bit pseudo-random number generator
- // from the archive downloaded http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/mt19937-64stdint.tgz
- // from http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/emt64.html
- 
-
-  return genrand64_int63() % exclusive_range_limit;
-}
-
 static inline int32_t dithered_vol_32(int32_t sample, int output_precision) {
   if ((fix_volume==0x1000) && (output_precision==32)) {
     return sample;
@@ -599,10 +590,15 @@ static inline int32_t dithered_vol_32(int32_t sample, int output_precision) {
     int64_t s = sample; // 64 bit signed
     int64_t v = fix_volume & 0x1FFFF; // 17 bit unsigned made a 33 bit unsigned
     v<<=16;
-    s = s*v; // 32 bit multiplication
-  /*
-    // here, do the dithering
-    int64_t tpdf = rand_in_range_64((1<<(64-output_precision))+1) - rand_in_range_64((1<<(64-output_precision))+1);
+    s = s*v; // 32 bit multiplication -- we need to dither it down to its target resolution
+
+    int64_t r = r64i();
+    int64_t mask = 1<<(64+1-output_precision);
+    //mask -=1;
+    int64_t tpdf = (r&mask); //-(previous_random_number&((1<<(64+1-output_precision))-1));
+		debug(1,"output precision is %d, m is %llx, r is %llx, tpdf is %llx",output_precision,mask,r,tpdf);
+    previous_random_number=r;
+ 
     // Check there's no clipping -- if there is, 
     if (tpdf>=0) {
       if (INT64_MAX-tpdf>=s)
@@ -615,7 +611,7 @@ static inline int32_t dithered_vol_32(int32_t sample, int output_precision) {
       else
         s = INT64_MIN;
     }
-  */
+
     s>>=(64-output_precision);
     return s;
   }
