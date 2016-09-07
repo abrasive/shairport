@@ -68,6 +68,7 @@
 #include "alac.h"
 
 #include "apple_alac.h"
+#include "mt64.h"
 
 // parameters from the source
 static unsigned char *aesiv;
@@ -583,13 +584,12 @@ int32_t rand_in_range(int32_t exclusive_range_limit) {
 }
 
 int64_t rand_in_range_64(int64_t exclusive_range_limit) {
-  static uint64_t lcg_prev = 12345;
-	// returns a pseudo random integer in the range 0 to (exclusive_range_limit-1) inclusive
-	int64_t sp = lcg_prev;
-	int64_t rl = exclusive_range_limit;
-	lcg_prev = lcg_prev * 69069 + 3; // crappy psrg
-	sp = sp*rl; // 64 bit calculation. INtersting part if above the 32 rightmost bits;
-	return sp;  
+ // this is a call to a 64-bit pseudo-random number generator
+ // from the archive downloaded http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/mt19937-64stdint.tgz
+ // from http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/emt64.html
+ 
+
+  return genrand64_int63() % exclusive_range_limit;
 }
 
 static inline int32_t dithered_vol_32(int32_t sample, int output_precision) {

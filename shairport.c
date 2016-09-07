@@ -54,6 +54,7 @@
 #include "rtsp.h"
 #include "rtp.h"
 #include "mdns.h"
+#include "mt64.h" // 64-bit prng
 
 #include <libdaemon/dfork.h>
 #include <libdaemon/dsignal.h>
@@ -778,6 +779,14 @@ int main(int argc, char **argv) {
  #ifdef HAVE_APPLE_ALAC
   config.decoders_supported += 1<<decoder_apple_alac;
  #endif
+ 
+ // here, initialise the 64-bit random number generator
+ // from mt19937-64test.c in the archive downloaded http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/mt19937-64stdint.tgz
+ // from http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/emt64.html
+ 
+    uint64_t init[4]={UINT64_C(0x12345), UINT64_C(0x23456), UINT64_C(0x34567), UINT64_C(0x45678)}, length=4;
+    init_by_array64(init, length);
+
 
   /* Check if we are called with -V or --version parameter */
   if (argc >= 2 && ((strcmp(argv[1], "-V") == 0) || (strcmp(argv[1], "--version") == 0))) {
