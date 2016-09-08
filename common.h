@@ -149,8 +149,8 @@ char *str_replace ( const char *string, const char *substr, const char *replacem
 // based on http://burtleburtle.net/bob/rand/smallprng.html
 
 void r64init(uint64_t seed);
-inline uint64_t r64u();
-inline int64_t r64i();
+uint64_t r64u();
+int64_t r64i();
 
 
 int debuglev;

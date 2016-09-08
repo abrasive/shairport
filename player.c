@@ -583,6 +583,78 @@ int32_t rand_in_range(int32_t exclusive_range_limit) {
 	return sp >> 32;  
 }
 
+inline void process_sample(int32_t sample,char**outp,enum sps_format_t format,int volume,int dither) {
+  int64_t hyper_sample = sample;
+  int result;
+  // first, modify volume, if necessary
+  if (volume==0x10000)
+    hyper_sample<<32;
+  else
+    hyper_sample*=(volume<<16);
+    
+  // next, do dither, if necessary
+  if (dither) {
+    int64_t dither_mask;
+    switch (format) {
+      case SPS_FORMAT_S32_LE:
+        dither_mask = (int64_t)1<<(64+1-32);
+        break;
+      case SPS_FORMAT_S24_LE:
+        dither_mask = (int64_t)1<<(64+1-24);
+        break;
+      case SPS_FORMAT_S16_LE:
+        dither_mask = (int64_t)1<<(64+1-16);
+        break;
+      case SPS_FORMAT_S8:
+        dither_mask = (int64_t)1<<(64+1-24);
+        break;    
+    }
+    dither_mask-=1;
+    int64_t r = r64i();
+    int64_t tpdf = (r&dither_mask)-(previous_random_number&dither_mask);
+    previous_random_number=r;
+    // add dither, allowing for clipping
+    if (tpdf>=0) {
+      if (INT64_MAX-tpdf>=hyper_sample)
+        hyper_sample += tpdf;
+      else
+        hyper_sample = INT64_MAX;
+    } else {
+      if (INT64_MIN-tpdf<=hyper_sample)
+        hyper_sample += tpdf;
+      else
+        hyper_sample = INT64_MIN;
+    }
+    // dither is complete here
+  }
+  // move the result to the desired position in the int64_t
+  char *op = *outp;
+  switch (format) {
+    case SPS_FORMAT_S32_LE:
+      hyper_sample>>64-32;
+      *op++ = (int32_t)hyper_sample;
+      result=4;
+      break;
+    case SPS_FORMAT_S24_LE:
+      hyper_sample>>64-24;
+      *op = (int32_t)hyper_sample;
+      result=4;
+      break;
+    case SPS_FORMAT_S16_LE:
+      hyper_sample>>64-16;
+      *op = (int16_t)hyper_sample;
+      result=2;
+      break;
+    case SPS_FORMAT_S8:
+      hyper_sample>>64-8;
+      *op = (int8_t)hyper_sample;
+      result=1;
+     break;    
+  } 
+  *outp+=result;
+}
+
+
 static inline int32_t dithered_vol_32(int32_t sample, int output_precision) {
   if ((fix_volume==0x1000) && (output_precision==32)) {
     return sample;
@@ -1046,13 +1118,21 @@ static inline int32_t mean_32(int32_t a, int32_t b) {
   return r;
 }
 
+// this takes an array of signed 32-bit integers and (a) removes or inserts a frame as specified in stuff,
+// (b) multiplies each sample by the fixedvolume (a 16-bit quantity)
+// (c) dithers the result to the output size 32/24/16 bits
+// (d) outputs the result in the approprate format
+// formats accepted so far include S16_LE, S24_LE and S32_LE on a little endinan machine.
+
 // stuff: 1 means add 1; 0 means do nothing; -1 means remove 1
-static int stuff_buffer_basic_32(int32_t *inptr, int length, int32_t *outptr, int stuff, int l_output_bit_depth) {
+static int stuff_buffer_basic_32(int32_t *inptr, int length, enum sps_format_t l_output_format, char *outptr, int* outlength, int stuff, int dither) {
   int tstuff = stuff;
+  char *l_outptr = outptr;
   if ((stuff > 1) || (stuff < -1) || (length <100)) {
     // debug(1, "Stuff argument to stuff_buffer must be from -1 to +1 and length >100.");
     tstuff = 0; // if any of these conditions hold, don't stuff anything/
   }
+  
   int i;
   int stuffsamp = length;
   if (tstuff)
@@ -1062,8 +1142,10 @@ static int stuff_buffer_basic_32(int32_t *inptr, int length, int32_t *outptr, in
 
   pthread_mutex_lock(&vol_mutex);
   for (i = 0; i < stuffsamp; i++) { // the whole frame, if no stuffing
-    *outptr++ = dithered_vol_32(*inptr++,l_output_bit_depth);
-    *outptr++ = dithered_vol_32(*inptr++,l_output_bit_depth);
+    process_sample(*inptr++,&l_outptr,l_output_format,fix_volume,dither);
+    process_sample(*inptr++,&l_outptr,l_output_format,fix_volume,dither);    
+    //*outptr++ = dithered_vol_32(*inptr++,l_output_bit_depth);
+    //*outptr++ = dithered_vol_32(*inptr++,l_output_bit_depth);
   };
   if (tstuff) {
     if (tstuff == 1) {
@@ -1071,8 +1153,10 @@ static int stuff_buffer_basic_32(int32_t *inptr, int length, int32_t *outptr, in
       // interpolate one sample
       //*outptr++ = dithered_vol(((long)inptr[-2] + (long)inptr[0]) >> 1);
       //*outptr++ = dithered_vol(((long)inptr[-1] + (long)inptr[1]) >> 1);
-      *outptr++ = dithered_vol_32(mean_32(inptr[-2], inptr[0]),l_output_bit_depth);
-      *outptr++ = dithered_vol_32(mean_32(inptr[-1], inptr[1]),l_output_bit_depth);
+      process_sample(mean_32(inptr[-2], inptr[0]),&l_outptr,l_output_format,fix_volume,dither);
+      process_sample(mean_32(inptr[-1], inptr[1]),&l_outptr,l_output_format,fix_volume,dither);    
+      //*outptr++ = dithered_vol_32(mean_32(inptr[-2], inptr[0]),l_output_bit_depth);
+      //*outptr++ = dithered_vol_32(mean_32(inptr[-1], inptr[1]),l_output_bit_depth);
     } else if (stuff == -1) {
       // debug(3, "---------");
       inptr++;
@@ -1085,12 +1169,12 @@ static int stuff_buffer_basic_32(int32_t *inptr, int length, int32_t *outptr, in
       remainder = remainder+tstuff; // don't run over the correct end of the output buffer
 
     for (i = stuffsamp; i < remainder; i++) {
-      *outptr++ = dithered_vol_32(*inptr++,l_output_bit_depth);
-      *outptr++ = dithered_vol_32(*inptr++,l_output_bit_depth);
+      process_sample(*inptr++,&l_outptr,l_output_format,fix_volume,dither);
+      process_sample(*inptr++,&l_outptr,l_output_format,fix_volume,dither);
     }
   }
   pthread_mutex_unlock(&vol_mutex);
-
+    *outlength = l_outptr-outptr; // in bytes
   return length + tstuff;
 }
 

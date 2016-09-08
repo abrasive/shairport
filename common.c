@@ -584,7 +584,7 @@ typedef struct ranctx { uint64_t a; uint64_t b; uint64_t c; uint64_t d; } ranctx
 static struct ranctx rx;
 
 #define rot(x,k) (((x)<<(k))|((x)>>(64-(k))))
-inline uint64_t ranval( ranctx *x ) {
+uint64_t ranval( ranctx *x ) {
     uint64_t e = x->a - rot(x->b, 7);
     x->a = x->b ^ rot(x->c, 13);
     x->b = x->c + rot(x->d, 37);
@@ -605,10 +605,10 @@ void r64init(uint64_t seed) {
 	raninit(&rx,seed);
 }
 
-inline uint64_t r64u() {
+uint64_t r64u() {
 	return(ranval(&rx));
 }
 
-inline int64_t r64i() {
+int64_t r64i() {
 	return(ranval(&rx)>>1);
 }
