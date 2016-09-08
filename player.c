@@ -74,7 +74,7 @@ static unsigned char *aesiv;
 #ifdef HAVE_LIBSSL
 static AES_KEY aes;
 #endif
-static int input_sample_rate, input_bit_depth, input_num_channels, max_frames_per_packet;
+static int input_rate, input_bit_depth, input_num_channels, max_frames_per_packet;
 
 static uint32_t timestamp_epoch, last_timestamp, maximum_timestamp_interval;// timestamp_epoch of zero means not initialised, could start at 2 or 1.
 
@@ -83,7 +83,7 @@ static uint32_t timestamp_epoch, last_timestamp, maximum_timestamp_interval;// t
 static int input_bytes_per_frame = 4;
 static int output_bytes_per_frame;
 static int output_sample_ratio;
-static int output_sample_rate;
+static int output_rate;
 static int64_t previous_random_number = 0;
 
 
@@ -421,7 +421,7 @@ static int init_decoder(int32_t fmtp[12]) {
 
   max_frames_per_packet = fmtp[1]; // number of audio frames per packet.
 
-  input_sample_rate = fmtp[11];
+  input_rate = fmtp[11];
   input_num_channels = fmtp[7];
   input_bit_depth = fmtp[3];
   
@@ -583,7 +583,7 @@ int32_t rand_in_range(int32_t exclusive_range_limit) {
 	return sp >> 32;  
 }
 
-inline void process_sample(int32_t sample,char**outp,enum sps_format_t format,int volume,int dither) {
+static inline void process_sample(int32_t sample,char**outp,enum sps_format_t format,int volume,int dither) {
   int64_t hyper_sample = sample;
   int result;
   // first, modify volume, if necessary
@@ -858,14 +858,14 @@ static abuf_t *buffer_get_frame(void) {
 
 debug(1,"Output sample ratio is %d",output_sample_ratio);
 
-              int64_t delta = (first_packet_timestamp - reference_timestamp)+config.latency*output_sample_ratio+config.audio_backend_latency_offset*output_sample_rate;
+              int64_t delta = (first_packet_timestamp - reference_timestamp)+config.latency*output_sample_ratio+config.audio_backend_latency_offset*output_rate;
               
               if (delta>=0) {
-                int64_t delta_fp_sec = (delta << 32) / output_sample_rate; // int64_t which is positive
+                int64_t delta_fp_sec = (delta << 32) / output_rate; // int64_t which is positive
                 first_packet_time_to_play=reference_timestamp_time+delta_fp_sec;
               } else {
                 int64_t abs_delta = -delta;
-                int64_t delta_fp_sec = (abs_delta << 32) / output_sample_rate; // int64_t which is positive
+                int64_t delta_fp_sec = (abs_delta << 32) / output_rate; // int64_t which is positive
                 first_packet_time_to_play=reference_timestamp_time-delta_fp_sec;              
               }
 
@@ -880,25 +880,25 @@ debug(1,"Output sample ratio is %d",output_sample_ratio);
 
           if (first_packet_time_to_play != 0) {
             // recalculate first_packet_time_to_play -- the latency might change
-            int64_t delta = (first_packet_timestamp - reference_timestamp)+config.latency*output_sample_ratio+config.audio_backend_latency_offset*output_sample_rate;
+            int64_t delta = (first_packet_timestamp - reference_timestamp)+config.latency*output_sample_ratio+config.audio_backend_latency_offset*output_rate;
             
             if (delta>=0) {
-              int64_t delta_fp_sec = (delta << 32) / output_sample_rate; // int64_t which is positive
+              int64_t delta_fp_sec = (delta << 32) / output_rate; // int64_t which is positive
               first_packet_time_to_play=reference_timestamp_time+delta_fp_sec;
             } else {
               int64_t abs_delta = -delta;
-              int64_t delta_fp_sec = (abs_delta << 32) / output_sample_rate; // int64_t which is positive
+              int64_t delta_fp_sec = (abs_delta << 32) / output_rate; // int64_t which is positive
               first_packet_time_to_play=reference_timestamp_time-delta_fp_sec;              
             }
 
-            int64_t max_dac_delay = output_sample_rate/10;
+            int64_t max_dac_delay = output_rate/10;
             int64_t filler_size = max_dac_delay; // 0.1 second -- the maximum we'll add to the DAC
 
             if (local_time_now >= first_packet_time_to_play) {
               // we've gone past the time...
               // debug(1,"Run past the exact start time by %llu frames, with time now of %llx, fpttp
               // of %llx and dac_delay of %d and %d packets;
-              // flush.",(((tn-first_packet_time_to_play)*output_sample_rate)>>32)+dac_delay,tn,first_packet_time_to_play,dac_delay,seq_diff(ab_read,
+              // flush.",(((tn-first_packet_time_to_play)*output_rate)>>32)+dac_delay,tn,first_packet_time_to_play,dac_delay,seq_diff(ab_read,
               // ab_write));
 
               if (config.output->flush)
@@ -918,7 +918,7 @@ debug(1,"Output sample ratio is %d",output_sample_ratio);
               } else
                 dac_delay = 0;
               int64_t gross_frame_gap =
-                  ((first_packet_time_to_play - local_time_now) * output_sample_rate) >> 32;
+                  ((first_packet_time_to_play - local_time_now) * output_rate) >> 32;
               int64_t exact_frame_gap = gross_frame_gap - dac_delay;
               if (exact_frame_gap < 0) {
                 // we've gone past the time...
@@ -1002,17 +1002,17 @@ debug(1,"Output sample ratio is %d",output_sample_ratio);
       if (reference_timestamp) { // if we have a reference time
         int64_t packet_timestamp = curframe->timestamp; // types okay
         int64_t delta = packet_timestamp - reference_timestamp;
-        int64_t offset = config.latency*output_sample_ratio + config.audio_backend_latency_offset*output_sample_rate -
-                         config.audio_backend_buffer_desired_length*output_sample_rate; // all arguments are int32_t, so expression promotion okay
+        int64_t offset = config.latency*output_sample_ratio + config.audio_backend_latency_offset*output_rate -
+                         config.audio_backend_buffer_desired_length*output_rate; // all arguments are int32_t, so expression promotion okay
         int64_t net_offset = delta + offset; // okay
         uint64_t time_to_play = reference_timestamp_time; // type okay
         if (net_offset >= 0) {
-          uint64_t net_offset_fp_sec = (net_offset << 32) / output_sample_rate; // int64_t which is positive
+          uint64_t net_offset_fp_sec = (net_offset << 32) / output_rate; // int64_t which is positive
           time_to_play += net_offset_fp_sec; // using the latency requested...
           // debug(2,"Net Offset: %lld, adjusted: %lld.",net_offset,net_offset_fp_sec);
         } else {
           int64_t abs_net_offset = -net_offset;
-          uint64_t net_offset_fp_sec = (abs_net_offset << 32) / output_sample_rate; // int64_t which is positive
+          uint64_t net_offset_fp_sec = (abs_net_offset << 32) / output_rate; // int64_t which is positive
           time_to_play -= net_offset_fp_sec;
           // debug(2,"Net Offset: %lld, adjusted: -%lld.",net_offset,net_offset_fp_sec);
         }
@@ -1034,7 +1034,7 @@ debug(1,"Output sample ratio is %d",output_sample_ratio);
 
     if (wait) {
       uint64_t time_to_wait_for_wakeup_fp =
-          ((uint64_t)1 << 32) / input_sample_rate;       // this is time period of one frame
+          ((uint64_t)1 << 32) / input_rate;       // this is time period of one frame
       time_to_wait_for_wakeup_fp *= 4 * 352; // four full 352-frame packets
       time_to_wait_for_wakeup_fp /= 3; // four thirds of a packet time
 
@@ -1125,7 +1125,7 @@ static inline int32_t mean_32(int32_t a, int32_t b) {
 // formats accepted so far include S16_LE, S24_LE and S32_LE on a little endinan machine.
 
 // stuff: 1 means add 1; 0 means do nothing; -1 means remove 1
-static int stuff_buffer_basic_32(int32_t *inptr, int length, enum sps_format_t l_output_format, char *outptr, int* outlength, int stuff, int dither) {
+static int stuff_buffer_basic_32(int32_t *inptr, int length, enum sps_format_t l_output_format, char *outptr, int stuff, int dither) {
   int tstuff = stuff;
   char *l_outptr = outptr;
   if ((stuff > 1) || (stuff < -1) || (length <100)) {
@@ -1174,7 +1174,6 @@ static int stuff_buffer_basic_32(int32_t *inptr, int length, enum sps_format_t l
     }
   }
   pthread_mutex_unlock(&vol_mutex);
-    *outlength = l_outptr-outptr; // in bytes
   return length + tstuff;
 }
 
@@ -1314,14 +1313,9 @@ static void *player_thread_func(void *arg) {
 	struct inter_threads_record itr;
 	itr.please_stop = 0;
 	timestamp_epoch = 0; // indicate that the next timestamp will be the first one.
-	maximum_timestamp_interval = input_sample_rate * 60; // actually there shouldn't be more than about 13v seconds of a gap between successive rtptimes, at worst
-
-	output_sample_rate = input_sample_rate;
-
-	if (config.output_rate!=0)
-	  output_sample_rate = config.output_rate;
-	  
-	output_sample_ratio = output_sample_rate/input_sample_rate;
+	maximum_timestamp_interval = input_rate * 60; // actually there shouldn't be more than about 13v seconds of a gap between successive rtptimes, at worst
+		  
+	output_sample_ratio = config.output_rate/input_rate;
 
 	debug(1,"Output sample ratio is %d.",output_sample_ratio);
 	
@@ -1351,7 +1345,7 @@ static void *player_thread_func(void *arg) {
 
 	// check that there are enough buffers to accommodate the desired latency and the latency offset
 	
-	int maximum_latency = config.latency+config.audio_backend_latency_offset*input_sample_rate;
+	int maximum_latency = config.latency+config.audio_backend_latency_offset*input_rate;
 	if ((maximum_latency+(352-1))/352 + 10 > BUFFER_FRAMES)
 		die("Not enough buffers available for a total latency of %d frames. A maximum of %d 352-frame packets may be accommodated.",maximum_latency,BUFFER_FRAMES);
   connection_state_to_output = get_requested_connection_state_to_output();
@@ -1386,7 +1380,10 @@ static void *player_thread_func(void *arg) {
   char rnstate[256];
   initstate(time(NULL), rnstate, 256);
 
-  signed short *inbuf, *outbuf, *tbuf, *silence;
+  signed short *inbuf, *tbuf, *silence;
+
+  char *outbuf;
+  
   int inbuflength;
   
   int output_bit_depth = 16; // default;
@@ -1409,7 +1406,7 @@ static void *player_thread_func(void *arg) {
   // if we are changing any of the parameters of the input, like sample rate or sample depth, then we
   // need an intermediate "transition" buffer
   
-//  if ((config.output_rate!=0 && (input_sample_rate!=config.output_rate)) || (input_bit_depth!=output_bit_depth)) {
+//  if ((config.output_rate!=0 && (input_rate!=config.output_rate)) || (input_bit_depth!=output_bit_depth)) {
     tbuf = malloc(output_bytes_per_frame*(max_frames_per_packet*output_sample_ratio+max_frame_size_change));
     if (tbuf==NULL)
       debug(1,"Failed to allocate memory for the transition buffer.");
@@ -1492,6 +1489,9 @@ static void *player_thread_func(void *arg) {
               config.output->play(inbuf, inbuflength);
           }
         } else {
+        
+          int enable_dither = !((fix_volume==0x10000)&&(input_bit_depth==output_bit_depth)); // avoid dither on audio being sent through without alteration
+          
           // here, let's transform the frame of data, if necessary
           
           if (tbuf!=NULL) { //this will be null if no changes are needed
@@ -1595,10 +1595,10 @@ static void *player_thread_func(void *arg) {
           if (local_time_now >= reference_timestamp_time) {
           // debug(1,"td is %lld.",td);
              td = local_time_now - reference_timestamp_time; // this is the positive value. Conversion is positive uint64_t to int64_t, thus okay
-            td_in_frames = (td * output_sample_rate) >> 32;
+            td_in_frames = (td * config.output_rate) >> 32;
           } else {
             td = reference_timestamp_time - local_time_now; // this is the absolute value, which should be negated. Conversion is positive uint64_t to int64_t, thus okay.
-            td_in_frames = (td * output_sample_rate) >> 32; //use the absolute td value for the present. Types okay
+            td_in_frames = (td * config.output_rate) >> 32; //use the absolute td value for the present. Types okay
             td_in_frames = -td_in_frames;
             td = -td; // should be okay, as the range of values should be very small w.r.t 64 bits
           }
@@ -1671,10 +1671,10 @@ static void *player_thread_func(void *arg) {
             // before we finally commit to this frame, check its sequencing and timing
 
             // require a certain error before bothering to fix it...
-            if (sync_error > config.tolerance*output_sample_rate) { // int64_t > int, okay
+            if (sync_error > config.tolerance*config.output_rate) { // int64_t > int, okay
               amount_to_stuff = -1;
             }
-            if (sync_error < -config.tolerance*output_sample_rate) {
+            if (sync_error < -config.tolerance*config.output_rate) {
               amount_to_stuff = 1;
             }
 
@@ -1704,74 +1704,58 @@ static void *player_thread_func(void *arg) {
             
             if (config.no_sync!=0)
               amount_to_stuff = 0 ; // no stuffing if it's been disabled
-                        
-            if ((amount_to_stuff == 0) && (fix_volume == 0x10000) && ((config.output_rate==0) || (config.output_rate==44100)) && ((config.output_format==0) || (config.output_format==SPS_FORMAT_S16_LE))) {
-
-              // if no stuffing needed and no volume adjustment, then
-              // don't send to stuff_buffer_* and don't copy to outbuf; just send directly to the
-              // output device...
-              if (inbuf==NULL)
-                debug(1,"NULL inframe->data to play -- skipping it.");
-              else {
-                if (inbuflength==0)
-                  debug(1,"empty frame to play -- skipping it (2).");
-                else
-                  config.output->play(inbuf, inbuflength);
-              }
-            } else {
-
+                      
 
 #ifdef HAVE_LIBSOXR
-              switch (config.packet_stuffing) {
-              case ST_basic:
-                //                if (amount_to_stuff) debug(1,"Basic stuff...");
-                if (tbuf)
-                  play_samples = stuff_buffer_basic_32((int32_t*)inbuf, inbuflength, (int32_t*)outbuf, amount_to_stuff,output_bit_depth);
-                else
-                  play_samples = stuff_buffer_basic(inbuf, inbuflength, outbuf, amount_to_stuff);
-                break;
-              case ST_soxr:
-                //                if (amount_to_stuff) debug(1,"Soxr stuff...");
-                if (tbuf)
-                  play_samples = stuff_buffer_soxr_32((int32_t*)inbuf, inbuflength, (int32_t*)outbuf, amount_to_stuff,output_bit_depth);
-                else
-                  play_samples = stuff_buffer_soxr(inbuf, inbuflength, outbuf, amount_to_stuff);
-                break;
-              }
-#else
-              //          if (amount_to_stuff) debug(1,"Standard stuff...");
+            switch (config.packet_stuffing) {
+            case ST_basic:
+              //                if (amount_to_stuff) debug(1,"Basic stuff...");
               if (tbuf)
-                play_samples = stuff_buffer_basic_32((int32_t*)inbuf, inbuflength, (int32_t*)outbuf, amount_to_stuff,output_bit_depth);
+                play_samples = stuff_buffer_basic_32((int32_t*)inbuf, inbuflength, config.output_format, outbuf, amount_to_stuff, enable_dither);
               else
-                play_samples = stuff_buffer_basic(inbuf, inbuflength, outbuf, amount_to_stuff);
+                play_samples = stuff_buffer_basic(inbuf, inbuflength, (short *)outbuf, amount_to_stuff);
+              break;
+            case ST_soxr:
+              //                if (amount_to_stuff) debug(1,"Soxr stuff...");
+              if (tbuf)
+                play_samples = stuff_buffer_soxr_32((int32_t*)inbuf, inbuflength, (int32_t*)outbuf, amount_to_stuff,output_bit_depth);
+              else
+                play_samples = stuff_buffer_soxr(inbuf, inbuflength, (short *)outbuf, amount_to_stuff);
+              break;
+            }
+#else
+            //          if (amount_to_stuff) debug(1,"Standard stuff...");
+            if (tbuf)
+              play_samples = stuff_buffer_basic_32((int32_t*)inbuf, inbuflength, config.output_format, outbuf, amount_to_stuff, enable_dither);
+            else
+              play_samples = stuff_buffer_basic(inbuf, inbuflength, (short *)outbuf, amount_to_stuff);
 #endif
 
-              /*
-              {
-                int co;
-                int is_silent=1;
-                short *p = outbuf;
-                for (co=0;co<play_samples;co++) {
-                  if (*p!=0)
-                    is_silent=0;
-                  p++;
-                }
-                if (is_silent)
-                  debug(1,"Silence!");
+            /*
+            {
+              int co;
+              int is_silent=1;
+              short *p = outbuf;
+              for (co=0;co<play_samples;co++) {
+                if (*p!=0)
+                  is_silent=0;
+                p++;
               }
-              */
-              
-              
-              if (outbuf==NULL)
-                debug(1,"NULL outbuf to play -- skipping it.");
-              else {
-                if (play_samples==0)
-                  debug(1,"play_samples==0 skipping it (1).");
-                else
-                  config.output->play(outbuf, play_samples);
-              }
+              if (is_silent)
+                debug(1,"Silence!");
             }
-
+            */
+            
+            
+            if (outbuf==NULL)
+              debug(1,"NULL outbuf to play -- skipping it.");
+            else {
+              if (play_samples==0)
+                debug(1,"play_samples==0 skipping it (1).");
+              else
+                config.output->play((short*)outbuf, play_samples); // remove the (short*)!
+            }
+ 
             // check for loss of sync
             // timestamp of zero means an inserted silent frame in place of a missing frame
             
@@ -1781,7 +1765,7 @@ static void *player_thread_func(void *arg) {
               abs_sync_error = -abs_sync_error;
             
             if ((config.no_sync==0) && (inframe->timestamp != 0) && (!please_stop) && (config.resyncthreshold > 0.0) &&
-                (abs_sync_error > config.resyncthreshold*output_sample_rate)) {
+                (abs_sync_error > config.resyncthreshold*config.output_rate)) {
               sync_error_out_of_bounds++;
               // debug(1,"Sync error out of bounds: Error: %lld; previous error: %lld; DAC: %lld;
               // timestamp: %llx, time now
@@ -1811,9 +1795,9 @@ static void *player_thread_func(void *arg) {
               }
             else {
               if (tbuf)
-                play_samples = stuff_buffer_basic_32((int32_t*)inbuf, inbuflength, (int32_t*)outbuf, 0, output_bit_depth); // no stuffing, but volume adjustment
+                play_samples = stuff_buffer_basic_32((int32_t*)inbuf, inbuflength, config.output_format, outbuf, 0, enable_dither);
               else
-                play_samples = stuff_buffer_basic(inbuf, inbuflength, outbuf, 0); // no stuffing, but volume adjustment
+                play_samples = stuff_buffer_basic(inbuf, inbuflength, (short *)outbuf, 0); // no stuffing, but volume adjustment
 
               if (outbuf==NULL)
                 debug(1,"NULL outbuf to play -- skipping it.");
@@ -1821,7 +1805,7 @@ static void *player_thread_func(void *arg) {
                 if (inbuf==0)
                   debug(1,"empty frame to play -- skipping it (4).");
                 else
-                  config.output->play(outbuf, play_samples);
+                  config.output->play((short*)outbuf, play_samples); // remove the (short*)!
               }
             }
           }
@@ -1902,7 +1886,7 @@ static void *player_thread_func(void *arg) {
                          "%*lli,"  /* min DAC queue size */
                          "%*d,"    /* min buffer occupancy */
                          "%*d",    /* max buffer occupancy */
-                         10, 1000*moving_average_sync_error/output_sample_rate,
+                         10, 1000*moving_average_sync_error/config.output_rate,
                          10, moving_average_correction * 1000000 / (352*output_sample_ratio),
                          10, moving_average_insertions_plus_deletions * 1000000 / (352*output_sample_ratio),
                          12, play_number,
@@ -1923,7 +1907,7 @@ static void *player_thread_func(void *arg) {
                          "%*lli,"  /* min DAC queue size */
                          "%*d,"    /* min buffer occupancy */
                          "%*d",    /* max buffer occupancy */
-                         10, 1000*moving_average_sync_error/output_sample_rate,
+                         10, 1000*moving_average_sync_error/config.output_rate,
                          12, play_number,
                          7, missing_packets,
                          7, late_packets,
@@ -1942,7 +1926,7 @@ static void *player_thread_func(void *arg) {
                        "%*llu,"  /* resend requests */
                        "%*d,"    /* min buffer occupancy */
                        "%*d",    /* max buffer occupancy */
-                       10, 1000*moving_average_sync_error/output_sample_rate,
+                       10, 1000*moving_average_sync_error/config.output_rate,
                        12, play_number,
                        7, missing_packets,
                        7, late_packets,

@@ -774,6 +774,8 @@ int main(int argc, char **argv) {
   config.audio_backend_buffer_desired_length = 6615; // 0.15 seconds.
   config.udp_port_base = 6001;
   config.udp_port_range = 100;
+  config.output_format = SPS_FORMAT_S16_LE; // default
+  config.output_rate = 44100; // default   
   config.decoders_supported = 1<<decoder_hammerton; // David Hammerton's decoder supported by default
  #ifdef HAVE_APPLE_ALAC
   config.decoders_supported += 1<<decoder_apple_alac;
@@ -1039,7 +1041,7 @@ int main(int argc, char **argv) {
   debug(1, "disable_synchronization is %d.", config.no_sync);
   debug(1, "use_mmap_if_available is %d.", config.no_mmap ? 0 : 1);
   debug(1, "output_rate is %d (0 means 44,100).", config.output_rate);
-  debug(1, "output_format is %d (0 means S16_LE).", config.output_format);
+  debug(1, "output_format is %d (2 is the default SPS_FORMAT_S16_LE).", config.output_format);
   debug(1, "audio backend desired buffer length is %f seconds.",
         config.audio_backend_buffer_desired_length);
   debug(1, "audio backend latency offset is %f seconds.", config.audio_backend_latency_offset);
