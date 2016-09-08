@@ -593,10 +593,10 @@ static inline int32_t dithered_vol_32(int32_t sample, int output_precision) {
     s = s*v; // 32 bit multiplication -- we need to dither it down to its target resolution
 
     int64_t r = r64i();
-    int64_t mask = 1<<(64+1-output_precision);
-    //mask -=1;
+    int64_t mask = (int64_t)1<<(64+1-output_precision);
+    mask -=1;
     int64_t tpdf = (r&mask); //-(previous_random_number&((1<<(64+1-output_precision))-1));
-		debug(1,"output precision is %d, m is %llx, r is %llx, tpdf is %llx",output_precision,mask,r,tpdf);
+//		debug(1,"output precision is %d, m is %llx, r is %llx, tpdf is %llx",output_precision,mask,r,tpdf);
     previous_random_number=r;
  
     // Check there's no clipping -- if there is, 
