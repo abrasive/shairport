@@ -587,10 +587,10 @@ static inline void process_sample(int32_t sample,char**outp,enum sps_format_t fo
   int64_t hyper_sample = sample;
   int result;
   // first, modify volume, if necessary
-  if (volume==0x10000)
+  //if (volume==0x10000)
     hyper_sample<<32;
-  else
-    hyper_sample*=(volume<<16);
+  //else
+  //  hyper_sample*=(volume<<16);
     
   // next, do dither, if necessary
   if (dither) {
@@ -629,24 +629,25 @@ static inline void process_sample(int32_t sample,char**outp,enum sps_format_t fo
   }
   // move the result to the desired position in the int64_t
   char *op = *outp;
+  short ss;
   switch (format) {
     case SPS_FORMAT_S32_LE:
-      hyper_sample>>64-32;
+      hyper_sample>>=(64-32);
       *op++ = (int32_t)hyper_sample;
       result=4;
       break;
     case SPS_FORMAT_S24_LE:
-      hyper_sample>>64-24;
+      hyper_sample>>=(64-24);
       *op = (int32_t)hyper_sample;
       result=4;
       break;
     case SPS_FORMAT_S16_LE:
-      hyper_sample>>64-16;
+      hyper_sample>>=(64-16);
       *op = (int16_t)hyper_sample;
       result=2;
       break;
     case SPS_FORMAT_S8:
-      hyper_sample>>64-8;
+      hyper_sample>>=(64-8);
       *op = (int8_t)hyper_sample;
       result=1;
      break;    
@@ -858,14 +859,14 @@ static abuf_t *buffer_get_frame(void) {
 
 debug(1,"Output sample ratio is %d",output_sample_ratio);
 
-              int64_t delta = (first_packet_timestamp - reference_timestamp)+config.latency*output_sample_ratio+config.audio_backend_latency_offset*output_rate;
+              int64_t delta = (first_packet_timestamp - reference_timestamp)+config.latency*output_sample_ratio+config.audio_backend_latency_offset*config.output_rate;
               
               if (delta>=0) {
-                int64_t delta_fp_sec = (delta << 32) / output_rate; // int64_t which is positive
+                int64_t delta_fp_sec = (delta << 32) / config.output_rate; // int64_t which is positive
                 first_packet_time_to_play=reference_timestamp_time+delta_fp_sec;
               } else {
                 int64_t abs_delta = -delta;
-                int64_t delta_fp_sec = (abs_delta << 32) / output_rate; // int64_t which is positive
+                int64_t delta_fp_sec = (abs_delta << 32) / config.output_rate; // int64_t which is positive
                 first_packet_time_to_play=reference_timestamp_time-delta_fp_sec;              
               }
 
@@ -880,25 +881,25 @@ debug(1,"Output sample ratio is %d",output_sample_ratio);
 
           if (first_packet_time_to_play != 0) {
             // recalculate first_packet_time_to_play -- the latency might change
-            int64_t delta = (first_packet_timestamp - reference_timestamp)+config.latency*output_sample_ratio+config.audio_backend_latency_offset*output_rate;
+            int64_t delta = (first_packet_timestamp - reference_timestamp)+config.latency*output_sample_ratio+config.audio_backend_latency_offset*config.output_rate;
             
             if (delta>=0) {
-              int64_t delta_fp_sec = (delta << 32) / output_rate; // int64_t which is positive
+              int64_t delta_fp_sec = (delta << 32) / config.output_rate; // int64_t which is positive
               first_packet_time_to_play=reference_timestamp_time+delta_fp_sec;
             } else {
               int64_t abs_delta = -delta;
-              int64_t delta_fp_sec = (abs_delta << 32) / output_rate; // int64_t which is positive
+              int64_t delta_fp_sec = (abs_delta << 32) / config.output_rate; // int64_t which is positive
               first_packet_time_to_play=reference_timestamp_time-delta_fp_sec;              
             }
 
-            int64_t max_dac_delay = output_rate/10;
+            int64_t max_dac_delay = config.output_rate/10;
             int64_t filler_size = max_dac_delay; // 0.1 second -- the maximum we'll add to the DAC
 
             if (local_time_now >= first_packet_time_to_play) {
               // we've gone past the time...
               // debug(1,"Run past the exact start time by %llu frames, with time now of %llx, fpttp
               // of %llx and dac_delay of %d and %d packets;
-              // flush.",(((tn-first_packet_time_to_play)*output_rate)>>32)+dac_delay,tn,first_packet_time_to_play,dac_delay,seq_diff(ab_read,
+              // flush.",(((tn-first_packet_time_to_play)*config.output_rate)>>32)+dac_delay,tn,first_packet_time_to_play,dac_delay,seq_diff(ab_read,
               // ab_write));
 
               if (config.output->flush)
@@ -918,7 +919,7 @@ debug(1,"Output sample ratio is %d",output_sample_ratio);
               } else
                 dac_delay = 0;
               int64_t gross_frame_gap =
-                  ((first_packet_time_to_play - local_time_now) * output_rate) >> 32;
+                  ((first_packet_time_to_play - local_time_now) * config.output_rate) >> 32;
               int64_t exact_frame_gap = gross_frame_gap - dac_delay;
               if (exact_frame_gap < 0) {
                 // we've gone past the time...
@@ -1002,17 +1003,17 @@ debug(1,"Output sample ratio is %d",output_sample_ratio);
       if (reference_timestamp) { // if we have a reference time
         int64_t packet_timestamp = curframe->timestamp; // types okay
         int64_t delta = packet_timestamp - reference_timestamp;
-        int64_t offset = config.latency*output_sample_ratio + config.audio_backend_latency_offset*output_rate -
-                         config.audio_backend_buffer_desired_length*output_rate; // all arguments are int32_t, so expression promotion okay
+        int64_t offset = config.latency*output_sample_ratio + config.audio_backend_latency_offset*config.output_rate -
+                         config.audio_backend_buffer_desired_length*config.output_rate; // all arguments are int32_t, so expression promotion okay
         int64_t net_offset = delta + offset; // okay
         uint64_t time_to_play = reference_timestamp_time; // type okay
         if (net_offset >= 0) {
-          uint64_t net_offset_fp_sec = (net_offset << 32) / output_rate; // int64_t which is positive
+          uint64_t net_offset_fp_sec = (net_offset << 32) / config.output_rate; // int64_t which is positive
           time_to_play += net_offset_fp_sec; // using the latency requested...
           // debug(2,"Net Offset: %lld, adjusted: %lld.",net_offset,net_offset_fp_sec);
         } else {
           int64_t abs_net_offset = -net_offset;
-          uint64_t net_offset_fp_sec = (abs_net_offset << 32) / output_rate; // int64_t which is positive
+          uint64_t net_offset_fp_sec = (abs_net_offset << 32) / config.output_rate; // int64_t which is positive
           time_to_play -= net_offset_fp_sec;
           // debug(2,"Net Offset: %lld, adjusted: -%lld.",net_offset,net_offset_fp_sec);
         }
@@ -1490,7 +1491,8 @@ static void *player_thread_func(void *arg) {
           }
         } else {
         
-          int enable_dither = !((fix_volume==0x10000)&&(input_bit_depth==output_bit_depth)); // avoid dither on audio being sent through without alteration
+          int enable_dither = 0;
+         // int enable_dither = !((fix_volume==0x10000)&&(input_bit_depth==output_bit_depth)); // avoid dither on audio being sent through without alteration
           
           // here, let's transform the frame of data, if necessary
           
@@ -1535,7 +1537,15 @@ static void *player_thread_func(void *arg) {
                     }
                     
                     // here, replicate the samples if you're upsampling
+                    
                     for (j=0;j<output_sample_ratio;j++) {
+                          // raise the 16-bit sample to 32 bits.
+                          int32_t t = ls<<16;
+                          *outpl++=t;
+                          int32_t u = rs<<16;
+                          *outpl++=u;
+
+                      /*
                       switch (output_bit_depth) {
                         case 16:
                           *outps++=ls;
@@ -1554,6 +1564,7 @@ static void *player_thread_func(void *arg) {
                           *outpl++=u;
                           } break;
                       }
+                      */
                     }
                   }
 
