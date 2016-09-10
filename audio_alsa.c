@@ -206,7 +206,7 @@ static int init(int argc, char **argv) {
         die("Invalid disable_synchronization option choice \"%s\". It should be \"yes\" or \"no\"");
     }
     
-    /* Get the output format, using the same names as aplay does -- S16_LE, S32_LE to begin with*/
+    /* Get the output format, using the same names as aplay does*/
     if (config_lookup_string(config.cfg, "alsa.output_format", &str)) {
       if (strcasecmp(str, "S16_LE") == 0)
         config.output_format = SND_PCM_FORMAT_S16_LE;
@@ -214,8 +214,12 @@ static int init(int argc, char **argv) {
         config.output_format = SND_PCM_FORMAT_S24_LE;
       else if (strcasecmp(str, "S32_LE") == 0)
         config.output_format = SND_PCM_FORMAT_S32_LE;
+      else if (strcasecmp(str, "U8") == 0)
+        config.output_format = SPS_FORMAT_U8;
+      else if (strcasecmp(str, "S8") == 0)
+        config.output_format = SPS_FORMAT_S8;
       else
-        die("Invalid output format \"%s\". It should be \"S16_LE\", \"S24_LE\" or \"S32_LE\"",str);
+        die("Invalid output format \"%s\". It should be \"U8\", \"S8\", \"S16_LE\", \"S24_LE\" or \"S32_LE\"",str);
     }
 
     /* Get the output rate, which must be a multiple of 44,100*/
