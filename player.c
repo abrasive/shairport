@@ -587,10 +587,10 @@ static inline void process_sample(int32_t sample,char**outp,enum sps_format_t fo
   int64_t hyper_sample = sample;
   int result;
   // first, modify volume, if necessary
-  //if (volume==0x10000)
-    hyper_sample<<32;
-  //else
-  //  hyper_sample*=(volume<<16);
+  if (volume==0x10000)
+    hyper_sample<<=32;
+  else
+    hyper_sample*=(volume<<16);
     
   // next, do dither, if necessary
   if (dither) {
@@ -606,6 +606,7 @@ static inline void process_sample(int32_t sample,char**outp,enum sps_format_t fo
         dither_mask = (int64_t)1<<(64+1-16);
         break;
       case SPS_FORMAT_S8:
+      case SPS_FORMAT_U8:
         dither_mask = (int64_t)1<<(64+1-24);
         break;    
     }
@@ -627,31 +628,38 @@ static inline void process_sample(int32_t sample,char**outp,enum sps_format_t fo
     }
     // dither is complete here
   }
+    
   // move the result to the desired position in the int64_t
   char *op = *outp;
-  short ss;
   switch (format) {
     case SPS_FORMAT_S32_LE:
       hyper_sample>>=(64-32);
-      *op++ = (int32_t)hyper_sample;
+      *(int32_t*)op = hyper_sample;
       result=4;
       break;
     case SPS_FORMAT_S24_LE:
       hyper_sample>>=(64-24);
-      *op = (int32_t)hyper_sample;
+      *(int32_t*)op = hyper_sample;
       result=4;
       break;
     case SPS_FORMAT_S16_LE:
       hyper_sample>>=(64-16);
-      *op = (int16_t)hyper_sample;
+      *(int16_t*)op = hyper_sample;
       result=2;
       break;
     case SPS_FORMAT_S8:
       hyper_sample>>=(64-8);
-      *op = (int8_t)hyper_sample;
+      *op = hyper_sample;
       result=1;
      break;    
-  } 
+    case SPS_FORMAT_U8:
+      hyper_sample>>=(64-8);
+      hyper_sample+=128; // this is just a guess!
+      *op = hyper_sample;
+      result=1;
+     break;    
+  }
+  
   *outp+=result;
 }
 
@@ -1123,7 +1131,7 @@ static inline int32_t mean_32(int32_t a, int32_t b) {
 // (b) multiplies each sample by the fixedvolume (a 16-bit quantity)
 // (c) dithers the result to the output size 32/24/16 bits
 // (d) outputs the result in the approprate format
-// formats accepted so far include S16_LE, S24_LE and S32_LE on a little endinan machine.
+// formats accepted so far include U8, S8, S16_LE, S24_LE and S32_LE on a little endinan machine.
 
 // stuff: 1 means add 1; 0 means do nothing; -1 means remove 1
 static int stuff_buffer_basic_32(int32_t *inptr, int length, enum sps_format_t l_output_format, char *outptr, int stuff, int dither) {
@@ -1145,19 +1153,13 @@ static int stuff_buffer_basic_32(int32_t *inptr, int length, enum sps_format_t l
   for (i = 0; i < stuffsamp; i++) { // the whole frame, if no stuffing
     process_sample(*inptr++,&l_outptr,l_output_format,fix_volume,dither);
     process_sample(*inptr++,&l_outptr,l_output_format,fix_volume,dither);    
-    //*outptr++ = dithered_vol_32(*inptr++,l_output_bit_depth);
-    //*outptr++ = dithered_vol_32(*inptr++,l_output_bit_depth);
   };
   if (tstuff) {
     if (tstuff == 1) {
       // debug(3, "+++++++++");
       // interpolate one sample
-      //*outptr++ = dithered_vol(((long)inptr[-2] + (long)inptr[0]) >> 1);
-      //*outptr++ = dithered_vol(((long)inptr[-1] + (long)inptr[1]) >> 1);
       process_sample(mean_32(inptr[-2], inptr[0]),&l_outptr,l_output_format,fix_volume,dither);
       process_sample(mean_32(inptr[-1], inptr[1]),&l_outptr,l_output_format,fix_volume,dither);    
-      //*outptr++ = dithered_vol_32(mean_32(inptr[-2], inptr[0]),l_output_bit_depth);
-      //*outptr++ = dithered_vol_32(mean_32(inptr[-1], inptr[1]),l_output_bit_depth);
     } else if (stuff == -1) {
       // debug(3, "---------");
       inptr++;
@@ -1175,6 +1177,7 @@ static int stuff_buffer_basic_32(int32_t *inptr, int length, enum sps_format_t l
     }
   }
   pthread_mutex_unlock(&vol_mutex);
+  
   return length + tstuff;
 }
 
@@ -1407,13 +1410,15 @@ static void *player_thread_func(void *arg) {
   // if we are changing any of the parameters of the input, like sample rate or sample depth, then we
   // need an intermediate "transition" buffer
   
-//  if ((config.output_rate!=0 && (input_rate!=config.output_rate)) || (input_bit_depth!=output_bit_depth)) {
-    tbuf = malloc(output_bytes_per_frame*(max_frames_per_packet*output_sample_ratio+max_frame_size_change));
+  if (1) {
+  //if ((input_rate!=config.output_rate) || (input_bit_depth!=output_bit_depth)) {
+    // debug(1,"Define tbuf of length %d.",output_bytes_per_frame*(max_frames_per_packet*output_sample_ratio+max_frame_size_change));
+    tbuf = malloc(sizeof(int32_t)*2*(max_frames_per_packet*output_sample_ratio+max_frame_size_change));
     if (tbuf==NULL)
       debug(1,"Failed to allocate memory for the transition buffer.");
-//  } else {
-//    tbuf = 0;
-//  }  
+  } else {
+    tbuf = 0;
+  }  
   
   // We might need an output buffer and a buffer of silence.
   // The size of these dependents on the number of frames, the size of each frame and the maximum size change
@@ -1491,8 +1496,8 @@ static void *player_thread_func(void *arg) {
           }
         } else {
         
-          int enable_dither = 0;
-         // int enable_dither = !((fix_volume==0x10000)&&(input_bit_depth==output_bit_depth)); // avoid dither on audio being sent through without alteration
+//          int enable_dither = 0;
+          int enable_dither = !((fix_volume==0x10000)&&(input_bit_depth==output_bit_depth)); // avoid dither on audio being sent through without alteration
           
           // here, let's transform the frame of data, if necessary
           
@@ -1507,7 +1512,7 @@ static void *player_thread_func(void *arg) {
                   for (i=0;i<inbuflength;i++) {
                     ls=*inps++;
                     rs=*inps++;
-                    
+                                        
                     // here, do the mode stuff -- mono / reverse stereo / leftonly / rightonly
                     
                     switch (config.playback_mode) {
@@ -1573,8 +1578,8 @@ static void *player_thread_func(void *arg) {
               default:
                 die("Shairport Sync only supports 16 bit input");
             }
-            
-            inbuf = tbuf;
+                        
+            // inbuf = tbuf;
             inbuflength*=output_sample_ratio;
           }
           
@@ -1721,15 +1726,16 @@ static void *player_thread_func(void *arg) {
             switch (config.packet_stuffing) {
             case ST_basic:
               //                if (amount_to_stuff) debug(1,"Basic stuff...");
-              if (tbuf)
-                play_samples = stuff_buffer_basic_32((int32_t*)inbuf, inbuflength, config.output_format, outbuf, amount_to_stuff, enable_dither);
+              if (tbuf) {
+                play_samples = stuff_buffer_basic_32((int32_t*)tbuf, inbuflength, config.output_format, outbuf, amount_to_stuff, enable_dither);
+                }
               else
                 play_samples = stuff_buffer_basic(inbuf, inbuflength, (short *)outbuf, amount_to_stuff);
               break;
             case ST_soxr:
               //                if (amount_to_stuff) debug(1,"Soxr stuff...");
               if (tbuf)
-                play_samples = stuff_buffer_soxr_32((int32_t*)inbuf, inbuflength, (int32_t*)outbuf, amount_to_stuff,output_bit_depth);
+                play_samples = stuff_buffer_soxr_32((int32_t*)tbuf, inbuflength, (int32_t*)outbuf, amount_to_stuff,output_bit_depth);
               else
                 play_samples = stuff_buffer_soxr(inbuf, inbuflength, (short *)outbuf, amount_to_stuff);
               break;
@@ -1737,7 +1743,7 @@ static void *player_thread_func(void *arg) {
 #else
             //          if (amount_to_stuff) debug(1,"Standard stuff...");
             if (tbuf)
-              play_samples = stuff_buffer_basic_32((int32_t*)inbuf, inbuflength, config.output_format, outbuf, amount_to_stuff, enable_dither);
+              play_samples = stuff_buffer_basic_32((int32_t*)tbuf, inbuflength, config.output_format, outbuf, amount_to_stuff, enable_dither);
             else
               play_samples = stuff_buffer_basic(inbuf, inbuflength, (short *)outbuf, amount_to_stuff);
 #endif
@@ -1806,7 +1812,7 @@ static void *player_thread_func(void *arg) {
               }
             else {
               if (tbuf)
-                play_samples = stuff_buffer_basic_32((int32_t*)inbuf, inbuflength, config.output_format, outbuf, 0, enable_dither);
+                play_samples = stuff_buffer_basic_32((int32_t*)tbuf, inbuflength, config.output_format, outbuf, 0, enable_dither);
               else
                 play_samples = stuff_buffer_basic(inbuf, inbuflength, (short *)outbuf, 0); // no stuffing, but volume adjustment
 
@@ -1972,6 +1978,8 @@ static void *player_thread_func(void *arg) {
   usleep(100000); // allow this time to (?) allow the alsa subsystem to finish cleaning up after itself. 50 ms seems too short
   free(outbuf);
   free(silence);
+  if (tbuf)
+    free(tbuf);
   debug(1,"Shut down audio, control and timing threads");
   itr.please_stop = 1;
   pthread_kill(rtp_audio_thread, SIGUSR1);
