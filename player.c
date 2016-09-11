@@ -625,10 +625,10 @@ static inline void process_sample(int32_t sample, char **outp, enum sps_format_t
                                   int dither) {
   int64_t hyper_sample = sample;
   int result;
-  int64_t hyper_volume = (int64_t) volume<<16;
-    hyper_sample = hyper_sample * hyper_volume; // this is 64 bit bit multiplication -- we may need to
-                                    // dither it down to its
-                                    // target resolution
+  int64_t hyper_volume = (int64_t)volume << 16;
+  hyper_sample = hyper_sample * hyper_volume; // this is 64 bit bit multiplication -- we may need to
+                                              // dither it down to its
+                                              // target resolution
 
   // next, do dither, if necessary
   if (dither) {
@@ -1550,15 +1550,14 @@ static void *player_thread_func(void *arg) {
   }
 
   debug(1, "Output bit depth is %d.", output_bit_depth);
-  
-  if (input_bit_depth>output_bit_depth) {
-    debug(1,"Dithering will be enabled because the input bit depth is greater than the output bit depth");
-  }
-  if (fix_volume!=0x10000) {
-    debug(1,"Dithering will be enabled the output volume is being altered in software");
-  }
-  
 
+  if (input_bit_depth > output_bit_depth) {
+    debug(1, "Dithering will be enabled because the input bit depth is greater than the output bit "
+             "depth");
+  }
+  if (fix_volume != 0x10000) {
+    debug(1, "Dithering will be enabled the output volume is being altered in software");
+  }
 
   // if we are changing any of the parameters of the input, like sample rate or sample depth, then
   // we
@@ -1663,8 +1662,8 @@ static void *player_thread_func(void *arg) {
         } else {
 
           int enable_dither = 0;
-          if ((fix_volume!=0x10000) || (input_bit_depth>output_bit_depth))
-            enable_dither=1;
+          if ((fix_volume != 0x10000) || (input_bit_depth > output_bit_depth))
+            enable_dither = 1;
 
           // here, let's transform the frame of data, if necessary
 
@@ -2323,12 +2322,11 @@ void player_volume(double airplay_volume) {
   double temp_fix_volume = 65536.0 * pow(10, software_attenuation / 2000);
   // debug(1,"Software attenuation set to %f, i.e %f out of 65,536, for airplay volume of
   // %f",software_attenuation,temp_fix_volume,airplay_volume);
-  
- 
+
   pthread_mutex_lock(&vol_mutex);
   fix_volume = temp_fix_volume;
   pthread_mutex_unlock(&vol_mutex);
-  
+
 #ifdef CONFIG_METADATA
   char *dv = malloc(128); // will be freed in the metadata thread
   if (dv) {
