@@ -26,14 +26,14 @@
 
 #define ALSA_PCM_NEW_HW_PARAMS_API
 
+#include "audio.h"
+#include "common.h"
+#include <alsa/asoundlib.h>
+#include <math.h>
+#include <memory.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <memory.h>
-#include <math.h>
-#include <pthread.h>
-#include <alsa/asoundlib.h>
-#include "common.h"
-#include "audio.h"
 
 static void help(void);
 static int init(int argc, char **argv);
@@ -42,7 +42,7 @@ static void start(int i_sample_rate, int i_sample_format);
 static void play(short buf[], int samples);
 static void stop(void);
 static void flush(void);
-int delay(long* the_delay);
+int delay(long *the_delay);
 static void volume(double vol);
 static void linear_volume(double vol);
 static void parameters(audio_parameters *info);
@@ -50,20 +50,18 @@ static void mute(int do_mute);
 static double set_volume;
 static int output_method_signalled = 0;
 
-audio_output audio_alsa = {
-    .name = "alsa",
-    .help = &help,
-    .init = &init,
-    .deinit = &deinit,
-    .start = &start,
-    .stop = &stop,
-    .flush = &flush,
-    .delay = &delay,
-    .play = &play,
-    .mute = &mute,
-    .volume = &volume,
-    .parameters = &parameters
-};
+audio_output audio_alsa = {.name = "alsa",
+                           .help = &help,
+                           .init = &init,
+                           .deinit = &deinit,
+                           .start = &start,
+                           .stop = &stop,
+                           .flush = &flush,
+                           .delay = &delay,
+                           .play = &play,
+                           .mute = &mute,
+                           .volume = &volume,
+                           .parameters = &parameters};
 
 static pthread_mutex_t alsa_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -87,15 +85,15 @@ static int alsa_mix_index = 0;
 static int hardware_mixer = 0;
 static int has_softvol = 0;
 
-static snd_pcm_sframes_t (*alsa_pcm_write)(snd_pcm_t *, const void *, snd_pcm_uframes_t) = snd_pcm_writei;
+static snd_pcm_sframes_t (*alsa_pcm_write)(snd_pcm_t *, const void *,
+                                           snd_pcm_uframes_t) = snd_pcm_writei;
 
 static int play_number;
 static int64_t accumulated_delay, accumulated_da_delay;
 int alsa_characteristics_already_listed = 0;
 
-static snd_pcm_uframes_t period_size_requested,buffer_size_requested;
-static int 	set_period_size_request,set_buffer_size_request;
-
+static snd_pcm_uframes_t period_size_requested, buffer_size_requested;
+static int set_period_size_request, set_buffer_size_request;
 
 static void help(void) {
   printf("    -d output-device    set the output device [default*|...]\n"
@@ -138,9 +136,9 @@ static int init(int argc, char **argv) {
   int value;
   double dvalue;
 
-	set_period_size_request = 0;
-	set_buffer_size_request = 0;
-	
+  set_period_size_request = 0;
+  set_buffer_size_request = 0;
+
   config.audio_backend_latency_offset = 0;
   config.audio_backend_buffer_desired_length = 0.15;
 
@@ -149,8 +147,7 @@ static int init(int argc, char **argv) {
 
   if (config.cfg != NULL) {
     /* Get the desired buffer size setting. */
-    if (config_lookup_float(config.cfg,
-                          "alsa.audio_backend_buffer_desired_length", &dvalue)) {
+    if (config_lookup_float(config.cfg, "alsa.audio_backend_buffer_desired_length", &dvalue)) {
       if ((dvalue < 0) || (value > 1.5))
         die("Invalid alsa audio backend buffer desired length \"%f\". It "
             "should be between 0 and "
@@ -162,8 +159,7 @@ static int init(int argc, char **argv) {
     }
 
     /* Get the latency offset. */
-    if (config_lookup_float(config.cfg, "alsa.audio_backend_latency_offset",
-                          &dvalue)) {
+    if (config_lookup_float(config.cfg, "alsa.audio_backend_latency_offset", &dvalue)) {
       if ((dvalue < -1.0) || (value > 1.5))
         die("Invalid alsa audio backend buffer latency offset \"%f\". It "
             "should be between -1.0 and +1.5, default is 0 seconds",
@@ -195,7 +191,7 @@ static int init(int argc, char **argv) {
       alsa_mix_ctrl = (char *)str;
       hardware_mixer = 1;
     }
-  
+
     /* Get the disable_synchronization setting. */
     if (config_lookup_string(config.cfg, "alsa.disable_synchronization", &str)) {
       if (strcasecmp(str, "no") == 0)
@@ -205,7 +201,7 @@ static int init(int argc, char **argv) {
       else
         die("Invalid disable_synchronization option choice \"%s\". It should be \"yes\" or \"no\"");
     }
-    
+
     /* Get the output format, using the same names as aplay does*/
     if (config_lookup_string(config.cfg, "alsa.output_format", &str)) {
       if (strcasecmp(str, "S16_LE") == 0)
@@ -219,25 +215,25 @@ static int init(int argc, char **argv) {
       else if (strcasecmp(str, "S8") == 0)
         config.output_format = SPS_FORMAT_S8;
       else
-        die("Invalid output format \"%s\". It should be \"U8\", \"S8\", \"S16_LE\", \"S24_LE\" or \"S32_LE\"",str);
+        die("Invalid output format \"%s\". It should be \"U8\", \"S8\", \"S16_LE\", \"S24_LE\" or "
+            "\"S32_LE\"",
+            str);
     }
 
     /* Get the output rate, which must be a multiple of 44,100*/
-    if (config_lookup_int(config.cfg, "alsa.output_rate",
-                          &value)) {
-      debug(1,"Value read for output rate is %d.",value);
-      switch(value) {
-        case 44100:
-        case 88200:
-        case 176400:
-        case 352800:
-          config.output_rate = value;
-          break;
-        default :
-          die("Invalid output rate \"%d\". It should be a multiple of 44,100 up to 352,800",value);
-      }      
+    if (config_lookup_int(config.cfg, "alsa.output_rate", &value)) {
+      debug(1, "Value read for output rate is %d.", value);
+      switch (value) {
+      case 44100:
+      case 88200:
+      case 176400:
+      case 352800:
+        config.output_rate = value;
+        break;
+      default:
+        die("Invalid output rate \"%d\". It should be a multiple of 44,100 up to 352,800", value);
+      }
     }
-
 
     /* Get the use_mmap_if_available setting. */
     if (config_lookup_string(config.cfg, "alsa.use_mmap_if_available", &str)) {
@@ -249,10 +245,9 @@ static int init(int argc, char **argv) {
         die("Invalid use_mmap_if_available option choice \"%s\". It should be \"yes\" or \"no\"");
     }
     /* Get the optional period size value */
-    if (config_lookup_int(config.cfg, "alsa.period_size",
-                          &value)) {
+    if (config_lookup_int(config.cfg, "alsa.period_size", &value)) {
       set_period_size_request = 1;
-      debug(1,"Value read for period size is %d.",value);
+      debug(1, "Value read for period size is %d.", value);
       if (value < 0)
         die("Invalid alsa period size setting \"%d\". It "
             "must be greater than 0.",
@@ -262,10 +257,9 @@ static int init(int argc, char **argv) {
     }
 
     /* Get the optional buffer size value */
-    if (config_lookup_int(config.cfg, "alsa.buffer_size",
-                          &value)) {
+    if (config_lookup_int(config.cfg, "alsa.buffer_size", &value)) {
       set_buffer_size_request = 1;
-      debug(1,"Value read for buffer size is %d.",value);
+      debug(1, "Value read for buffer size is %d.", value);
       if (value < 0)
         die("Invalid alsa buffer size setting \"%d\". It "
             "must be greater than 0.",
@@ -274,8 +268,6 @@ static int init(int argc, char **argv) {
         buffer_size_requested = value;
     }
   }
-  
-
 
   optind = 1; // optind=0 is equivalent to optind=1 plus special behaviour
   argv--;     // so we shift the arguments to satisfy getopt()
@@ -316,7 +308,7 @@ static int init(int argc, char **argv) {
   debug(1, "Output device name is \"%s\".", alsa_out_dev);
 
   if (hardware_mixer) {
-  
+
     if (alsa_mix_dev == NULL)
       alsa_mix_dev = alsa_out_dev;
 
@@ -324,25 +316,24 @@ static int init(int argc, char **argv) {
 
     open_mixer();
 
-    if (snd_mixer_selem_get_playback_volume_range(alsa_mix_elem, &alsa_mix_minv,
-                                                  &alsa_mix_maxv) < 0)
+    if (snd_mixer_selem_get_playback_volume_range(alsa_mix_elem, &alsa_mix_minv, &alsa_mix_maxv) <
+        0)
       debug(1, "Can't read mixer's [linear] min and max volumes.");
     else {
-      if (snd_mixer_selem_get_playback_dB_range(alsa_mix_elem, &alsa_mix_mindb,
-                                                &alsa_mix_maxdb) == 0) {
+      if (snd_mixer_selem_get_playback_dB_range(alsa_mix_elem, &alsa_mix_mindb, &alsa_mix_maxdb) ==
+          0) {
 
-        audio_alsa.volume =
-            &volume; // insert the volume function now we know it can do dB stuff
+        audio_alsa.volume = &volume; // insert the volume function now we know it can do dB stuff
         audio_alsa.parameters = &parameters; // likewise the parameters stuff
         if (alsa_mix_mindb == SND_CTL_TLV_DB_GAIN_MUTE) {
           // Raspberry Pi does this
           debug(1, "Lowest dB value is a mute -- try minimum volume +1");
-          if (snd_mixer_selem_ask_playback_vol_dB(
-                  alsa_mix_elem, alsa_mix_minv + 1, &alsa_mix_mindb) != 0)
+          if (snd_mixer_selem_ask_playback_vol_dB(alsa_mix_elem, alsa_mix_minv + 1,
+                                                  &alsa_mix_mindb) != 0)
             debug(1, "Can't get dB value corresponding to a minimum volume + 1.");
         }
-        debug(1, "Hardware mixer has dB volume from %f to %f.",
-              (1.0 * alsa_mix_mindb) / 100.0, (1.0 * alsa_mix_maxdb) / 100.0);
+        debug(1, "Hardware mixer has dB volume from %f to %f.", (1.0 * alsa_mix_mindb) / 100.0,
+              (1.0 * alsa_mix_maxdb) / 100.0);
       } else {
         // use the linear scale and do the db conversion ourselves
         debug(1, "note: the hardware mixer specified -- \"%s\" -- does not have "
@@ -357,16 +348,12 @@ static int init(int argc, char **argv) {
         snd_ctl_elem_id_set_interface(elem_id, SND_CTL_ELEM_IFACE_MIXER);
         snd_ctl_elem_id_set_name(elem_id, alsa_mix_ctrl);
 
-        if (snd_ctl_get_dB_range(ctl, elem_id, &alsa_mix_mindb,
-                                               &alsa_mix_maxdb) == 0) {
-          debug(1, "Volume control \"%s\" has dB volume from %f to %f.",
-                    alsa_mix_ctrl,
-                    (1.0 * alsa_mix_mindb) / 100.0,
-                    (1.0 * alsa_mix_maxdb) / 100.0);
+        if (snd_ctl_get_dB_range(ctl, elem_id, &alsa_mix_mindb, &alsa_mix_maxdb) == 0) {
+          debug(1, "Volume control \"%s\" has dB volume from %f to %f.", alsa_mix_ctrl,
+                (1.0 * alsa_mix_mindb) / 100.0, (1.0 * alsa_mix_maxdb) / 100.0);
           has_softvol = 1;
         } else {
-          debug(1, "Cannot get the dB range from the volume control \"%s\"",
-                    alsa_mix_ctrl);
+          debug(1, "Cannot get the dB range from the volume control \"%s\"", alsa_mix_ctrl);
         }
 
         /*
@@ -386,14 +373,13 @@ static int init(int argc, char **argv) {
       }
     }
     if (snd_mixer_selem_has_playback_switch(alsa_mix_elem)) {
-      audio_alsa.mute =
-          &mute; // insert the mute function now we know it can do muting stuff
+      audio_alsa.mute = &mute; // insert the mute function now we know it can do muting stuff
       debug(1, "Has mute ability.");
     }
 
     snd_mixer_close(alsa_mix_handle);
   }
-  
+
   alsa_mix_handle = NULL;
   pthread_mutex_unlock(&alsa_mutex);
   return 0;
@@ -408,7 +394,7 @@ static void deinit(void) {
 }
 
 int open_alsa_device(void) {
-  
+
   const snd_pcm_uframes_t minimal_buffer_headroom =
       352 * 2; // we accept this much headroom in the hardware buffer, but we'll
                // accept less
@@ -436,77 +422,83 @@ int open_alsa_device(void) {
         alsa_out_dev);
   }
 
-  if ((config.no_mmap == 0) && (snd_pcm_hw_params_set_access(alsa_handle, alsa_params, SND_PCM_ACCESS_MMAP_INTERLEAVED) >= 0)) {
-  	if (output_method_signalled==0) {
-  		debug(1,"Output written using MMAP");
-  		output_method_signalled=1;
-  	}
+  if ((config.no_mmap == 0) &&
+      (snd_pcm_hw_params_set_access(alsa_handle, alsa_params, SND_PCM_ACCESS_MMAP_INTERLEAVED) >=
+       0)) {
+    if (output_method_signalled == 0) {
+      debug(1, "Output written using MMAP");
+      output_method_signalled = 1;
+    }
     access = SND_PCM_ACCESS_MMAP_INTERLEAVED;
     alsa_pcm_write = snd_pcm_mmap_writei;
   } else {
-  	if (output_method_signalled==0) {
-  		debug(1,"Output written with RW");
-  		output_method_signalled=1;
-  	}
+    if (output_method_signalled == 0) {
+      debug(1, "Output written with RW");
+      output_method_signalled = 1;
+    }
     access = SND_PCM_ACCESS_RW_INTERLEAVED;
     alsa_pcm_write = snd_pcm_writei;
   }
 
   ret = snd_pcm_hw_params_set_access(alsa_handle, alsa_params, access);
   if (ret < 0) {
-    die("audio_alsa: Access type not available for device \"%s\": %s",
-        alsa_out_dev, snd_strerror(ret));
+    die("audio_alsa: Access type not available for device \"%s\": %s", alsa_out_dev,
+        snd_strerror(ret));
   }
 
   ret = snd_pcm_hw_params_set_format(alsa_handle, alsa_params, sample_format);
   if (ret < 0) {
-    die("audio_alsa: Sample format %d not available for device \"%s\": %s",
-        sample_format, alsa_out_dev, snd_strerror(ret));
+    die("audio_alsa: Sample format %d not available for device \"%s\": %s", sample_format,
+        alsa_out_dev, snd_strerror(ret));
   }
 
   ret = snd_pcm_hw_params_set_channels(alsa_handle, alsa_params, 2);
   if (ret < 0) {
-    die("audio_alsa: Channels count (2) not available for device \"%s\": %s",
-        alsa_out_dev, snd_strerror(ret));
+    die("audio_alsa: Channels count (2) not available for device \"%s\": %s", alsa_out_dev,
+        snd_strerror(ret));
   }
 
-  ret = snd_pcm_hw_params_set_rate_near(alsa_handle, alsa_params,
-                                        &my_sample_rate, &dir);
+  ret = snd_pcm_hw_params_set_rate_near(alsa_handle, alsa_params, &my_sample_rate, &dir);
   if (ret < 0) {
-    die("audio_alsa: Rate %iHz not available for playback: %s",
-        desired_sample_rate, snd_strerror(ret));
+    die("audio_alsa: Rate %iHz not available for playback: %s", desired_sample_rate,
+        snd_strerror(ret));
   }
 
-	if (set_period_size_request!=0) {
-		debug(1,"Attempting to set the period size");
-		ret = snd_pcm_hw_params_set_period_size_near(alsa_handle, alsa_params, &period_size_requested, &dir);
-		if (ret < 0) {
-			die("audio_alsa: cannot set period size of %lu: %s",
-					period_size_requested, snd_strerror(ret));
-		snd_pcm_uframes_t actual_period_size;
-		snd_pcm_hw_params_get_period_size(alsa_params, &actual_period_size, &dir);
-		if (actual_period_size!=period_size_requested)
-			inform("Actual period size set to a different value than requested. Requested: %lu, actual setting: %lu",period_size_requested,actual_period_size);
-		}
+  if (set_period_size_request != 0) {
+    debug(1, "Attempting to set the period size");
+    ret = snd_pcm_hw_params_set_period_size_near(alsa_handle, alsa_params, &period_size_requested,
+                                                 &dir);
+    if (ret < 0) {
+      die("audio_alsa: cannot set period size of %lu: %s", period_size_requested,
+          snd_strerror(ret));
+      snd_pcm_uframes_t actual_period_size;
+      snd_pcm_hw_params_get_period_size(alsa_params, &actual_period_size, &dir);
+      if (actual_period_size != period_size_requested)
+        inform("Actual period size set to a different value than requested. Requested: %lu, actual "
+               "setting: %lu",
+               period_size_requested, actual_period_size);
+    }
   }
 
-	if (set_buffer_size_request!=0) {
-		debug(1,"Attempting to set the buffer size to %lu",buffer_size_requested);
-		ret = snd_pcm_hw_params_set_buffer_size_near(alsa_handle, alsa_params, &buffer_size_requested);
-		if (ret < 0) {
-			die("audio_alsa: cannot set buffer size of %lu: %s",
-					buffer_size_requested, snd_strerror(ret));
-		snd_pcm_uframes_t actual_buffer_size;
-		snd_pcm_hw_params_get_buffer_size(alsa_params, &actual_buffer_size);
-		if (actual_buffer_size!=buffer_size_requested)
-			inform("Actual period size set to a different value than requested. Requested: %lu, actual setting: %lu",buffer_size,actual_buffer_size);
-		}
+  if (set_buffer_size_request != 0) {
+    debug(1, "Attempting to set the buffer size to %lu", buffer_size_requested);
+    ret = snd_pcm_hw_params_set_buffer_size_near(alsa_handle, alsa_params, &buffer_size_requested);
+    if (ret < 0) {
+      die("audio_alsa: cannot set buffer size of %lu: %s", buffer_size_requested,
+          snd_strerror(ret));
+      snd_pcm_uframes_t actual_buffer_size;
+      snd_pcm_hw_params_get_buffer_size(alsa_params, &actual_buffer_size);
+      if (actual_buffer_size != buffer_size_requested)
+        inform("Actual period size set to a different value than requested. Requested: %lu, actual "
+               "setting: %lu",
+               buffer_size, actual_buffer_size);
+    }
   }
 
   ret = snd_pcm_hw_params(alsa_handle, alsa_params);
   if (ret < 0) {
-    die("audio_alsa: Unable to set hw parameters for device \"%s\": %s.",
-        alsa_out_dev, snd_strerror(ret));
+    die("audio_alsa: Unable to set hw parameters for device \"%s\": %s.", alsa_out_dev,
+        snd_strerror(ret));
   }
 
   if (my_sample_rate != desired_sample_rate) {
@@ -515,12 +507,11 @@ int open_alsa_device(void) {
 
   ret = snd_pcm_hw_params_get_buffer_size(alsa_params, &actual_buffer_length);
   if (ret < 0) {
-    die("audio_alsa: Unable to get hw buffer length for device \"%s\": %s.",
-        alsa_out_dev, snd_strerror(ret));
+    die("audio_alsa: Unable to get hw buffer length for device \"%s\": %s.", alsa_out_dev,
+        snd_strerror(ret));
   }
 
-  if (actual_buffer_length <
-      config.audio_backend_buffer_desired_length + minimal_buffer_headroom) {
+  if (actual_buffer_length < config.audio_backend_buffer_desired_length + minimal_buffer_headroom) {
     /*
     // the dac buffer is too small, so let's try to set it
     buffer_size =
@@ -543,153 +534,158 @@ int open_alsa_device(void) {
           buffer_size);
     }
     */
-    debug(1,"The alsa buffer is to small (%lu bytes) to accommodate the desired backend buffer length (%ld) you have chosen.",actual_buffer_length,config.audio_backend_buffer_desired_length);
+    debug(1, "The alsa buffer is to small (%lu bytes) to accommodate the desired backend buffer "
+             "length (%ld) you have chosen.",
+          actual_buffer_length, config.audio_backend_buffer_desired_length);
   }
-  
-  if (alsa_characteristics_already_listed==0) {
-  		alsa_characteristics_already_listed=1;
-  		int log_level = 2; // the level at which debug information should be output
-  		int rc;
-  		snd_pcm_access_t access_type;
-  		snd_pcm_format_t format_type;
-  		snd_pcm_subformat_t subformat_type;
-			unsigned int val, val2;
-			unsigned int uval, uval2;
-			int sval;
-			int dir;
-			snd_pcm_uframes_t frames;
 
-			debug(log_level,"PCM handle name = '%s'",
-						 snd_pcm_name(alsa_handle));
-			
-//			ret = snd_pcm_hw_params_any(alsa_handle, alsa_params);
-//			if (ret < 0) {
-//				die("audio_alsa: Cannpot get configuration for device \"%s\": no configurations "
-//						"available",
-//						alsa_out_dev);
-//			}
+  if (alsa_characteristics_already_listed == 0) {
+    alsa_characteristics_already_listed = 1;
+    int log_level = 2; // the level at which debug information should be output
+    int rc;
+    snd_pcm_access_t access_type;
+    snd_pcm_format_t format_type;
+    snd_pcm_subformat_t subformat_type;
+    unsigned int val, val2;
+    unsigned int uval, uval2;
+    int sval;
+    int dir;
+    snd_pcm_uframes_t frames;
 
-			debug(log_level,"alsa device parameters:");
+    debug(log_level, "PCM handle name = '%s'", snd_pcm_name(alsa_handle));
 
-			snd_pcm_hw_params_get_access(alsa_params,&access_type);			
-			debug(log_level,"  access type = %s", snd_pcm_access_name(access_type));
+    //			ret = snd_pcm_hw_params_any(alsa_handle, alsa_params);
+    //			if (ret < 0) {
+    //				die("audio_alsa: Cannpot get configuration for device \"%s\": no
+    // configurations
+    //"
+    //						"available",
+    //						alsa_out_dev);
+    //			}
 
-			snd_pcm_hw_params_get_format(alsa_params,&format_type);
-			debug(log_level,"  format = '%s' (%s)",snd_pcm_format_name(format_type),snd_pcm_format_description(format_type));
+    debug(log_level, "alsa device parameters:");
 
-			snd_pcm_hw_params_get_subformat(alsa_params,&subformat_type);
-			debug(log_level,"  subformat = '%s' (%s)",snd_pcm_subformat_name(subformat_type),snd_pcm_subformat_description(subformat_type));
+    snd_pcm_hw_params_get_access(alsa_params, &access_type);
+    debug(log_level, "  access type = %s", snd_pcm_access_name(access_type));
 
-			snd_pcm_hw_params_get_channels(alsa_params, &uval);
-			debug(log_level,"  number of channels = %u", uval);
+    snd_pcm_hw_params_get_format(alsa_params, &format_type);
+    debug(log_level, "  format = '%s' (%s)", snd_pcm_format_name(format_type),
+          snd_pcm_format_description(format_type));
 
-			sval = snd_pcm_hw_params_get_sbits(alsa_params);
-			debug(log_level,"  number of significant bits = %d", sval);
-			
-			snd_pcm_hw_params_get_rate(alsa_params, &uval, &dir);
- 			switch (dir) {
-			  case -1:
-			    debug(log_level,"  rate = %u frames per second (<).", uval);
-			    break;
-			  case 0:
-			    debug(log_level,"  rate = %u frames per second (precisely).", uval);
-			    break;
-			  case 1:
-			    debug(log_level,"  rate = %u frames per second (>).", uval);
-			    break;
-			}
+    snd_pcm_hw_params_get_subformat(alsa_params, &subformat_type);
+    debug(log_level, "  subformat = '%s' (%s)", snd_pcm_subformat_name(subformat_type),
+          snd_pcm_subformat_description(subformat_type));
 
-			if (snd_pcm_hw_params_get_rate_numden(alsa_params,&uval, &uval2)==0)
-				debug(log_level,"  precise (rational) rate = %.3f frames per second (i.e. %u/%u).", uval, uval2, ((double)uval)/uval2);
-			else
-				debug(log_level,"  precise (rational) rate information unavailable.");
+    snd_pcm_hw_params_get_channels(alsa_params, &uval);
+    debug(log_level, "  number of channels = %u", uval);
 
-			snd_pcm_hw_params_get_period_time(alsa_params,&uval, &dir);			
-			switch (dir) {
-			  case -1:
-			    debug(log_level,"  period_time = %u us (<).", uval);
-			    break;
-			  case 0:
-			    debug(log_level,"  period_time = %u us (precisely).", uval);
-			    break;
-			  case 1:
-			    debug(log_level,"  period_time = %u us (>).", uval);
-			    break;
-			}
+    sval = snd_pcm_hw_params_get_sbits(alsa_params);
+    debug(log_level, "  number of significant bits = %d", sval);
 
-			snd_pcm_hw_params_get_period_size(alsa_params,&frames, &dir);
-			switch (dir) {
-			  case -1:
-			    debug(log_level,"  period_size = %lu frames (<).", frames);
-			    break;
-			  case 0:
-			    debug(log_level,"  period_size = %lu frames (precisely).", frames);
-			    break;
-			  case 1:
-			    debug(log_level,"  period_size = %lu frames (>).", frames);
-			    break;
-			}
+    snd_pcm_hw_params_get_rate(alsa_params, &uval, &dir);
+    switch (dir) {
+    case -1:
+      debug(log_level, "  rate = %u frames per second (<).", uval);
+      break;
+    case 0:
+      debug(log_level, "  rate = %u frames per second (precisely).", uval);
+      break;
+    case 1:
+      debug(log_level, "  rate = %u frames per second (>).", uval);
+      break;
+    }
 
-			snd_pcm_hw_params_get_buffer_time(alsa_params,&uval, &dir);
-			switch (dir) {
-			  case -1:
-			    debug(log_level,"  buffer_time = %u us (<).", uval);
-			    break;
-			  case 0:
-			    debug(log_level,"  buffer_time = %u us (precisely).", uval);
-			    break;
-			  case 1:
-			    debug(log_level,"  buffer_time = %u us (>).", uval);
-			    break;
-			}
+    if (snd_pcm_hw_params_get_rate_numden(alsa_params, &uval, &uval2) == 0)
+      debug(log_level, "  precise (rational) rate = %.3f frames per second (i.e. %u/%u).", uval,
+            uval2, ((double)uval) / uval2);
+    else
+      debug(log_level, "  precise (rational) rate information unavailable.");
 
-			snd_pcm_hw_params_get_buffer_size(alsa_params,&frames);
-			switch (dir) {
-			  case -1:
-			    debug(log_level,"  buffer_size = %lu frames (<).", frames);
-			    break;
-			  case 0:
-			    debug(log_level,"  buffer_size = %lu frames (precisely).", frames);
-			    break;
-			  case 1:
-			    debug(log_level,"  buffer_size = %lu frames (>).", frames);
-			    break;
-			}
-			
-			snd_pcm_hw_params_get_periods(alsa_params, &uval, &dir);
-			switch (dir) {
-			  case -1:
-			    debug(log_level,"  periods_per_buffer = %u (<).", uval);
-			    break;
-			  case 0:
-			    debug(log_level,"  periods_per_buffer = %u (precisely).", uval);
-			    break;
-			  case 1:
-			    debug(log_level,"  periods_per_buffer = %u (>).", uval);
-			    break;
-			}
-		}
-  
+    snd_pcm_hw_params_get_period_time(alsa_params, &uval, &dir);
+    switch (dir) {
+    case -1:
+      debug(log_level, "  period_time = %u us (<).", uval);
+      break;
+    case 0:
+      debug(log_level, "  period_time = %u us (precisely).", uval);
+      break;
+    case 1:
+      debug(log_level, "  period_time = %u us (>).", uval);
+      break;
+    }
+
+    snd_pcm_hw_params_get_period_size(alsa_params, &frames, &dir);
+    switch (dir) {
+    case -1:
+      debug(log_level, "  period_size = %lu frames (<).", frames);
+      break;
+    case 0:
+      debug(log_level, "  period_size = %lu frames (precisely).", frames);
+      break;
+    case 1:
+      debug(log_level, "  period_size = %lu frames (>).", frames);
+      break;
+    }
+
+    snd_pcm_hw_params_get_buffer_time(alsa_params, &uval, &dir);
+    switch (dir) {
+    case -1:
+      debug(log_level, "  buffer_time = %u us (<).", uval);
+      break;
+    case 0:
+      debug(log_level, "  buffer_time = %u us (precisely).", uval);
+      break;
+    case 1:
+      debug(log_level, "  buffer_time = %u us (>).", uval);
+      break;
+    }
+
+    snd_pcm_hw_params_get_buffer_size(alsa_params, &frames);
+    switch (dir) {
+    case -1:
+      debug(log_level, "  buffer_size = %lu frames (<).", frames);
+      break;
+    case 0:
+      debug(log_level, "  buffer_size = %lu frames (precisely).", frames);
+      break;
+    case 1:
+      debug(log_level, "  buffer_size = %lu frames (>).", frames);
+      break;
+    }
+
+    snd_pcm_hw_params_get_periods(alsa_params, &uval, &dir);
+    switch (dir) {
+    case -1:
+      debug(log_level, "  periods_per_buffer = %u (<).", uval);
+      break;
+    case 0:
+      debug(log_level, "  periods_per_buffer = %u (precisely).", uval);
+      break;
+    case 1:
+      debug(log_level, "  periods_per_buffer = %u (>).", uval);
+      break;
+    }
+  }
+
   return (0);
 }
 
 static void start(int i_sample_rate, int i_sample_format) {
   // debug(2,"audio_alsa start called.");
-  if (i_sample_rate==0)
+  if (i_sample_rate == 0)
     desired_sample_rate = 44100; // default
   else
     desired_sample_rate = i_sample_rate; // must be a variable
-  
-  if (i_sample_format==0)
-    sample_format = SND_PCM_FORMAT_S16_LE; // default 
+
+  if (i_sample_format == 0)
+    sample_format = SND_PCM_FORMAT_S16_LE; // default
   else
     sample_format = i_sample_format;
-    
 }
 
-int delay(long* the_delay) {
-  //snd_pcm_sframes_t is a signed long -- hence the return of a "long"
-	int reply;
+int delay(long *the_delay) {
+  // snd_pcm_sframes_t is a signed long -- hence the return of a "long"
+  int reply;
   // debug(3,"audio_alsa delay called.");
   if (alsa_handle == NULL) {
     return -ENODEV;
@@ -709,12 +705,11 @@ int delay(long* the_delay) {
       reply = 0; // no error
     } else {
       if (snd_pcm_state(alsa_handle) == SND_PCM_STATE_XRUN) {
-				*the_delay = 0;
-      	reply = 0; // no error
+        *the_delay = 0;
+        reply = 0; // no error
       } else {
         reply = -EIO;
-        debug(1, "Error -- ALSA delay(): bad state: %d.",
-              snd_pcm_state(alsa_handle));
+        debug(1, "Error -- ALSA delay(): bad state: %d.", snd_pcm_state(alsa_handle));
       }
       if ((derr = snd_pcm_prepare(alsa_handle))) {
         ignore = snd_pcm_recover(alsa_handle, derr, 1);
@@ -723,8 +718,8 @@ int delay(long* the_delay) {
     }
     pthread_mutex_unlock(&alsa_mutex);
     // here, occasionally pretend there's a problem with pcm_get_delay()
-		//if ((random() % 100000) < 3) // keep it pretty rare
-		//	reply = -EPERM; // pretend something bad has happened
+    // if ((random() % 100000) < 3) // keep it pretty rare
+    //	reply = -EPERM; // pretend something bad has happened
     return reply;
   }
 }
@@ -736,7 +731,7 @@ static void play(short buf[], int samples) {
     pthread_mutex_lock(&alsa_mutex);
     ret = open_alsa_device();
     if (hardware_mixer)
-    	open_mixer();
+      open_mixer();
     pthread_mutex_unlock(&alsa_mutex);
     if ((hardware_mixer) && (ret == 0) && (audio_alsa.volume))
       audio_alsa.volume(set_volume);
@@ -747,17 +742,17 @@ static void play(short buf[], int samples) {
     int err, ignore;
     if ((snd_pcm_state(alsa_handle) == SND_PCM_STATE_PREPARED) ||
         (snd_pcm_state(alsa_handle) == SND_PCM_STATE_RUNNING)) {
-      if (buf==NULL)
-      	debug(1,"NULL buffer passed to pcm_writei -- skipping it");
-      if (samples==0)
-      	debug(1,"empty buffer being passed to pcm_writei -- skipping it");
-      if ((samples!=0) && (buf!=NULL)) {
-				err = alsa_pcm_write(alsa_handle, (char *)buf, samples);
-				if (err < 0) {
-					debug(1, "Error %d writing %d samples in play(): \"%s\".", err, samples,
-								snd_strerror(err));
-					ignore = snd_pcm_recover(alsa_handle, err, 1);
-				}
+      if (buf == NULL)
+        debug(1, "NULL buffer passed to pcm_writei -- skipping it");
+      if (samples == 0)
+        debug(1, "empty buffer being passed to pcm_writei -- skipping it");
+      if ((samples != 0) && (buf != NULL)) {
+        err = alsa_pcm_write(alsa_handle, (char *)buf, samples);
+        if (err < 0) {
+          debug(1, "Error %d writing %d samples in play(): \"%s\".", err, samples,
+                snd_strerror(err));
+          ignore = snd_pcm_recover(alsa_handle, err, 1);
+        }
       }
     } else {
       debug(1, "Error -- ALSA device in incorrect state (%d) for play.",
@@ -795,8 +790,7 @@ static void flush(void) {
     */
     if (!((snd_pcm_state(alsa_handle) == SND_PCM_STATE_PREPARED) ||
           (snd_pcm_state(alsa_handle) == SND_PCM_STATE_RUNNING)))
-      debug(1, "Flush returning unexpected state -- %d.",
-            snd_pcm_state(alsa_handle));
+      debug(1, "Flush returning unexpected state -- %d.", snd_pcm_state(alsa_handle));
 
     // flush also closes the device
     snd_pcm_close(alsa_handle);
@@ -822,7 +816,7 @@ static void parameters(audio_parameters *info) {
 
 static void volume(double vol) {
   pthread_mutex_lock(&alsa_mutex);
-	debug(2, "Setting volume db to %f.", vol);
+  debug(2, "Setting volume db to %f.", vol);
   set_volume = vol;
   if (hardware_mixer && alsa_mix_handle) {
     if (has_softvol) {
@@ -830,17 +824,17 @@ static void volume(double vol) {
         snd_ctl_elem_value_t *value;
         long raw;
 
-        if (snd_ctl_convert_from_dB(ctl, elem_id, (long) vol, &raw, 0) < 0)
-        debug(1, "Failed converting dB gain to raw volume value for the "
-                 "software volume control.");
+        if (snd_ctl_convert_from_dB(ctl, elem_id, (long)vol, &raw, 0) < 0)
+          debug(1, "Failed converting dB gain to raw volume value for the "
+                   "software volume control.");
 
         snd_ctl_elem_value_alloca(&value);
         snd_ctl_elem_value_set_id(value, elem_id);
         snd_ctl_elem_value_set_integer(value, 0, raw);
         snd_ctl_elem_value_set_integer(value, 1, raw);
         if (snd_ctl_elem_write(ctl, value) < 0)
-        debug(1, "Failed to set playback dB volume for the software volume "
-                 "control.");
+          debug(1, "Failed to set playback dB volume for the software volume "
+                   "control.");
       }
     } else {
       if (snd_mixer_selem_set_playback_dB_all(alsa_mix_elem, vol, 0) != 0) {
@@ -860,8 +854,7 @@ static void linear_volume(double vol) {
   if (hardware_mixer && alsa_mix_handle) {
     double linear_volume = pow(10, vol);
     // debug(1,"Linear volume is %f.",linear_volume);
-    long int_vol =
-        alsa_mix_minv + (alsa_mix_maxv - alsa_mix_minv) * linear_volume;
+    long int_vol = alsa_mix_minv + (alsa_mix_maxv - alsa_mix_minv) * linear_volume;
     // debug(1,"Setting volume to %ld, for volume input of %f.",int_vol,vol);
     if (alsa_mix_handle) {
       if (snd_mixer_selem_set_playback_volume_all(alsa_mix_elem, int_vol) != 0)

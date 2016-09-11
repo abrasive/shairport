@@ -25,20 +25,20 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <stdio.h>
-#include <stdarg.h>
-#include <stdlib.h>
-#include <memory.h>
 #include <errno.h>
-#include <time.h>
-#include <unistd.h>
-#include <popt.h>
+#include <memory.h>
 #include <poll.h>
+#include <popt.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <time.h>
+#include <unistd.h>
 
-#include <assert.h>
 #include "common.h"
+#include <assert.h>
 
 #ifdef COMPILE_FOR_OSX
 #include <CoreServices/CoreServices.h>
@@ -47,20 +47,20 @@
 #endif
 
 #ifdef HAVE_LIBSSL
-#include <openssl/rsa.h>
-#include <openssl/pem.h>
-#include <openssl/evp.h>
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
+#include <openssl/evp.h>
+#include <openssl/pem.h>
+#include <openssl/rsa.h>
 #endif
 
 #ifdef HAVE_LIBPOLARSSL
-#include <polarssl/version.h>
-#include <polarssl/base64.h>
-#include <polarssl/x509.h>
-#include <polarssl/md.h>
-#include "polarssl/entropy.h"
 #include "polarssl/ctr_drbg.h"
+#include "polarssl/entropy.h"
+#include <polarssl/base64.h>
+#include <polarssl/md.h>
+#include <polarssl/version.h>
+#include <polarssl/x509.h>
 
 #if POLARSSL_VERSION_NUMBER >= 0x01030000
 #include "polarssl/compat-1.2.h"
@@ -478,7 +478,8 @@ uint64_t get_absolute_time_in_fp() {
   struct timespec tn;
   // can't use CLOCK_MONOTONIC_RAW as it's not implemented in OpenWrt
   clock_gettime(CLOCK_MONOTONIC, &tn);
-  time_now_fp = ((uint64_t)tn.tv_sec << 32) + ((uint64_t)tn.tv_nsec << 32) / 1000000000; // types okay
+  time_now_fp =
+      ((uint64_t)tn.tv_sec << 32) + ((uint64_t)tn.tv_nsec << 32) / 1000000000; // types okay
 #endif
 #ifdef COMPILE_FOR_OSX
   uint64_t time_now_mach;
@@ -513,13 +514,13 @@ uint64_t get_absolute_time_in_fp() {
 }
 
 ssize_t non_blocking_write(int fd, const void *buf, size_t count) {
-	void *ibuf = (void *)buf;
-	size_t bytes_remaining = count;
-	int rc = 0;
+  void *ibuf = (void *)buf;
+  size_t bytes_remaining = count;
+  int rc = 0;
   struct pollfd ufds[1];
-	while ((bytes_remaining>0) && (rc==0)) {
-		// check that we can do some writing
-		ufds[0].fd = fd;
+  while ((bytes_remaining > 0) && (rc == 0)) {
+    // check that we can do some writing
+    ufds[0].fd = fd;
     ufds[0].events = POLLOUT;
     rc = poll(ufds, 1, 5000);
     if (rc < 0) {
@@ -527,51 +528,55 @@ ssize_t non_blocking_write(int fd, const void *buf, size_t count) {
     } else if (rc == 0) {
       // warn("non-blocking write timeout waiting for pipe to become ready for writing");
       rc = -2;
-    } else { //rc > 0, implying it might be ready
-    	size_t bytes_written = write(fd,ibuf,bytes_remaining);
-    	if (bytes_written==-1) {
-    	  // debug(1,"Error %d in non_blocking_write: \"%s\".",errno,strerror(errno));
-    		rc = -1;
-    	} else {
-    		ibuf += bytes_written;
-    		bytes_remaining -= bytes_written;
-    	}    		
+    } else { // rc > 0, implying it might be ready
+      size_t bytes_written = write(fd, ibuf, bytes_remaining);
+      if (bytes_written == -1) {
+        // debug(1,"Error %d in non_blocking_write: \"%s\".",errno,strerror(errno));
+        rc = -1;
+      } else {
+        ibuf += bytes_written;
+        bytes_remaining -= bytes_written;
+      }
     }
-	}
-	if (rc==0)
-		return count-bytes_remaining; // this is just to mimic a normal write/3.
-	else
-		return rc;
+  }
+  if (rc == 0)
+    return count - bytes_remaining; // this is just to mimic a normal write/3.
+  else
+    return rc;
   //  return write(fd,buf,count);
 }
 
-/* from http://coding.debuntu.org/c-implementing-str_replace-replace-all-occurrences-substring#comment-722 */
+/* from
+ * http://coding.debuntu.org/c-implementing-str_replace-replace-all-occurrences-substring#comment-722
+ */
 
-char *str_replace ( const char *string, const char *substr, const char *replacement ){
+char *str_replace(const char *string, const char *substr, const char *replacement) {
   char *tok = NULL;
   char *newstr = NULL;
   char *oldstr = NULL;
   char *head = NULL;
- 
+
   /* if either substr or replacement is NULL, duplicate string a let caller handle it */
-  if ( substr == NULL || replacement == NULL ) return strdup (string);
-  newstr = strdup (string);
+  if (substr == NULL || replacement == NULL)
+    return strdup(string);
+  newstr = strdup(string);
   head = newstr;
-  while ( (tok = strstr ( head, substr ))){
+  while ((tok = strstr(head, substr))) {
     oldstr = newstr;
-    newstr = malloc ( strlen ( oldstr ) - strlen ( substr ) + strlen ( replacement ) + 1 );
+    newstr = malloc(strlen(oldstr) - strlen(substr) + strlen(replacement) + 1);
     /*failed to alloc mem, free old string and return NULL */
-    if ( newstr == NULL ){
-      free (oldstr);
+    if (newstr == NULL) {
+      free(oldstr);
       return NULL;
     }
-    memcpy ( newstr, oldstr, tok - oldstr );
-    memcpy ( newstr + (tok - oldstr), replacement, strlen ( replacement ) );
-    memcpy ( newstr + (tok - oldstr) + strlen( replacement ), tok + strlen ( substr ), strlen ( oldstr ) - strlen ( substr ) - ( tok - oldstr ) );
-    memset ( newstr + strlen ( oldstr ) - strlen ( substr ) + strlen ( replacement ) , 0, 1 );
+    memcpy(newstr, oldstr, tok - oldstr);
+    memcpy(newstr + (tok - oldstr), replacement, strlen(replacement));
+    memcpy(newstr + (tok - oldstr) + strlen(replacement), tok + strlen(substr),
+           strlen(oldstr) - strlen(substr) - (tok - oldstr));
+    memset(newstr + strlen(oldstr) - strlen(substr) + strlen(replacement), 0, 1);
     /* move back head right after the last replacement */
-    head = newstr + (tok - oldstr) + strlen( replacement );
-    free (oldstr);
+    head = newstr + (tok - oldstr) + strlen(replacement);
+    free(oldstr);
   }
   return newstr;
 }
@@ -579,36 +584,35 @@ char *str_replace ( const char *string, const char *substr, const char *replacem
 /* from http://burtleburtle.net/bob/rand/smallprng.html */
 
 typedef uint64_t u8;
-typedef struct ranctx { uint64_t a; uint64_t b; uint64_t c; uint64_t d; } ranctx;
+typedef struct ranctx {
+  uint64_t a;
+  uint64_t b;
+  uint64_t c;
+  uint64_t d;
+} ranctx;
 
 static struct ranctx rx;
 
-#define rot(x,k) (((x)<<(k))|((x)>>(64-(k))))
-uint64_t ranval( ranctx *x ) {
-    uint64_t e = x->a - rot(x->b, 7);
-    x->a = x->b ^ rot(x->c, 13);
-    x->b = x->c + rot(x->d, 37);
-    x->c = x->d + e;
-    x->d = e + x->a;
-    return x->d;
+#define rot(x, k) (((x) << (k)) | ((x) >> (64 - (k))))
+uint64_t ranval(ranctx *x) {
+  uint64_t e = x->a - rot(x->b, 7);
+  x->a = x->b ^ rot(x->c, 13);
+  x->b = x->c + rot(x->d, 37);
+  x->c = x->d + e;
+  x->d = e + x->a;
+  return x->d;
 }
 
-void raninit( ranctx *x, uint64_t seed ) {
-    uint64_t i;
-    x->a = 0xf1ea5eed, x->b = x->c = x->d = seed;
-    for (i=0; i<20; ++i) {
-        (void)ranval(x);
-    }
+void raninit(ranctx *x, uint64_t seed) {
+  uint64_t i;
+  x->a = 0xf1ea5eed, x->b = x->c = x->d = seed;
+  for (i = 0; i < 20; ++i) {
+    (void)ranval(x);
+  }
 }
 
-void r64init(uint64_t seed) {
-	raninit(&rx,seed);
-}
+void r64init(uint64_t seed) { raninit(&rx, seed); }
 
-uint64_t r64u() {
-	return(ranval(&rx));
-}
+uint64_t r64u() { return (ranval(&rx)); }
 
-int64_t r64i() {
-	return(ranval(&rx)>>1);
-}
+int64_t r64i() { return (ranval(&rx) >> 1); }

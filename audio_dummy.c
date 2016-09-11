@@ -28,11 +28,11 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <stdio.h>
-#include <unistd.h>
-#include <sys/time.h>
-#include "common.h"
 #include "audio.h"
+#include "common.h"
+#include <stdio.h>
+#include <sys/time.h>
+#include <unistd.h>
 
 int Fs;
 long long starttime, samples_played;

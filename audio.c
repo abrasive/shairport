@@ -24,10 +24,10 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <stdio.h>
-#include <string.h>
 #include "audio.h"
 #include "config.h"
+#include <stdio.h>
+#include <string.h>
 
 #ifdef CONFIG_SNDIO
 extern audio_output audio_sndio;
@@ -67,7 +67,7 @@ static audio_output *outputs[] = {
 #ifdef CONFIG_DUMMY
     &audio_dummy,
 #endif
-#ifdef CONFIG_PIPE 
+#ifdef CONFIG_PIPE
     &audio_pipe,
 #endif
 #ifdef CONFIG_STDOUT

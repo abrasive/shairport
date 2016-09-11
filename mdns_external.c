@@ -24,14 +24,14 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <unistd.h>
-#include <signal.h>
-#include <fcntl.h>
-#include <string.h>
-#include <errno.h>
-#include <stdio.h>
-#include "common.h"
 #include "mdns.h"
+#include "common.h"
+#include <errno.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
 
 int mdns_pid = 0;
 
@@ -87,8 +87,8 @@ static int mdns_external_avahi_register(char *apname, int port) {
   char mdns_port[6];
   sprintf(mdns_port, "%d", config.port);
 
-  char *argvwithoutmetadata[] = {NULL, apname, config.regtype, mdns_port,
-                                 MDNS_RECORD_WITHOUT_METADATA, NULL};
+  char *argvwithoutmetadata[] = {
+      NULL, apname, config.regtype, mdns_port, MDNS_RECORD_WITHOUT_METADATA, NULL};
 #ifdef CONFIG_METADATA
   char *argvwithmetadata[] = {NULL, apname, config.regtype, mdns_port, MDNS_RECORD_WITH_METADATA,
                               NULL};
@@ -126,8 +126,8 @@ static int mdns_external_dns_sd_register(char *apname, int port) {
   char mdns_port[6];
   sprintf(mdns_port, "%d", config.port);
 
-  char *argvwithoutmetadata[] = {NULL, apname, config.regtype, mdns_port,
-                                 MDNS_RECORD_WITHOUT_METADATA, NULL};
+  char *argvwithoutmetadata[] = {
+      NULL, apname, config.regtype, mdns_port, MDNS_RECORD_WITHOUT_METADATA, NULL};
 
 #ifdef CONFIG_METADATA
   char *argvwithmetadata[] = {NULL, apname, config.regtype, mdns_port, MDNS_RECORD_WITH_METADATA,

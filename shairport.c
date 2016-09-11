@@ -25,20 +25,20 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <sys/types.h>
-#include <signal.h>
 #include <errno.h>
-#include <unistd.h>
-#include <sys/stat.h>
 #include <fcntl.h>
-#include <memory.h>
-#include <sys/wait.h>
 #include <getopt.h>
+#include <libconfig.h>
+#include <libgen.h>
+#include <memory.h>
+#include <popt.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <popt.h>
-#include <libgen.h>
-#include <libconfig.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 #include "config.h"
 
@@ -51,20 +51,20 @@
 #endif
 
 #include "common.h"
-#include "rtsp.h"
-#include "rtp.h"
 #include "mdns.h"
+#include "rtp.h"
+#include "rtsp.h"
 
+#include <libdaemon/dexec.h>
 #include <libdaemon/dfork.h>
-#include <libdaemon/dsignal.h>
 #include <libdaemon/dlog.h>
 #include <libdaemon/dpid.h>
-#include <libdaemon/dexec.h>
+#include <libdaemon/dsignal.h>
 
 static int shutting_down = 0;
 static char *appName = NULL;
-char configuration_file_path[4096+1];
-char actual_configuration_file_path[4096+1];
+char configuration_file_path[4096 + 1];
+char actual_configuration_file_path[4096 + 1];
 
 void shairport_shutdown() {
   if (shutting_down)
@@ -80,7 +80,7 @@ static void sig_ignore(int foo, siginfo_t *bar, void *baz) {}
 static void sig_shutdown(int foo, siginfo_t *bar, void *baz) {
   debug(1, "shutdown requested...");
   shairport_shutdown();
-//  daemon_log(LOG_NOTICE, "exit...");
+  //  daemon_log(LOG_NOTICE, "exit...");
   daemon_retval_send(255);
   daemon_pid_file_remove();
   exit(0);
@@ -105,52 +105,52 @@ static void sig_connect_audio_output(int foo, siginfo_t *bar, void *baz) {
   set_requested_connection_state_to_output(1);
 }
 
-char* get_version_string() {
-  char* version_string = malloc(200);
+char *get_version_string() {
+  char *version_string = malloc(200);
   if (version_string) {
     strcpy(version_string, PACKAGE_VERSION);
-  #ifdef HAVE_LIBPOLARSSL
+#ifdef HAVE_LIBPOLARSSL
     strcat(version_string, "-PolarSSL");
-  #endif
-  #ifdef HAVE_LIBSSL
+#endif
+#ifdef HAVE_LIBSSL
     strcat(version_string, "-OpenSSL");
-  #endif
-  #ifdef CONFIG_TINYSVCMDNS
+#endif
+#ifdef CONFIG_TINYSVCMDNS
     strcat(version_string, "-tinysvcmdns");
-  #endif
-  #ifdef CONFIG_AVAHI
+#endif
+#ifdef CONFIG_AVAHI
     strcat(version_string, "-Avahi");
-  #endif
-  #ifdef CONFIG_DNS_SD
+#endif
+#ifdef CONFIG_DNS_SD
     strcat(version_string, "-dns_sd");
-  #endif
-  #ifdef CONFIG_ALSA
+#endif
+#ifdef CONFIG_ALSA
     strcat(version_string, "-ALSA");
-  #endif
-  #ifdef CONFIG_SNDIO
+#endif
+#ifdef CONFIG_SNDIO
     strcat(version_string, "-sndio");
-  #endif
-  #ifdef CONFIG_AO
+#endif
+#ifdef CONFIG_AO
     strcat(version_string, "-ao");
-  #endif
-  #ifdef CONFIG_PULSE
+#endif
+#ifdef CONFIG_PULSE
     strcat(version_string, "-pulse");
-  #endif
-  #ifdef CONFIG_DUMMY
+#endif
+#ifdef CONFIG_DUMMY
     strcat(version_string, "-dummy");
-  #endif
-  #ifdef CONFIG_STDOUT
+#endif
+#ifdef CONFIG_STDOUT
     strcat(version_string, "-stdout");
-  #endif
-  #ifdef CONFIG_PIPE
+#endif
+#ifdef CONFIG_PIPE
     strcat(version_string, "-pipe");
-  #endif
-  #ifdef HAVE_LIBSOXR
+#endif
+#ifdef HAVE_LIBSOXR
     strcat(version_string, "-soxr");
-  #endif
-  #ifdef CONFIG_METADATA
+#endif
+#ifdef CONFIG_METADATA
     strcat(version_string, "-metadata");
-  #endif
+#endif
     strcat(version_string, "-sysconfdir:");
     strcat(version_string, SYSCONFDIR);
   }
@@ -158,12 +158,12 @@ char* get_version_string() {
 }
 
 void print_version(void) {
-  char* version_string = get_version_string();
+  char *version_string = get_version_string();
   if (version_string) {
     printf("%s\n", version_string);
     free(version_string);
   } else {
-    debug(1,"Can't print version string!");
+    debug(1, "Can't print version string!");
   }
 }
 
@@ -182,21 +182,25 @@ void usage(char *progname) {
          "/etc/shairport-sync.conf.\n");
 
   printf("\n");
-  printf("The following general options are for backward compatability. These and all new options have settings in the configuration file, by default /etc/shairport-sync.conf:\n");
+  printf("The following general options are for backward compatability. These and all new options "
+         "have settings in the configuration file, by default /etc/shairport-sync.conf:\n");
   printf("    -v, --verbose           -v print debug information; -vv more; -vvv lots.\n");
   printf("    -p, --port=PORT         set RTSP listening port.\n");
   printf("    -a, --name=NAME         set advertised name.\n");
-  printf(
-      "    -A, --AirPlayLatency=FRAMES [Deprecated] Set the latency for audio sent from an AirPlay device.\n");
+  printf("    -A, --AirPlayLatency=FRAMES [Deprecated] Set the latency for audio sent from an "
+         "AirPlay device.\n");
   printf("                            The default is to set it automatically.\n");
-  printf(
-      "    -i, --iTunesLatency=FRAMES [Deprecated] Set the latency for audio sent from iTunes 10 or later.\n");
+  printf("    -i, --iTunesLatency=FRAMES [Deprecated] Set the latency for audio sent from iTunes "
+         "10 or later.\n");
   printf("                            The default is to set it automatically.\n");
-  printf("    -L, --latency=FRAMES    [Deprecated] Set the latency for audio sent from an unknown device.\n");
+  printf("    -L, --latency=FRAMES    [Deprecated] Set the latency for audio sent from an unknown "
+         "device.\n");
   printf("                            The default is to set it automatically.\n");
-  printf("    --forkedDaapdLatency=FRAMES [Deprecated] Set the latency for audio sent from forked-daapd.\n");
+  printf("    --forkedDaapdLatency=FRAMES [Deprecated] Set the latency for audio sent from "
+         "forked-daapd.\n");
   printf("                            The default is to set it automatically.\n");
-  printf("    -S, --stuffing=MODE set how to adjust current latency to match desired latency, where \n");
+  printf("    -S, --stuffing=MODE set how to adjust current latency to match desired latency, "
+         "where \n");
   printf("                            \"basic\" (default) inserts or deletes audio frames from "
          "packet frames with low processor overhead, and \n");
   printf("                            \"soxr\" uses libsoxr to minimally resample packet frames -- "
@@ -209,12 +213,14 @@ void usage(char *progname) {
          "e.g. /usr/bin/logger.\n");
   printf("                            Executable scripts work, but must have #!/bin/sh (or "
          "whatever) in the headline.\n");
-  printf("    -w, --wait-cmd          wait until the -B or -E programs finish before continuing.\n");
+  printf(
+      "    -w, --wait-cmd          wait until the -B or -E programs finish before continuing.\n");
   printf("    -o, --output=BACKEND    select audio output method.\n");
   printf("    -m, --mdns=BACKEND      force the use of BACKEND to advertize the service.\n");
   printf("                            if no mdns provider is specified,\n");
   printf("                            shairport tries them all until one works.\n");
-  printf("    -r, --resync=THRESHOLD  resync if timing error exceeds this number of seconds. Set to 0 to "
+  printf("    -r, --resync=THRESHOLD  resync if timing error exceeds this number of seconds. Set "
+         "to 0 to "
          "stop resyncing.\n");
   printf("    -t, --timeout=SECONDS   go back to idle mode from play mode after a break in "
          "communications of this many seconds (default 120). Set to 0 never to exit play mode.\n");
@@ -237,12 +243,13 @@ void usage(char *progname) {
 }
 
 int parse_options(int argc, char **argv) {
-  // there are potential memory leaks here -- it's called a second time, previously allocated strings will dangle.
+  // there are potential memory leaks here -- it's called a second time, previously allocated
+  // strings will dangle.
   char *raw_service_name = NULL; /* Used to pick up the service name before possibly expanding it */
-  char *stuffing = NULL; /* used for picking up the stuffing option */
-  signed char c;      /* used for argument parsing */
-  int i = 0;          /* used for tracking options */
-  poptContext optCon; /* context for parsing command-line options */
+  char *stuffing = NULL;         /* used for picking up the stuffing option */
+  signed char c;                 /* used for argument parsing */
+  int i = 0;                     /* used for tracking options */
+  poptContext optCon;            /* context for parsing command-line options */
   struct poptOption optionsTable[] = {
       {"verbose", 'v', POPT_ARG_NONE, NULL, 'v', NULL},
       {"disconnectFromOutput", 'D', POPT_ARG_NONE, NULL, 0, NULL},
@@ -272,10 +279,9 @@ int parse_options(int argc, char **argv) {
       {"metadata-pipename", 'M', POPT_ARG_STRING, &config.metadata_pipename, 'M', NULL},
       {"get-coverart", 'g', POPT_ARG_NONE, &config.get_coverart, 'g', NULL},
 #endif
-      POPT_AUTOHELP
-      {NULL, 0, 0, NULL, 0}};
+      POPT_AUTOHELP{NULL, 0, 0, NULL, 0}};
 
-// we have to parse the command line arguments to look for a config file
+  // we have to parse the command line arguments to look for a config file
   int optind;
   optind = argc;
   int j;
@@ -285,8 +291,8 @@ int parse_options(int argc, char **argv) {
 
   optCon = poptGetContext(NULL, optind, (const char **)argv, optionsTable, 0);
   poptSetOtherOptionHelp(optCon, "[OPTIONS]* ");
-  
-   /* Now do options processing just to get a debug level */
+
+  /* Now do options processing just to get a debug level */
   debuglev = 0;
   while ((c = poptGetNextOpt(optCon)) >= 0) {
     switch (c) {
@@ -300,17 +306,17 @@ int parse_options(int argc, char **argv) {
   }
 
   config_setting_t *setting;
-  const char *str=0;
-  int value=0;
+  const char *str = 0;
+  int value = 0;
   double dvalue = 0.0;
-  
-  debug(1,"Looking for the configuration file \"%s\".",config.configfile);
-  
+
+  debug(1, "Looking for the configuration file \"%s\".", config.configfile);
+
   config_init(&config_file_stuff);
-  
+
   char *config_file_real_path = realpath(config.configfile, NULL);
-  if (config_file_real_path==NULL) {
-    debug(2,"Can't resolve the configuration file \"%s\".",config.configfile);
+  if (config_file_real_path == NULL) {
+    debug(2, "Can't resolve the configuration file \"%s\".", config.configfile);
   } else {
     debug(2, "Looking for configuration file at full path \"%s\"", config_file_real_path);
     /* Read the file. If there is an error, report it and exit. */
@@ -358,7 +364,8 @@ int parse_options(int argc, char **argv) {
           config.udp_port_base = value;
       }
 
-      /* Get the udp port range setting. This is number of ports that will be tried for free ports , starting at the port base. Only three ports are needed. */
+      /* Get the udp port range setting. This is number of ports that will be tried for free ports ,
+       * starting at the port base. Only three ports are needed. */
       if (config_lookup_int(config.cfg, "general.udp_port_range", &value)) {
         if ((value < 0) || (value > 65535))
           die("Invalid port range  \"%sd\". It should be between 0 and 65535, default is 100",
@@ -419,7 +426,7 @@ int parse_options(int argc, char **argv) {
       }
 
       /* Get the playback_mode setting */
-       if (config_lookup_string(config.cfg, "general.playback_mode", &str)) {
+      if (config_lookup_string(config.cfg, "general.playback_mode", &str)) {
         if (strcasecmp(str, "stereo") == 0)
           config.playback_mode = ST_stereo;
         else if (strcasecmp(str, "mono") == 0)
@@ -428,15 +435,17 @@ int parse_options(int argc, char **argv) {
           die("Invalid playback_mode choice \"%s\". It should be \"stereo\" (default) or \"mono\"");
       }
 
-      /* Get the regtype -- the service type and protocol, separated by a dot. Default is "_raop._tcp" */
+      /* Get the regtype -- the service type and protocol, separated by a dot. Default is
+       * "_raop._tcp" */
       if (config_lookup_string(config.cfg, "general.regtype", &str))
         config.regtype = strdup(str);
-     
 
-      /* Get the volume range, in dB, that should be used If not set, it means you just use the range set by the mixer. */
+      /* Get the volume range, in dB, that should be used If not set, it means you just use the
+       * range set by the mixer. */
       if (config_lookup_int(config.cfg, "general.volume_range_db", &value)) {
         if ((value < 30) || (value > 150))
-          die("Invalid volume range  \"%sd\". It should be between 30 and 150 dB. Zero means use the mixer's native range",
+          die("Invalid volume range  \"%sd\". It should be between 30 and 150 dB. Zero means use "
+              "the mixer's native range",
               value);
         else
           config.volume_range_db = value;
@@ -447,15 +456,16 @@ int parse_options(int argc, char **argv) {
         if (strcasecmp(str, "hammerton") == 0)
           config.use_apple_decoder = 0;
         else if (strcasecmp(str, "apple") == 0) {
-          if ((config.decoders_supported & 1<<decoder_apple_alac)!=0)
+          if ((config.decoders_supported & 1 << decoder_apple_alac) != 0)
             config.use_apple_decoder = 1;
           else
-            inform("Support for the Apple ALAC decoder has not been compiled into this version of Shairport Sync. The default decoder will be used.");
+            inform("Support for the Apple ALAC decoder has not been compiled into this version of "
+                   "Shairport Sync. The default decoder will be used.");
         } else
           die("Invalid alac_decoder option choice \"%s\". It should be \"hammerton\" or \"apple\"");
       }
 
-/* Get the default latency. Deprecated! */
+      /* Get the default latency. Deprecated! */
       if (config_lookup_int(config.cfg, "latencies.default", &value))
         config.userSuppliedLatency = value;
 
@@ -471,7 +481,7 @@ int parse_options(int argc, char **argv) {
       if (config_lookup_int(config.cfg, "latencies.forkedDaapd", &value))
         config.ForkedDaapdLatency = value;
 
-  #ifdef CONFIG_METADATA
+#ifdef CONFIG_METADATA
       /* Get the metadata setting. */
       if (config_lookup_string(config.cfg, "metadata.enabled", &str)) {
         if (strcasecmp(str, "no") == 0)
@@ -507,7 +517,7 @@ int parse_options(int argc, char **argv) {
         config.metadata_sockmsglength = value < 500 ? 500 : value > 65000 ? 65000 : value;
       }
 
-  #endif
+#endif
 
       if (config_lookup_string(config.cfg, "sessioncontrol.run_this_before_play_begins", &str)) {
         config.cmd_start = (char *)str;
@@ -534,7 +544,8 @@ int parse_options(int argc, char **argv) {
         else if (strcasecmp(str, "yes") == 0)
           config.allow_session_interruption = 1;
         else
-          die("Invalid session control allow_interruption option choice \"%s\". It should be \"yes\" "
+          die("Invalid session control allow_interruption option choice \"%s\". It should be "
+              "\"yes\" "
               "or \"no\"");
       }
 
@@ -555,8 +566,9 @@ int parse_options(int argc, char **argv) {
     free(config_file_real_path);
   }
 
-// now, do the command line options again, but this time do them fully -- it's a unix convention that command line
-// arguments have precedence over configuration file settings.
+  // now, do the command line options again, but this time do them fully -- it's a unix convention
+  // that command line
+  // arguments have precedence over configuration file settings.
 
   optind = argc;
   for (j = 0; j < argc; j++)
@@ -609,34 +621,34 @@ int parse_options(int argc, char **argv) {
   if (c < -1) {
     die("%s: %s", poptBadOption(optCon, POPT_BADOPTION_NOALIAS), poptStrerror(c));
   }
-  
+
 #ifdef CONFIG_METADATA
   if ((config.metadata_enabled == 1) && (config.metadata_pipename == NULL))
-    config.metadata_pipename=strdup("/tmp/shairport-sync-metadata");
+    config.metadata_pipename = strdup("/tmp/shairport-sync-metadata");
 #endif
 
-/* if the regtype hasn't been set, do it now */
-  if (config.regtype==NULL)
+  /* if the regtype hasn't been set, do it now */
+  if (config.regtype == NULL)
     config.regtype = strdup("_raop._tcp");
-  
-  if (tdebuglev!=0)
+
+  if (tdebuglev != 0)
     debuglev = tdebuglev;
 
-/* if the Service Name wasn't specified, do it now */
+  /* if the Service Name wasn't specified, do it now */
 
-  if (raw_service_name==NULL)
+  if (raw_service_name == NULL)
     raw_service_name = strdup("%H");
-    
-// now, do the substitutions in the service name
+
+  // now, do the substitutions in the service name
   char hostname[100];
   gethostname(hostname, 100);
-  char *i1 = str_replace(raw_service_name,"%h",hostname);
-  if ((hostname[0]>='a') && (hostname[0]<='z'))
-    hostname[0] = hostname[0]-0x20; // convert a lowercase first letter into a capital letter
-  char *i2 = str_replace(i1,"%H",hostname);
-  char *i3 = str_replace(i2,"%v",PACKAGE_VERSION);
+  char *i1 = str_replace(raw_service_name, "%h", hostname);
+  if ((hostname[0] >= 'a') && (hostname[0] <= 'z'))
+    hostname[0] = hostname[0] - 0x20; // convert a lowercase first letter into a capital letter
+  char *i2 = str_replace(i1, "%H", hostname);
+  char *i3 = str_replace(i2, "%v", PACKAGE_VERSION);
   char *vs = get_version_string();
-  config.service_name = str_replace(i3,"%V",vs);  
+  config.service_name = str_replace(i3, "%V", vs);
   free(i1);
   free(i2);
   free(i3);
@@ -724,27 +736,27 @@ int main(int argc, char **argv) {
   free(basec);
 
   // set defaults
-  
-  
+
   // get thje endianness
   union {
-   uint32_t u32;
-   uint8_t arr[4];
+    uint32_t u32;
+    uint8_t arr[4];
   } xn;
 
-  xn.arr[0] = 0x44;     /* Lowest-address byte */
+  xn.arr[0] = 0x44; /* Lowest-address byte */
   xn.arr[1] = 0x33;
   xn.arr[2] = 0x22;
-  xn.arr[3] = 0x11;     /* Highest-address byte */
-  
-  if (xn.u32==0x11223344)
+  xn.arr[3] = 0x11; /* Highest-address byte */
+
+  if (xn.u32 == 0x11223344)
     endianness = SS_LITTLE_ENDIAN;
-  else if (xn.u32==0x33441122)
+  else if (xn.u32 == 0x33441122)
     endianness = SS_PDP_ENDIAN;
-  else if (xn.u32==0x44332211)
+  else if (xn.u32 == 0x44332211)
     endianness = SS_BIG_ENDIAN;
-  else die("Can not recognise the endianness of the processor.");
-  
+  else
+    die("Can not recognise the endianness of the processor.");
+
   strcpy(configuration_file_path, SYSCONFDIR);
   strcat(configuration_file_path, "/");
   strcat(configuration_file_path, appName);
@@ -752,38 +764,44 @@ int main(int argc, char **argv) {
   config.configfile = configuration_file_path;
 
   config.statistics_requested = 0; // don't print stats in the log
-  config.latency = -1;             // -1 means not set. 88200 works well. This is also reset in rtsp.c when play is about to start
-  config.userSuppliedLatency = 0;  // zero means none supplied
-  config.iTunesLatency = -1;       // -1 means not supplied. 99400 seems to work pretty well for iTunes from Version 10 (?)
-                                   // upwards-- two left-ear headphones, one from the iMac jack, one
-                                   // from an NSLU2 running a cheap "3D Sound" USB Soundcard
-  config.AirPlayLatency = -1;      // -1 means not set. 88200 seems to work well for AirPlay -- Syncs sound and
-                                   // vision on AppleTV, but also used for iPhone/iPod/iPad sources
-  config.ForkedDaapdLatency = -1;  // -1 means not set. 99400 seems to be right
-  config.resyncthreshold = 0.05;   // 50 ms
+  config.latency = -1; // -1 means not set. 88200 works well. This is also reset in rtsp.c when play
+                       // is about to start
+  config.userSuppliedLatency = 0; // zero means none supplied
+  config.iTunesLatency =
+      -1; // -1 means not supplied. 99400 seems to work pretty well for iTunes from Version 10 (?)
+          // upwards-- two left-ear headphones, one from the iMac jack, one
+          // from an NSLU2 running a cheap "3D Sound" USB Soundcard
+  config.AirPlayLatency =
+      -1; // -1 means not set. 88200 seems to work well for AirPlay -- Syncs sound and
+          // vision on AppleTV, but also used for iPhone/iPod/iPad sources
+  config.ForkedDaapdLatency = -1; // -1 means not set. 99400 seems to be right
+  config.resyncthreshold = 0.05;  // 50 ms
   config.timeout = 120; // this number of seconds to wait for [more] audio before switching to idle.
-  config.tolerance = 0.002; // this number of seconds of timing error before attempting to correct it.
+  config.tolerance =
+      0.002; // this number of seconds of timing error before attempting to correct it.
   config.buffer_start_fill = 220;
   config.port = 5000;
   config.packet_stuffing = ST_basic; // simple interpolation or deletion
-  //char hostname[100];
-  //gethostname(hostname, 100);
-  //config.service_name = malloc(20 + 100);
-  //snprintf(config.service_name, 20 + 100, "Shairport Sync on %s", hostname);
-  set_requested_connection_state_to_output(1); // we expect to be able to connect to the output device
+  // char hostname[100];
+  // gethostname(hostname, 100);
+  // config.service_name = malloc(20 + 100);
+  // snprintf(config.service_name, 20 + 100, "Shairport Sync on %s", hostname);
+  set_requested_connection_state_to_output(
+      1); // we expect to be able to connect to the output device
   config.audio_backend_buffer_desired_length = 6615; // 0.15 seconds.
   config.udp_port_base = 6001;
   config.udp_port_range = 100;
   config.output_format = SPS_FORMAT_S16_LE; // default
-  config.output_rate = 44100; // default   
-  config.decoders_supported = 1<<decoder_hammerton; // David Hammerton's decoder supported by default
- #ifdef HAVE_APPLE_ALAC
-  config.decoders_supported += 1<<decoder_apple_alac;
- #endif
- 
- // initialise random number generator
- 
- r64init(0);
+  config.output_rate = 44100;               // default
+  config.decoders_supported =
+      1 << decoder_hammerton; // David Hammerton's decoder supported by default
+#ifdef HAVE_APPLE_ALAC
+  config.decoders_supported += 1 << decoder_apple_alac;
+#endif
+
+  // initialise random number generator
+
+  r64init(0);
 
   /* Check if we are called with -V or --version parameter */
   if (argc >= 2 && ((strcmp(argv[1], "-V") == 0) || (strcmp(argv[1], "--version") == 0))) {
@@ -878,7 +896,7 @@ int main(int argc, char **argv) {
   // mDNS supports maximum of 63-character names (we append 13).
   if (strlen(config.service_name) > 50) {
     warn("Supplied name too long (max 50 characters)");
-    config.service_name[50] = '\0'; //truncate it and carry on...
+    config.service_name[50] = '\0'; // truncate it and carry on...
   }
 
   /* here, daemonise with libdaemon */
@@ -948,69 +966,84 @@ int main(int argc, char **argv) {
   config.output->init(argc - audio_arg, argv + audio_arg);
 
   // daemon_log(LOG_NOTICE, "startup");
-  
+
   switch (endianness) {
-    case SS_LITTLE_ENDIAN:
-      debug(2,"The processor is running little-endian.");
-      break;
-    case SS_BIG_ENDIAN:
-      debug(2,"The processor is running big-endian.");
-      break;
-    case SS_PDP_ENDIAN:
-      debug(2,"The processor is running pdp-endian.");
-      break; 
+  case SS_LITTLE_ENDIAN:
+    debug(2, "The processor is running little-endian.");
+    break;
+  case SS_BIG_ENDIAN:
+    debug(2, "The processor is running big-endian.");
+    break;
+  case SS_PDP_ENDIAN:
+    debug(2, "The processor is running pdp-endian.");
+    break;
   }
-  
+
   /* Mess around with the latency options */
-  // Basically, we used to rely on static latencies -- 99400 for iTunes 10 or later and forkedDaapd, 88200 for everything else
-  // Nowadays we allow the source to set the latency, which works out at 99651 for iTunes 10 and forkedDaapd and 88220 for everything else
-  // What we want to do here is allow the source to set the latency unless the user has specified an non-standard latency.
+  // Basically, we used to rely on static latencies -- 99400 for iTunes 10 or later and forkedDaapd,
+  // 88200 for everything else
+  // Nowadays we allow the source to set the latency, which works out at 99651 for iTunes 10 and
+  // forkedDaapd and 88220 for everything else
+  // What we want to do here is allow the source to set the latency unless the user has specified an
+  // non-standard latency.
   // If the user has specified a standard latency, we suggest to them to stop doing it.
-  // If they specify a non-standard latency, we suggest the user to use the audio_backend_latency_offset instead.
-  
-  if (config.AirPlayLatency!=-1) {
-    if (config.AirPlayLatency==88200) {
-      inform("It is not necessary to set the AirPlay latency to 88200 -- you should remove this setting or configuration option, as it is deprecated.");
-      config.AirPlayLatency= -1;
+  // If they specify a non-standard latency, we suggest the user to use the
+  // audio_backend_latency_offset instead.
+
+  if (config.AirPlayLatency != -1) {
+    if (config.AirPlayLatency == 88200) {
+      inform("It is not necessary to set the AirPlay latency to 88200 -- you should remove this "
+             "setting or configuration option, as it is deprecated.");
+      config.AirPlayLatency = -1;
     } else {
-      inform("The AirPlay latency setting is deprecated, as Shairport Sync can now get the correct latency from the source.");
-      inform("Please remove this setting and use the relevant audio_backend_latency_offset setting, if necessary, to compensate for delays elsewhere.");
+      inform("The AirPlay latency setting is deprecated, as Shairport Sync can now get the correct "
+             "latency from the source.");
+      inform("Please remove this setting and use the relevant audio_backend_latency_offset "
+             "setting, if necessary, to compensate for delays elsewhere.");
     }
   }
-  
-  if (config.iTunesLatency!=-1) {
-    if (config.iTunesLatency==99400) {
-      inform("It is not necessary to set the iTunes latency to 99400 -- you should remove this setting or configuration option, as it is deprecated and ignored.");
-      config.iTunesLatency= -1;
+
+  if (config.iTunesLatency != -1) {
+    if (config.iTunesLatency == 99400) {
+      inform("It is not necessary to set the iTunes latency to 99400 -- you should remove this "
+             "setting or configuration option, as it is deprecated and ignored.");
+      config.iTunesLatency = -1;
     } else {
-      inform("The iTunes latency setting is deprecated, as Shairport Sync can now get the correct latency from the source.");
-      inform("Please remove this setting and use the relevant audio_backend_latency_offset setting, if necessary, to compensate for delays elsewhere.");
+      inform("The iTunes latency setting is deprecated, as Shairport Sync can now get the correct "
+             "latency from the source.");
+      inform("Please remove this setting and use the relevant audio_backend_latency_offset "
+             "setting, if necessary, to compensate for delays elsewhere.");
     }
   }
-  
-  if (config.ForkedDaapdLatency!=-1) {
-    if (config.ForkedDaapdLatency==99400) {
-      inform("It is not necessary to set the forkedDaapd latency to 99400 -- you should remove this setting or configuration option, as it is deprecated and ignored.");
-      config.ForkedDaapdLatency= -1;
+
+  if (config.ForkedDaapdLatency != -1) {
+    if (config.ForkedDaapdLatency == 99400) {
+      inform("It is not necessary to set the forkedDaapd latency to 99400 -- you should remove "
+             "this setting or configuration option, as it is deprecated and ignored.");
+      config.ForkedDaapdLatency = -1;
     } else {
-      inform("The forkedDaapd latency setting is deprecated, as Shairport Sync can now get the correct latency from the source.");
-      inform("Please remove this setting and use the relevant audio_backend_latency_offset setting, if necessary, to compensate for delays elsewhere.");
+      inform("The forkedDaapd latency setting is deprecated, as Shairport Sync can now get the "
+             "correct latency from the source.");
+      inform("Please remove this setting and use the relevant audio_backend_latency_offset "
+             "setting, if necessary, to compensate for delays elsewhere.");
     }
   }
 
   if (config.userSuppliedLatency) {
-    inform("The default latency setting is deprecated, as Shairport Sync can now get the correct latency from the source.");
-    inform("Please remove this setting and use the relevant audio_backend_latency_offset setting, if necessary, to compensate for delays elsewhere.");
+    inform("The default latency setting is deprecated, as Shairport Sync can now get the correct "
+           "latency from the source.");
+    inform("Please remove this setting and use the relevant audio_backend_latency_offset setting, "
+           "if necessary, to compensate for delays elsewhere.");
   }
-  
+
   /* print out version */
-  
-  char* version_dbs = get_version_string();
+
+  char *version_dbs = get_version_string();
   if (version_dbs) {
-    debug(1,"Version: \"%s\"",version_dbs);
+    debug(1, "Version: \"%s\"", version_dbs);
     free(version_dbs);
   } else {
-    debug(1,"Can't print the version information!");
+    debug(1, "Can't print the version information!");
   }
 
   /* Print out options */
@@ -1045,22 +1078,25 @@ int main(int argc, char **argv) {
   debug(1, "audio backend desired buffer length is %f seconds.",
         config.audio_backend_buffer_desired_length);
   debug(1, "audio backend latency offset is %f seconds.", config.audio_backend_latency_offset);
-  debug(1, "volume range in dB (zero means use the range specified by the mixer): %u.", config.volume_range_db);
+  debug(1, "volume range in dB (zero means use the range specified by the mixer): %u.",
+        config.volume_range_db);
   debug(1, "zeroconf regtype is \"%s\".", config.regtype);
   debug(1, "decoders_supported field is %d.", config.decoders_supported);
   debug(1, "use_apple_decoder is %d.", config.use_apple_decoder);
-  
-  char *realConfigPath = realpath(config.configfile,NULL);
+
+  char *realConfigPath = realpath(config.configfile, NULL);
   if (realConfigPath) {
-    debug(1, "configuration file name \"%s\" resolves to \"%s\".", config.configfile,realConfigPath);
+    debug(1, "configuration file name \"%s\" resolves to \"%s\".", config.configfile,
+          realConfigPath);
     free(realConfigPath);
   } else {
-     debug(1, "configuration file name \"%s\" can not be resolved.", config.configfile);
-  }   
+    debug(1, "configuration file name \"%s\" can not be resolved.", config.configfile);
+  }
 #ifdef CONFIG_METADATA
   debug(1, "metdata enabled is %d.", config.metadata_enabled);
   debug(1, "metadata pipename is \"%s\".", config.metadata_pipename);
-  debug(1, "metadata socket address is \"%s\" port %d.", config.metadata_sockaddr, config.metadata_sockport);
+  debug(1, "metadata socket address is \"%s\" port %d.", config.metadata_sockaddr,
+        config.metadata_sockport);
   debug(1, "metadata socket packet size is \"%d\".", config.metadata_sockmsglength);
   debug(1, "get-coverart is %d.", config.get_coverart);
 #endif
@@ -1084,7 +1120,7 @@ int main(int argc, char **argv) {
 #ifdef CONFIG_METADATA
   metadata_init(); // create the metadata pipe if necessary
 #endif
-  daemon_log(LOG_INFO,"Successful Startup");
+  daemon_log(LOG_INFO, "Successful Startup");
   rtsp_listen_loop();
 
   // should not reach this...

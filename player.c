@@ -28,22 +28,22 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include <assert.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <inttypes.h>
+#include <limits.h>
+#include <math.h>
+#include <pthread.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <sys/types.h>
-#include <pthread.h>
-#include <math.h>
-#include <sys/stat.h>
-#include <signal.h>
-#include <sys/syslog.h>
-#include <assert.h>
-#include <fcntl.h>
 #include <stdlib.h>
-#include <errno.h>
-#include <limits.h>
-#include <inttypes.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/syslog.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "config.h"
 
@@ -76,16 +76,15 @@ static AES_KEY aes;
 #endif
 static int input_rate, input_bit_depth, input_num_channels, max_frames_per_packet;
 
-static uint32_t timestamp_epoch, last_timestamp, maximum_timestamp_interval;// timestamp_epoch of zero means not initialised, could start at 2 or 1.
-
-
+static uint32_t timestamp_epoch, last_timestamp,
+    maximum_timestamp_interval; // timestamp_epoch of zero means not initialised, could start at 2
+                                // or 1.
 
 static int input_bytes_per_frame = 4;
 static int output_bytes_per_frame;
 static int output_sample_ratio;
 static int output_rate;
 static int64_t previous_random_number = 0;
-
 
 // The maximum frame size change there can be is +/- 1;
 static int max_frame_size_change;
@@ -97,11 +96,12 @@ static int max_frame_size_change;
 static aes_context dctx;
 #endif
 
-//static pthread_t player_thread = NULL;
+// static pthread_t player_thread = NULL;
 static int please_stop;
 static int encrypted; // Normally the audio is encrypted, but it may not be
 
-static int connection_state_to_output; // if true, then play incoming stuff; if false drop everything
+static int
+    connection_state_to_output; // if true, then play incoming stuff; if false drop everything
 
 static alac_file *decoder_info;
 
@@ -156,56 +156,58 @@ static uint64_t missing_packets, late_packets, too_late_packets, resend_requests
 
 // make timestamps and seqnos definitely monotonic
 
-// add an epoch to the timestamp. The monotonic timestamp guaranteed to start between 2^32 and 2^33 frames and continue up to 2^63-1 frames
+// add an epoch to the timestamp. The monotonic timestamp guaranteed to start between 2^32 and 2^33
+// frames and continue up to 2^63-1 frames
 // if should never get into the negative range
-// which is about 2*10^8 * 1,000 seconds at 384,000 frames per second -- about 2 trillion seconds or over 50,000 years.
-// also, it won't reach zero until then, if ever, so we can safely say that a null monotonic timestamp can mean something special
+// which is about 2*10^8 * 1,000 seconds at 384,000 frames per second -- about 2 trillion seconds or
+// over 50,000 years.
+// also, it won't reach zero until then, if ever, so we can safely say that a null monotonic
+// timestamp can mean something special
 int64_t monotonic_timestamp(uint32_t timestamp) {
   int64_t previous_value;
   int64_t return_value;
-  if (timestamp_epoch==0) {
-    if (timestamp>maximum_timestamp_interval)
-      timestamp_epoch=1;
+  if (timestamp_epoch == 0) {
+    if (timestamp > maximum_timestamp_interval)
+      timestamp_epoch = 1;
     else
-      timestamp_epoch=2;
+      timestamp_epoch = 2;
     previous_value = timestamp_epoch;
-    previous_value<<=32;
-    previous_value+=timestamp;
+    previous_value <<= 32;
+    previous_value += timestamp;
   } else {
     previous_value = timestamp_epoch;
-    previous_value<<=32;
-    previous_value+=last_timestamp;  
-    if (timestamp<last_timestamp) {
+    previous_value <<= 32;
+    previous_value += last_timestamp;
+    if (timestamp < last_timestamp) {
       // the incoming timestamp is less than the last one.
       // if the difference is more than a minute, assume it's really from the next epoch
-      if ((last_timestamp-timestamp)>maximum_timestamp_interval)
-        timestamp_epoch++;      
+      if ((last_timestamp - timestamp) > maximum_timestamp_interval)
+        timestamp_epoch++;
     } else {
       // the incoming timestamp is greater than the last one.
       // if the difference is more than a minute, assume it's really from the previous epoch
-      if ((timestamp-last_timestamp)>maximum_timestamp_interval)
+      if ((timestamp - last_timestamp) > maximum_timestamp_interval)
         timestamp_epoch--;
     }
   }
-  last_timestamp=timestamp;
+  last_timestamp = timestamp;
   return_value = timestamp_epoch;
-  return_value<<=32;
-  return_value+=timestamp;
-  if (previous_value>return_value) {
-   if ((previous_value-return_value)>maximum_timestamp_interval)
-    debug(1,"interval between successive rtptimes greater than allowed!");
+  return_value <<= 32;
+  return_value += timestamp;
+  if (previous_value > return_value) {
+    if ((previous_value - return_value) > maximum_timestamp_interval)
+      debug(1, "interval between successive rtptimes greater than allowed!");
   } else {
-    if ((return_value-previous_value)>maximum_timestamp_interval)
-    debug(1,"interval between successive rtptimes greater than allowed!");
+    if ((return_value - previous_value) > maximum_timestamp_interval)
+      debug(1, "interval between successive rtptimes greater than allowed!");
   }
-  if (return_value<0)
-  	debug(1,"monotonic rtptime is negative!");
+  if (return_value < 0)
+    debug(1, "monotonic rtptime is negative!");
   return return_value;
 }
 
 // add an epoch to the seq_no. Uses the accompanying timestamp to determine the correct epoch
-uint64_t monotonic_seqno(uint16_t seq_no) { 
-}
+uint64_t monotonic_seqno(uint16_t seq_no) {}
 
 static void ab_resync(void) {
   int i;
@@ -239,7 +241,7 @@ static inline seq_t PREDECESSOR(seq_t x) {
 
 // anything with ORDINATE in it must be proctected by the ab_mutex
 static inline int32_t ORDINATE(seq_t x) {
-  int32_t p = x; // int32_t from seq_t, i.e. uint16_t, so okay
+  int32_t p = x;       // int32_t from seq_t, i.e. uint16_t, so okay
   int32_t q = ab_read; // int32_t from seq_t, i.e. uint16_t, so okay
   int32_t t = (p + 0x10000 - q) & 0xffff;
   // we definitely will get a positive number in t at this point, but it might be a
@@ -296,16 +298,17 @@ static int alac_decode(short *dest, int *destlen, uint8_t *buf, int len) {
   // parameters: where the decoded stuff goes, its length in samples,
   // the incoming packet, the length of the incoming packet in bytes
   // destlen should contain the allowed max number of samples on entry
-  
-  if (len>MAX_PACKET) {
-    warn("Incoming audio packet size is too large at %d; it should not exceed %d.",len,MAX_PACKET);
+
+  if (len > MAX_PACKET) {
+    warn("Incoming audio packet size is too large at %d; it should not exceed %d.", len,
+         MAX_PACKET);
     return -1;
   }
   unsigned char packet[MAX_PACKET];
   unsigned char packetp[MAX_PACKET];
   assert(len <= MAX_PACKET);
-  int reply = 0; //everything okay
-  int outsize=input_bytes_per_frame*(*destlen); // the size the output should be, in bytes
+  int reply = 0;                                    // everything okay
+  int outsize = input_bytes_per_frame * (*destlen); // the size the output should be, in bytes
   int toutsize = outsize;
 
   if (encrypted) {
@@ -321,101 +324,132 @@ static int alac_decode(short *dest, int *destlen, uint8_t *buf, int len) {
     memcpy(packet + aeslen, buf + aeslen, len - aeslen);
 #ifdef HAVE_APPLE_ALAC
     if (config.use_apple_decoder) {
-      if (decoder_in_use!=1<<decoder_apple_alac) {
-        debug(1,"Apple ALAC Decoder used on encrypted audio.");
-        decoder_in_use=1<<decoder_apple_alac;
+      if (decoder_in_use != 1 << decoder_apple_alac) {
+        debug(1, "Apple ALAC Decoder used on encrypted audio.");
+        decoder_in_use = 1 << decoder_apple_alac;
       }
-      apple_alac_decode_frame(packet, len, (unsigned char *) dest, &outsize);
-      outsize=outsize*4; // bring the size to bytes
+      apple_alac_decode_frame(packet, len, (unsigned char *)dest, &outsize);
+      outsize = outsize * 4; // bring the size to bytes
     } else
 #endif
     {
-      if (decoder_in_use!=1<<decoder_hammerton) {
-        debug(1,"Hammerton Decoder used on encrypted audio.");
-        decoder_in_use=1<<decoder_hammerton;
+      if (decoder_in_use != 1 << decoder_hammerton) {
+        debug(1, "Hammerton Decoder used on encrypted audio.");
+        decoder_in_use = 1 << decoder_hammerton;
       }
-      alac_decode_frame(decoder_info, packet, (unsigned char *) dest, &outsize);
+      alac_decode_frame(decoder_info, packet, (unsigned char *)dest, &outsize);
     }
   } else {
-    // not encrypted
+// not encrypted
 #ifdef HAVE_APPLE_ALAC
     if (config.use_apple_decoder) {
-      if (decoder_in_use!=1<<decoder_apple_alac) {
-        debug(1,"Apple ALAC Decoder used on unencrypted audio.");
-        decoder_in_use=1<<decoder_apple_alac;
+      if (decoder_in_use != 1 << decoder_apple_alac) {
+        debug(1, "Apple ALAC Decoder used on unencrypted audio.");
+        decoder_in_use = 1 << decoder_apple_alac;
       }
-      apple_alac_decode_frame(buf, len, (unsigned char *) dest, &outsize);
-      outsize=outsize*4; // bring the size to bytes
+      apple_alac_decode_frame(buf, len, (unsigned char *)dest, &outsize);
+      outsize = outsize * 4; // bring the size to bytes
     } else
 #endif
     {
-      if (decoder_in_use!=1<<decoder_hammerton) {
-        debug(1,"Hammerton Decoder used on unencrypted audio.");
-        decoder_in_use=1<<decoder_hammerton;
+      if (decoder_in_use != 1 << decoder_hammerton) {
+        debug(1, "Hammerton Decoder used on unencrypted audio.");
+        decoder_in_use = 1 << decoder_hammerton;
       }
       alac_decode_frame(decoder_info, buf, dest, &outsize);
     }
   }
 
-  if(outsize>toutsize) {
-    debug(2,"Output from alac_decode larger (%d bytes, not frames) than expected (%d bytes) -- truncated, but buffer overflow possible! Encrypted = %d.",outsize, toutsize, encrypted);
+  if (outsize > toutsize) {
+    debug(2, "Output from alac_decode larger (%d bytes, not frames) than expected (%d bytes) -- "
+             "truncated, but buffer overflow possible! Encrypted = %d.",
+          outsize, toutsize, encrypted);
     reply = -1; // output packet is the wrong size
   }
 
   *destlen = outsize / input_bytes_per_frame;
-  if ((outsize % input_bytes_per_frame)!=0)
-    debug(1,"Number of audio frames (%d) does not correspond exactly to the number of bytes (%d) and the audio frame size (%d).",*destlen,outsize,input_bytes_per_frame);
+  if ((outsize % input_bytes_per_frame) != 0)
+    debug(1, "Number of audio frames (%d) does not correspond exactly to the number of bytes (%d) "
+             "and the audio frame size (%d).",
+          *destlen, outsize, input_bytes_per_frame);
   return reply;
 }
 
 static int init_decoder(int32_t fmtp[12]) {
 
-// This is a guess, but the format of the fmtp looks identical to the format of an ALACSpecificCOnfig
-// which is detailed in the file ALACMagicCookieDescription.txt in the Apple ALAC sample implementation
-// Here it is:
+  // This is a guess, but the format of the fmtp looks identical to the format of an
+  // ALACSpecificCOnfig
+  // which is detailed in the file ALACMagicCookieDescription.txt in the Apple ALAC sample
+  // implementation
+  // Here it is:
 
-/*
-    struct	ALACSpecificConfig (defined in ALACAudioTypes.h)
-    abstract   	This struct is used to describe codec provided information about the encoded Apple Lossless bitstream. 
-		It must accompany the encoded stream in the containing audio file and be provided to the decoder.
+  /*
+      struct	ALACSpecificConfig (defined in ALACAudioTypes.h)
+      abstract   	This struct is used to describe codec provided information about the encoded
+     Apple Lossless bitstream.
+                  It must accompany the encoded stream in the containing audio file and be provided
+     to the decoder.
 
-    field      	frameLength 		uint32_t	indicating the frames per packet when no explicit frames per packet setting is 
-							  present in the packet header. The encoder frames per packet can be explicitly set 
-							  but for maximum compatibility, the default encoder setting of 4096 should be used.
+      field      	frameLength 		uint32_t	indicating the frames per packet
+     when
+     no
+     explicit
+     frames per packet setting is
+                                                            present in the packet header. The
+     encoder frames per packet can be explicitly set
+                                                            but for maximum compatibility, the
+     default encoder setting of 4096 should be used.
 
-    field      	compatibleVersion 	uint8_t 	indicating compatible version, 
-							  value must be set to 0
+      field      	compatibleVersion 	uint8_t 	indicating compatible version,
+                                                            value must be set to 0
 
-    field      	bitDepth 		uint8_t 	describes the bit depth of the source PCM data (maximum value = 32)
+      field      	bitDepth 		uint8_t 	describes the bit depth of the source
+     PCM
+     data
+     (maximum
+     value = 32)
 
-    field      	pb 			uint8_t 	currently unused tuning parametetbugr. 
-						 	  value should be set to 40
+      field      	pb 			uint8_t 	currently unused tuning
+     parametetbugr.
+                                                            value should be set to 40
 
-    field      	mb 			uint8_t 	currently unused tuning parameter. 
-						 	  value should be set to 14
+      field      	mb 			uint8_t 	currently unused tuning parameter.
+                                                            value should be set to 14
 
-    field      	kb			uint8_t 	currently unused tuning parameter. 
-						 	  value should be set to 10
+      field      	kb			uint8_t 	currently unused tuning parameter.
+                                                            value should be set to 10
 
-    field      	numChannels 		uint8_t 	describes the channel count (1 = mono, 2 = stereo, etc...)
-							  when channel layout info is not provided in the 'magic cookie', a channel count > 2
-							  describes a set of discreet channels with no specific ordering
+      field      	numChannels 		uint8_t 	describes the channel count (1 = mono,
+     2
+     =
+     stereo,
+     etc...)
+                                                            when channel layout info is not provided
+     in the 'magic cookie', a channel count > 2
+                                                            describes a set of discreet channels
+     with no specific ordering
 
-    field      	maxRun			uint16_t 	currently unused. 
-   						  value should be set to 255
+      field      	maxRun			uint16_t 	currently unused.
+                                                    value should be set to 255
 
-    field      	maxFrameBytes 		uint32_t 	the maximum size of an Apple Lossless packet within the encoded stream. 
-						  	value of 0 indicates unknown
+      field      	maxFrameBytes 		uint32_t 	the maximum size of an Apple
+     Lossless
+     packet
+     within
+     the encoded stream.
+                                                          value of 0 indicates unknown
 
-    field      	avgBitRate 		uint32_t 	the average bit rate in bits per second of the Apple Lossless stream. 
-						  	value of 0 indicates unknown
+      field      	avgBitRate 		uint32_t 	the average bit rate in bits per second
+     of
+     the
+     Apple
+     Lossless stream.
+                                                          value of 0 indicates unknown
 
-    field      	sampleRate 		uint32_t 	sample rate of the encoded stream
- */
+      field      	sampleRate 		uint32_t 	sample rate of the encoded stream
+   */
 
-// We are going to go on that basis
-
-
+  // We are going to go on that basis
 
   alac_file *alac;
 
@@ -424,8 +458,8 @@ static int init_decoder(int32_t fmtp[12]) {
   input_rate = fmtp[11];
   input_num_channels = fmtp[7];
   input_bit_depth = fmtp[3];
-  
-  input_bytes_per_frame = input_num_channels*((input_bit_depth+7)/8);
+
+  input_bytes_per_frame = input_num_channels * ((input_bit_depth + 7) / 8);
 
   alac = alac_create(input_bit_depth, input_num_channels);
   if (!alac)
@@ -462,7 +496,8 @@ static void terminate_decoders(void) {
 static void init_buffer(void) {
   int i;
   for (i = 0; i < BUFFER_FRAMES; i++)
-    audio_buffer[i].data = malloc(input_bytes_per_frame*(max_frames_per_packet+max_frame_size_change));
+    audio_buffer[i].data =
+        malloc(input_bytes_per_frame * (max_frames_per_packet + max_frame_size_change));
   ab_resync();
 }
 
@@ -473,35 +508,35 @@ static void free_buffer(void) {
 }
 
 void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len) {
-	
-	// all timestamps are done at the output rate
-	
-	int64_t ltimestamp = timestamp*output_sample_ratio;
+
+  // all timestamps are done at the output rate
+
+  int64_t ltimestamp = timestamp * output_sample_ratio;
 
   // ignore a request to flush that has been made before the first packet...
-  if (packet_count==0) {
+  if (packet_count == 0) {
     pthread_mutex_lock(&flush_mutex);
     flush_requested = 0;
     flush_rtp_timestamp = 0;
     pthread_mutex_unlock(&flush_mutex);
   }
-  
+
   pthread_mutex_lock(&ab_mutex);
   packet_count++;
   time_of_last_audio_packet = get_absolute_time_in_fp();
   if (connection_state_to_output) { // if we are supposed to be processing these packets
 
-//    if (flush_rtp_timestamp != 0)
-//    	debug(1,"Flush_rtp_timestamp is %u",flush_rtp_timestamp);
+    //    if (flush_rtp_timestamp != 0)
+    //    	debug(1,"Flush_rtp_timestamp is %u",flush_rtp_timestamp);
 
-    if ((flush_rtp_timestamp != 0) &&
-        (ltimestamp <= flush_rtp_timestamp)) {
-      debug(3, "Dropping flushed packet in player_put_packet, seqno %u, timestamp %lld, flushing to "
-               "timestamp: %lld.",
+    if ((flush_rtp_timestamp != 0) && (ltimestamp <= flush_rtp_timestamp)) {
+      debug(3,
+            "Dropping flushed packet in player_put_packet, seqno %u, timestamp %lld, flushing to "
+            "timestamp: %lld.",
             seqno, ltimestamp, flush_rtp_timestamp);
     } else {
       if ((flush_rtp_timestamp != 0x0) &&
-          (ltimestamp>flush_rtp_timestamp)) // if we have gone past the flush boundary time
+          (ltimestamp > flush_rtp_timestamp)) // if we have gone past the flush boundary time
         flush_rtp_timestamp = 0x0;
 
       abuf_t *abuf = 0;
@@ -531,8 +566,8 @@ void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len) {
         }
         // debug(1,"N %d s %u.",seq_diff(ab_write,PREDECESSOR(seqno))+1,ab_write);
         abuf = audio_buffer + BUFIDX(seqno);
-//        rtp_request_resend(ab_write, gap);
-//        resend_requests++;
+        //        rtp_request_resend(ab_write, gap);
+        //        resend_requests++;
         ab_write = SUCCESSOR(seqno);
       } else if (seq_order(ab_read, seqno)) { // late but not yet played
         late_packets++;
@@ -551,16 +586,16 @@ void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len) {
 
       if (abuf) {
         int datalen = max_frames_per_packet;
-        if (alac_decode(abuf->data, &datalen, data, len)==0) {
-					abuf->ready = 1;
-					abuf->length = datalen;
-					abuf->timestamp = ltimestamp;
-					abuf->sequence_number = seqno;
+        if (alac_decode(abuf->data, &datalen, data, len) == 0) {
+          abuf->ready = 1;
+          abuf->length = datalen;
+          abuf->timestamp = ltimestamp;
+          abuf->sequence_number = seqno;
         } else {
-        	debug(1,"Bad audio packet detected and discarded.");
-					abuf->ready = 0;
-					abuf->timestamp = 0;
-					abuf->sequence_number = 0;        
+          debug(1, "Bad audio packet detected and discarded.");
+          abuf->ready = 0;
+          abuf->timestamp = 0;
+          abuf->sequence_number = 0;
         }
       }
 
@@ -575,125 +610,154 @@ void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len) {
 
 int32_t rand_in_range(int32_t exclusive_range_limit) {
   static uint32_t lcg_prev = 12345;
-	// returns a pseudo random integer in the range 0 to (exclusive_range_limit-1) inclusive
-	int64_t sp = lcg_prev;
-	int64_t rl = exclusive_range_limit;
-	lcg_prev = lcg_prev * 69069 + 3; // crappy psrg
-	sp = sp*rl; // 64 bit calculation. INtersting part if above the 32 rightmost bits;
-	return sp >> 32;  
+  // returns a pseudo random integer in the range 0 to (exclusive_range_limit-1) inclusive
+  int64_t sp = lcg_prev;
+  int64_t rl = exclusive_range_limit;
+  lcg_prev = lcg_prev * 69069 + 3; // crappy psrg
+  sp = sp * rl; // 64 bit calculation. INtersting part if above the 32 rightmost bits;
+  return sp >> 32;
 }
 
-static inline void process_sample(int32_t sample,char**outp,enum sps_format_t format,int volume,int dither) {
+static inline void process_sample(int32_t sample, char **outp, enum sps_format_t format, int volume,
+                                  int dither) {
   int64_t hyper_sample = sample;
   int result;
   // first, modify volume, if necessary
-  if (volume==0x10000)
-    hyper_sample<<=32;
+  if (volume == 0x10000)
+    hyper_sample <<= 32;
   else
-    hyper_sample*=(volume<<16);
-    
+    hyper_sample *= (volume << 16); // this is 32*32 -> 64 bit bit multiplication -- we may need to
+                                    // dither it down to its
+                                    // target resolution
+
   // next, do dither, if necessary
   if (dither) {
+
+    // add a TPDF dither -- see
+    // http://www.users.qwest.net/%7Evolt42/cadenzarecording/DitherExplained.pdf
+    // and the discussion around https://www.hydrogenaud.io/forums/index.php?showtopic=16963&st=25
+
+    // I think, for a 32 --> 16 bits, the range of
+    // random numbers needs to be from -2^16 to 2^16, i.e. from -65536 to 65536 inclusive, not from
+    // -32768 to +32767
+
+    // See the original paper at
+    // http://www.ece.rochester.edu/courses/ECE472/resources/Papers/Lipshitz_1992.pdf
+    // by Lipshitz, Wannamaker and Vanderkooy, 1992.
+
     int64_t dither_mask;
     switch (format) {
-      case SPS_FORMAT_S32_LE:
-        dither_mask = (int64_t)1<<(64+1-32);
-        break;
-      case SPS_FORMAT_S24_LE:
-        dither_mask = (int64_t)1<<(64+1-24);
-        break;
-      case SPS_FORMAT_S16_LE:
-        dither_mask = (int64_t)1<<(64+1-16);
-        break;
-      case SPS_FORMAT_S8:
-      case SPS_FORMAT_U8:
-        dither_mask = (int64_t)1<<(64+1-24);
-        break;    
+    case SPS_FORMAT_S32_LE:
+      dither_mask = (int64_t)1 << (64 + 1 - 32);
+      break;
+    case SPS_FORMAT_S24_LE:
+      dither_mask = (int64_t)1 << (64 + 1 - 24);
+      break;
+    case SPS_FORMAT_S16_LE:
+      dither_mask = (int64_t)1 << (64 + 1 - 16);
+      break;
+    case SPS_FORMAT_S8:
+    case SPS_FORMAT_U8:
+      dither_mask = (int64_t)1 << (64 + 1 - 24);
+      break;
     }
-    dither_mask-=1;
+    dither_mask -= 1;
     int64_t r = r64i();
-    int64_t tpdf = (r&dither_mask)-(previous_random_number&dither_mask);
-    previous_random_number=r;
+    int64_t tpdf = (r & dither_mask) - (previous_random_number & dither_mask);
+    previous_random_number = r;
     // add dither, allowing for clipping
-    if (tpdf>=0) {
-      if (INT64_MAX-tpdf>=hyper_sample)
+    if (tpdf >= 0) {
+      if (INT64_MAX - tpdf >= hyper_sample)
         hyper_sample += tpdf;
       else
         hyper_sample = INT64_MAX;
     } else {
-      if (INT64_MIN-tpdf<=hyper_sample)
+      if (INT64_MIN - tpdf <= hyper_sample)
         hyper_sample += tpdf;
       else
         hyper_sample = INT64_MIN;
     }
     // dither is complete here
   }
-    
+
   // move the result to the desired position in the int64_t
   char *op = *outp;
   switch (format) {
-    case SPS_FORMAT_S32_LE:
-      hyper_sample>>=(64-32);
-      *(int32_t*)op = hyper_sample;
-      result=4;
-      break;
-    case SPS_FORMAT_S24_LE:
-      hyper_sample>>=(64-24);
-      *(int32_t*)op = hyper_sample;
-      result=4;
-      break;
-    case SPS_FORMAT_S16_LE:
-      hyper_sample>>=(64-16);
-      *(int16_t*)op = hyper_sample;
-      result=2;
-      break;
-    case SPS_FORMAT_S8:
-      hyper_sample>>=(64-8);
-      *op = hyper_sample;
-      result=1;
-     break;    
-    case SPS_FORMAT_U8:
-      hyper_sample>>=(64-8);
-      hyper_sample+=128; // this is just a guess!
-      *op = hyper_sample;
-      result=1;
-     break;    
+  case SPS_FORMAT_S32_LE:
+    hyper_sample >>= (64 - 32);
+    *(int32_t *)op = hyper_sample;
+    result = 4;
+    break;
+  case SPS_FORMAT_S24_LE:
+    hyper_sample >>= (64 - 24);
+    *(int32_t *)op = hyper_sample;
+    result = 4;
+    break;
+  case SPS_FORMAT_S16_LE:
+    hyper_sample >>= (64 - 16);
+    *(int16_t *)op = hyper_sample;
+    result = 2;
+    break;
+  case SPS_FORMAT_S8:
+    hyper_sample >>= (64 - 8);
+    *op = hyper_sample;
+    result = 1;
+    break;
+  case SPS_FORMAT_U8:
+    hyper_sample >>= (64 - 8);
+    hyper_sample += 128; // this is just a guess!
+    *op = hyper_sample;
+    result = 1;
+    break;
   }
-  
-  *outp+=result;
+
+  *outp += result;
 }
 
-
 static inline int32_t dithered_vol_32(int32_t sample, int output_precision) {
-  if ((fix_volume==0x1000) && (output_precision==32)) {
+  if ((fix_volume == 0x1000) && (output_precision == 32)) {
     return sample;
   } else {
-    int64_t s = sample; // 64 bit signed
+    int64_t s = sample;               // 64 bit signed
     int64_t v = fix_volume & 0x1FFFF; // 17 bit unsigned made a 33 bit unsigned
-    v<<=16;
-    s = s*v; // 32 bit multiplication -- we need to dither it down to its target resolution
+    v <<= 16;
+    s = s * v; // this is 32*32 -> 64 bit bit multiplication -- we may need to dither it down to its
+               // target resolution
+
+    // add a TPDF dither -- see
+    // http://www.users.qwest.net/%7Evolt42/cadenzarecording/DitherExplained.pdf
+    // and the discussion around https://www.hydrogenaud.io/forums/index.php?showtopic=16963&st=25
+
+    // I think, for a 32 --> 16 bits, the range of
+    // random numbers needs to be from -2^16 to 2^16, i.e. from -65536 to 65536 inclusive, not from
+    // -32768 to +32767
+
+    // See the original paper at
+    // http://www.ece.rochester.edu/courses/ECE472/resources/Papers/Lipshitz_1992.pdf
+    // by Lipshitz, Wannamaker and Vanderkooy, 1992.
 
     int64_t r = r64i();
-    int64_t mask = (int64_t)1<<(64+1-output_precision);
-    mask -=1;
-    int64_t tpdf = (r&mask); //-(previous_random_number&((1<<(64+1-output_precision))-1));
-//		debug(1,"output precision is %d, m is %llx, r is %llx, tpdf is %llx",output_precision,mask,r,tpdf);
-    previous_random_number=r;
- 
-    // Check there's no clipping -- if there is, 
-    if (tpdf>=0) {
-      if (INT64_MAX-tpdf>=s)
+    int64_t mask = (int64_t)1 << (64 + 1 - output_precision);
+    mask -= 1;
+    int64_t tpdf = (r & mask) - (previous_random_number & mask);
+
+    previous_random_number = r;
+
+    // Check there's no clipping -- if there is, use INT64_MAX or INT64_MIN
+
+    if (tpdf >= 0) {
+      if (INT64_MAX - tpdf >= s)
         s += tpdf;
       else
         s = INT64_MAX;
     } else {
-      if (INT64_MIN-tpdf<=s)
+      if (INT64_MIN - tpdf <= s)
         s += tpdf;
       else
         s = INT64_MIN;
     }
 
-    s>>=(64-output_precision);
+    s >>= (64 - output_precision);
     return s;
   }
 }
@@ -703,28 +767,31 @@ static inline short dithered_vol(short sample) {
 
   out = (long)sample * fix_volume;
   if (fix_volume < 0x10000) {
-  
-  	// add a TPDF dither -- see http://www.users.qwest.net/%7Evolt42/cadenzarecording/DitherExplained.pdf
-  	// and the discussion around https://www.hydrogenaud.io/forums/index.php?showtopic=16963&st=25
-  	
-  	// I think, for a 32 --> 16 bits, the range of
-  	// random numbers needs to be from -2^16 to 2^16, i.e. from -65536 to 65536 inclusive, not from -32768 to +32767
-  	
-  	// See the original paper at http://www.ece.rochester.edu/courses/ECE472/resources/Papers/Lipshitz_1992.pdf
-  	// by Lipshitz, Wannamaker and Vanderkooy, 1992.
-  	
-  	long tpdf = rand_in_range(65536+1) - rand_in_range(65536+1);
-  	// Check there's no clipping -- if there is, 
-  	if (tpdf>=0) {
-  		if (LONG_MAX-tpdf>=out)
-    		out += tpdf;
-    	else
-    		out = LONG_MAX;
+
+    // add a TPDF dither -- see
+    // http://www.users.qwest.net/%7Evolt42/cadenzarecording/DitherExplained.pdf
+    // and the discussion around https://www.hydrogenaud.io/forums/index.php?showtopic=16963&st=25
+
+    // I think, for a 32 --> 16 bits, the range of
+    // random numbers needs to be from -2^16 to 2^16, i.e. from -65536 to 65536 inclusive, not from
+    // -32768 to +32767
+
+    // See the original paper at
+    // http://www.ece.rochester.edu/courses/ECE472/resources/Papers/Lipshitz_1992.pdf
+    // by Lipshitz, Wannamaker and Vanderkooy, 1992.
+
+    long tpdf = rand_in_range(65536 + 1) - rand_in_range(65536 + 1);
+    // Check there's no clipping -- if there is,
+    if (tpdf >= 0) {
+      if (LONG_MAX - tpdf >= out)
+        out += tpdf;
+      else
+        out = LONG_MAX;
     } else {
-    	if (LONG_MIN-tpdf<=out)
-    		out += tpdf;
-    	else
-    		out = LONG_MIN;
+      if (LONG_MIN - tpdf <= out)
+        out += tpdf;
+      else
+        out = LONG_MIN;
     }
   }
   return out >> 16;
@@ -742,7 +809,7 @@ static abuf_t *buffer_get_frame(void) {
 
   pthread_mutex_lock(&ab_mutex);
   int wait;
-  long dac_delay = 0; // long because alsa returns a long 
+  long dac_delay = 0; // long because alsa returns a long
   do {
     // get the time
     local_time_now = get_absolute_time_in_fp(); // type okay
@@ -785,12 +852,14 @@ static abuf_t *buffer_get_frame(void) {
       flush_requested = 0;
     }
     pthread_mutex_unlock(&flush_mutex);
-    
+
     uint32_t flush_limit = 0;
     if (ab_synced) {
       do {
         curframe = audio_buffer + BUFIDX(ab_read);
-        if ((ab_read!=ab_write) && (curframe->ready)) { // it could be synced and empty, under exceptional circumstances, with the frame unused, thus apparently ready
+        if ((ab_read != ab_write) && (curframe->ready)) { // it could be synced and empty, under
+                                                          // exceptional circumstances, with the
+                                                          // frame unused, thus apparently ready
 
           if (curframe->sequence_number != ab_read) {
             // some kind of sync problem has occurred.
@@ -805,15 +874,14 @@ static abuf_t *buffer_get_frame(void) {
             }
           }
 
-          if ((flush_rtp_timestamp != 0) &&
-              (curframe->timestamp <= flush_rtp_timestamp)) {
+          if ((flush_rtp_timestamp != 0) && (curframe->timestamp <= flush_rtp_timestamp)) {
             debug(1, "Dropping flushed packet seqno %u, timestamp %lld", curframe->sequence_number,
                   curframe->timestamp);
             curframe->ready = 0;
             flush_limit++;
             ab_read = SUCCESSOR(ab_read);
           }
-          if (curframe->timestamp>flush_rtp_timestamp) 
+          if (curframe->timestamp > flush_rtp_timestamp)
             flush_rtp_timestamp = 0;
         }
       } while ((flush_rtp_timestamp != 0) && (flush_limit <= 8820) && (curframe->ready == 0));
@@ -826,13 +894,15 @@ static abuf_t *buffer_get_frame(void) {
       curframe = audio_buffer + BUFIDX(ab_read);
 
       if (curframe->ready) {
-        notified_buffer_empty=0; // at least one buffer now -- diagnostic only.
+        notified_buffer_empty = 0; // at least one buffer now -- diagnostic only.
         if (ab_buffering) { // if we are getting packets but not yet forwarding them to the player
-          int have_sent_prefiller_silence; // set true when we have sent some silent frames to the DAC
+          int have_sent_prefiller_silence; // set true when we have sent some silent frames to the
+                                           // DAC
           int64_t reference_timestamp;
-          uint64_t reference_timestamp_time,remote_reference_timestamp_time;
-          get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time, &remote_reference_timestamp_time);
-          reference_timestamp*=output_sample_ratio;
+          uint64_t reference_timestamp_time, remote_reference_timestamp_time;
+          get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time,
+                                        &remote_reference_timestamp_time);
+          reference_timestamp *= output_sample_ratio;
           if (first_packet_timestamp == 0) { // if this is the very first packet
             // debug(1,"First frame seen, time %u, with %d
             // frames...",curframe->timestamp,seq_diff(ab_read, ab_write));
@@ -865,42 +935,50 @@ static abuf_t *buffer_get_frame(void) {
               // if would be in sync. To do this, we would give it a latency offset of -100 ms, i.e.
               // -4410 frames.
 
-debug(1,"Output sample ratio is %d",output_sample_ratio);
+              debug(1, "Output sample ratio is %d", output_sample_ratio);
 
-              int64_t delta = (first_packet_timestamp - reference_timestamp)+config.latency*output_sample_ratio+config.audio_backend_latency_offset*config.output_rate;
-              
-              if (delta>=0) {
-                int64_t delta_fp_sec = (delta << 32) / config.output_rate; // int64_t which is positive
-                first_packet_time_to_play=reference_timestamp_time+delta_fp_sec;
+              int64_t delta = (first_packet_timestamp - reference_timestamp) +
+                              config.latency * output_sample_ratio +
+                              config.audio_backend_latency_offset * config.output_rate;
+
+              if (delta >= 0) {
+                int64_t delta_fp_sec =
+                    (delta << 32) / config.output_rate; // int64_t which is positive
+                first_packet_time_to_play = reference_timestamp_time + delta_fp_sec;
               } else {
                 int64_t abs_delta = -delta;
-                int64_t delta_fp_sec = (abs_delta << 32) / config.output_rate; // int64_t which is positive
-                first_packet_time_to_play=reference_timestamp_time-delta_fp_sec;              
+                int64_t delta_fp_sec =
+                    (abs_delta << 32) / config.output_rate; // int64_t which is positive
+                first_packet_time_to_play = reference_timestamp_time - delta_fp_sec;
               }
 
               if (local_time_now >= first_packet_time_to_play) {
                 debug(
                     1,
                     "First packet is late! It should have played before now. Flushing 0.1 seconds");
-                player_flush(first_packet_timestamp + 4410*output_sample_ratio);
+                player_flush(first_packet_timestamp + 4410 * output_sample_ratio);
               }
             }
           }
 
           if (first_packet_time_to_play != 0) {
             // recalculate first_packet_time_to_play -- the latency might change
-            int64_t delta = (first_packet_timestamp - reference_timestamp)+config.latency*output_sample_ratio+config.audio_backend_latency_offset*config.output_rate;
-            
-            if (delta>=0) {
-              int64_t delta_fp_sec = (delta << 32) / config.output_rate; // int64_t which is positive
-              first_packet_time_to_play=reference_timestamp_time+delta_fp_sec;
+            int64_t delta = (first_packet_timestamp - reference_timestamp) +
+                            config.latency * output_sample_ratio +
+                            config.audio_backend_latency_offset * config.output_rate;
+
+            if (delta >= 0) {
+              int64_t delta_fp_sec =
+                  (delta << 32) / config.output_rate; // int64_t which is positive
+              first_packet_time_to_play = reference_timestamp_time + delta_fp_sec;
             } else {
               int64_t abs_delta = -delta;
-              int64_t delta_fp_sec = (abs_delta << 32) / config.output_rate; // int64_t which is positive
-              first_packet_time_to_play=reference_timestamp_time-delta_fp_sec;              
+              int64_t delta_fp_sec =
+                  (abs_delta << 32) / config.output_rate; // int64_t which is positive
+              first_packet_time_to_play = reference_timestamp_time - delta_fp_sec;
             }
 
-            int64_t max_dac_delay = config.output_rate/10;
+            int64_t max_dac_delay = config.output_rate / 10;
             int64_t filler_size = max_dac_delay; // 0.1 second -- the maximum we'll add to the DAC
 
             if (local_time_now >= first_packet_time_to_play) {
@@ -919,11 +997,11 @@ debug(1,"Output sample ratio is %d",output_sample_ratio);
             } else {
               // first_packet_time_to_play is definitely later than local_time_now
               if ((config.output->delay) && (have_sent_prefiller_silence != 0)) {
-          			int resp = config.output->delay(&dac_delay);
+                int resp = config.output->delay(&dac_delay);
                 if (resp != 0) {
-                  debug(1, "Error %d getting dac_delay in buffer_get_frame.",resp);
+                  debug(1, "Error %d getting dac_delay in buffer_get_frame.", resp);
                   dac_delay = 0;
-                }              
+                }
               } else
                 dac_delay = 0;
               int64_t gross_frame_gap =
@@ -944,9 +1022,10 @@ debug(1,"Output sample ratio is %d",output_sample_ratio);
                 int64_t fs = filler_size;
                 if (fs > (max_dac_delay - dac_delay))
                   fs = max_dac_delay - dac_delay;
-                if (fs<0) {
-                  debug(2,"frame size (fs) < 0 with max_dac_delay of %lld and dac_delay of %ld",max_dac_delay, dac_delay);
-                  fs=0;
+                if (fs < 0) {
+                  debug(2, "frame size (fs) < 0 with max_dac_delay of %lld and dac_delay of %ld",
+                        max_dac_delay, dac_delay);
+                  fs = 0;
                 }
                 if ((exact_frame_gap <= fs) || (exact_frame_gap <= max_frames_per_packet * 2)) {
                   fs = exact_frame_gap;
@@ -957,15 +1036,18 @@ debug(1,"Output sample ratio is %d",output_sample_ratio);
                   ab_buffering = 0;
                 }
                 signed short *silence;
-                //if (fs==0)
-                //  debug(2,"Zero length silence buffer needed with gross_frame_gap of %lld and dac_delay of %lld.",gross_frame_gap,dac_delay);
-                // the fs (number of frames of silence to play) can be zero in the DAC doesn't start ouotputting frames for a while -- it could get loaded up but not start responding for many milliseconds.
-                if (fs!=0) {
-                  silence = malloc(output_bytes_per_frame*fs);
-                  if (silence==NULL)
-                    debug(1,"Failed to allocate %d byte silence buffer.",fs);
+                // if (fs==0)
+                //  debug(2,"Zero length silence buffer needed with gross_frame_gap of %lld and
+                //  dac_delay of %lld.",gross_frame_gap,dac_delay);
+                // the fs (number of frames of silence to play) can be zero in the DAC doesn't start
+                // ouotputting frames for a while -- it could get loaded up but not start responding
+                // for many milliseconds.
+                if (fs != 0) {
+                  silence = malloc(output_bytes_per_frame * fs);
+                  if (silence == NULL)
+                    debug(1, "Failed to allocate %d byte silence buffer.", fs);
                   else {
-                    memset(silence, 0, output_bytes_per_frame*fs);
+                    memset(silence, 0, output_bytes_per_frame * fs);
                     // debug(1,"Exact frame gap is %llu; play %d frames of silence. Dac_delay is %d,
                     // with %d packets.",exact_frame_gap,fs,dac_delay,seq_diff(ab_read, ab_write));
                     config.output->play(silence, fs);
@@ -979,12 +1061,14 @@ debug(1,"Output sample ratio is %d",output_sample_ratio);
           if (ab_buffering == 0) {
             // not the time of the playing of the first frame
             uint64_t reference_timestamp_time; // don't need this...
-            get_reference_timestamp_stuff(&play_segment_reference_frame, &reference_timestamp_time, &play_segment_reference_frame_remote_time);
-            play_segment_reference_frame*=output_sample_ratio;
+            get_reference_timestamp_stuff(&play_segment_reference_frame, &reference_timestamp_time,
+                                          &play_segment_reference_frame_remote_time);
+            play_segment_reference_frame *= output_sample_ratio;
 #ifdef CONFIG_METADATA
-            send_ssnc_metadata('prsm', NULL, 0, 0); // "resume", but don't wait if the queue is locked
+            send_ssnc_metadata('prsm', NULL, 0,
+                               0); // "resume", but don't wait if the queue is locked
 #endif
-          }              
+          }
         }
       }
     }
@@ -1003,25 +1087,32 @@ debug(1,"Output sample ratio is %d",output_sample_ratio);
 
     int do_wait = 0; // don't wait unless we can really prove we must
     if ((ab_synced) && (curframe) && (curframe->ready) && (curframe->timestamp)) {
-    	do_wait = 1; // if the current frame exists and is ready, then wait unless it's time to let it go...
+      do_wait =
+          1; // if the current frame exists and is ready, then wait unless it's time to let it go...
       int64_t reference_timestamp;
-      uint64_t reference_timestamp_time,remote_reference_timestamp_time;
-      get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time, &remote_reference_timestamp_time); // all types okay
-      reference_timestamp*=output_sample_ratio;
-      if (reference_timestamp) { // if we have a reference time
+      uint64_t reference_timestamp_time, remote_reference_timestamp_time;
+      get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time,
+                                    &remote_reference_timestamp_time); // all types okay
+      reference_timestamp *= output_sample_ratio;
+      if (reference_timestamp) {                        // if we have a reference time
         int64_t packet_timestamp = curframe->timestamp; // types okay
         int64_t delta = packet_timestamp - reference_timestamp;
-        int64_t offset = config.latency*output_sample_ratio + config.audio_backend_latency_offset*config.output_rate -
-                         config.audio_backend_buffer_desired_length*config.output_rate; // all arguments are int32_t, so expression promotion okay
-        int64_t net_offset = delta + offset; // okay
+        int64_t offset =
+            config.latency * output_sample_ratio +
+            config.audio_backend_latency_offset * config.output_rate -
+            config.audio_backend_buffer_desired_length *
+                config.output_rate; // all arguments are int32_t, so expression promotion okay
+        int64_t net_offset = delta + offset;              // okay
         uint64_t time_to_play = reference_timestamp_time; // type okay
         if (net_offset >= 0) {
-          uint64_t net_offset_fp_sec = (net_offset << 32) / config.output_rate; // int64_t which is positive
-          time_to_play += net_offset_fp_sec; // using the latency requested...
+          uint64_t net_offset_fp_sec =
+              (net_offset << 32) / config.output_rate; // int64_t which is positive
+          time_to_play += net_offset_fp_sec;           // using the latency requested...
           // debug(2,"Net Offset: %lld, adjusted: %lld.",net_offset,net_offset_fp_sec);
         } else {
           int64_t abs_net_offset = -net_offset;
-          uint64_t net_offset_fp_sec = (abs_net_offset << 32) / config.output_rate; // int64_t which is positive
+          uint64_t net_offset_fp_sec =
+              (abs_net_offset << 32) / config.output_rate; // int64_t which is positive
           time_to_play -= net_offset_fp_sec;
           // debug(2,"Net Offset: %lld, adjusted: -%lld.",net_offset,net_offset_fp_sec);
         }
@@ -1031,21 +1122,21 @@ debug(1,"Output sample ratio is %d",output_sample_ratio);
         }
       }
     }
-    if (do_wait==0)
-      if ((ab_synced!=0) && (ab_read==ab_write)) { // the buffer is empty!
-        if (notified_buffer_empty==0) {
-          debug(1,"Buffers exhausted.");
-          notified_buffer_empty=1;
+    if (do_wait == 0)
+      if ((ab_synced != 0) && (ab_read == ab_write)) { // the buffer is empty!
+        if (notified_buffer_empty == 0) {
+          debug(1, "Buffers exhausted.");
+          notified_buffer_empty = 1;
         }
-        do_wait=1;
+        do_wait = 1;
       }
     wait = (ab_buffering || (do_wait != 0) || (!ab_synced)) && (!please_stop);
 
     if (wait) {
       uint64_t time_to_wait_for_wakeup_fp =
-          ((uint64_t)1 << 32) / input_rate;       // this is time period of one frame
+          ((uint64_t)1 << 32) / input_rate;  // this is time period of one frame
       time_to_wait_for_wakeup_fp *= 4 * 352; // four full 352-frame packets
-      time_to_wait_for_wakeup_fp /= 3; // four thirds of a packet time
+      time_to_wait_for_wakeup_fp /= 3;       // four thirds of a packet time
 
 #ifdef COMPILE_FOR_LINUX_AND_FREEBSD_AND_CYGWIN
       uint64_t time_of_wakeup_fp = local_time_now + time_to_wait_for_wakeup_fp;
@@ -1094,11 +1185,10 @@ debug(1,"Output sample ratio is %d",output_sample_ratio);
     }
   }
 
-
   if (!curframe->ready) {
     // debug(1, "Supplying a silent frame for frame %u", read);
     missing_packets++;
-    memset(curframe->data, 0, input_bytes_per_frame*max_frames_per_packet);
+    memset(curframe->data, 0, input_bytes_per_frame * max_frames_per_packet);
     curframe->timestamp = 0;
   }
   curframe->ready = 0;
@@ -1127,21 +1217,23 @@ static inline int32_t mean_32(int32_t a, int32_t b) {
   return r;
 }
 
-// this takes an array of signed 32-bit integers and (a) removes or inserts a frame as specified in stuff,
+// this takes an array of signed 32-bit integers and (a) removes or inserts a frame as specified in
+// stuff,
 // (b) multiplies each sample by the fixedvolume (a 16-bit quantity)
 // (c) dithers the result to the output size 32/24/16 bits
 // (d) outputs the result in the approprate format
 // formats accepted so far include U8, S8, S16_LE, S24_LE and S32_LE on a little endinan machine.
 
 // stuff: 1 means add 1; 0 means do nothing; -1 means remove 1
-static int stuff_buffer_basic_32(int32_t *inptr, int length, enum sps_format_t l_output_format, char *outptr, int stuff, int dither) {
+static int stuff_buffer_basic_32(int32_t *inptr, int length, enum sps_format_t l_output_format,
+                                 char *outptr, int stuff, int dither) {
   int tstuff = stuff;
   char *l_outptr = outptr;
-  if ((stuff > 1) || (stuff < -1) || (length <100)) {
+  if ((stuff > 1) || (stuff < -1) || (length < 100)) {
     // debug(1, "Stuff argument to stuff_buffer must be from -1 to +1 and length >100.");
     tstuff = 0; // if any of these conditions hold, don't stuff anything/
   }
-  
+
   int i;
   int stuffsamp = length;
   if (tstuff)
@@ -1151,39 +1243,40 @@ static int stuff_buffer_basic_32(int32_t *inptr, int length, enum sps_format_t l
 
   pthread_mutex_lock(&vol_mutex);
   for (i = 0; i < stuffsamp; i++) { // the whole frame, if no stuffing
-    process_sample(*inptr++,&l_outptr,l_output_format,fix_volume,dither);
-    process_sample(*inptr++,&l_outptr,l_output_format,fix_volume,dither);    
+    process_sample(*inptr++, &l_outptr, l_output_format, fix_volume, dither);
+    process_sample(*inptr++, &l_outptr, l_output_format, fix_volume, dither);
   };
   if (tstuff) {
     if (tstuff == 1) {
       // debug(3, "+++++++++");
       // interpolate one sample
-      process_sample(mean_32(inptr[-2], inptr[0]),&l_outptr,l_output_format,fix_volume,dither);
-      process_sample(mean_32(inptr[-1], inptr[1]),&l_outptr,l_output_format,fix_volume,dither);    
+      process_sample(mean_32(inptr[-2], inptr[0]), &l_outptr, l_output_format, fix_volume, dither);
+      process_sample(mean_32(inptr[-1], inptr[1]), &l_outptr, l_output_format, fix_volume, dither);
     } else if (stuff == -1) {
       // debug(3, "---------");
       inptr++;
       inptr++;
     }
-    
-    // if you're removing, i.e. stuff < 0, copy that much less over. If you're adding, do all the rest.
+
+    // if you're removing, i.e. stuff < 0, copy that much less over. If you're adding, do all the
+    // rest.
     int remainder = length;
-    if (tstuff<0)
-      remainder = remainder+tstuff; // don't run over the correct end of the output buffer
+    if (tstuff < 0)
+      remainder = remainder + tstuff; // don't run over the correct end of the output buffer
 
     for (i = stuffsamp; i < remainder; i++) {
-      process_sample(*inptr++,&l_outptr,l_output_format,fix_volume,dither);
-      process_sample(*inptr++,&l_outptr,l_output_format,fix_volume,dither);
+      process_sample(*inptr++, &l_outptr, l_output_format, fix_volume, dither);
+      process_sample(*inptr++, &l_outptr, l_output_format, fix_volume, dither);
     }
   }
   pthread_mutex_unlock(&vol_mutex);
-  
+
   return length + tstuff;
 }
 
 static int stuff_buffer_basic(short *inptr, int length, short *outptr, int stuff) {
   int tstuff = stuff;
-  if ((stuff > 1) || (stuff < -1) || (length <100)) {
+  if ((stuff > 1) || (stuff < -1) || (length < 100)) {
     // debug(1, "Stuff argument to stuff_buffer must be from -1 to +1 and length >100.");
     tstuff = 0; // if any of these conditions hold, don't stuff anything/
   }
@@ -1212,11 +1305,12 @@ static int stuff_buffer_basic(short *inptr, int length, short *outptr, int stuff
       inptr++;
       inptr++;
     }
-    
-    // if you're removing, i.e. stuff < 0, copy that much less over. If you're adding, do all the rest.
+
+    // if you're removing, i.e. stuff < 0, copy that much less over. If you're adding, do all the
+    // rest.
     int remainder = length;
-    if (tstuff<0)
-      remainder = remainder+tstuff; // don't run over the correct end of the output buffer
+    if (tstuff < 0)
+      remainder = remainder + tstuff; // don't run over the correct end of the output buffer
 
     for (i = stuffsamp; i < remainder; i++) {
       *outptr++ = dithered_vol(*inptr++);
@@ -1229,13 +1323,14 @@ static int stuff_buffer_basic(short *inptr, int length, short *outptr, int stuff
 }
 
 #ifdef HAVE_LIBSOXR
-static int stuff_buffer_soxr_32(int32_t *inptr, int length, int32_t *outptr, int stuff, int l_output_bit_depth) {
+static int stuff_buffer_soxr_32(int32_t *inptr, int length, int32_t *outptr, int stuff,
+                                int l_output_bit_depth) {
   return length;
 }
 // stuff: 1 means add 1; 0 means do nothing; -1 means remove 1
 static int stuff_buffer_soxr(short *inptr, int length, short *outptr, int stuff) {
   int tstuff = stuff;
-  if ((stuff > 1) || (stuff < -1) || (length <100)) {
+  if ((stuff > 1) || (stuff < -1) || (length < 100)) {
     // debug(1, "Stuff argument to stuff_buffer must be from -1 to +1 and length >100.");
     tstuff = 0; // if any of these conditions hold, don't stuff anything/
   }
@@ -1255,8 +1350,8 @@ static int stuff_buffer_soxr(short *inptr, int length, short *outptr, int stuff)
 
     size_t odone;
 
-    soxr_error_t error = soxr_oneshot(length, length + tstuff, 2, /* Rates and # of chans. */
-                                      inptr, length, NULL,           /* Input. */
+    soxr_error_t error = soxr_oneshot(length, length + tstuff, 2,      /* Rates and # of chans. */
+                                      inptr, length, NULL,             /* Input. */
                                       outptr, length + tstuff, &odone, /* Output. */
                                       &io_spec,    /* Input, output and transfer spec. */
                                       NULL, NULL); /* Default configuration.*/
@@ -1314,44 +1409,48 @@ typedef struct stats { // statistics for running averages
 } stats_t;
 
 static void *player_thread_func(void *arg) {
-	struct inter_threads_record itr;
-	itr.please_stop = 0;
-	timestamp_epoch = 0; // indicate that the next timestamp will be the first one.
-	maximum_timestamp_interval = input_rate * 60; // actually there shouldn't be more than about 13v seconds of a gap between successive rtptimes, at worst
-		  
-	output_sample_ratio = config.output_rate/input_rate;
+  struct inter_threads_record itr;
+  itr.please_stop = 0;
+  timestamp_epoch = 0; // indicate that the next timestamp will be the first one.
+  maximum_timestamp_interval = input_rate * 60; // actually there shouldn't be more than about 13v
+                                                // seconds of a gap between successive rtptimes, at
+                                                // worst
 
-	debug(1,"Output sample ratio is %d.",output_sample_ratio);
-	
-	max_frame_size_change = 1*output_sample_ratio; // we add or subtract one frame at the nominal rate, multiply it by the frame ratio.
+  output_sample_ratio = config.output_rate / input_rate;
 
-	output_bytes_per_frame = 4;	
-	switch (config.output_format) {
-		case SPS_FORMAT_S24_LE:
-			output_bytes_per_frame=8;
-			break;
-		case SPS_FORMAT_S32_LE:
-			output_bytes_per_frame=8;
-			break;		
-	}
+  debug(1, "Output sample ratio is %d.", output_sample_ratio);
 
-	debug(1,"Output frame bytes is %d.",output_bytes_per_frame);
+  max_frame_size_change = 1 * output_sample_ratio; // we add or subtract one frame at the nominal
+                                                   // rate, multiply it by the frame ratio.
 
-	// create and start the timing, control and audio receiver threads
-	pthread_t rtp_audio_thread, rtp_control_thread, rtp_timing_thread;
-	pthread_create(&rtp_audio_thread, NULL, &rtp_audio_receiver, (void *)&itr);
+  output_bytes_per_frame = 4;
+  switch (config.output_format) {
+  case SPS_FORMAT_S24_LE:
+    output_bytes_per_frame = 8;
+    break;
+  case SPS_FORMAT_S32_LE:
+    output_bytes_per_frame = 8;
+    break;
+  }
+
+  debug(1, "Output frame bytes is %d.", output_bytes_per_frame);
+
+  // create and start the timing, control and audio receiver threads
+  pthread_t rtp_audio_thread, rtp_control_thread, rtp_timing_thread;
+  pthread_create(&rtp_audio_thread, NULL, &rtp_audio_receiver, (void *)&itr);
   pthread_create(&rtp_control_thread, NULL, &rtp_control_receiver, (void *)&itr);
   pthread_create(&rtp_timing_thread, NULL, &rtp_timing_receiver, (void *)&itr);
 
-	session_corrections = 0;
-	play_segment_reference_frame = 0; // zero signals that we are not in a play segment
+  session_corrections = 0;
+  play_segment_reference_frame = 0; // zero signals that we are not in a play segment
 
+  // check that there are enough buffers to accommodate the desired latency and the latency offset
 
-	// check that there are enough buffers to accommodate the desired latency and the latency offset
-	
-	int maximum_latency = config.latency+config.audio_backend_latency_offset*input_rate;
-	if ((maximum_latency+(352-1))/352 + 10 > BUFFER_FRAMES)
-		die("Not enough buffers available for a total latency of %d frames. A maximum of %d 352-frame packets may be accommodated.",maximum_latency,BUFFER_FRAMES);
+  int maximum_latency = config.latency + config.audio_backend_latency_offset * input_rate;
+  if ((maximum_latency + (352 - 1)) / 352 + 10 > BUFFER_FRAMES)
+    die("Not enough buffers available for a total latency of %d frames. A maximum of %d 352-frame "
+        "packets may be accommodated.",
+        maximum_latency, BUFFER_FRAMES);
   connection_state_to_output = get_requested_connection_state_to_output();
 // this is about half a minute
 #define trend_interval 3758
@@ -1387,58 +1486,63 @@ static void *player_thread_func(void *arg) {
   signed short *inbuf, *tbuf, *silence;
 
   char *outbuf;
-  
-  int inbuflength;
-  
-  int output_bit_depth = 16; // default;
-  
-  switch (config.output_format) {
-    case SPS_FORMAT_S16_LE:
-      output_bit_depth = 16;
-      break;
-    case SPS_FORMAT_S24_LE:
-      output_bit_depth = 24;
-      break;
-    case SPS_FORMAT_S32_LE:
-      output_bit_depth = 32;
-      break;
-  }
-  
-  
-	debug(1,"Output bit depth is %d.",output_bit_depth);
 
-  // if we are changing any of the parameters of the input, like sample rate or sample depth, then we
+  int inbuflength;
+
+  int output_bit_depth = 16; // default;
+
+  switch (config.output_format) {
+  case SPS_FORMAT_S16_LE:
+    output_bit_depth = 16;
+    break;
+  case SPS_FORMAT_S24_LE:
+    output_bit_depth = 24;
+    break;
+  case SPS_FORMAT_S32_LE:
+    output_bit_depth = 32;
+    break;
+  }
+
+  debug(1, "Output bit depth is %d.", output_bit_depth);
+
+  // if we are changing any of the parameters of the input, like sample rate or sample depth, then
+  // we
   // need an intermediate "transition" buffer
-  
+
   if (1) {
-  //if ((input_rate!=config.output_rate) || (input_bit_depth!=output_bit_depth)) {
-    // debug(1,"Define tbuf of length %d.",output_bytes_per_frame*(max_frames_per_packet*output_sample_ratio+max_frame_size_change));
-    tbuf = malloc(sizeof(int32_t)*2*(max_frames_per_packet*output_sample_ratio+max_frame_size_change));
-    if (tbuf==NULL)
-      debug(1,"Failed to allocate memory for the transition buffer.");
+    // if ((input_rate!=config.output_rate) || (input_bit_depth!=output_bit_depth)) {
+    // debug(1,"Define tbuf of length
+    // %d.",output_bytes_per_frame*(max_frames_per_packet*output_sample_ratio+max_frame_size_change));
+    tbuf = malloc(sizeof(int32_t) * 2 *
+                  (max_frames_per_packet * output_sample_ratio + max_frame_size_change));
+    if (tbuf == NULL)
+      debug(1, "Failed to allocate memory for the transition buffer.");
   } else {
     tbuf = 0;
-  }  
-  
+  }
+
   // We might need an output buffer and a buffer of silence.
-  // The size of these dependents on the number of frames, the size of each frame and the maximum size change
-  outbuf = malloc(output_bytes_per_frame*(max_frames_per_packet*output_sample_ratio+max_frame_size_change));
-  if (outbuf==NULL)
-    debug(1,"Failed to allocate memory for an output buffer.");
-  silence = malloc(output_bytes_per_frame*max_frames_per_packet*output_sample_ratio);
-  if (silence==NULL)
-    debug(1,"Failed to allocate memory for a silence buffer.");
-  memset(silence, 0, output_bytes_per_frame*max_frames_per_packet*output_sample_ratio);
+  // The size of these dependents on the number of frames, the size of each frame and the maximum
+  // size change
+  outbuf = malloc(output_bytes_per_frame *
+                  (max_frames_per_packet * output_sample_ratio + max_frame_size_change));
+  if (outbuf == NULL)
+    debug(1, "Failed to allocate memory for an output buffer.");
+  silence = malloc(output_bytes_per_frame * max_frames_per_packet * output_sample_ratio);
+  if (silence == NULL)
+    debug(1, "Failed to allocate memory for a silence buffer.");
+  memset(silence, 0, output_bytes_per_frame * max_frames_per_packet * output_sample_ratio);
   late_packet_message_sent = 0;
   first_packet_timestamp = 0;
   missing_packets = late_packets = too_late_packets = resend_requests = 0;
   flush_rtp_timestamp = 0; // it seems this number has a special significance -- it seems to be used
                            // as a null operand, so we'll use it like that too
-  int sync_error_out_of_bounds = 0; // number of times in a row that there's been a serious sync error
+  int sync_error_out_of_bounds =
+      0; // number of times in a row that there's been a serious sync error
 
   if (config.statistics_requested) {
     if ((config.output->delay)) {
-      if (config.no_sync==0) {
+      if (config.no_sync == 0) {
         inform("sync error in milliseconds, "
                "net correction in ppm, "
                "corrections in ppm, "
@@ -1486,103 +1590,105 @@ static void *player_thread_func(void *arg) {
           // debug(1,"Player has a supplied silent frame.");
           last_seqno_read =
               (SUCCESSOR(last_seqno_read) & 0xffff); // manage the packet out of sequence minder
-          if (inbuf==NULL)
-            debug(1,"NULL inbuf to play -- skipping it.");
+          if (inbuf == NULL)
+            debug(1, "NULL inbuf to play -- skipping it.");
           else {
-            if (inbuflength==0)
-              debug(1,"empty frame to play -- skipping it (1).");
+            if (inbuflength == 0)
+              debug(1, "empty frame to play -- skipping it (1).");
             else
               config.output->play(inbuf, inbuflength);
           }
         } else {
-        
-//          int enable_dither = 0;
-          int enable_dither = !((fix_volume==0x10000)&&(input_bit_depth==output_bit_depth)); // avoid dither on audio being sent through without alteration
-          
+
+          //          int enable_dither = 0;
+          int enable_dither =
+              !((fix_volume == 0x10000) &&
+                (input_bit_depth ==
+                 output_bit_depth)); // avoid dither on audio being sent through without alteration
+
           // here, let's transform the frame of data, if necessary
-          
-          if (tbuf!=NULL) { //this will be null if no changes are needed
+
+          if (tbuf != NULL) { // this will be null if no changes are needed
             switch (input_bit_depth) {
-              case 16: {
-                  int i,j;
-                  int16_t ls,rs;
-                  int16_t *inps=inbuf;
-                  int16_t *outps=tbuf;
-                  int32_t *outpl=(int32_t*)tbuf;
-                  for (i=0;i<inbuflength;i++) {
-                    ls=*inps++;
-                    rs=*inps++;
-                                        
-                    // here, do the mode stuff -- mono / reverse stereo / leftonly / rightonly
-                    
-                    switch (config.playback_mode) {
-                      case ST_mono: {
-                        int both = ls+rs;
-                        // Note -- this is assuming 16 bit signed.
-                        if (both > INT16_MAX) {
-                          both = INT16_MAX;
-                        } else if (both < INT16_MIN) {
-                          both = INT16_MIN;
-                        }
-                        int16_t sboth = (int16_t)both;
-                        ls = sboth;
-                        rs = sboth;
-                        } break;
-                      case ST_reverse_stereo: {
-                        int16_t t = ls;
-                        ls = rs;
-                        rs = t;
-                        } break;
-                      case ST_left_only:
-                        rs = ls;
-                        break;
-                      case ST_right_only:
-                        ls = rs;
-                        break;
-                    }
-                    
-                    // here, replicate the samples if you're upsampling
-                    
-                    for (j=0;j<output_sample_ratio;j++) {
-                          // raise the 16-bit sample to 32 bits.
-                          int32_t t = ls<<16;
-                          *outpl++=t;
-                          int32_t u = rs<<16;
-                          *outpl++=u;
+            case 16: {
+              int i, j;
+              int16_t ls, rs;
+              int16_t *inps = inbuf;
+              int16_t *outps = tbuf;
+              int32_t *outpl = (int32_t *)tbuf;
+              for (i = 0; i < inbuflength; i++) {
+                ls = *inps++;
+                rs = *inps++;
 
-                      /*
-                      switch (output_bit_depth) {
-                        case 16:
-                          *outps++=ls;
-                          *outps++=rs;
-                          break;
-                        case 24: {
-                          int32_t t = ls<<8;
-                          *outpl++=t;
-                          int32_t u = rs<<8;
-                          *outpl++=u;
-                          } break;
-                        case 32: {
-                          int32_t t = ls<<16;
-                          *outpl++=t;
-                          int32_t u = rs<<16;
-                          *outpl++=u;
-                          } break;
-                      }
-                      */
-                    }
+                // here, do the mode stuff -- mono / reverse stereo / leftonly / rightonly
+
+                switch (config.playback_mode) {
+                case ST_mono: {
+                  int both = ls + rs;
+                  // Note -- this is assuming 16 bit signed.
+                  if (both > INT16_MAX) {
+                    both = INT16_MAX;
+                  } else if (both < INT16_MIN) {
+                    both = INT16_MIN;
                   }
-
+                  int16_t sboth = (int16_t)both;
+                  ls = sboth;
+                  rs = sboth;
+                } break;
+                case ST_reverse_stereo: {
+                  int16_t t = ls;
+                  ls = rs;
+                  rs = t;
+                } break;
+                case ST_left_only:
+                  rs = ls;
+                  break;
+                case ST_right_only:
+                  ls = rs;
+                  break;
                 }
-                break;
-              default:
-                die("Shairport Sync only supports 16 bit input");
+
+                // here, replicate the samples if you're upsampling
+
+                for (j = 0; j < output_sample_ratio; j++) {
+                  // raise the 16-bit sample to 32 bits.
+                  int32_t t = ls << 16;
+                  *outpl++ = t;
+                  int32_t u = rs << 16;
+                  *outpl++ = u;
+
+                  /*
+                  switch (output_bit_depth) {
+                    case 16:
+                      *outps++=ls;
+                      *outps++=rs;
+                      break;
+                    case 24: {
+                      int32_t t = ls<<8;
+                      *outpl++=t;
+                      int32_t u = rs<<8;
+                      *outpl++=u;
+                      } break;
+                    case 32: {
+                      int32_t t = ls<<16;
+                      *outpl++=t;
+                      int32_t u = rs<<16;
+                      *outpl++=u;
+                      } break;
+                  }
+                  */
+                }
+              }
+
+            } break;
+            default:
+              die("Shairport Sync only supports 16 bit input");
             }
-                        
+
             // inbuf = tbuf;
-            inbuflength*=output_sample_ratio;
+            inbuflength *= output_sample_ratio;
           }
-          
+
           // We have a frame of data. We need to see if we want to add or remove a frame from it to
           // keep in sync.
           // So we calculate the timing error for the first frame in the DAC.
@@ -1593,12 +1699,13 @@ static void *player_thread_func(void *arg) {
           at_least_one_frame_seen = 1;
 
           int64_t reference_timestamp;
-          uint64_t reference_timestamp_time,remote_reference_timestamp_time;
-          get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time, &remote_reference_timestamp_time); // types okay
-          reference_timestamp*=output_sample_ratio;
+          uint64_t reference_timestamp_time, remote_reference_timestamp_time;
+          get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time,
+                                        &remote_reference_timestamp_time); // types okay
+          reference_timestamp *= output_sample_ratio;
           int64_t rt, nt;
           rt = reference_timestamp; // uint32_t to int64_t
-          nt = inframe->timestamp; // uint32_t to int64_t
+          nt = inframe->timestamp;  // uint32_t to int64_t
 
           uint64_t local_time_now = get_absolute_time_in_fp(); // types okay
           // struct timespec tn;
@@ -1609,12 +1716,18 @@ static void *player_thread_func(void *arg) {
           int64_t td = 0;
           int64_t td_in_frames = 0;
           if (local_time_now >= reference_timestamp_time) {
-          // debug(1,"td is %lld.",td);
-             td = local_time_now - reference_timestamp_time; // this is the positive value. Conversion is positive uint64_t to int64_t, thus okay
+            // debug(1,"td is %lld.",td);
+            td = local_time_now - reference_timestamp_time; // this is the positive value.
+                                                            // Conversion is positive uint64_t to
+                                                            // int64_t, thus okay
             td_in_frames = (td * config.output_rate) >> 32;
           } else {
-            td = reference_timestamp_time - local_time_now; // this is the absolute value, which should be negated. Conversion is positive uint64_t to int64_t, thus okay.
-            td_in_frames = (td * config.output_rate) >> 32; //use the absolute td value for the present. Types okay
+            td = reference_timestamp_time - local_time_now; // this is the absolute value, which
+                                                            // should be negated. Conversion is
+                                                            // positive uint64_t to int64_t, thus
+                                                            // okay.
+            td_in_frames = (td * config.output_rate) >>
+                           32; // use the absolute td value for the present. Types okay
             td_in_frames = -td_in_frames;
             td = -td; // should be okay, as the range of values should be very small w.r.t 64 bits
           }
@@ -1626,60 +1739,64 @@ static void *player_thread_func(void *arg) {
 
           // check sequencing
           if (last_seqno_read == -1)
-            last_seqno_read = inframe->sequence_number; //int32_t from seq_t, i.e. uint16_t, so okay.
+            last_seqno_read =
+                inframe->sequence_number; // int32_t from seq_t, i.e. uint16_t, so okay.
           else {
-            last_seqno_read = SUCCESSOR(last_seqno_read); // int32_t from seq_t, i.e. uint16_t, so okay.
-            if (inframe->sequence_number != last_seqno_read) { //seq_t, ei.e. uint16_t and int32_t, so okay
-              debug(
-                  1,
-                  "Player: packets out of sequence: expected: %u, got: %u, with ab_read: %u and ab_write: %u.",
-                  last_seqno_read, inframe->sequence_number,ab_read,ab_write);
+            last_seqno_read =
+                SUCCESSOR(last_seqno_read); // int32_t from seq_t, i.e. uint16_t, so okay.
+            if (inframe->sequence_number !=
+                last_seqno_read) { // seq_t, ei.e. uint16_t and int32_t, so okay
+              debug(1, "Player: packets out of sequence: expected: %u, got: %u, with ab_read: %u "
+                       "and ab_write: %u.",
+                    last_seqno_read, inframe->sequence_number, ab_read, ab_write);
               last_seqno_read = inframe->sequence_number; // reset warning...
             }
           }
 
-					buffer_occupancy = seq_diff(ab_read, ab_write); // int32_t from int32
+          buffer_occupancy = seq_diff(ab_read, ab_write); // int32_t from int32
 
-					if (buffer_occupancy < minimum_buffer_occupancy)
-						minimum_buffer_occupancy = buffer_occupancy;
+          if (buffer_occupancy < minimum_buffer_occupancy)
+            minimum_buffer_occupancy = buffer_occupancy;
 
-					if (buffer_occupancy > maximum_buffer_occupancy)
-						maximum_buffer_occupancy = buffer_occupancy;
+          if (buffer_occupancy > maximum_buffer_occupancy)
+            maximum_buffer_occupancy = buffer_occupancy;
 
           // here, we want to check (a) if we are meant to do synchronisation,
           // (b) if we have a delay procedure, (c) if we can get the delay.
 
           // If any of these are false, we don't do any synchronisation stuff
 
-					int resp = -1; // use this as a flag -- if negative, we can't rely on a real known delay
+          int resp = -1; // use this as a flag -- if negative, we can't rely on a real known delay
           current_delay = -1; // use this as a failure flag
- 
-					if (config.output->delay) {
-						long l_delay; 
-						resp = config.output->delay(&l_delay);
-						current_delay = l_delay;
-						if (resp==0) { // no error
-							if (current_delay<0) {
-								debug(1,"Underrun of %d frames reported, but ignored.",current_delay);
-								current_delay=0; // could get a negative value if there was underrun, but ignore it.
-							}
-							if (current_delay < minimum_dac_queue_size) {
-								minimum_dac_queue_size = current_delay; // update for display later
-							}
-						} else { 
-							debug(2, "Delay error %d when checking running latency.",resp);
-						}
-					}
+
+          if (config.output->delay) {
+            long l_delay;
+            resp = config.output->delay(&l_delay);
+            current_delay = l_delay;
+            if (resp == 0) { // no error
+              if (current_delay < 0) {
+                debug(1, "Underrun of %d frames reported, but ignored.", current_delay);
+                current_delay =
+                    0; // could get a negative value if there was underrun, but ignore it.
+              }
+              if (current_delay < minimum_dac_queue_size) {
+                minimum_dac_queue_size = current_delay; // update for display later
+              }
+            } else {
+              debug(2, "Delay error %d when checking running latency.", resp);
+            }
+          }
 
           if (resp >= 0) {
 
             // this is the actual delay, including the latency we actually want, which will
             // fluctuate a good bit about a potentially rising or falling trend.
             int64_t delay = td_in_frames + rt - (nt - current_delay); // all int64_t
-            
 
             // This is the timing error for the next audio frame in the DAC.
-            sync_error = delay - config.latency*output_sample_ratio; // int64_t from int64_t - int32_t, so okay
+            sync_error =
+                delay -
+                config.latency * output_sample_ratio; // int64_t from int64_t - int32_t, so okay
 
             // if (llabs(sync_error)>352*512)
             //  debug(1,"Very large sync error: %lld",sync_error);
@@ -1687,10 +1804,10 @@ static void *player_thread_func(void *arg) {
             // before we finally commit to this frame, check its sequencing and timing
 
             // require a certain error before bothering to fix it...
-            if (sync_error > config.tolerance*config.output_rate) { // int64_t > int, okay
+            if (sync_error > config.tolerance * config.output_rate) { // int64_t > int, okay
               amount_to_stuff = -1;
             }
-            if (sync_error < -config.tolerance*config.output_rate) {
+            if (sync_error < -config.tolerance * config.output_rate) {
               amount_to_stuff = 1;
             }
 
@@ -1701,51 +1818,60 @@ static void *player_thread_func(void *arg) {
             }
 
             // try to keep the corrections definitely below 1 in 1000 audio frames
-            
-            // calculate the time elapsed since the play session started.
-            
-            if (amount_to_stuff) {
-              if ((local_time_now) && (first_packet_time_to_play) && (local_time_now >= first_packet_time_to_play)) {
 
-                int64_t tp = (local_time_now - first_packet_time_to_play)>>32; // seconds int64_t from uint64_t which is always positive, so ok
-                
-                if (tp<5)
+            // calculate the time elapsed since the play session started.
+
+            if (amount_to_stuff) {
+              if ((local_time_now) && (first_packet_time_to_play) &&
+                  (local_time_now >= first_packet_time_to_play)) {
+
+                int64_t tp = (local_time_now - first_packet_time_to_play) >>
+                             32; // seconds int64_t from uint64_t which is always positive, so ok
+
+                if (tp < 5)
                   amount_to_stuff = 0; // wait at least five seconds
-                else if (tp<30) {
-                  if ((random() % 1000) > 352) // keep it to about 1:1000 for the first thirty seconds
+                else if (tp < 30) {
+                  if ((random() % 1000) >
+                      352) // keep it to about 1:1000 for the first thirty seconds
                     amount_to_stuff = 0;
                 }
               }
             }
-            
-            if (config.no_sync!=0)
-              amount_to_stuff = 0 ; // no stuffing if it's been disabled
-                      
+
+            if (config.no_sync != 0)
+              amount_to_stuff = 0; // no stuffing if it's been disabled
 
 #ifdef HAVE_LIBSOXR
             switch (config.packet_stuffing) {
             case ST_basic:
               //                if (amount_to_stuff) debug(1,"Basic stuff...");
               if (tbuf) {
-                play_samples = stuff_buffer_basic_32((int32_t*)tbuf, inbuflength, config.output_format, outbuf, amount_to_stuff, enable_dither);
-                }
-              else
-                play_samples = stuff_buffer_basic(inbuf, inbuflength, (short *)outbuf, amount_to_stuff);
+                play_samples =
+                    stuff_buffer_basic_32((int32_t *)tbuf, inbuflength, config.output_format,
+                                          outbuf, amount_to_stuff, enable_dither);
+              } else
+                play_samples =
+                    stuff_buffer_basic(inbuf, inbuflength, (short *)outbuf, amount_to_stuff);
               break;
             case ST_soxr:
               //                if (amount_to_stuff) debug(1,"Soxr stuff...");
               if (tbuf)
-                play_samples = stuff_buffer_soxr_32((int32_t*)tbuf, inbuflength, (int32_t*)outbuf, amount_to_stuff,output_bit_depth);
+                play_samples = stuff_buffer_soxr_32((int32_t *)tbuf, inbuflength, (int32_t *)outbuf,
+                                                    amount_to_stuff, output_bit_depth);
               else
-                play_samples = stuff_buffer_soxr(inbuf, inbuflength, (short *)outbuf, amount_to_stuff);
+                play_samples =
+                    stuff_buffer_soxr(inbuf, inbuflength, (short *)outbuf, amount_to_stuff);
               break;
             }
 #else
             //          if (amount_to_stuff) debug(1,"Standard stuff...");
             if (tbuf)
-              play_samples = stuff_buffer_basic_32((int32_t*)tbuf, inbuflength, config.output_format, outbuf, amount_to_stuff, enable_dither);
+              play_samples =
+                  stuff_buffer_basic_32((int32_t *)tbuf, inbuflength, config.output_format, outbuf,
+                                        amount_to_stuff, enable_dither);
             else
-              play_samples = stuff_buffer_basic(inbuf, inbuflength, (short *)outbuf, amount_to_stuff);
+              play_samples =
+                  stuff_buffer_basic(inbuf, inbuflength, (short *)outbuf, amount_to_stuff);
 #endif
 
             /*
@@ -1762,27 +1888,27 @@ static void *player_thread_func(void *arg) {
                 debug(1,"Silence!");
             }
             */
-            
-            
-            if (outbuf==NULL)
-              debug(1,"NULL outbuf to play -- skipping it.");
+
+            if (outbuf == NULL)
+              debug(1, "NULL outbuf to play -- skipping it.");
             else {
-              if (play_samples==0)
-                debug(1,"play_samples==0 skipping it (1).");
+              if (play_samples == 0)
+                debug(1, "play_samples==0 skipping it (1).");
               else
-                config.output->play((short*)outbuf, play_samples); // remove the (short*)!
+                config.output->play((short *)outbuf, play_samples); // remove the (short*)!
             }
- 
+
             // check for loss of sync
             // timestamp of zero means an inserted silent frame in place of a missing frame
-            
+
             // not too sure if abs() is implemented for int64_t, so we'll do it manually
             int64_t abs_sync_error = sync_error;
-            if (abs_sync_error<0)
+            if (abs_sync_error < 0)
               abs_sync_error = -abs_sync_error;
-            
-            if ((config.no_sync==0) && (inframe->timestamp != 0) && (!please_stop) && (config.resyncthreshold > 0.0) &&
-                (abs_sync_error > config.resyncthreshold*config.output_rate)) {
+
+            if ((config.no_sync == 0) && (inframe->timestamp != 0) && (!please_stop) &&
+                (config.resyncthreshold > 0.0) &&
+                (abs_sync_error > config.resyncthreshold * config.output_rate)) {
               sync_error_out_of_bounds++;
               // debug(1,"Sync error out of bounds: Error: %lld; previous error: %lld; DAC: %lld;
               // timestamp: %llx, time now
@@ -1798,31 +1924,34 @@ static void *player_thread_func(void *arg) {
               sync_error_out_of_bounds = 0;
             }
           } else {
-            // if there is no delay procedure, or it's not working or not allowed, there can be no synchronising
-            
+            // if there is no delay procedure, or it's not working or not allowed, there can be no
+            // synchronising
+
             if (fix_volume == 0x10000)
-            
-              if (inbuf==NULL)
-                debug(1,"NULL inbuf to play -- skipping it.");
+
+              if (inbuf == NULL)
+                debug(1, "NULL inbuf to play -- skipping it.");
               else {
-                if (inbuflength==0)
-                  debug(1,"empty frame to play -- skipping it (3).");
+                if (inbuflength == 0)
+                  debug(1, "empty frame to play -- skipping it (3).");
                 else
                   config.output->play(inbuf, inbuflength);
               }
             else {
               if (tbuf)
-                play_samples = stuff_buffer_basic_32((int32_t*)tbuf, inbuflength, config.output_format, outbuf, 0, enable_dither);
+                play_samples = stuff_buffer_basic_32(
+                    (int32_t *)tbuf, inbuflength, config.output_format, outbuf, 0, enable_dither);
               else
-                play_samples = stuff_buffer_basic(inbuf, inbuflength, (short *)outbuf, 0); // no stuffing, but volume adjustment
+                play_samples = stuff_buffer_basic(inbuf, inbuflength, (short *)outbuf,
+                                                  0); // no stuffing, but volume adjustment
 
-              if (outbuf==NULL)
-                debug(1,"NULL outbuf to play -- skipping it.");
+              if (outbuf == NULL)
+                debug(1, "NULL outbuf to play -- skipping it.");
               else {
-                if (inbuf==0)
-                  debug(1,"empty frame to play -- skipping it (4).");
+                if (inbuf == 0)
+                  debug(1, "empty frame to play -- skipping it (4).");
                 else
-                  config.output->play((short*)outbuf, play_samples); // remove the (short*)!
+                  config.output->play((short *)outbuf, play_samples); // remove the (short*)!
               }
             }
           }
@@ -1835,10 +1964,12 @@ static void *player_thread_func(void *arg) {
 
           // new stats calculation. We want a running average of sync error, drift, adjustment,
           // number of additions+subtractions
-          
-          // this is a misleading hack -- the statistics should include some data on the number of valid samples and the number of times sync wasn't checked due to non availability of a delay figure.
+
+          // this is a misleading hack -- the statistics should include some data on the number of
+          // valid samples and the number of times sync wasn't checked due to non availability of a
+          // delay figure.
           // for the present, stats are only updated when sync has been checked
-          if (sync_error!=-1) {
+          if (sync_error != -1) {
             if (number_of_statistics == trend_interval) {
               // here we remove the oldest statistical data and take it from the summaries as well
               tsum_of_sync_errors -= statistics[oldest_statistic].sync_error;
@@ -1874,10 +2005,9 @@ static void *player_thread_func(void *arg) {
             tsum_of_corrections += amount_to_stuff;
             session_corrections += amount_to_stuff;
 
-
             newest_statistic = (newest_statistic + 1) % trend_interval;
             number_of_statistics++;
-            }
+          }
         }
         if (play_number % print_interval == 0) {
           // we can now calculate running averages for sync error (frames), corrections (ppm),
@@ -1890,67 +2020,56 @@ static void *player_thread_func(void *arg) {
           // if ((play_number/print_interval)%20==0)
           if (config.statistics_requested) {
             if (at_least_one_frame_seen) {
-            	if ((config.output->delay)) {
-                if (config.no_sync==0) {
-                  inform("%*.1f,"  /* Sync error in milliseconds */
-                         "%*.1f,"  /* net correction in ppm */
-                         "%*.1f,"  /* corrections in ppm */
-                         "%*d,"    /* total packets */
-                         "%*llu,"  /* missing packets */
-                         "%*llu,"  /* late packets */
-                         "%*llu,"  /* too late packets */
-                         "%*llu,"  /* resend requests */
-                         "%*lli,"  /* min DAC queue size */
-                         "%*d,"    /* min buffer occupancy */
-                         "%*d",    /* max buffer occupancy */
-                         10, 1000*moving_average_sync_error/config.output_rate,
-                         10, moving_average_correction * 1000000 / (352*output_sample_ratio),
-                         10, moving_average_insertions_plus_deletions * 1000000 / (352*output_sample_ratio),
-                         12, play_number,
-                         7, missing_packets,
-                         7, late_packets,
-                         7, too_late_packets,
-                         7, resend_requests,
-                         7, minimum_dac_queue_size,
-                         5, minimum_buffer_occupancy,
+              if ((config.output->delay)) {
+                if (config.no_sync == 0) {
+                  inform("%*.1f," /* Sync error in milliseconds */
+                         "%*.1f," /* net correction in ppm */
+                         "%*.1f," /* corrections in ppm */
+                         "%*d,"   /* total packets */
+                         "%*llu," /* missing packets */
+                         "%*llu," /* late packets */
+                         "%*llu," /* too late packets */
+                         "%*llu," /* resend requests */
+                         "%*lli," /* min DAC queue size */
+                         "%*d,"   /* min buffer occupancy */
+                         "%*d",   /* max buffer occupancy */
+                         10,
+                         1000 * moving_average_sync_error / config.output_rate, 10,
+                         moving_average_correction * 1000000 / (352 * output_sample_ratio), 10,
+                         moving_average_insertions_plus_deletions * 1000000 /
+                             (352 * output_sample_ratio),
+                         12, play_number, 7, missing_packets, 7, late_packets, 7, too_late_packets,
+                         7, resend_requests, 7, minimum_dac_queue_size, 5, minimum_buffer_occupancy,
                          5, maximum_buffer_occupancy);
                 } else {
-                  inform("%*.1f,"  /* Sync error in milliseconds */
-                         "%*d,"    /* total packets */
-                         "%*llu,"  /* missing packets */
-                         "%*llu,"  /* late packets */
-                         "%*llu,"  /* too late packets */
-                         "%*llu,"  /* resend requests */
-                         "%*lli,"  /* min DAC queue size */
-                         "%*d,"    /* min buffer occupancy */
-                         "%*d",    /* max buffer occupancy */
-                         10, 1000*moving_average_sync_error/config.output_rate,
-                         12, play_number,
-                         7, missing_packets,
-                         7, late_packets,
-                         7, too_late_packets,
-                         7, resend_requests,
-                         7, minimum_dac_queue_size,
-                         5, minimum_buffer_occupancy,
-                         5, maximum_buffer_occupancy);
-                } 
+                  inform("%*.1f," /* Sync error in milliseconds */
+                         "%*d,"   /* total packets */
+                         "%*llu," /* missing packets */
+                         "%*llu," /* late packets */
+                         "%*llu," /* too late packets */
+                         "%*llu," /* resend requests */
+                         "%*lli," /* min DAC queue size */
+                         "%*d,"   /* min buffer occupancy */
+                         "%*d",   /* max buffer occupancy */
+                         10,
+                         1000 * moving_average_sync_error / config.output_rate, 12, play_number, 7,
+                         missing_packets, 7, late_packets, 7, too_late_packets, 7, resend_requests,
+                         7, minimum_dac_queue_size, 5, minimum_buffer_occupancy, 5,
+                         maximum_buffer_occupancy);
+                }
               } else {
-                inform("%*.1f,"  /* Sync error in milliseconds */
-                       "%*d,"    /* total packets */
-                       "%*llu,"  /* missing packets */
-                       "%*llu,"  /* late packets */
-                       "%*llu,"  /* too late packets */
-                       "%*llu,"  /* resend requests */
-                       "%*d,"    /* min buffer occupancy */
-                       "%*d",    /* max buffer occupancy */
-                       10, 1000*moving_average_sync_error/config.output_rate,
-                       12, play_number,
-                       7, missing_packets,
-                       7, late_packets,
-                       7, too_late_packets,
-                       7, resend_requests,
-                       5, minimum_buffer_occupancy,
-                       5, maximum_buffer_occupancy);
+                inform("%*.1f," /* Sync error in milliseconds */
+                       "%*d,"   /* total packets */
+                       "%*llu," /* missing packets */
+                       "%*llu," /* late packets */
+                       "%*llu," /* too late packets */
+                       "%*llu," /* resend requests */
+                       "%*d,"   /* min buffer occupancy */
+                       "%*d",   /* max buffer occupancy */
+                       10,
+                       1000 * moving_average_sync_error / config.output_rate, 12, play_number, 7,
+                       missing_packets, 7, late_packets, 7, too_late_packets, 7, resend_requests, 5,
+                       minimum_buffer_occupancy, 5, maximum_buffer_occupancy);
               }
             } else {
               inform("No frames received in the last sampling interval.");
@@ -1966,32 +2085,34 @@ static void *player_thread_func(void *arg) {
   }
 
   if (config.statistics_requested) {
-     int rawSeconds = (int) difftime( time( NULL ), playstart );
-     int elapsedHours = rawSeconds / 3600;
-     int elapsedMin = (rawSeconds / 60) % 60;
-     int elapsedSec = rawSeconds % 60;
-     inform( "Playback Stopped. Total playing time %02d:%02d:%02d\n", elapsedHours, elapsedMin, elapsedSec );
+    int rawSeconds = (int)difftime(time(NULL), playstart);
+    int elapsedHours = rawSeconds / 3600;
+    int elapsedMin = (rawSeconds / 60) % 60;
+    int elapsedSec = rawSeconds % 60;
+    inform("Playback Stopped. Total playing time %02d:%02d:%02d\n", elapsedHours, elapsedMin,
+           elapsedSec);
   }
 
   if (config.output->stop)
-  	config.output->stop();
-  usleep(100000); // allow this time to (?) allow the alsa subsystem to finish cleaning up after itself. 50 ms seems too short
+    config.output->stop();
+  usleep(100000); // allow this time to (?) allow the alsa subsystem to finish cleaning up after
+                  // itself. 50 ms seems too short
   free(outbuf);
   free(silence);
   if (tbuf)
     free(tbuf);
-  debug(1,"Shut down audio, control and timing threads");
+  debug(1, "Shut down audio, control and timing threads");
   itr.please_stop = 1;
   pthread_kill(rtp_audio_thread, SIGUSR1);
   pthread_kill(rtp_control_thread, SIGUSR1);
   pthread_kill(rtp_timing_thread, SIGUSR1);
   pthread_join(rtp_timing_thread, NULL);
-  debug(1,"timing thread joined");
+  debug(1, "timing thread joined");
   pthread_join(rtp_audio_thread, NULL);
-  debug(1,"audio thread joined");
+  debug(1, "audio thread joined");
   pthread_join(rtp_control_thread, NULL);
-  debug(1,"control thread joined");
-  debug(1,"Player thread exit");
+  debug(1, "control thread joined");
+  debug(1, "Player thread exit");
   return 0;
 }
 
@@ -2003,72 +2124,81 @@ void player_volume(double airplay_volume) {
   // By examination, the -30 -- 0 range is linear on the slider; i.e. the slider is calibrated in 30
   // equal increments. Since the human ear's response is roughly logarithmic, we imagine these to
   // be power dB, i.e. from -30dB to 0dB.
-    
+
   // We may have a hardware mixer, and if so, we will give it priority.
   // If a desired volume range is given, then we will try to accommodate it from
   // the top of the hardware mixer's range downwards.
-  
-  // If no desired volume range is given, we will use the native resolution of the hardware mixer, if any,
-  // or failing that, the software mixer. The software mixer has a range of from -96.3 dB up to 0 dB,
+
+  // If no desired volume range is given, we will use the native resolution of the hardware mixer,
+  // if any,
+  // or failing that, the software mixer. The software mixer has a range of from -96.3 dB up to 0
+  // dB,
   // corresponding to a multiplier of 1 to 65535.
- 
-  // Otherwise, we will accommodate the desired volume range in the combination of the software and hardware mixer
+
+  // Otherwise, we will accommodate the desired volume range in the combination of the software and
+  // hardware mixer
   // Intuitively (!), it seems best to give the hardware mixer as big a role as possible, so
   // we will use its full range and then accommodate the rest of the attenuation in software.
   // A problem is that we don't know whether the lowest hardware volume actually mutes the output
-  // so we must assume that it does, and for this reason, the volume control goes at the "bottom" of the adjustment range
-    
+  // so we must assume that it does, and for this reason, the volume control goes at the "bottom" of
+  // the adjustment range
+
   // The dB range of a value from 1 to 65536 is about 96.3 dB (log10 of 65536 is 4.8164).
   // Since the levels correspond with amplitude, they correspond to voltage, hence voltage dB,
   // or 20 times the log of the ratio. Then multiplied by 100 for convenience.
   // Thus, we ask our vol2attn function for an appropriate dB between -96.3 and 0 dB and translate
   // it back to a number.
-  
-  int32_t hw_min_db, hw_max_db, hw_range_db, range_to_use, min_db, max_db; // hw_range_db is a flag; if 0 means no mixer
-  
+
+  int32_t hw_min_db, hw_max_db, hw_range_db, range_to_use, min_db,
+      max_db; // hw_range_db is a flag; if 0 means no mixer
+
   int32_t sw_min_db = -9630;
   int32_t sw_max_db = 0;
   int32_t sw_range_db = sw_max_db - sw_min_db;
   int32_t desired_range_db; // this is used as a flag; if 0 means no desired range
-  
+
   if (config.volume_range_db)
-    desired_range_db = (int32_t)trunc(config.volume_range_db*100);
+    desired_range_db = (int32_t)trunc(config.volume_range_db * 100);
   else
     desired_range_db = 0;
-  
+
   if (config.output->parameters) {
     // have a hardware mixer
     config.output->parameters(&audio_information);
     hw_max_db = audio_information.maximum_volume_dB;
     hw_min_db = audio_information.minimum_volume_dB;
-    hw_range_db = hw_max_db-hw_min_db;
+    hw_range_db = hw_max_db - hw_min_db;
   } else {
     // don't have a hardware mixer
     hw_max_db = hw_min_db = hw_range_db = 0;
   }
-  
+
   if (desired_range_db) {
     // debug(1,"An attenuation range of %d is requested.",desired_range_db);
     // we have a desired volume range.
     if (hw_range_db) {
-    // we have a hardware mixer
-      if (hw_range_db>=desired_range_db) {
+      // we have a hardware mixer
+      if (hw_range_db >= desired_range_db) {
         // the hardware mixer can accommodate the desired range
         max_db = hw_max_db;
         min_db = max_db - desired_range_db;
       } else {
-        if ((hw_range_db+sw_range_db)<desired_range_db) {
-          inform("The volume attenuation range %f is greater than can be accommodated by the hardware and software -- set to %f.",config.volume_range_db,hw_range_db+sw_range_db);
-          desired_range_db=hw_range_db+sw_range_db;
+        if ((hw_range_db + sw_range_db) < desired_range_db) {
+          inform("The volume attenuation range %f is greater than can be accommodated by the "
+                 "hardware and software -- set to %f.",
+                 config.volume_range_db, hw_range_db + sw_range_db);
+          desired_range_db = hw_range_db + sw_range_db;
         }
         min_db = hw_min_db;
         max_db = min_db + desired_range_db;
       }
     } else {
       // we have a desired volume range and no hardware mixer
-      if (sw_range_db<desired_range_db) {
-        inform("The volume attenuation range %f is greater than can be accommodated by the software -- set to %f.",config.volume_range_db,sw_range_db);
-        desired_range_db=sw_range_db;      
+      if (sw_range_db < desired_range_db) {
+        inform("The volume attenuation range %f is greater than can be accommodated by the "
+               "software -- set to %f.",
+               config.volume_range_db, sw_range_db);
+        desired_range_db = sw_range_db;
       }
       max_db = sw_max_db;
       min_db = max_db - desired_range_db;
@@ -2084,34 +2214,36 @@ void player_volume(double airplay_volume) {
       max_db = sw_max_db;
     }
   }
-  
+
   double hardware_attenuation, software_attenuation;
-  double scaled_attenuation = hw_min_db+sw_min_db;
-    
+  double scaled_attenuation = hw_min_db + sw_min_db;
+
   // now, we can map the input to the desired output volume
-  if (airplay_volume==-144.0) {    
-    // do a mute   
+  if (airplay_volume == -144.0) {
+    // do a mute
     // needed even with hardware mute, as when sound is unmuted it might otherwise be very loud.
-  	hardware_attenuation = hw_min_db;
-  	software_attenuation = sw_min_db;
-  	if (config.output->mute)
-  		config.output->mute(1); // use real mute if it's there
-    
+    hardware_attenuation = hw_min_db;
+    software_attenuation = sw_min_db;
+    if (config.output->mute)
+      config.output->mute(1); // use real mute if it's there
+
   } else {
-  	if (config.output->mute)
-  		config.output->mute(0); // unmute mute if it's there  
+    if (config.output->mute)
+      config.output->mute(0); // unmute mute if it's there
     scaled_attenuation = vol2attn(airplay_volume, max_db, min_db);
     if (hw_range_db) {
       // if there is a hardware mixer
-      if (scaled_attenuation<=hw_max_db) {
+      if (scaled_attenuation <= hw_max_db) {
         // the attenuation is so low that's it's in the hardware mixer's range
         // debug(1,"Attenuation all taken care of by the hardware mixer.");
         hardware_attenuation = scaled_attenuation;
-        software_attenuation = sw_max_db - (max_db-hw_max_db); // e.g. if the hw_max_db  is +4 and the max is +40, this will be -36 (all by 100, of course)
+        software_attenuation = sw_max_db - (max_db - hw_max_db); // e.g. if the hw_max_db  is +4 and
+                                                                 // the max is +40, this will be -36
+                                                                 // (all by 100, of course)
       } else {
         // debug(1,"Attenuation taken care of by hardware and software mixer.");
         hardware_attenuation = hw_max_db; // the hardware mixer is turned up full
-        software_attenuation = sw_max_db - (max_db-scaled_attenuation);
+        software_attenuation = sw_max_db - (max_db - scaled_attenuation);
       }
     } else {
       // if there is no hardware mixer, the scaled_volume is the software volume
@@ -2119,14 +2251,16 @@ void player_volume(double airplay_volume) {
       software_attenuation = scaled_attenuation;
     }
   }
-  
+
   if ((config.output->volume) && (hw_range_db)) {
-	  config.output->volume(hardware_attenuation); // otherwise set the output to the lowest value
-	  //debug(1,"Hardware attenuation set to %f for airplay volume of %f.",hardware_attenuation,airplay_volume);
+    config.output->volume(hardware_attenuation); // otherwise set the output to the lowest value
+    // debug(1,"Hardware attenuation set to %f for airplay volume of
+    // %f.",hardware_attenuation,airplay_volume);
   }
   double temp_fix_volume = 65536.0 * pow(10, software_attenuation / 2000);
- 	// debug(1,"Software attenuation set to %f, i.e %f out of 65,536, for airplay volume of %f",software_attenuation,temp_fix_volume,airplay_volume);
-  
+  // debug(1,"Software attenuation set to %f, i.e %f out of 65,536, for airplay volume of
+  // %f",software_attenuation,temp_fix_volume,airplay_volume);
+
   pthread_mutex_lock(&vol_mutex);
   fix_volume = temp_fix_volume;
   pthread_mutex_unlock(&vol_mutex);
@@ -2135,17 +2269,15 @@ void player_volume(double airplay_volume) {
   char *dv = malloc(128); // will be freed in the metadata thread
   if (dv) {
     memset(dv, 0, 128);
-    snprintf(dv, 127, "%.2f,%.2f,%.2f,%.2f", airplay_volume,
-             scaled_attenuation / 100.0,
-             min_db / 100.0,
-             max_db / 100.0);
+    snprintf(dv, 127, "%.2f,%.2f,%.2f,%.2f", airplay_volume, scaled_attenuation / 100.0,
+             min_db / 100.0, max_db / 100.0);
     send_ssnc_metadata('pvol', dv, strlen(dv), 1);
   }
 #endif
 }
 
 void player_flush(int64_t timestamp) {
-  debug(3,"Flush requested up to %u. It seems as if 0 is special.",timestamp);
+  debug(3, "Flush requested up to %u. It seems as if 0 is special.", timestamp);
   pthread_mutex_lock(&flush_mutex);
   flush_requested = 1;
   // if (timestamp!=0)
@@ -2158,8 +2290,8 @@ void player_flush(int64_t timestamp) {
 }
 
 int player_play(stream_cfg *stream, pthread_t *player_thread) {
-	//if (*player_thread!=NULL)
-	//	die("Trying to create a second player thread for this RTSP session");
+  // if (*player_thread!=NULL)
+  //	die("Trying to create a second player thread for this RTSP session");
   packet_count = 0;
   encrypted = stream->encrypted;
   if (config.buffer_start_fill > BUFFER_FRAMES)
@@ -2197,7 +2329,7 @@ int player_play(stream_cfg *stream, pthread_t *player_thread) {
 #endif
   if (rc)
     debug(1, "Error initialising condition variable.");
-  config.output->start(config.output_rate,config.output_format);
+  config.output->start(config.output_rate, config.output_format);
   size_t size = (PTHREAD_STACK_MIN + 256 * 1024);
   pthread_attr_t tattr;
   pthread_attr_init(&tattr);
@@ -2210,20 +2342,20 @@ int player_play(stream_cfg *stream, pthread_t *player_thread) {
 }
 
 void player_stop(pthread_t *player_thread) {
-	//if (*thread==NULL)
-	//	debug(1,"Trying to stop a non-existent player thread");
-	// else {
-		please_stop = 1;
-		pthread_cond_signal(&flowcontrol); // tell it to give up
-		pthread_join(*player_thread, NULL);
-	#ifdef CONFIG_METADATA
-		send_ssnc_metadata('pend', NULL, 0, 1);
-	#endif
-		command_stop();
-		free_buffer();
-		terminate_decoders();
-		int rc = pthread_cond_destroy(&flowcontrol);
-		if (rc)
-			debug(1, "Error destroying condition variable.");
-	//	}
+  // if (*thread==NULL)
+  //	debug(1,"Trying to stop a non-existent player thread");
+  // else {
+  please_stop = 1;
+  pthread_cond_signal(&flowcontrol); // tell it to give up
+  pthread_join(*player_thread, NULL);
+#ifdef CONFIG_METADATA
+  send_ssnc_metadata('pend', NULL, 0, 1);
+#endif
+  command_stop();
+  free_buffer();
+  terminate_decoders();
+  int rc = pthread_cond_destroy(&flowcontrol);
+  if (rc)
+    debug(1, "Error destroying condition variable.");
+  //	}
 }

@@ -19,10 +19,10 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "audio.h"
+#include <sndio.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <sndio.h>
-#include "audio.h"
 
 static struct sio_hdl *sio;
 static struct sio_par par;
@@ -88,4 +88,4 @@ audio_output audio_sndio = {.name = "sndio",
                             .play = &play,
                             .volume = &volume,
                             .parameters = NULL,
-                            .mute= NULL};
+                            .mute = NULL};

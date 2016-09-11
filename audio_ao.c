@@ -24,12 +24,12 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include "audio.h"
+#include "common.h"
+#include <ao/ao.h>
+#include <memory.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <memory.h>
-#include <ao/ao.h>
-#include "common.h"
-#include "audio.h"
 
 ao_device *dev = NULL;
 
@@ -50,13 +50,12 @@ static int init(int argc, char **argv) {
 
   config.audio_backend_buffer_desired_length = 1.0;
   config.audio_backend_latency_offset = 0;
-  
+
   // get settings from settings file first, allow them to be overridden by command line options
 
   if (config.cfg != NULL) {
     /* Get the desired buffer size setting. */
-    if (config_lookup_float(config.cfg,
-                          "ao.audio_backend_buffer_desired_length", &dvalue)) {
+    if (config_lookup_float(config.cfg, "ao.audio_backend_buffer_desired_length", &dvalue)) {
       if ((dvalue < 0) || (value > 1.5))
         die("Invalid ao audio backend buffer desired length \"%f\". It "
             "should be between 0 and "
@@ -68,8 +67,7 @@ static int init(int argc, char **argv) {
     }
 
     /* Get the latency offset. */
-    if (config_lookup_float(config.cfg, "ao.audio_backend_latency_offset",
-                          &dvalue)) {
+    if (config_lookup_float(config.cfg, "ao.audio_backend_latency_offset", &dvalue)) {
       if ((dvalue < -1.0) || (value > 1.5))
         die("Invalid ao audio backend buffer latency offset \"%f\". It "
             "should be between -1.0 and +1.5, default is 0 seconds",

@@ -1,12 +1,12 @@
 #ifndef _COMMON_H
 #define _COMMON_H
 
+#include <libconfig.h>
 #include <stdint.h>
 #include <sys/socket.h>
-#include <libconfig.h>
 
-#include "config.h"
 #include "audio.h"
+#include "config.h"
 #include "mdns.h"
 
 #if defined(__APPLE__) && defined(__MACH__)
@@ -58,28 +58,72 @@ enum decoders_supported_type {
 
 // the following enum must _exactly match the snd_pcm_format_t definition in the alsa pcm.h file.
 
-enum  	sps_format_t { 
-  SPS_FORMAT_UNKNOWN = -1, SPS_FORMAT_S8 = 0, SPS_FORMAT_U8, SPS_FORMAT_S16_LE, 
-  SPS_FORMAT_S16_BE, SPS_FORMAT_U16_LE, SPS_FORMAT_U16_BE, SPS_FORMAT_S24_LE, 
-  SPS_FORMAT_S24_BE, SPS_FORMAT_U24_LE, SPS_FORMAT_U24_BE, SPS_FORMAT_S32_LE, 
-  SPS_FORMAT_S32_BE, SPS_FORMAT_U32_LE, SPS_FORMAT_U32_BE, SPS_FORMAT_FLOAT_LE, 
-  SPS_FORMAT_FLOAT_BE, SPS_FORMAT_FLOAT64_LE, SPS_FORMAT_FLOAT64_BE, SPS_FORMAT_IEC958_SUBFRAME_LE, 
-  SPS_FORMAT_IEC958_SUBFRAME_BE, SPS_FORMAT_MU_LAW, SPS_FORMAT_A_LAW, SPS_FORMAT_IMA_ADPCM, 
-  SPS_FORMAT_MPEG, SPS_FORMAT_GSM, SPS_FORMAT_SPECIAL = 31, SPS_FORMAT_S24_3LE = 32, 
-  SPS_FORMAT_S24_3BE, SPS_FORMAT_U24_3LE, SPS_FORMAT_U24_3BE, SPS_FORMAT_S20_3LE, 
-  SPS_FORMAT_S20_3BE, SPS_FORMAT_U20_3LE, SPS_FORMAT_U20_3BE, SPS_FORMAT_S18_3LE, 
-  SPS_FORMAT_S18_3BE, SPS_FORMAT_U18_3LE, SPS_FORMAT_U18_3BE, SPS_FORMAT_G723_24, 
-  SPS_FORMAT_G723_24_1B, SPS_FORMAT_G723_40, SPS_FORMAT_G723_40_1B, SPS_FORMAT_DSD_U8, 
-  SPS_FORMAT_DSD_U16_LE, SPS_FORMAT_DSD_U32_LE, SPS_FORMAT_DSD_U16_BE, SPS_FORMAT_DSD_U32_BE, 
-  SPS_FORMAT_LAST = SPS_FORMAT_DSD_U32_BE, SPS_FORMAT_S16 = SPS_FORMAT_S16_LE, SPS_FORMAT_U16 = SPS_FORMAT_U16_LE, SPS_FORMAT_S24 = SPS_FORMAT_S24_LE, 
-  SPS_FORMAT_U24 = SPS_FORMAT_U24_LE, SPS_FORMAT_S32 = SPS_FORMAT_S32_LE, SPS_FORMAT_U32 = SPS_FORMAT_U32_LE, SPS_FORMAT_FLOAT = SPS_FORMAT_FLOAT_LE, 
-  SPS_FORMAT_FLOAT64 = SPS_FORMAT_FLOAT64_LE, SPS_FORMAT_IEC958_SUBFRAME = SPS_FORMAT_IEC958_SUBFRAME_LE 
+enum sps_format_t {
+  SPS_FORMAT_UNKNOWN = -1,
+  SPS_FORMAT_S8 = 0,
+  SPS_FORMAT_U8,
+  SPS_FORMAT_S16_LE,
+  SPS_FORMAT_S16_BE,
+  SPS_FORMAT_U16_LE,
+  SPS_FORMAT_U16_BE,
+  SPS_FORMAT_S24_LE,
+  SPS_FORMAT_S24_BE,
+  SPS_FORMAT_U24_LE,
+  SPS_FORMAT_U24_BE,
+  SPS_FORMAT_S32_LE,
+  SPS_FORMAT_S32_BE,
+  SPS_FORMAT_U32_LE,
+  SPS_FORMAT_U32_BE,
+  SPS_FORMAT_FLOAT_LE,
+  SPS_FORMAT_FLOAT_BE,
+  SPS_FORMAT_FLOAT64_LE,
+  SPS_FORMAT_FLOAT64_BE,
+  SPS_FORMAT_IEC958_SUBFRAME_LE,
+  SPS_FORMAT_IEC958_SUBFRAME_BE,
+  SPS_FORMAT_MU_LAW,
+  SPS_FORMAT_A_LAW,
+  SPS_FORMAT_IMA_ADPCM,
+  SPS_FORMAT_MPEG,
+  SPS_FORMAT_GSM,
+  SPS_FORMAT_SPECIAL = 31,
+  SPS_FORMAT_S24_3LE = 32,
+  SPS_FORMAT_S24_3BE,
+  SPS_FORMAT_U24_3LE,
+  SPS_FORMAT_U24_3BE,
+  SPS_FORMAT_S20_3LE,
+  SPS_FORMAT_S20_3BE,
+  SPS_FORMAT_U20_3LE,
+  SPS_FORMAT_U20_3BE,
+  SPS_FORMAT_S18_3LE,
+  SPS_FORMAT_S18_3BE,
+  SPS_FORMAT_U18_3LE,
+  SPS_FORMAT_U18_3BE,
+  SPS_FORMAT_G723_24,
+  SPS_FORMAT_G723_24_1B,
+  SPS_FORMAT_G723_40,
+  SPS_FORMAT_G723_40_1B,
+  SPS_FORMAT_DSD_U8,
+  SPS_FORMAT_DSD_U16_LE,
+  SPS_FORMAT_DSD_U32_LE,
+  SPS_FORMAT_DSD_U16_BE,
+  SPS_FORMAT_DSD_U32_BE,
+  SPS_FORMAT_LAST = SPS_FORMAT_DSD_U32_BE,
+  SPS_FORMAT_S16 = SPS_FORMAT_S16_LE,
+  SPS_FORMAT_U16 = SPS_FORMAT_U16_LE,
+  SPS_FORMAT_S24 = SPS_FORMAT_S24_LE,
+  SPS_FORMAT_U24 = SPS_FORMAT_U24_LE,
+  SPS_FORMAT_S32 = SPS_FORMAT_S32_LE,
+  SPS_FORMAT_U32 = SPS_FORMAT_U32_LE,
+  SPS_FORMAT_FLOAT = SPS_FORMAT_FLOAT_LE,
+  SPS_FORMAT_FLOAT64 = SPS_FORMAT_FLOAT64_LE,
+  SPS_FORMAT_IEC958_SUBFRAME = SPS_FORMAT_IEC958_SUBFRAME_LE
 } sps_format_t;
 
 typedef struct {
   config_t *cfg;
   char *password;
-  char *service_name; // the name for the shairport service, e.g. "Shairport Sync Version %v running on host %h"
+  char *service_name; // the name for the shairport service, e.g. "Shairport Sync Version %v running
+                      // on host %h"
 #ifdef CONFIG_METADATA
   int metadata_enabled;
   char *metadata_pipename;
@@ -93,9 +137,10 @@ typedef struct {
   int udp_port_base;
   int udp_port_range;
   int ignore_volume_control;
-  int no_sync; // disable synchronisation, even if it's available
-  int no_mmap; // disable use of mmap-based output, even if it's available
-  double resyncthreshold; // if it get's out of whack my more than this number of seconds, resync. Zero means never
+  int no_sync;            // disable synchronisation, even if it's available
+  int no_mmap;            // disable use of mmap-based output, even if it's available
+  double resyncthreshold; // if it get's out of whack my more than this number of seconds, resync.
+                          // Zero means never
                           // resync.
   int allow_session_interruption;
   int timeout; // while in play mode, exit if no packets of audio come in for more than this number
@@ -110,26 +155,30 @@ typedef struct {
   int64_t latency;
   int64_t userSuppliedLatency; // overrides all other latencies -- use with caution
   int64_t iTunesLatency;       // supplied with --iTunesLatency option
-  int64_t AirPlayLatency; // supplied with --AirPlayLatency option
-  int64_t ForkedDaapdLatency; // supplied with --ForkedDaapdLatency option
+  int64_t AirPlayLatency;      // supplied with --AirPlayLatency option
+  int64_t ForkedDaapdLatency;  // supplied with --ForkedDaapdLatency option
   int daemonise;
-  int statistics_requested,use_negotiated_latencies;
+  int statistics_requested, use_negotiated_latencies;
   enum playback_mode_type playback_mode;
   char *cmd_start, *cmd_stop;
   int cmd_blocking;
   double tolerance; // allow this much drift before attempting to correct it
   enum stuffing_type packet_stuffing;
   int decoders_supported;
-  int use_apple_decoder; // set to 1 if you want to use the apple decoder instead of the original by David Hammerton
+  int use_apple_decoder; // set to 1 if you want to use the apple decoder instead of the original by
+                         // David Hammerton
   char *pidfile;
   // char *logfile;
   // char *errfile;
   char *configfile;
-  char *regtype; // The regtype is the service type followed by the protocol, separated by a dot, by default “_raop._tcp.”.
+  char *regtype; // The regtype is the service type followed by the protocol, separated by a dot, by
+                 // default “_raop._tcp.”.
   double audio_backend_buffer_desired_length; // this will be the length in seconds of the
                                               // audio backend buffer -- the DAC buffer for ALSA
-  double audio_backend_latency_offset; // this will be the offset in seconds to compensate for any fixed latency there might be in the audio path
-  uint32_t volume_range_db; // the range, in dB, from max dB to min dB. Zero means use the mixer's native range.
+  double audio_backend_latency_offset; // this will be the offset in seconds to compensate for any
+                                       // fixed latency there might be in the audio path
+  uint32_t volume_range_db; // the range, in dB, from max dB to min dB. Zero means use the mixer's
+                            // native range.
   enum sps_format_t output_format;
   int output_rate;
 } shairport_cfg;
@@ -142,16 +191,16 @@ void set_requested_connection_state_to_output(int v);
 
 ssize_t non_blocking_write(int fd, const void *buf, size_t count); // used in a few places
 
-/* from http://coding.debuntu.org/c-implementing-str_replace-replace-all-occurrences-substring#comment-722 */
-char *str_replace ( const char *string, const char *substr, const char *replacement );
-
+/* from
+ * http://coding.debuntu.org/c-implementing-str_replace-replace-all-occurrences-substring#comment-722
+ */
+char *str_replace(const char *string, const char *substr, const char *replacement);
 
 // based on http://burtleburtle.net/bob/rand/smallprng.html
 
 void r64init(uint64_t seed);
 uint64_t r64u();
 int64_t r64i();
-
 
 int debuglev;
 void die(char *format, ...);

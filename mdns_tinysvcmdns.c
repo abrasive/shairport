@@ -24,15 +24,15 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <net/if.h>
-#include <ifaddrs.h>
-#include <unistd.h>
-#include <netinet/in.h>
-#include "common.h"
 #include "mdns.h"
+#include "common.h"
+#include <ifaddrs.h>
+#include <net/if.h>
+#include <netinet/in.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "tinysvcmdns.h"
 
@@ -124,22 +124,23 @@ static int mdns_tinysvcmdns_register(char *apname, int port) {
 #endif
 
     txt = txtwithoutmetadata;
-  
+
   if (config.regtype == NULL)
     die("tinysvcmdns: regtype is null");
 
-  char* extendedregtype = malloc(strlen(config.regtype)+strlen(".local")+1);
+  char *extendedregtype = malloc(strlen(config.regtype) + strlen(".local") + 1);
 
-  if (extendedregtype==NULL)
+  if (extendedregtype == NULL)
     die("tinysvcmdns: could not allocated memory to request a Zeroconf service");
-    
-  strcpy(extendedregtype,config.regtype);
-  strcat(extendedregtype,".local");
 
-  struct mdns_service *svc = mdnsd_register_svc(svr, apname, extendedregtype, port, NULL,
+  strcpy(extendedregtype, config.regtype);
+  strcat(extendedregtype, ".local");
+
+  struct mdns_service *svc =
+      mdnsd_register_svc(svr, apname, extendedregtype, port, NULL,
                          (const char **)txt); // TTL should be 75 minutes, i.e. 4500 seconds
   mdns_service_destroy(svc);
-  
+
   free(extendedregtype);
 
   return 0;

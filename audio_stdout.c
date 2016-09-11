@@ -27,24 +27,20 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <stdio.h>
-#include <unistd.h>
+#include "audio.h"
+#include "common.h"
+#include <errno.h>
 #include <fcntl.h>
 #include <memory.h>
+#include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
-#include "common.h"
-#include "audio.h"
+#include <unistd.h>
 
 static int fd = -1;
 
-static void start(int sample_rate, int sample_format) {
-  fd = STDOUT_FILENO;
-}
+static void start(int sample_rate, int sample_format) { fd = STDOUT_FILENO; }
 
-static void play(short buf[], int samples) {
-  int ignore = write(fd, buf, samples * 4);
-}
+static void play(short buf[], int samples) { int ignore = write(fd, buf, samples * 4); }
 
 static void stop(void) {
   // don't close stdout
@@ -60,8 +56,7 @@ static int init(int argc, char **argv) {
 
   if (config.cfg != NULL) {
     /* Get the desired buffer size setting. */
-    if (config_lookup_float(config.cfg,
-                          "stdout.audio_backend_buffer_desired_length", &dvalue)) {
+    if (config_lookup_float(config.cfg, "stdout.audio_backend_buffer_desired_length", &dvalue)) {
       if ((dvalue < 0) || (dvalue > 1.5))
         die("Invalid stdout audio backend buffer desired length \"%f\". It "
             "should be between 0 and "
@@ -73,8 +68,7 @@ static int init(int argc, char **argv) {
     }
 
     /* Get the latency offset. */
-    if (config_lookup_float(config.cfg, "stdout.audio_backend_latency_offset",
-                          &dvalue)) {
+    if (config_lookup_float(config.cfg, "stdout.audio_backend_latency_offset", &dvalue)) {
       if ((dvalue < -1.0) || (value > 1.5))
         die("Invalid stdout audio backend buffer latency offset \"%f\". It "
             "should be between -1.0 and +1.5, default is 0 seconds",
@@ -90,19 +84,17 @@ static void deinit(void) {
   // don't close stdout
 }
 
-static void help(void) {
-  printf("    stdout takes no arguments\n");
-}
+static void help(void) { printf("    stdout takes no arguments\n"); }
 
 audio_output audio_stdout = {.name = "stdout",
-                           .help = &help,
-                           .init = &init,
-                           .deinit = &deinit,
-                           .start = &start,
-                           .stop = &stop,
-                           .flush = NULL,
-                           .delay = NULL,
-                           .play = &play,
-                           .volume = NULL,
-                           .parameters = NULL,
-                           .mute = NULL};
+                             .help = &help,
+                             .init = &init,
+                             .deinit = &deinit,
+                             .start = &start,
+                             .stop = &stop,
+                             .flush = NULL,
+                             .delay = NULL,
+                             .play = &play,
+                             .volume = NULL,
+                             .parameters = NULL,
+                             .mute = NULL};

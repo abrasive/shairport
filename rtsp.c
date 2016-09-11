@@ -26,23 +26,23 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <memory.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
-#include <netdb.h>
-#include <sys/select.h>
-#include <signal.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <pthread.h>
+#include <memory.h>
+#include <netdb.h>
+#include <netinet/in.h>
 #include <poll.h>
+#include <pthread.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/select.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "config.h"
 
@@ -55,9 +55,9 @@
 #endif
 
 #include "common.h"
+#include "mdns.h"
 #include "player.h"
 #include "rtp.h"
-#include "mdns.h"
 
 #ifdef AF_INET6
 #define INETx_ADDRSTRLEN INET6_ADDRSTRLEN
@@ -82,7 +82,7 @@ static pthread_mutex_t reference_counter_lock = PTHREAD_MUTEX_INITIALIZER;
 
 // only one thread is allowed to use the player at once.
 // it monitors the request variable (at least when interrupted)
-//static pthread_mutex_t playing_mutex = PTHREAD_MUTEX_INITIALIZER;
+// static pthread_mutex_t playing_mutex = PTHREAD_MUTEX_INITIALIZER;
 // static int please_shutdown = 0;
 // static pthread_t playing_thread = 0;
 
@@ -90,14 +90,15 @@ typedef struct {
   int fd;
   int authorized; // set is a password is required and has been supplied
   stream_cfg stream;
-  SOCKADDR remote,local;
+  SOCKADDR remote, local;
   int stop;
   int running;
   pthread_t thread;
   pthread_t player_thread;
 } rtsp_conn_info;
 
-static rtsp_conn_info *playing_conn = NULL; // the data structure representing the connection that has the player.
+static rtsp_conn_info *playing_conn =
+    NULL; // the data structure representing the connection that has the player.
 static rtsp_conn_info **conns = NULL;
 
 void memory_barrier() {
@@ -144,8 +145,7 @@ typedef struct {
   rtsp_message *carrier;
 } metadata_package;
 
-void pc_queue_init(pc_queue *the_queue, char *items, size_t item_size,
-                   uint32_t number_of_items) {
+void pc_queue_init(pc_queue *the_queue, char *items, size_t item_size, uint32_t number_of_items) {
   pthread_mutex_init(&the_queue->pc_queue_lock, NULL);
   pthread_cond_init(&the_queue->pc_queue_item_added_signal, NULL);
   pthread_cond_init(&the_queue->pc_queue_item_removed_signal, NULL);
@@ -157,8 +157,8 @@ void pc_queue_init(pc_queue *the_queue, char *items, size_t item_size,
   the_queue->eoq = 0;
 }
 
-int send_metadata(uint32_t type, uint32_t code, char *data, uint32_t length,
-                  rtsp_message *carrier, int block);
+int send_metadata(uint32_t type, uint32_t code, char *data, uint32_t length, rtsp_message *carrier,
+                  int block);
 
 int send_ssnc_metadata(uint32_t code, char *data, uint32_t length, int block) {
   return send_metadata('ssnc', code, data, length, NULL, block);
@@ -176,8 +176,7 @@ int pc_queue_add_item(pc_queue *the_queue, const void *the_stuff, int block) {
     if (rc)
       debug(1, "Error locking for pc_queue_add_item");
     while (the_queue->count == the_queue->capacity) {
-      rc = pthread_cond_wait(&the_queue->pc_queue_item_removed_signal,
-                             &the_queue->pc_queue_lock);
+      rc = pthread_cond_wait(&the_queue->pc_queue_item_removed_signal, &the_queue->pc_queue_lock);
       if (rc)
         debug(1, "Error waiting for item to be removed");
     }
@@ -214,8 +213,7 @@ int pc_queue_get_item(pc_queue *the_queue, void *the_stuff) {
     if (rc)
       debug(1, "Error locking for pc_queue_get_item");
     while (the_queue->count == 0) {
-      rc = pthread_cond_wait(&the_queue->pc_queue_item_added_signal,
-                             &the_queue->pc_queue_lock);
+      rc = pthread_cond_wait(&the_queue->pc_queue_item_added_signal, &the_queue->pc_queue_lock);
       if (rc)
         debug(1, "Error waiting for item to be added");
     }
@@ -263,11 +261,10 @@ static inline int rtsp_playing(void) {
 
 void rtsp_request_shutdown_stream(void) {
   debug(1, "Request to shut down all rtsp conversation threads");
-  ask_other_rtsp_conversation_threads_to_stop(
-      0); // i.e. ask all playing threads to stop
+  ask_other_rtsp_conversation_threads_to_stop(0); // i.e. ask all playing threads to stop
 }
 
-//static void rtsp_take_player(void) {
+// static void rtsp_take_player(void) {
 //  if (rtsp_playing())
 //    return;
 
@@ -314,8 +311,7 @@ void ask_other_rtsp_conversation_threads_to_stop(pthread_t except_this_thread) {
   int i;
   debug(2, "asking playing threads to stop");
   for (i = 0; i < nconns; i++) {
-    if (((except_this_thread == 0) ||
-         (pthread_equal(conns[i]->thread, except_this_thread) == 0)) &&
+    if (((except_this_thread == 0) || (pthread_equal(conns[i]->thread, except_this_thread) == 0)) &&
         (conns[i]->running != 0)) {
       conns[i]->stop = 1;
       pthread_kill(conns[i]->thread, SIGUSR1);
@@ -363,8 +359,7 @@ static void msg_retain(rtsp_message *msg) {
 static rtsp_message *msg_init(void) {
   rtsp_message *msg = malloc(sizeof(rtsp_message));
   memset(msg, 0, sizeof(rtsp_message));
-  msg->referenceCount =
-      1; // from now on, any access to this must be protected with the lock
+  msg->referenceCount = 1; // from now on, any access to this must be protected with the lock
   return msg;
 }
 
@@ -405,8 +400,7 @@ static void msg_free(rtsp_message *msg) {
     msg->referenceCount--;
     rc = pthread_mutex_unlock(&reference_counter_lock);
     if (rc)
-      debug(1, "Error %d unlocking reference counter lock during msg_free()",
-            rc);
+      debug(1, "Error %d unlocking reference counter lock during msg_free()", rc);
     if (msg->referenceCount == 0) {
       int i;
       for (i = 0; i < msg->nheaders; i++) {
@@ -479,8 +473,8 @@ fail:
   return 0;
 }
 
-static enum rtsp_read_request_response
-rtsp_read_request(rtsp_conn_info *conn, rtsp_message **the_packet) {
+static enum rtsp_read_request_response rtsp_read_request(rtsp_conn_info *conn,
+                                                         rtsp_message **the_packet) {
   enum rtsp_read_request_response reply = rtsp_read_request_response_ok;
   ssize_t buflen = 512;
   char *buf = malloc(buflen + 1);
@@ -499,8 +493,8 @@ rtsp_read_request(rtsp_conn_info *conn, rtsp_message **the_packet) {
       goto shutdown;
     }
     nread = read(conn->fd, buf + inbuf, buflen - inbuf);
-    
-    if (nread==0) {
+
+    if (nread == 0) {
       // a blocking read that returns zero means eof -- implies connection closed
       debug(3, "RTSP connection closed.");
       reply = rtsp_read_request_response_shutdown_requested;
@@ -542,8 +536,8 @@ rtsp_read_request(rtsp_conn_info *conn, rtsp_message **the_packet) {
     buflen = msg_size;
   }
 
-  uint64_t threshold_time = get_absolute_time_in_fp() +
-                            ((uint64_t)5 << 32); // i.e. five seconds from now
+  uint64_t threshold_time =
+      get_absolute_time_in_fp() + ((uint64_t)5 << 32); // i.e. five seconds from now
   int warning_message_sent = 0;
 
   const size_t max_read_chunk = 50000;
@@ -628,8 +622,7 @@ static void msg_write_response(int fd, rtsp_message *resp) {
   int ignore = write(fd, pkt, p - pkt + 2);
 }
 
-static void handle_record(rtsp_conn_info *conn, rtsp_message *req,
-                          rtsp_message *resp) {
+static void handle_record(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
   // debug(1,"Handle Record");
   resp->respcode = 200;
   // I think this is for telling the client what the absolute minimum latency
@@ -663,16 +656,14 @@ static void handle_record(rtsp_conn_info *conn, rtsp_message *req,
   }
 }
 
-static void handle_options(rtsp_conn_info *conn, rtsp_message *req,
-                           rtsp_message *resp) {
+static void handle_options(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
   resp->respcode = 200;
   msg_add_header(resp, "Public", "ANNOUNCE, SETUP, RECORD, "
                                  "PAUSE, FLUSH, TEARDOWN, "
                                  "OPTIONS, GET_PARAMETER, SET_PARAMETER");
 }
 
-static void handle_teardown(rtsp_conn_info *conn, rtsp_message *req,
-                            rtsp_message *resp) {
+static void handle_teardown(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
   if (!rtsp_playing())
     debug(1, "This RTSP conversation thread doesn't think it's playing, but "
              "it's sending a response to teardown anyway");
@@ -681,8 +672,7 @@ static void handle_teardown(rtsp_conn_info *conn, rtsp_message *req,
   conn->stop = 1;
 }
 
-static void handle_flush(rtsp_conn_info *conn, rtsp_message *req,
-                         rtsp_message *resp) {
+static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
   if (!rtsp_playing())
     debug(1, "This RTSP conversation thread doesn't think it's playing, but "
              "it's sending a response to flush anyway");
@@ -705,8 +695,7 @@ static void handle_flush(rtsp_conn_info *conn, rtsp_message *req,
   resp->respcode = 200;
 }
 
-static void handle_setup(rtsp_conn_info *conn, rtsp_message *req,
-                         rtsp_message *resp) {
+static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
   // debug(1,"Handle Setup");
   int cport, tport;
   int lsport, lcport, ltport;
@@ -768,10 +757,8 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req,
         config.latency = config.iTunesLatency;
       }
     } else if (strstr(ua, "AirPlay") == ua) {
-      debug(
-          2,
-          "User-Agent is AirPlay; selecting the AirPlay latency of %d frames.",
-          config.AirPlayLatency);
+      debug(2, "User-Agent is AirPlay; selecting the AirPlay latency of %d frames.",
+            config.AirPlayLatency);
       config.latency = config.AirPlayLatency;
     } else if (strstr(ua, "forked-daapd") == ua) {
       debug(2, "User-Agent is forked-daapd; selecting the forked-daapd latency "
@@ -779,8 +766,7 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req,
             config.ForkedDaapdLatency);
       config.latency = config.ForkedDaapdLatency;
     } else {
-      debug(2, "Unrecognised User-Agent. Using latency of %d frames.",
-            config.latency);
+      debug(2, "Unrecognised User-Agent. Using latency of %d frames.", config.latency);
     }
   }
 
@@ -809,9 +795,8 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req,
   p = strchr(p, '=') + 1;
   tport = atoi(p);
 
-//  rtsp_take_player();
-  rtp_setup(&conn->local, &conn->remote, cport, tport, active_remote, &lsport, &lcport,
-            &ltport);
+  //  rtsp_take_player();
+  rtp_setup(&conn->local, &conn->remote, cport, tport, active_remote, &lsport, &lcport, &ltport);
   if (!lsport)
     goto error;
   char *q;
@@ -853,13 +838,11 @@ error:
   resp->respcode = 451; // invalid arguments
 }
 
-static void handle_ignore(rtsp_conn_info *conn, rtsp_message *req,
-                          rtsp_message *resp) {
+static void handle_ignore(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
   resp->respcode = 200;
 }
 
-static void handle_set_parameter_parameter(rtsp_conn_info *conn,
-                                           rtsp_message *req,
+static void handle_set_parameter_parameter(rtsp_conn_info *conn, rtsp_message *req,
                                            rtsp_message *resp) {
   char *cp = req->content;
   int cp_left = req->contentlength;
@@ -888,7 +871,7 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn,
 #ifdef CONFIG_METADATA
         if (!strncmp(cp, "progress: ", 10)) {
       char *progress = cp + 10;
-      //debug(2, "progress: \"%s\"\n",
+      // debug(2, "progress: \"%s\"\n",
       //      progress); // rtpstampstart/rtpstampnow/rtpstampend 44100 per second
       send_ssnc_metadata('prgr', strdup(progress), strlen(progress), 1);
     } else
@@ -978,12 +961,11 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn,
 
 // add _so to end of name to avoid confusion with polarssl's implementation
 
-static char encoding_table[] = {
-    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
-    'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
-    'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
-    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '/'};
+static char encoding_table[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+                                'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+                                'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+                                'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+                                '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '/'};
 
 static int mod_table[] = {0, 2, 1};
 
@@ -992,8 +974,8 @@ static int mod_table[] = {0, 2, 1};
 // containing its maximum length
 // the actual length will be returned.
 
-char *base64_encode_so(const unsigned char *data, size_t input_length,
-                       char *encoded_data, size_t *output_length) {
+char *base64_encode_so(const unsigned char *data, size_t input_length, char *encoded_data,
+                       size_t *output_length) {
 
   size_t calculated_output_length = 4 * ((input_length + 2) / 3);
   if (calculated_output_length > *output_length)
@@ -1090,8 +1072,7 @@ static void metadata_close(void) {
   fd = -1;
 }
 
-void metadata_process(uint32_t type, uint32_t code, char *data,
-                      uint32_t length) {
+void metadata_process(uint32_t type, uint32_t code, char *data, uint32_t length) {
   // debug(2, "Process metadata with type %x, code %x and length %u.", type, code, length);
   int ret;
 
@@ -1105,7 +1086,8 @@ void metadata_process(uint32_t type, uint32_t code, char *data,
     memcpy(ptr, &v, 4);
     ptr += 4;
     memcpy(ptr, data, length);
-    sendto(metadata_sock, metadata_sockmsg, length + 8, 0, (struct sockaddr *)&metadata_sockaddr, sizeof(metadata_sockaddr));
+    sendto(metadata_sock, metadata_sockmsg, length + 8, 0, (struct sockaddr *)&metadata_sockaddr,
+           sizeof(metadata_sockaddr));
   }
 
   // readers may go away and come back
@@ -1114,9 +1096,8 @@ void metadata_process(uint32_t type, uint32_t code, char *data,
   if (fd < 0)
     return;
   char thestring[1024];
-  snprintf(thestring, 1024,
-           "<item><type>%x</type><code>%x</code><length>%u</length>", type,
-           code, length);
+  snprintf(thestring, 1024, "<item><type>%x</type><code>%x</code><length>%u</length>", type, code,
+           length);
   ret = non_blocking_write(fd, thestring, strlen(thestring));
   if (ret < 0) {
     // debug(1,"metadata_process error %d exit 1",ret);
@@ -1141,10 +1122,9 @@ void metadata_process(uint32_t type, uint32_t code, char *data,
       size_t towrite_count = remaining_count;
       if (towrite_count > 57)
         towrite_count = 57;
-      size_t outbuf_size =
-          76; // size of output buffer on entry, length of result on exit
-      if (base64_encode_so((unsigned char *)remaining_data, towrite_count,
-                           outbuf, &outbuf_size) == NULL)
+      size_t outbuf_size = 76; // size of output buffer on entry, length of result on exit
+      if (base64_encode_so((unsigned char *)remaining_data, towrite_count, outbuf, &outbuf_size) ==
+          NULL)
         debug(1, "Error encoding base64 data.");
       // debug(1,"Remaining count: %d ret: %d, outbuf_size:
       // %d.",remaining_count,ret,outbuf_size);
@@ -1188,16 +1168,15 @@ void *metadata_thread_function(void *ignore) {
 
 void metadata_init(void) {
   // create a pc_queue for passing information to a threaded metadata handler
-  pc_queue_init(&metadata_queue, (char *)&metadata_queue_items,
-                sizeof(metadata_package), metadata_queue_size);
-  int ret =
-      pthread_create(&metadata_thread, NULL, metadata_thread_function, NULL);
+  pc_queue_init(&metadata_queue, (char *)&metadata_queue_items, sizeof(metadata_package),
+                metadata_queue_size);
+  int ret = pthread_create(&metadata_thread, NULL, metadata_thread_function, NULL);
   if (ret)
     debug(1, "Failed to create metadata thread!");
 }
 
-int send_metadata(uint32_t type, uint32_t code, char *data, uint32_t length,
-                  rtsp_message *carrier, int block) {
+int send_metadata(uint32_t type, uint32_t code, char *data, uint32_t length, rtsp_message *carrier,
+                  int block) {
 
   // parameters: type, code, pointer to data or NULL, length of data or NULL,
   // the rtsp_message or
@@ -1237,14 +1216,11 @@ int send_metadata(uint32_t type, uint32_t code, char *data, uint32_t length,
   if ((rc == EBUSY) && (carrier))
     msg_free(carrier);
   if (rc == EBUSY)
-    warn(
-        "Metadata queue is busy, dropping message of type 0x%08X, code 0x%08X.",
-        type, code);
+    warn("Metadata queue is busy, dropping message of type 0x%08X, code 0x%08X.", type, code);
   return rc;
 }
 
-static void handle_set_parameter_metadata(rtsp_conn_info *conn,
-                                          rtsp_message *req,
+static void handle_set_parameter_metadata(rtsp_conn_info *conn, rtsp_message *req,
                                           rtsp_message *resp) {
   char *cp = req->content;
   int cl = req->contentlength;
@@ -1254,14 +1230,12 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn,
   uint32_t itag, vl;
   while (off < cl) {
     // pick up the metadata tag as an unsigned longint
-    memcpy(&itag, (uint32_t *)(cp + off),
-           sizeof(uint32_t)); /* can be misaligned, thus memcpy */
+    memcpy(&itag, (uint32_t *)(cp + off), sizeof(uint32_t)); /* can be misaligned, thus memcpy */
     itag = ntohl(itag);
     off += sizeof(uint32_t);
 
     // pick up the length of the data
-    memcpy(&vl, (uint32_t *)(cp + off),
-           sizeof(uint32_t)); /* can be misaligned, thus memcpy */
+    memcpy(&vl, (uint32_t *)(cp + off), sizeof(uint32_t)); /* can be misaligned, thus memcpy */
     vl = ntohl(vl);
     off += sizeof(uint32_t);
 
@@ -1278,14 +1252,12 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn,
 
 #endif
 
-static void handle_get_parameter(rtsp_conn_info *conn, rtsp_message *req,
-                                 rtsp_message *resp) {
+static void handle_get_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
   debug(1, "received GET_PARAMETER request.");
   resp->respcode = 200;
 }
 
-static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req,
-                                 rtsp_message *resp) {
+static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
   // if (!req->contentlength)
   //    debug(1, "received empty SET_PARAMETER request.");
 
@@ -1294,7 +1266,7 @@ static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req,
   char *ct = msg_get_header(req, "Content-Type");
 
   if (ct) {
-    // debug(2, "SET_PARAMETER Content-Type:\"%s\".", ct);
+// debug(2, "SET_PARAMETER Content-Type:\"%s\".", ct);
 
 #ifdef CONFIG_METADATA
     // It seems that the rtptime of the message is used as a kind of an ID that
@@ -1322,8 +1294,7 @@ static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req,
       if (p == NULL)
         debug(1, "Missing RTP-Time info for metadata");
       if (p)
-        send_metadata('ssnc', 'mdst', p + 1, strlen(p + 1), req,
-                      1); // metadata starting
+        send_metadata('ssnc', 'mdst', p + 1, strlen(p + 1), req, 1); // metadata starting
       else
         send_metadata('ssnc', 'mdst', NULL, 0, NULL,
                       0); // metadata starting, if rtptime is not available
@@ -1331,8 +1302,7 @@ static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req,
       handle_set_parameter_metadata(conn, req, resp);
 
       if (p)
-        send_metadata('ssnc', 'mden', p + 1, strlen(p + 1), req,
-                      1); // metadata ending
+        send_metadata('ssnc', 'mden', p + 1, strlen(p + 1), req, 1); // metadata ending
       else
         send_metadata('ssnc', 'mden', NULL, 0, NULL,
                       0); // metadata starting, if rtptime is not available
@@ -1348,8 +1318,7 @@ static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req,
         if (p == NULL)
           debug(1, "Missing RTP-Time info for picture item");
         if (p)
-          send_metadata('ssnc', 'pcst', p + 1, strlen(p + 1), req,
-                        1); // picture starting
+          send_metadata('ssnc', 'pcst', p + 1, strlen(p + 1), req, 1); // picture starting
         else
           send_metadata('ssnc', 'pcst', NULL, 0, NULL,
                         0); // picture starting, if rtptime is not available
@@ -1357,8 +1326,7 @@ static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req,
         send_metadata('ssnc', 'PICT', req->content, req->contentlength, req, 1);
 
         if (p)
-          send_metadata('ssnc', 'pcen', p + 1, strlen(p + 1), req,
-                        1); // picture ending
+          send_metadata('ssnc', 'pcen', p + 1, strlen(p + 1), req, 1); // picture ending
         else
           send_metadata('ssnc', 'pcen', NULL, 0, NULL,
                         0); // picture ending, if rtptime is not available
@@ -1369,11 +1337,9 @@ static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req,
 #endif
         if (!strncmp(ct, "text/parameters", 15)) {
       // debug(2, "received parameters in SET_PARAMETER request.");
-      handle_set_parameter_parameter(conn, req,
-                                     resp); // this could be volume or progress
+      handle_set_parameter_parameter(conn, req, resp); // this could be volume or progress
     } else {
-      debug(1, "received unknown Content-Type \"%s\" in SET_PARAMETER request.",
-            ct);
+      debug(1, "received unknown Content-Type \"%s\" in SET_PARAMETER request.", ct);
     }
   } else {
     debug(1, "missing Content-Type header in SET_PARAMETER request.");
@@ -1382,8 +1348,7 @@ static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req,
   resp->respcode = 200;
 }
 
-static void handle_announce(rtsp_conn_info *conn, rtsp_message *req,
-                            rtsp_message *resp) {
+static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
   int have_the_player = 0;
 
   // interrupt session if permitted
@@ -1400,15 +1365,15 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req,
         die("Non existent the_playing_conn with play_lock enabled.");
       }
       usleep(1000000); // here, it is possible for other connections to come in and nab the player.
-      debug(1,"Try to get the player now");
-      //pthread_mutex_lock(&play_lock);
+      debug(1, "Try to get the player now");
+      // pthread_mutex_lock(&play_lock);
       if (pthread_mutex_trylock(&play_lock) == 0)
         have_the_player = 1;
     }
   }
-  
-  if (have_the_player) {    
-    playing_conn = conn; // the present connection is now playing
+
+  if (have_the_player) {
+    playing_conn = conn;  // the present connection is now playing
     resp->respcode = 456; // 456 - Header Field Not Valid for Resource
     char *paesiv = NULL;
     char *prsaaeskey = NULL;
@@ -1479,8 +1444,7 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req,
       free(aeskey);
     }
     int i;
-    for (i = 0; i < sizeof(conn->stream.fmtp) / sizeof(conn->stream.fmtp[0]);
-         i++)
+    for (i = 0; i < sizeof(conn->stream.fmtp) / sizeof(conn->stream.fmtp[0]); i++)
       conn->stream.fmtp[i] = atoi(strsep(&pfmtp, " \t"));
 
     char *hdr = msg_get_header(req, "X-Apple-Client-Name");
@@ -1655,8 +1619,7 @@ static int rtsp_auth(char **nonce, rtsp_message *req, rtsp_message *resp) {
   md5_update(&tctx, (unsigned char *)":", 1);
   md5_update(&tctx, (const unsigned char *)realm, strlen(realm));
   md5_update(&tctx, (unsigned char *)":", 1);
-  md5_update(&tctx, (const unsigned char *)config.password,
-             strlen(config.password));
+  md5_update(&tctx, (const unsigned char *)config.password, strlen(config.password));
   md5_finish(&tctx, digest_urp);
   md5_starts(&tctx);
   md5_update(&tctx, (const unsigned char *)req->method, strlen(req->method));
@@ -1728,8 +1691,8 @@ static void *rtsp_conversation_thread_func(void *pconn) {
   do {
     reply = rtsp_read_request(conn, &req);
     if (reply == rtsp_read_request_response_ok) {
-			debug(3,"RTSP Packet received of type \"%s\":",req->method),
-			debug_print_msg_headers(3,req);
+      debug(3, "RTSP Packet received of type \"%s\":", req->method),
+          debug_print_msg_headers(3, req);
       resp = msg_init();
       resp->respcode = 400;
 
@@ -1737,26 +1700,25 @@ static void *rtsp_conversation_thread_func(void *pconn) {
       hdr = msg_get_header(req, "CSeq");
       if (hdr)
         msg_add_header(resp, "CSeq", hdr);
-//      msg_add_header(resp, "Audio-Jack-Status", "connected; type=analog");
+      //      msg_add_header(resp, "Audio-Jack-Status", "connected; type=analog");
       msg_add_header(resp, "Server", "AirTunes/105.1");
-      
-      if ((conn->authorized==1) || (rtsp_auth(&auth_nonce, req, resp))==0) {
-				conn->authorized=1; // it must have been authorized or didn't need a password
-				struct method_handler *mh;
-				int method_selected = 0;
-				for (mh = method_handlers; mh->method; mh++) {
-					if (!strcmp(mh->method, req->method)) {
-						method_selected = 1;
-						mh->handler(conn, req, resp);
-						break;
-					}
-				}
-				if (method_selected == 0)
-					debug(1, "Unrecognised and unhandled rtsp request \"%s\".",
-								req->method);
-			}
-			debug(3,"RTSP Response:");
-			debug_print_msg_headers(3,resp);
+
+      if ((conn->authorized == 1) || (rtsp_auth(&auth_nonce, req, resp)) == 0) {
+        conn->authorized = 1; // it must have been authorized or didn't need a password
+        struct method_handler *mh;
+        int method_selected = 0;
+        for (mh = method_handlers; mh->method; mh++) {
+          if (!strcmp(mh->method, req->method)) {
+            method_selected = 1;
+            mh->handler(conn, req, resp);
+            break;
+          }
+        }
+        if (method_selected == 0)
+          debug(1, "Unrecognised and unhandled rtsp request \"%s\".", req->method);
+      }
+      debug(3, "RTSP Response:");
+      debug_print_msg_headers(3, resp);
       msg_write_response(conn->fd, resp);
       msg_free(req);
       msg_free(resp);
@@ -1778,11 +1740,11 @@ static void *rtsp_conversation_thread_func(void *pconn) {
     close(conn->fd);
   if (auth_nonce)
     free(auth_nonce);
-//    pthread_mutex_unlock(&playing_mutex);
-    // usleep(1000000);
-//  } // else {
-    //debug(1, "This RTSP conversation thread doesn't think it's playing for a "
-    //         "close RTSP connection.");
+  //    pthread_mutex_unlock(&playing_mutex);
+  // usleep(1000000);
+  //  } // else {
+  // debug(1, "This RTSP conversation thread doesn't think it's playing for a "
+  //         "close RTSP connection.");
   // }
   debug(2, "RTSP conversation thread terminated.");
   //  please_shutdown = 0;
@@ -1828,7 +1790,7 @@ void rtsp_listen_loop(void) {
   }
 
   for (p = info; p; p = p->ai_next) {
-  	ret = 0;
+    ret = 0;
     int fd = socket(p->ai_family, p->ai_socktype, IPPROTO_TCP);
     int yes = 1;
 
@@ -1862,14 +1824,15 @@ void rtsp_listen_loop(void) {
     // report its availability. do not complain.
 
     if (ret) {
-    	char *family;
+      char *family;
 #ifdef AF_INET6
-			if (p->ai_family == AF_INET6) {
-			family = "IPv6";
-			} else
+      if (p->ai_family == AF_INET6) {
+        family = "IPv6";
+      } else
 #endif
-			family = "IPv4";
-      debug(1, "Unable to listen on %s port %d. The error is: \"%s\".", family, config.port,strerror(errno));
+        family = "IPv4";
+      debug(1, "Unable to listen on %s port %d. The error is: \"%s\".", family, config.port,
+            strerror(errno));
       continue;
     }
 
@@ -1882,7 +1845,9 @@ void rtsp_listen_loop(void) {
   freeaddrinfo(info);
 
   if (!nsock)
-    die("Could not establish a service on port %d -- program terminating. Is another instance of Shairport Sync running on this device?",config.port);
+    die("Could not establish a service on port %d -- program terminating. Is another instance of "
+        "Shairport Sync running on this device?",
+        config.port);
 
   int maxfd = -1;
   fd_set fds;
@@ -1935,49 +1900,51 @@ void rtsp_listen_loop(void) {
       perror("failed to accept connection");
       free(conn);
     } else {
-      SOCKADDR *local_info = (SOCKADDR*)&conn->local;
+      SOCKADDR *local_info = (SOCKADDR *)&conn->local;
       socklen_t size_of_reply = sizeof(*local_info);
-      memset(local_info,0,sizeof(SOCKADDR));
-      if (getsockname(conn->fd, (struct sockaddr*)local_info, &size_of_reply)==0) {
-                
+      memset(local_info, 0, sizeof(SOCKADDR));
+      if (getsockname(conn->fd, (struct sockaddr *)local_info, &size_of_reply) == 0) {
+
         // IPv4:
-        if (local_info->SAFAMILY==AF_INET) {
-          char ip4[INET_ADDRSTRLEN];  // space to hold the IPv4 string
-          char remote_ip4[INET_ADDRSTRLEN];  // space to hold the IPv4 string
-          struct sockaddr_in *sa = (struct sockaddr_in*)local_info;
+        if (local_info->SAFAMILY == AF_INET) {
+          char ip4[INET_ADDRSTRLEN];        // space to hold the IPv4 string
+          char remote_ip4[INET_ADDRSTRLEN]; // space to hold the IPv4 string
+          struct sockaddr_in *sa = (struct sockaddr_in *)local_info;
           inet_ntop(AF_INET, &(sa->sin_addr), ip4, INET_ADDRSTRLEN);
           unsigned short int tport = ntohs(sa->sin_port);
-          sa = (struct sockaddr_in*)&conn->remote;
+          sa = (struct sockaddr_in *)&conn->remote;
           inet_ntop(AF_INET, &(sa->sin_addr), remote_ip4, INET_ADDRSTRLEN);
           unsigned short int rport = ntohs(sa->sin_port);
-          debug(1,"New RTSP connection from %s:%u to self at %s:%u.",remote_ip4,rport,ip4,tport);
+          debug(1, "New RTSP connection from %s:%u to self at %s:%u.", remote_ip4, rport, ip4,
+                tport);
         }
 #ifdef AF_INET6
-        if (local_info->SAFAMILY==AF_INET6) {
+        if (local_info->SAFAMILY == AF_INET6) {
           // IPv6:
 
-          char ip6[INET6_ADDRSTRLEN]; // space to hold the IPv6 string
+          char ip6[INET6_ADDRSTRLEN];        // space to hold the IPv6 string
           char remote_ip6[INET6_ADDRSTRLEN]; // space to hold the IPv6 string
-          struct sockaddr_in6 *sa6 = (struct sockaddr_in6*)local_info;    // pretend this is loaded with something
+          struct sockaddr_in6 *sa6 =
+              (struct sockaddr_in6 *)local_info; // pretend this is loaded with something
           inet_ntop(AF_INET6, &(sa6->sin6_addr), ip6, INET6_ADDRSTRLEN);
           u_int16_t tport = ntohs(sa6->sin6_port);
-          
-          sa6 = (struct sockaddr_in6*)&conn->remote;    // pretend this is loaded with something
+
+          sa6 = (struct sockaddr_in6 *)&conn->remote; // pretend this is loaded with something
           inet_ntop(AF_INET6, &(sa6->sin6_addr), remote_ip6, INET6_ADDRSTRLEN);
           u_int16_t rport = ntohs(sa6->sin6_port);
 
-          debug(1,"New RTSP connection from [%s]:%u to self at [%s]:%u.",remote_ip6,rport,ip6,tport);
+          debug(1, "New RTSP connection from [%s]:%u to self at [%s]:%u.", remote_ip6, rport, ip6,
+                tport);
         }
- #endif       
-      
+#endif
+
       } else {
-        debug(1,"Error figuring out Shairport Sync's own IP number.");
+        debug(1, "Error figuring out Shairport Sync's own IP number.");
       }
 
       usleep(500000);
       pthread_t rtsp_conversation_thread;
-      ret = pthread_create(&rtsp_conversation_thread, NULL,
-                           rtsp_conversation_thread_func, conn);
+      ret = pthread_create(&rtsp_conversation_thread, NULL, rtsp_conversation_thread_func, conn);
       if (ret)
         die("Failed to create RTSP receiver thread!");
 

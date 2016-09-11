@@ -48,15 +48,15 @@
 //******************************************************//
 //                      mdns.c                          //
 //******************************************************//
-#include <stdint.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #ifdef _WIN32
-#include <winsock.h>
 #include <in6addr.h>
+#include <winsock.h>
 #else
 #include <netinet/in.h>
 #endif
@@ -1029,26 +1029,26 @@ size_t mdns_encode_pkt(struct mdns_pkt *answer, uint8_t *pkt_buf, size_t pkt_len
 #include <ws2tcpip.h>
 #define LOG_ERR 3
 #else
-#include <sys/select.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
 #include <net/if.h>
+#include <netinet/in.h>
+#include <sys/ioctl.h>
+#include <sys/select.h>
+#include <sys/socket.h>
 #include <syslog.h>
 #endif
 
-#include <sys/types.h>
-#include <sys/stat.h>
+#include <assert.h>
 #include <fcntl.h>
+#include <pthread.h>
 #include <signal.h>
-#include <string.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdarg.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
-#include <assert.h>
-#include <pthread.h>
 
 /*
  * Define a proper IP socket level if not already done.
