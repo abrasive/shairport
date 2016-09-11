@@ -403,7 +403,8 @@ static int init_decoder(int32_t fmtp[12]) {
       field      	compatibleVersion 	uint8_t 	indicating compatible version,
                                                             value must be set to 0
 
-      field      	bitDepth 		uint8_t 	describes the bit depth of the source
+      field      	bitDepth 		uint8_t 	describes the bit depth of the
+     source
      PCM
      data
      (maximum
@@ -419,7 +420,8 @@ static int init_decoder(int32_t fmtp[12]) {
       field      	kb			uint8_t 	currently unused tuning parameter.
                                                             value should be set to 10
 
-      field      	numChannels 		uint8_t 	describes the channel count (1 = mono,
+      field      	numChannels 		uint8_t 	describes the channel count (1 =
+     mono,
      2
      =
      stereo,
@@ -439,7 +441,8 @@ static int init_decoder(int32_t fmtp[12]) {
      the encoded stream.
                                                           value of 0 indicates unknown
 
-      field      	avgBitRate 		uint32_t 	the average bit rate in bits per second
+      field      	avgBitRate 		uint32_t 	the average bit rate in bits per
+     second
      of
      the
      Apple
@@ -1222,7 +1225,7 @@ static inline int32_t mean_32(int32_t a, int32_t b) {
 // (b) multiplies each sample by the fixedvolume (a 16-bit quantity)
 // (c) dithers the result to the output size 32/24/16 bits
 // (d) outputs the result in the approprate format
-// formats accepted so far include U8, S8, S16_LE, S24_LE and S32_LE on a little endinan machine.
+// formats accepted so far include U8, S8, S16_LE, S24_LE and S32_LE on a little endian machine.
 
 // stuff: 1 means add 1; 0 means do nothing; -1 means remove 1
 static int stuff_buffer_basic_32(int32_t *inptr, int length, enum sps_format_t l_output_format,
@@ -1323,9 +1326,97 @@ static int stuff_buffer_basic(short *inptr, int length, short *outptr, int stuff
 }
 
 #ifdef HAVE_LIBSOXR
-static int stuff_buffer_soxr_32(int32_t *inptr, int length, int32_t *outptr, int stuff,
-                                int l_output_bit_depth) {
-  return length;
+// this takes an array of signed 32-bit integers and
+// (a) uses libsoxr to
+// resample the array to have one more or one less frame, as specified in
+// stuff,
+// (b) multiplies each sample by the fixedvolume (a 16-bit quantity)
+// (c) dithers the result to the output size 32/24/16 bits
+// (d) outputs the result in the approprate format
+// formats accepted so far include U8, S8, S16_LE, S24_LE and S32_LE on a little endian machine.
+
+static int stuff_buffer_soxr_32(int32_t *inptr, int32_t *scratchBuffer, int length,
+                                enum sps_format_t l_output_format, char *outptr, int stuff,
+                                int dither) {
+  if (scratchBuffer == NULL) {
+    die("soxr scratchBuffer not initialised.");
+  }
+  int tstuff = stuff;
+  if ((stuff > 1) || (stuff < -1) || (length < 100)) {
+    // debug(1, "Stuff argument to stuff_buffer must be from -1 to +1 and length >100.");
+    tstuff = 0; // if any of these conditions hold, don't stuff anything/
+  }
+
+  if (tstuff) {
+    // debug(1,"Stuff %d.",stuff);
+    soxr_io_spec_t io_spec;
+    io_spec.itype = SOXR_INT32_I;
+    io_spec.otype = SOXR_INT32_I;
+    io_spec.scale = 1.0; // this seems to crash if not = 1.0
+    io_spec.e = NULL;
+    io_spec.flags = 0;
+
+    size_t odone;
+
+    soxr_error_t error = soxr_oneshot(length, length + tstuff, 2, /* Rates and # of chans. */
+                                      inptr, length, NULL,        /* Input. */
+                                      scratchBuffer, length + tstuff, &odone, /* Output. */
+                                      &io_spec,    /* Input, output and transfer spec. */
+                                      NULL, NULL); /* Default configuration.*/
+
+    if (error)
+      die("soxr error: %s\n", "error: %s\n", soxr_strerror(error));
+
+    if (odone > length + 1)
+      die("odone = %d!\n", odone);
+
+    int i;
+    int32_t *ip, *op;
+    ip = inptr;
+    op = scratchBuffer;
+
+    const int gpm = 5;
+    // keep the first (dpm) samples, to mitigate the Gibbs phenomenon
+    for (i = 0; i < gpm; i++) {
+      *op++ = *ip++;
+      *op++ = *ip++;
+    }
+
+    // keep the last (dpm) samples, to mitigate the Gibbs phenomenon
+    op = scratchBuffer + (length + tstuff - gpm) * sizeof(int32_t);
+    ip = inptr + (length - gpm) * sizeof(int32_t);
+    for (i = 0; i < gpm; i++) {
+      *op++ = *ip++;
+      *op++ = *ip++;
+    }
+
+    // now, do the volume, dither and formatting processing
+    ip = scratchBuffer;
+    char *l_outptr = outptr;
+    for (i = 0; i < length + tstuff; i++) {
+      process_sample(*ip++, &l_outptr, l_output_format, fix_volume, dither);
+      process_sample(*ip++, &l_outptr, l_output_format, fix_volume, dither);
+      //*op = dithered_vol(*op);
+      // op++;
+      //*op = dithered_vol(*op);
+      // op++;
+    };
+
+  } else { // the whole frame, if no stuffing
+
+    // now, do the volume, dither and formatting processing
+    int32_t *ip = inptr;
+    char *l_outptr = outptr;
+    int i;
+
+    for (i = 0; i < length; i++) {
+      process_sample(*ip++, &l_outptr, l_output_format, fix_volume, dither);
+      process_sample(*ip++, &l_outptr, l_output_format, fix_volume, dither);
+      //*op++ = dithered_vol(*ip++);
+      //*op++ = dithered_vol(*ip++);
+    };
+  }
+  return length + tstuff;
 }
 // stuff: 1 means add 1; 0 means do nothing; -1 means remove 1
 static int stuff_buffer_soxr(short *inptr, int length, short *outptr, int stuff) {
@@ -1485,6 +1576,8 @@ static void *player_thread_func(void *arg) {
 
   signed short *inbuf, *tbuf, *silence;
 
+  int32_t *sbuf;
+
   char *outbuf;
 
   int inbuflength;
@@ -1517,6 +1610,13 @@ static void *player_thread_func(void *arg) {
                   (max_frames_per_packet * output_sample_ratio + max_frame_size_change));
     if (tbuf == NULL)
       debug(1, "Failed to allocate memory for the transition buffer.");
+    sbuf = 0;
+    if (config.packet_stuffing == ST_soxr) { // needed for stuffing
+      sbuf = malloc(sizeof(int32_t) * 2 *
+                    (max_frames_per_packet * output_sample_ratio + max_frame_size_change));
+      if (sbuf == NULL)
+        debug(1, "Failed to allocate memory for the transition buffer.");
+    }
   } else {
     tbuf = 0;
   }
@@ -1856,8 +1956,9 @@ static void *player_thread_func(void *arg) {
             case ST_soxr:
               //                if (amount_to_stuff) debug(1,"Soxr stuff...");
               if (tbuf)
-                play_samples = stuff_buffer_soxr_32((int32_t *)tbuf, inbuflength, (int32_t *)outbuf,
-                                                    amount_to_stuff, output_bit_depth);
+                play_samples = stuff_buffer_soxr_32((int32_t *)tbuf, (int32_t *)sbuf, inbuflength,
+                                                    config.output_format, outbuf, amount_to_stuff,
+                                                    enable_dither);
               else
                 play_samples =
                     stuff_buffer_soxr(inbuf, inbuflength, (short *)outbuf, amount_to_stuff);
@@ -2101,6 +2202,8 @@ static void *player_thread_func(void *arg) {
   free(silence);
   if (tbuf)
     free(tbuf);
+  if (sbuf)
+    free(sbuf);
   debug(1, "Shut down audio, control and timing threads");
   itr.please_stop = 1;
   pthread_kill(rtp_audio_thread, SIGUSR1);
