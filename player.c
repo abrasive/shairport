@@ -625,11 +625,8 @@ static inline void process_sample(int32_t sample, char **outp, enum sps_format_t
                                   int dither) {
   int64_t hyper_sample = sample;
   int result;
-  // first, modify volume, if necessary
-  if (volume == 0x10000)
-    hyper_sample <<= 32;
-  else
-    hyper_sample *= (volume << 16); // this is 32*32 -> 64 bit bit multiplication -- we may need to
+  int64_t hyper_volume = (int64_t) volume<<16;
+    hyper_sample = hyper_sample * hyper_volume; // this is 64 bit bit multiplication -- we may need to
                                     // dither it down to its
                                     // target resolution
 
@@ -661,7 +658,7 @@ static inline void process_sample(int32_t sample, char **outp, enum sps_format_t
       break;
     case SPS_FORMAT_S8:
     case SPS_FORMAT_U8:
-      dither_mask = (int64_t)1 << (64 + 1 - 24);
+      dither_mask = (int64_t)1 << (64 + 1 - 8);
       break;
     }
     dither_mask -= 1;
@@ -715,54 +712,6 @@ static inline void process_sample(int32_t sample, char **outp, enum sps_format_t
   }
 
   *outp += result;
-}
-
-static inline int32_t dithered_vol_32(int32_t sample, int output_precision) {
-  if ((fix_volume == 0x1000) && (output_precision == 32)) {
-    return sample;
-  } else {
-    int64_t s = sample;               // 64 bit signed
-    int64_t v = fix_volume & 0x1FFFF; // 17 bit unsigned made a 33 bit unsigned
-    v <<= 16;
-    s = s * v; // this is 32*32 -> 64 bit bit multiplication -- we may need to dither it down to its
-               // target resolution
-
-    // add a TPDF dither -- see
-    // http://www.users.qwest.net/%7Evolt42/cadenzarecording/DitherExplained.pdf
-    // and the discussion around https://www.hydrogenaud.io/forums/index.php?showtopic=16963&st=25
-
-    // I think, for a 32 --> 16 bits, the range of
-    // random numbers needs to be from -2^16 to 2^16, i.e. from -65536 to 65536 inclusive, not from
-    // -32768 to +32767
-
-    // See the original paper at
-    // http://www.ece.rochester.edu/courses/ECE472/resources/Papers/Lipshitz_1992.pdf
-    // by Lipshitz, Wannamaker and Vanderkooy, 1992.
-
-    int64_t r = r64i();
-    int64_t mask = (int64_t)1 << (64 + 1 - output_precision);
-    mask -= 1;
-    int64_t tpdf = (r & mask) - (previous_random_number & mask);
-
-    previous_random_number = r;
-
-    // Check there's no clipping -- if there is, use INT64_MAX or INT64_MIN
-
-    if (tpdf >= 0) {
-      if (INT64_MAX - tpdf >= s)
-        s += tpdf;
-      else
-        s = INT64_MAX;
-    } else {
-      if (INT64_MIN - tpdf <= s)
-        s += tpdf;
-      else
-        s = INT64_MIN;
-    }
-
-    s >>= (64 - output_precision);
-    return s;
-  }
 }
 
 static inline short dithered_vol(short sample) {
@@ -1585,6 +1534,10 @@ static void *player_thread_func(void *arg) {
   int output_bit_depth = 16; // default;
 
   switch (config.output_format) {
+  case SPS_FORMAT_S8:
+  case SPS_FORMAT_U8:
+    output_bit_depth = 8;
+    break;
   case SPS_FORMAT_S16_LE:
     output_bit_depth = 16;
     break;
@@ -1597,6 +1550,15 @@ static void *player_thread_func(void *arg) {
   }
 
   debug(1, "Output bit depth is %d.", output_bit_depth);
+  
+  if (input_bit_depth>output_bit_depth) {
+    debug(1,"Dithering will be enabled because the input bit depth is greater than the output bit depth");
+  }
+  if (fix_volume!=0x10000) {
+    debug(1,"Dithering will be enabled the output volume is being altered in software");
+  }
+  
+
 
   // if we are changing any of the parameters of the input, like sample rate or sample depth, then
   // we
@@ -1700,11 +1662,9 @@ static void *player_thread_func(void *arg) {
           }
         } else {
 
-          //          int enable_dither = 0;
-          int enable_dither =
-              !((fix_volume == 0x10000) &&
-                (input_bit_depth ==
-                 output_bit_depth)); // avoid dither on audio being sent through without alteration
+          int enable_dither = 0;
+          if ((fix_volume!=0x10000) || (input_bit_depth>output_bit_depth))
+            enable_dither=1;
 
           // here, let's transform the frame of data, if necessary
 
@@ -2363,11 +2323,12 @@ void player_volume(double airplay_volume) {
   double temp_fix_volume = 65536.0 * pow(10, software_attenuation / 2000);
   // debug(1,"Software attenuation set to %f, i.e %f out of 65,536, for airplay volume of
   // %f",software_attenuation,temp_fix_volume,airplay_volume);
-
+  
+ 
   pthread_mutex_lock(&vol_mutex);
   fix_volume = temp_fix_volume;
   pthread_mutex_unlock(&vol_mutex);
-
+  
 #ifdef CONFIG_METADATA
   char *dv = malloc(128); // will be freed in the metadata thread
   if (dv) {
