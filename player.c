@@ -647,13 +647,13 @@ static inline void process_sample(int32_t sample, char **outp, enum sps_format_t
 
     int64_t dither_mask;
     switch (format) {
-    case SPS_FORMAT_S32_LE:
+    case SPS_FORMAT_S32:
       dither_mask = (int64_t)1 << (64 + 1 - 32);
       break;
-    case SPS_FORMAT_S24_LE:
+    case SPS_FORMAT_S24:
       dither_mask = (int64_t)1 << (64 + 1 - 24);
       break;
-    case SPS_FORMAT_S16_LE:
+    case SPS_FORMAT_S16:
       dither_mask = (int64_t)1 << (64 + 1 - 16);
       break;
     case SPS_FORMAT_S8:
@@ -683,29 +683,29 @@ static inline void process_sample(int32_t sample, char **outp, enum sps_format_t
   // move the result to the desired position in the int64_t
   char *op = *outp;
   switch (format) {
-  case SPS_FORMAT_S32_LE:
+  case SPS_FORMAT_S32:
     hyper_sample >>= (64 - 32);
     *(int32_t *)op = hyper_sample;
     result = 4;
     break;
-  case SPS_FORMAT_S24_LE:
+  case SPS_FORMAT_S24:
     hyper_sample >>= (64 - 24);
     *(int32_t *)op = hyper_sample;
     result = 4;
     break;
-  case SPS_FORMAT_S16_LE:
+  case SPS_FORMAT_S16:
     hyper_sample >>= (64 - 16);
-    *(int16_t *)op = hyper_sample;
+    *(int16_t *)op = (int16_t)hyper_sample;
     result = 2;
     break;
   case SPS_FORMAT_S8:
-    hyper_sample >>= (64 - 8);
+    hyper_sample >>= (int8_t)(64 - 8);
     *op = hyper_sample;
     result = 1;
     break;
   case SPS_FORMAT_U8:
-    hyper_sample >>= (64 - 8);
-    hyper_sample += 128; // this is just a guess!
+    hyper_sample >>= (uint8_t)(64 - 8);
+    hyper_sample += 128;
     *op = hyper_sample;
     result = 1;
     break;
@@ -1465,10 +1465,10 @@ static void *player_thread_func(void *arg) {
 
   output_bytes_per_frame = 4;
   switch (config.output_format) {
-  case SPS_FORMAT_S24_LE:
+  case SPS_FORMAT_S24:
     output_bytes_per_frame = 8;
     break;
-  case SPS_FORMAT_S32_LE:
+  case SPS_FORMAT_S32:
     output_bytes_per_frame = 8;
     break;
   }
@@ -1538,13 +1538,13 @@ static void *player_thread_func(void *arg) {
   case SPS_FORMAT_U8:
     output_bit_depth = 8;
     break;
-  case SPS_FORMAT_S16_LE:
+  case SPS_FORMAT_S16:
     output_bit_depth = 16;
     break;
-  case SPS_FORMAT_S24_LE:
+  case SPS_FORMAT_S24:
     output_bit_depth = 24;
     break;
-  case SPS_FORMAT_S32_LE:
+  case SPS_FORMAT_S32:
     output_bit_depth = 32;
     break;
   }

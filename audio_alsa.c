@@ -204,19 +204,19 @@ static int init(int argc, char **argv) {
 
     /* Get the output format, using the same names as aplay does*/
     if (config_lookup_string(config.cfg, "alsa.output_format", &str)) {
-      if (strcasecmp(str, "S16_LE") == 0)
-        config.output_format = SND_PCM_FORMAT_S16_LE;
-      else if (strcasecmp(str, "S24_LE") == 0)
-        config.output_format = SND_PCM_FORMAT_S24_LE;
-      else if (strcasecmp(str, "S32_LE") == 0)
-        config.output_format = SND_PCM_FORMAT_S32_LE;
+      if (strcasecmp(str, "S16") == 0)
+        config.output_format = SPS_FORMAT_S16;
+      else if (strcasecmp(str, "S24") == 0)
+        config.output_format = SPS_FORMAT_S24;
+      else if (strcasecmp(str, "S32") == 0)
+        config.output_format = SPS_FORMAT_S32;
       else if (strcasecmp(str, "U8") == 0)
         config.output_format = SPS_FORMAT_U8;
       else if (strcasecmp(str, "S8") == 0)
         config.output_format = SPS_FORMAT_S8;
       else
-        die("Invalid output format \"%s\". It should be \"U8\", \"S8\", \"S16_LE\", \"S24_LE\" or "
-            "\"S32_LE\"",
+        die("Invalid output format \"%s\". It should be \"U8\", \"S8\", \"S16\", \"S24\" or "
+            "\"S32\"",
             str);
     }
 
@@ -445,10 +445,27 @@ int open_alsa_device(void) {
     die("audio_alsa: Access type not available for device \"%s\": %s", alsa_out_dev,
         snd_strerror(ret));
   }
-
-  ret = snd_pcm_hw_params_set_format(alsa_handle, alsa_params, sample_format);
+  snd_pcm_format_t sf;
+  switch (sample_format) {
+    case   SPS_FORMAT_S8:
+      sf = SND_PCM_FORMAT_S8;
+      break;
+    case   SPS_FORMAT_U8:
+      sf = SND_PCM_FORMAT_U8;
+      break;
+    case   SPS_FORMAT_S16:
+      sf = SND_PCM_FORMAT_S16;
+      break;
+    case   SPS_FORMAT_S24:
+      sf = SND_PCM_FORMAT_S24;
+      break;
+    case   SPS_FORMAT_S32:
+      sf = SND_PCM_FORMAT_S32;
+      break;  
+  }
+  ret = snd_pcm_hw_params_set_format(alsa_handle, alsa_params, sf);
   if (ret < 0) {
-    die("audio_alsa: Sample format %d not available for device \"%s\": %s", sample_format,
+    die("audio_alsa: Sample format %d not available for device \"%s\": %s", sf,
         alsa_out_dev, snd_strerror(ret));
   }
 
@@ -678,7 +695,7 @@ static void start(int i_sample_rate, int i_sample_format) {
     desired_sample_rate = i_sample_rate; // must be a variable
 
   if (i_sample_format == 0)
-    sample_format = SND_PCM_FORMAT_S16_LE; // default
+    sample_format = SPS_FORMAT_S16; // default
   else
     sample_format = i_sample_format;
 }
