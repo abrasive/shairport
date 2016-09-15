@@ -431,8 +431,14 @@ int parse_options(int argc, char **argv) {
           config.playback_mode = ST_stereo;
         else if (strcasecmp(str, "mono") == 0)
           config.playback_mode = ST_mono;
+        else if (strcasecmp(str, "reverse stereo") == 0)
+          config.playback_mode = ST_reverse_stereo;
+        else if (strcasecmp(str, "both left") == 0)
+          config.playback_mode = ST_left_only;
+        else if (strcasecmp(str, "both right") == 0)
+          config.playback_mode = ST_right_only;
         else
-          die("Invalid playback_mode choice \"%s\". It should be \"stereo\" (default) or \"mono\"");
+          die("Invalid playback_mode choice \"%s\". It should be \"stereo\" (default), \"mono\", \"reverse stereo\", \"both left\", \"both right\"");
       }
 
       /* Get the regtype -- the service type and protocol, separated by a dot. Default is
@@ -1070,11 +1076,11 @@ int main(int argc, char **argv) {
   debug(1, "drift tolerance is %f seconds.", config.tolerance);
   debug(1, "password is \"%s\".", config.password);
   debug(1, "ignore_volume_control is %d.", config.ignore_volume_control);
-  debug(1, "playback_mode is %d (0-stereo, 1-mono).", config.playback_mode);
+  debug(1, "playback_mode is %d (0-stereo, 1-mono, 1-reverse_stereo, 2-both_left, 3-both_right).", config.playback_mode);
   debug(1, "disable_synchronization is %d.", config.no_sync);
   debug(1, "use_mmap_if_available is %d.", config.no_mmap ? 0 : 1);
-  debug(1, "output_rate is %d (0 means 44,100).", config.output_rate);
-  debug(1, "output_format is %d (3 is the default SPS_FORMAT_S16).", config.output_format);
+  debug(1, "output_rate is %d.", config.output_rate);
+  debug(1, "output_format is %d (0-unknown, 1-S8, 2-U8, 3-S16, 4-S24, 5-S32).", config.output_format);
   debug(1, "audio backend desired buffer length is %f seconds.",
         config.audio_backend_buffer_desired_length);
   debug(1, "audio backend latency offset is %f seconds.", config.audio_backend_latency_offset);
