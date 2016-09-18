@@ -399,11 +399,13 @@ int parse_options(int argc, char **argv) {
 
       /* The old drift tolerance setting. */
       if (config_lookup_int(config.cfg, "general.drift", &value))
-        inform("The drift setting is deprecated and has been ignored. Use drift_tolerance_in_seconds instead");
+        inform("The drift setting is deprecated and has been ignored. Use "
+               "drift_tolerance_in_seconds instead");
 
       /* The old resync setting. */
       if (config_lookup_int(config.cfg, "general.resync_threshold", &value))
-        inform("The resync_threshold setting is deprecated and has been ignored. Use resync_threshold_in_seconds instead");
+        inform("The resync_threshold setting is deprecated and has been ignored. Use "
+               "resync_threshold_in_seconds instead");
 
       /* Get the drift tolerance setting. */
       if (config_lookup_float(config.cfg, "general.drift_tolerance_in_seconds", &dvalue))
@@ -446,7 +448,8 @@ int parse_options(int argc, char **argv) {
         else if (strcasecmp(str, "both right") == 0)
           config.playback_mode = ST_right_only;
         else
-          die("Invalid playback_mode choice \"%s\". It should be \"stereo\" (default), \"mono\", \"reverse stereo\", \"both left\", \"both right\"");
+          die("Invalid playback_mode choice \"%s\". It should be \"stereo\" (default), \"mono\", "
+              "\"reverse stereo\", \"both left\", \"both right\"");
       }
 
       /* Get the regtype -- the service type and protocol, separated by a dot. Default is
@@ -806,7 +809,7 @@ int main(int argc, char **argv) {
   config.udp_port_base = 6001;
   config.udp_port_range = 100;
   config.output_format = SPS_FORMAT_S16; // default
-  config.output_rate = 44100;               // default
+  config.output_rate = 44100;            // default
   config.decoders_supported =
       1 << decoder_hammerton; // David Hammerton's decoder supported by default
 #ifdef HAVE_APPLE_ALAC
@@ -1084,11 +1087,13 @@ int main(int argc, char **argv) {
   debug(1, "drift tolerance is %f seconds.", config.tolerance);
   debug(1, "password is \"%s\".", config.password);
   debug(1, "ignore_volume_control is %d.", config.ignore_volume_control);
-  debug(1, "playback_mode is %d (0-stereo, 1-mono, 1-reverse_stereo, 2-both_left, 3-both_right).", config.playback_mode);
+  debug(1, "playback_mode is %d (0-stereo, 1-mono, 1-reverse_stereo, 2-both_left, 3-both_right).",
+        config.playback_mode);
   debug(1, "disable_synchronization is %d.", config.no_sync);
   debug(1, "use_mmap_if_available is %d.", config.no_mmap ? 0 : 1);
   debug(1, "output_rate is %d.", config.output_rate);
-  debug(1, "output_format is %d (0-unknown, 1-S8, 2-U8, 3-S16, 4-S24, 5-S32).", config.output_format);
+  debug(1, "output_format is %d (0-unknown, 1-S8, 2-U8, 3-S16, 4-S24, 5-S32).",
+        config.output_format);
   debug(1, "audio backend desired buffer length is %f seconds.",
         config.audio_backend_buffer_desired_length);
   debug(1, "audio backend latency offset is %f seconds.", config.audio_backend_latency_offset);

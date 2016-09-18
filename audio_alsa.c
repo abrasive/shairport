@@ -147,19 +147,18 @@ static int init(int argc, char **argv) {
 
   if (config.cfg != NULL) {
 
-
-    if (config_lookup_int(config.cfg,
-                          "alsa.audio_backend_buffer_desired_length", &value)) 
-      inform("The setting audio_backend_buffer_desired_length is no longer used and has been ignored. Use audio_backend_buffer_desired_length_in_seconds instead.");
-    
+    if (config_lookup_int(config.cfg, "alsa.audio_backend_buffer_desired_length", &value))
+      inform("The setting audio_backend_buffer_desired_length is no longer used and has been "
+             "ignored. Use audio_backend_buffer_desired_length_in_seconds instead.");
 
     /* Get the latency offset. */
-    if (config_lookup_int(config.cfg, "alsa.audio_backend_latency_offset",
-                          &value)) 
-      inform("The setting audio_backend_latency_offset is no longer used and has been ignored. Use audio_backend_latency_offset_in_seconds instead.");
+    if (config_lookup_int(config.cfg, "alsa.audio_backend_latency_offset", &value))
+      inform("The setting audio_backend_latency_offset is no longer used and has been ignored. Use "
+             "audio_backend_latency_offset_in_seconds instead.");
 
     /* Get the desired buffer size setting. */
-    if (config_lookup_float(config.cfg, "alsa.audio_backend_buffer_desired_length_in_seconds", &dvalue)) {
+    if (config_lookup_float(config.cfg, "alsa.audio_backend_buffer_desired_length_in_seconds",
+                            &dvalue)) {
       if ((dvalue < 0) || (dvalue > 1.5))
         die("Invalid alsa audio backend buffer desired time \"%f\". It "
             "should be between 0 and "
@@ -459,26 +458,26 @@ int open_alsa_device(void) {
   }
   snd_pcm_format_t sf;
   switch (sample_format) {
-    case   SPS_FORMAT_S8:
-      sf = SND_PCM_FORMAT_S8;
-      break;
-    case   SPS_FORMAT_U8:
-      sf = SND_PCM_FORMAT_U8;
-      break;
-    case   SPS_FORMAT_S16:
-      sf = SND_PCM_FORMAT_S16;
-      break;
-    case   SPS_FORMAT_S24:
-      sf = SND_PCM_FORMAT_S24;
-      break;
-    case   SPS_FORMAT_S32:
-      sf = SND_PCM_FORMAT_S32;
-      break;  
+  case SPS_FORMAT_S8:
+    sf = SND_PCM_FORMAT_S8;
+    break;
+  case SPS_FORMAT_U8:
+    sf = SND_PCM_FORMAT_U8;
+    break;
+  case SPS_FORMAT_S16:
+    sf = SND_PCM_FORMAT_S16;
+    break;
+  case SPS_FORMAT_S24:
+    sf = SND_PCM_FORMAT_S24;
+    break;
+  case SPS_FORMAT_S32:
+    sf = SND_PCM_FORMAT_S32;
+    break;
   }
   ret = snd_pcm_hw_params_set_format(alsa_handle, alsa_params, sf);
   if (ret < 0) {
-    die("audio_alsa: Sample format %d not available for device \"%s\": %s", sf,
-        alsa_out_dev, snd_strerror(ret));
+    die("audio_alsa: Sample format %d not available for device \"%s\": %s", sf, alsa_out_dev,
+        snd_strerror(ret));
   }
 
   ret = snd_pcm_hw_params_set_channels(alsa_handle, alsa_params, 2);
