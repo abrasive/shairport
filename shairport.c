@@ -397,12 +397,20 @@ int parse_options(int argc, char **argv) {
           die("Invalid statistics option choice \"%s\". It should be \"yes\" or \"no\"");
       }
 
+      /* The old drift tolerance setting. */
+      if (config_lookup_int(config.cfg, "general.drift", &value))
+        inform("The drift setting is deprecated and has been ignored. Use drift_tolerance_in_seconds instead");
+
+      /* The old resync setting. */
+      if (config_lookup_int(config.cfg, "general.resync_threshold", &value))
+        inform("The resync_threshold setting is deprecated and has been ignored. Use resync_threshold_in_seconds instead");
+
       /* Get the drift tolerance setting. */
-      if (config_lookup_float(config.cfg, "general.drift", &dvalue))
+      if (config_lookup_float(config.cfg, "general.drift_tolerance_in_seconds", &dvalue))
         config.tolerance = dvalue;
 
       /* Get the resync setting. */
-      if (config_lookup_float(config.cfg, "general.resync_threshold", &dvalue))
+      if (config_lookup_float(config.cfg, "general.resync_threshold_in_seconds", &dvalue))
         config.resyncthreshold = dvalue;
 
       /* Get the verbosity setting. */

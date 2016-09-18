@@ -146,10 +146,22 @@ static int init(int argc, char **argv) {
   // command line options
 
   if (config.cfg != NULL) {
+
+
+    if (config_lookup_int(config.cfg,
+                          "alsa.audio_backend_buffer_desired_length", &value)) 
+      inform("The setting audio_backend_buffer_desired_length is no longer used and has been ignored. Use audio_backend_buffer_desired_length_in_seconds instead.");
+    
+
+    /* Get the latency offset. */
+    if (config_lookup_int(config.cfg, "alsa.audio_backend_latency_offset",
+                          &value)) 
+      inform("The setting audio_backend_latency_offset is no longer used and has been ignored. Use audio_backend_latency_offset_in_seconds instead.");
+
     /* Get the desired buffer size setting. */
-    if (config_lookup_float(config.cfg, "alsa.audio_backend_buffer_desired_length", &dvalue)) {
+    if (config_lookup_float(config.cfg, "alsa.audio_backend_buffer_desired_length_in_seconds", &dvalue)) {
       if ((dvalue < 0) || (dvalue > 1.5))
-        die("Invalid alsa audio backend buffer desired length \"%f\". It "
+        die("Invalid alsa audio backend buffer desired time \"%f\". It "
             "should be between 0 and "
             "1.5, default is 0.15 seconds",
             dvalue);
@@ -159,9 +171,9 @@ static int init(int argc, char **argv) {
     }
 
     /* Get the latency offset. */
-    if (config_lookup_float(config.cfg, "alsa.audio_backend_latency_offset", &dvalue)) {
+    if (config_lookup_float(config.cfg, "alsa.audio_backend_latency_offset_in_seconds", &dvalue)) {
       if ((dvalue < -1.0) || (dvalue > 1.5))
-        die("Invalid alsa audio backend buffer latency offset \"%f\". It "
+        die("Invalid alsa audio backend buffer latency offset time \"%f\". It "
             "should be between -1.0 and +1.5, default is 0 seconds",
             dvalue);
       else
