@@ -950,7 +950,9 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn, rtsp_message *r
 //    string to identify the source's remote control on the network.
 //    'acre' -- this is the source's Active-Remote token, necessary if you want
 //    to send commands to the source's remote control (if it has one).
-//
+//		`clip` -- the payload is the IP number of the client, i.e. the sender of audio.
+//		Can be an IPv4 or an IPv6 number.
+
 // including a simple base64 encoder to minimise malloc/free activity
 
 // From Stack Overflow, with thanks:
@@ -1915,6 +1917,9 @@ void rtsp_listen_loop(void) {
           sa = (struct sockaddr_in *)&conn->remote;
           inet_ntop(AF_INET, &(sa->sin_addr), remote_ip4, INET_ADDRSTRLEN);
           unsigned short int rport = ntohs(sa->sin_port);
+#ifdef CONFIG_METADATA
+          send_ssnc_metadata('clip', strdup(ip4), strlen(ip4), 1);
+#endif
           debug(1, "New RTSP connection from %s:%u to self at %s:%u.", remote_ip4, rport, ip4,
                 tport);
         }
@@ -1932,7 +1937,9 @@ void rtsp_listen_loop(void) {
           sa6 = (struct sockaddr_in6 *)&conn->remote; // pretend this is loaded with something
           inet_ntop(AF_INET6, &(sa6->sin6_addr), remote_ip6, INET6_ADDRSTRLEN);
           u_int16_t rport = ntohs(sa6->sin6_port);
-
+#ifdef CONFIG_METADATA
+          send_ssnc_metadata('clip', strdup(ip6), strlen(ip6), 1);
+#endif
           debug(1, "New RTSP connection from [%s]:%u to self at [%s]:%u.", remote_ip6, rport, ip6,
                 tport);
         }

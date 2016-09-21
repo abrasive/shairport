@@ -418,6 +418,11 @@ int open_alsa_device(void) {
   snd_pcm_uframes_t buffer_size, actual_buffer_length;
   snd_pcm_access_t access;
 
+  // ensure no calls are made to the alsa device enquiring about the buffer length if
+  // synchronisation is disabled.
+  if (config.no_sync != 0)
+    audio_alsa.delay = NULL;
+
   ret = snd_pcm_open(&alsa_handle, alsa_out_dev, SND_PCM_STREAM_PLAYBACK, 0);
   if (ret < 0)
     return (ret);
