@@ -2,20 +2,16 @@ Version 2.8.5 – Stable Version
 ----
 This release includes bug fixes and minor enhancements and is recommended for all users.
 
-There is once change you should not ignore: 
+Note: if you're upgrading, there is a new `./configure` option: 
 ====
-
-* The build process now uses the directory path `sysconfdir` to determine where to place the configuration file `shairport-sync.conf`.
+The build process now uses the directory path `sysconfdir` to determine where to place the configuration file `shairport-sync.conf`.
 The default value for `sysconfdir` is `/usr/local/etc` which is used in the BSD family, whereas `/etc` is normally used in Linux.
-So, to retain the present behaviour of Shairport Sync, *you must add an extra parameter to the `./configure... ` command.* The parameter you must add is `--sysconfdir=/etc`. (This has been added to the sample configuration command line in README.md.)
-* Shairport Sync has been updated to use the value of `sysconfdir` to determine where to look for the configuration file.
-If `sysconfdir` has been left with its default value of `/usr/local/etc`, then Shairport Sync will look for `/usr/local/etc/shairport-sync.conf`.
-If, as recommended for Linux, `sysconfdir` has been set to `/etc`, then Shairport Sync will look, as before, for `/etc/shairport-sync.conf`.
+To retain the present behaviour of Shairport Sync, *you must add an extra parameter to the `./configure... ` command.* The parameter you must add is `--sysconfdir=/etc`. (This has been added to the sample configuration command line in README.md.)
+
+The enhancements and bug fixes in 2.8.5 were made in versions 2.8.4.1 to 2.8.4.8 inclusive. Please read below for the full list.
 
 For advice on updating an installation you built yourself,
 please visit the [UPDATING](https://github.com/mikebrady/shairport-sync/blob/master/UPDATING.md) page.
-
-The enhancements and bug fixes were made in versions 2.8.4.1 to 2.8.4.8 inclusive. Please read below for the full list.
 
 =======
 Version 2.8.4.8 – Development Version
