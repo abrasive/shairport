@@ -2,7 +2,7 @@ Version 2.8.5 – Stable Version
 ----
 This release includes bug fixes and minor enhancements and is recommended for all users.
 
-Note: if you're upgrading, there is a new `./configure` option: 
+Note: if you're upgrading, there is a new `./configure` option:  
 ====
 The build process now uses the directory path `sysconfdir` to determine where to place the configuration file `shairport-sync.conf`.
 The default value for `sysconfdir` is `/usr/local/etc` which is used in the BSD family, whereas `/etc` is normally used in Linux.
