@@ -1,5 +1,5 @@
 Name:           shairport-sync
-Version:        2.8.4
+Version:        2.8.5
 Release:        1
 Summary:        AirTunes emulator. Shairport Sync adds multi-room capability with Audio Synchronisation.
 
@@ -56,6 +56,8 @@ getent passwd %{name} &> /dev/null || useradd --system -c "%{name} User" \
 %doc AUTHORS LICENSES README.md
 
 %changelog
+* Sun Sep 25 2016 Mike Brady <mikebrady@eircom.net> 2.8.5
+- Bug fixes and small enhancements 2.8.5
 * Sat May 28 2016 Mike Brady <mikebrady@eircom.net> 2.8.4
 - Bug fixes and a few small enhancements 2.8.4
 * Fri Apr 15 2016 Mike Brady <mikebrady@eircom.net> 2.8.2
