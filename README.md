@@ -6,6 +6,7 @@ Audio played by a Shairport Sync-powered device stays synchronised with the sour
 Shairport Sync does not support AirPlay video or photo streaming.
 
 This is the stable "master" branch. Changes and updates are incorporated into this branch relatively slowly. To access the development version, where all the latest changes are made first, please switch to the "development" branch.
+
 **Please note that, between 2.8.4 and 2.8.5, there is a change in the standard ./configure arguments which you should not ignore!** 
 
 
@@ -170,7 +171,7 @@ A final consideration is the location of the configuration file `shairport-sync.
 
 **Sample `./configure` command with parameters for a typical Linux `systemd` installation:**
 
-Here is an example, suitable for Linux installations that use `systemd`, such as Ubuntu 15.10 and Raspbian Jessie:
+Here is an example, suitable for Linux installations that use `systemd`, such as Ubuntu 16.04 and Raspbian Jessie:
 
 `$ ./configure --sysconfdir=/etc --with-alsa --with-avahi --with-ssl=openssl --with-metadata --with-soxr --with-systemd`
 
