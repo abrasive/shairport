@@ -1,3 +1,77 @@
+Version 2.8.5 – Stable Version
+----
+This release includes bug fixes and minor enhancements and is recommended for all users.
+
+There is once change you should not ignore: 
+====
+
+* The build process now uses the directory path `sysconfdir` to determine where to place the configuration file `shairport-sync.conf`.
+The default value for `sysconfdir` is `/usr/local/etc` which is used in the BSD family, whereas `/etc` is normally used in Linux.
+So, to retain the present behaviour of Shairport Sync, *you must add an extra parameter to the `./configure... ` command.* The parameter you must add is `--sysconfdir=/etc`. (This has been added to the sample configuration command line in README.md.)
+* Shairport Sync has been updated to use the value of `sysconfdir` to determine where to look for the configuration file.
+If `sysconfdir` has been left with its default value of `/usr/local/etc`, then Shairport Sync will look for `/usr/local/etc/shairport-sync.conf`.
+If, as recommended for Linux, `sysconfdir` has been set to `/etc`, then Shairport Sync will look, as before, for `/etc/shairport-sync.conf`.
+
+For advice on updating an installation you built yourself,
+please visit the [UPDATING](https://github.com/mikebrady/shairport-sync/blob/master/UPDATING.md) page.
+
+The enhancements and bug fixes were made in versions 2.8.4.1 to 2.8.4.8 inclusive. Please read below for the full list.
+
+=======
+Version 2.8.4.8 – Development Version
+----
+**Enhancements**
+* Add a new metadata item `clip` (for `CL`ient `IP`). This item is a string comprising the IP number of the "client", and is sent when a play session is starting. The "client" is the sender of the audio stream, e.g. iTunes on a Mac, or the Music player in iOS.
+* When synchronisation has been disabled on the ALSA device (you should only do this for testing), Shairport Sync now refrains from asking for buffer length information from the device.
+
+Version 2.8.4.7 – Development Version
+----
+
+* This update means the build process now uses the directory path `sysconfdir` to determine where to place the configuration file `shairport-sync.conf`. The default value for `sysconfdir` is `/usr/local/etc` which is used in the BSD family, whereas `/etc` is normally used in Linux. So, to retain the present behaviour of Shairport Sync, you must add an extra parameter to the `./configure... ` command. The parameter you must add is `--sysconfdir=/etc`. (This has been added to the sample configuration command line in README.md.)
+* Shairport Sync has been updated to use the value of `sysconfdir` to determine where to look for the configuration file. If `sysconfdir` has been left with its default value of `/usr/local/etc`, then Shairport Sync will look for `/usr/local/etc/shairport-sync.conf`. If, as recommended for Linux, `sysconfdir` has been set to `/etc`, then Shairport Sync will look, as before, for `/etc/shairport-sync.conf`.
+
+**Enhancement**
+* The version string output when you use the command-line option `-V` now includes the value of the `sysconfdir`, e.g. `2.8.4.7-OpenSSL-Avahi-ALSA-soxr-sysconfdir:/etc`.
+
+Version 2.8.4.6 – Development Version
+----
+**Enhancement**
+* Add a new `alsa` configuration setting: `use_mmap_if_available` to control the use of mmap. The default is `"yes"` -- see [#351](https://github.com/mikebrady/shairport-sync/issues/351).
+
+Version 2.8.4.5 – Development Version
+----
+**Enhancement**
+* Handle varying packet lengths -- this makes it compatible with the HTC Connect, HTCs AirPlay implementation. Thanks to [Jörg Krause](https://github.com/joerg-krause) for his detective work, and see [#338](https://github.com/mikebrady/shairport-sync/issues/338).
+
+Version 2.8.4.4 – Development Version
+----
+**Enhancement**
+* Use alsa direct access (mmap) feature to improve performance if mmap is supported. Thanks to [Yihui Xiong](https://github.com/xiongyihui).
+
+Version 2.8.4.3 – Development Version
+----
+**Bug Fix**
+
+* Set the RTSP socket to close on `exec()` of child processes; otherwise, background `run_this_before_play_begins` or `run_this_after_play_ends` commands that are sleeping prevent the daemon from being restarted because the listening RTSP port is still in use. Fixes [#329](https://github.com/mikebrady/shairport-sync/issues/329).
+
+Version 2.8.4.2 – Development Version
+----
+**Bug Fixes**
+
+* Fixed an issue where you could not compile the audio_pipe back end without enabling metadata support (thanks to [busa-projects](https://github.com/busa-projects) for reporting the issue).
+* Fixed a few small issues causing compiler warnings in `mdns_dns_sd.c`.
+
+
+**Other**
+* Removed the INSTALL file – it's generated automatically by `autoreconf -fi` anyway – added it to the files to be ignored in `.gitignore` and added a simple `INSTALL.md` file.
+
+Version 2.8.4.1 – Development Version
+----
+**Bug Fixes**
+
+* Fixed two issues when including support for `pulseaudio`.
+* Corrected two small errors in sample parameters for the UDP metadata stream settings, thanks to [rkam](https://github.com/rkam).
+
 Version 2.8.4 – Stable Version
 ----
 This release includes important bug fixes and minor enhancements and is recommended for all users. No settings need to be changed. For advice on updating an installation you built yourself, please visit the [UPDATING](https://github.com/mikebrady/shairport-sync/blob/master/UPDATING.md) page.

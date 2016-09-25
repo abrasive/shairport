@@ -151,6 +151,8 @@ char* get_version_string() {
   #ifdef CONFIG_METADATA
     strcat(version_string, "-metadata");
   #endif
+    strcat(version_string, "-sysconfdir:");
+    strcat(version_string, SYSCONFDIR);
   }
   return version_string;
 }
@@ -490,14 +492,6 @@ int parse_options(int argc, char **argv) {
       if (config_lookup_int(config.cfg, "metadata.socket_msglength", &value)) {
         config.metadata_sockmsglength = value < 500 ? 500 : value > 65000 ? 65000 : value;
       }
-      if (config_lookup_int(config.cfg, "metadata.pipe_timeout", &value)) {
-      
-        if ((value < 1) || (value > 150000))
-          die("Invalid timeout range  \"%sd\". It should be in the range 1 to 150,000 milliseconds.",
-              value);
-        else
-          config.metadata_pipe_timeout = value;
-      }
 
   #endif
 
@@ -737,7 +731,8 @@ int main(int argc, char **argv) {
     endianness = SS_BIG_ENDIAN;
   else die("Can not recognise the endianness of the processor.");
   
-  strcpy(configuration_file_path, "/etc/");
+  strcpy(configuration_file_path, SYSCONFDIR);
+  strcat(configuration_file_path, "/");
   strcat(configuration_file_path, appName);
   strcat(configuration_file_path, ".conf");
   config.configfile = configuration_file_path;
@@ -763,9 +758,6 @@ int main(int argc, char **argv) {
   //snprintf(config.service_name, 20 + 100, "Shairport Sync on %s", hostname);
   set_requested_connection_state_to_output(1); // we expect to be able to connect to the output device
   config.audio_backend_buffer_desired_length = 6615; // 0.15 seconds.
-#ifdef CONFIG_METADATA
-  config.metadata_pipe_timeout = 5000; //milliseconds
-#endif
   config.udp_port_base = 6001;
   config.udp_port_range = 100;
 
@@ -1023,6 +1015,7 @@ int main(int argc, char **argv) {
   debug(1, "ignore_volume_control is %d.", config.ignore_volume_control);
   debug(1, "playback_mode is %d (0-stereo, 1-mono).", config.playback_mode);
   debug(1, "disable_synchronization is %d.", config.no_sync);
+  debug(1, "use_mmap_if_available is %d.", config.no_mmap ? 0 : 1);
   debug(1, "audio backend desired buffer length is %d.",
         config.audio_backend_buffer_desired_length);
   debug(1, "audio backend latency offset is %d.", config.audio_backend_latency_offset);

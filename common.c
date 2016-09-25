@@ -513,7 +513,6 @@ uint64_t get_absolute_time_in_fp() {
   return time_now_fp;
 }
 
-#ifdef CONFIG_METADATA
 ssize_t non_blocking_write(int fd, const void *buf, size_t count) {
 	void *ibuf = (void *)buf;
 	size_t bytes_remaining = count;
@@ -523,7 +522,7 @@ ssize_t non_blocking_write(int fd, const void *buf, size_t count) {
 		// check that we can do some writing
 		ufds[0].fd = fd;
     ufds[0].events = POLLOUT;
-    rc = poll(ufds, 1, config.metadata_pipe_timeout);
+    rc = poll(ufds, 1, 5000);
     if (rc < 0) {
       // debug(1, "non-blocking write error waiting for pipe to become ready for writing...");
     } else if (rc == 0) {
@@ -546,7 +545,6 @@ ssize_t non_blocking_write(int fd, const void *buf, size_t count) {
 		return rc;
   //  return write(fd,buf,count);
 }
-#endif
 
 /* from http://coding.debuntu.org/c-implementing-str_replace-replace-all-occurrences-substring#comment-722 */
 

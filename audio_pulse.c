@@ -42,8 +42,8 @@ static pa_simple *pa_dev = NULL;
 static struct {
   char *server;
   char *sink;
-  char *apname;
-} pulse_options = {.server = NULL, .sink = NULL, .apname = NULL};
+  char *service_name;
+} pulse_options = {.server = NULL, .sink = NULL, .service_name = NULL};
 
 static int pa_error;
 
@@ -58,7 +58,7 @@ static void help(void) {
 
 static int init(int argc, char **argv) {
 
-  pulse_options.apname = config.apname;
+  pulse_options.service_name = config.service_name;
 
   config.audio_backend_buffer_desired_length = 44100; // one second.
   config.audio_backend_latency_offset = 0;
@@ -78,7 +78,7 @@ static int init(int argc, char **argv) {
       pulse_options.sink = optarg;
       break;
     case 'n':
-      pulse_options.apname = optarg;
+      pulse_options.service_name = optarg;
       break;
     default:
       help();
@@ -97,7 +97,7 @@ static int init(int argc, char **argv) {
 static void pulse_connect(void) {
   static const pa_sample_spec ss = {.format = PA_SAMPLE_S16LE, .rate = 44100, .channels = 2};
 
-  pa_dev = pa_simple_new(pulse_options.server, pulse_options.apname, PA_STREAM_PLAYBACK,
+  pa_dev = pa_simple_new(pulse_options.server, pulse_options.service_name, PA_STREAM_PLAYBACK,
                          pulse_options.sink, "Shairport Stream", &ss, NULL, NULL, &pa_error);
 
   if (!pa_dev)

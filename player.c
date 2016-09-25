@@ -74,9 +74,13 @@ static AES_KEY aes;
 #endif
 static int sampling_rate, frame_size;
 
-#define FRAME_BYTES(frame_size) (4 * frame_size)
+static int bytes_per_audio_frame = 4;
+
+// The maximum frame size change there can be is +/- 1;
+static int max_frame_size_change = 1;
+// #define FRAME_BYTES(frame_size) (4 * frame_size)
 // maximal resampling shift - conservative
-#define OUTFRAME_BYTES(frame_size) (4 * (frame_size + 3))
+//#define OUTFRAME_BYTES(frame_size) (4 * (frame_size + 3))
 
 #ifdef HAVE_LIBPOLARSSL
 static aes_context dctx;
@@ -112,6 +116,7 @@ typedef struct audio_buffer_entry { // decoded audio packets
   uint32_t timestamp;
   seq_t sequence_number;
   signed short *data;
+  int length; // the length of the decoded data
 } abuf_t;
 static abuf_t audio_buffer[BUFFER_FRAMES];
 #define BUFIDX(seqno) ((seq_t)(seqno) % BUFFER_FRAMES)
@@ -222,12 +227,21 @@ static inline int seq32_order(uint32_t a, uint32_t b) {
   return (C & 0x80000000) == 0;
 }
 
-static int alac_decode(short *dest, uint8_t *buf, int len) {
+static int alac_decode(short *dest, int *destlen, uint8_t *buf, int len) {
+  // parameters: where the decoded stuff goes, its length in samples,
+  // the incoming packet, the length of the incoming packet in bytes
+  // destlen should contain the allowed max number of samples on entry
+  
+  if (len>MAX_PACKET) {
+    warn("Incoming audio packet size is too large at %d; it should not exceed %d.",len,MAX_PACKET);
+    return -1;
+  }
   unsigned char packet[MAX_PACKET];
   unsigned char packetp[MAX_PACKET];
-  assert(len <= MAX_PACKET);
+  // assert(len <= MAX_PACKET);
   int reply = 0; //everything okay
-  int outsize=FRAME_BYTES(frame_size); // the size it should be
+  int outsize=bytes_per_audio_frame*(*destlen); // the size the output should be, in bytes
+  int toutsize = outsize;
 
   if (encrypted) {
     unsigned char iv[16];
@@ -244,14 +258,14 @@ static int alac_decode(short *dest, uint8_t *buf, int len) {
   } else {
     alac_decode_frame(decoder_info, buf, dest, &outsize);
   }
-  if (outsize!=FRAME_BYTES(frame_size)) {
-    if(outsize<FRAME_BYTES(frame_size)) {
-      debug(2,"Output from alac_decode is smaller than expected. Encrypted = %d.",encrypted);
-    } else {
-      debug(2,"Output from alac_decode larger than expected -- truncated, but buffer overflow possible! Encrypted = %d.",encrypted);
-    }
-    reply = -1; // output frame is the wrong size
-  }
+
+  if(outsize>toutsize) {
+    debug(2,"Output from alac_decode larger (%d bytes, not frames) than expected (%d bytes) -- truncated, but buffer overflow possible! Encrypted = %d.",outsize, toutsize, encrypted);
+    reply = -1; // output packet is the wrong size
+ }
+  *destlen = outsize / bytes_per_audio_frame;
+  if ((outsize % bytes_per_audio_frame)!=0)
+    debug(1,"Number of audio frames (%d) does not correspond exactly to the number of bytes (%d) and the audio frame size (%d).",*destlen,outsize,bytes_per_audio_frame);
   return reply;
 }
 
@@ -290,7 +304,7 @@ static void free_decoder(void) { alac_free(decoder_info); }
 static void init_buffer(void) {
   int i;
   for (i = 0; i < BUFFER_FRAMES; i++)
-    audio_buffer[i].data = malloc(OUTFRAME_BYTES(frame_size));
+    audio_buffer[i].data = malloc(bytes_per_audio_frame*(frame_size+max_frame_size_change));
   ab_resync();
 }
 
@@ -375,8 +389,10 @@ void player_put_packet(seq_t seqno, uint32_t timestamp, uint8_t *data, int len) 
       // pthread_mutex_unlock(&ab_mutex);
 
       if (abuf) {
-        if (alac_decode(abuf->data, data, len)==0) {
+        int datalen = frame_size;
+        if (alac_decode(abuf->data, &datalen, data, len)==0) {
 					abuf->ready = 1;
+					abuf->length = datalen;
 					abuf->timestamp = timestamp;
 					abuf->sequence_number = seqno;
 
@@ -686,11 +702,11 @@ static abuf_t *buffer_get_frame(void) {
                 //  debug(2,"Zero length silence buffer needed with gross_frame_gap of %lld and dac_delay of %lld.",gross_frame_gap,dac_delay);
                 // the fs (number of frames of silence to play) can be zero in the DAC doesn't start ouotputting frames for a while -- it could get loaded up but not start responding for many milliseconds.
                 if (fs!=0) {
-                  silence = malloc(FRAME_BYTES(fs));
+                  silence = malloc(bytes_per_audio_frame*fs);
                   if (silence==NULL)
                     debug(1,"Failed to allocate %d byte silence buffer.",fs);
                   else {
-                    memset(silence, 0, FRAME_BYTES(fs));
+                    memset(silence, 0, bytes_per_audio_frame*fs);
                     // debug(1,"Exact frame gap is %llu; play %d frames of silence. Dac_delay is %d,
                     // with %d packets.",exact_frame_gap,fs,dac_delay,seq_diff(ab_read, ab_write));
                     config.output->play(silence, fs);
@@ -822,7 +838,7 @@ static abuf_t *buffer_get_frame(void) {
   if (!curframe->ready) {
     // debug(1, "Supplying a silent frame for frame %u", read);
     missing_packets++;
-    memset(curframe->data, 0, FRAME_BYTES(frame_size));
+    memset(curframe->data, 0, bytes_per_audio_frame*frame_size);
     curframe->timestamp = 0;
   }
   curframe->ready = 0;
@@ -842,17 +858,17 @@ static inline short shortmean(short a, short b) {
 }
 
 // stuff: 1 means add 1; 0 means do nothing; -1 means remove 1
-static int stuff_buffer_basic(short *inptr, short *outptr, int stuff) {
-  if ((stuff > 1) || (stuff < -1)) {
-    debug(1, "Stuff argument to stuff_buffer must be from -1 to +1.");
-    return frame_size;
+static int stuff_buffer_basic(short *inptr, int length, short *outptr, int stuff) {
+  if ((stuff > 1) || (stuff < -1) || (length <100)) {
+    // debug(1, "Stuff argument to stuff_buffer must be from -1 to +1 and length >100.");
+    return length;
   }
   int i;
-  int stuffsamp = frame_size;
+  int stuffsamp = length;
   if (stuff)
-    //      stuffsamp = rand() % (frame_size - 1);
+    //      stuffsamp = rand() % (length - 1);
     stuffsamp =
-        (rand() % (frame_size - 2)) + 1; // ensure there's always a sample before and after the item
+        (rand() % (length - 2)) + 1; // ensure there's always a sample before and after the item
 
   pthread_mutex_lock(&vol_mutex);
   for (i = 0; i < stuffsamp; i++) { // the whole frame, if no stuffing
@@ -872,22 +888,28 @@ static int stuff_buffer_basic(short *inptr, short *outptr, int stuff) {
       inptr++;
       inptr++;
     }
-    for (i = stuffsamp; i < frame_size + stuff; i++) {
+    
+    // if you're removing, i.e. stuff < 0, copy that much less over. If you're adding, do all the rest.
+    int remainder = length;
+    if (stuff<0)
+      remainder = remainder+stuff; // don't run over the correct end of the output buffer
+
+    for (i = stuffsamp; i < remainder; i++) {
       *outptr++ = dithered_vol(*inptr++);
       *outptr++ = dithered_vol(*inptr++);
     }
   }
   pthread_mutex_unlock(&vol_mutex);
 
-  return frame_size + stuff;
+  return length + stuff;
 }
 
 #ifdef HAVE_LIBSOXR
 // stuff: 1 means add 1; 0 means do nothing; -1 means remove 1
-static int stuff_buffer_soxr(short *inptr, short *outptr, int stuff) {
-  if ((stuff > 1) || (stuff < -1)) {
-    debug(1, "Stuff argument to sox_stuff_buffer must be from -1 to +1.");
-    return frame_size;
+static int stuff_buffer_soxr(short *inptr, int length, short *outptr, int stuff) {
+  if ((stuff > 1) || (stuff < -1) || (length < 100)) {
+    // debug(1, "Stuff argument to sox_stuff_buffer must be from -1 to +1 and length must be > 100.");
+    return length;
   }
   int i;
   short *ip, *op;
@@ -905,16 +927,16 @@ static int stuff_buffer_soxr(short *inptr, short *outptr, int stuff) {
 
     size_t odone;
 
-    soxr_error_t error = soxr_oneshot(frame_size, frame_size + stuff, 2, /* Rates and # of chans. */
-                                      inptr, frame_size, NULL,           /* Input. */
-                                      outptr, frame_size + stuff, &odone, /* Output. */
+    soxr_error_t error = soxr_oneshot(length, length + stuff, 2, /* Rates and # of chans. */
+                                      inptr, length, NULL,           /* Input. */
+                                      outptr, length + stuff, &odone, /* Output. */
                                       &io_spec,    /* Input, output and transfer spec. */
                                       NULL, NULL); /* Default configuration.*/
 
     if (error)
       die("soxr error: %s\n", "error: %s\n", soxr_strerror(error));
 
-    if (odone > frame_size + 1)
+    if (odone > length + 1)
       die("odone = %d!\n", odone);
 
     const int gpm = 5;
@@ -926,8 +948,8 @@ static int stuff_buffer_soxr(short *inptr, short *outptr, int stuff) {
     }
 
     // keep the last (dpm) samples, to mitigate the Gibbs phenomenon
-    op = outptr + (frame_size + stuff - gpm) * sizeof(short);
-    ip = inptr + (frame_size - gpm) * sizeof(short);
+    op = outptr + (length + stuff - gpm) * sizeof(short);
+    ip = inptr + (length - gpm) * sizeof(short);
     for (i = 0; i < gpm; i++) {
       *op++ = *ip++;
       *op++ = *ip++;
@@ -937,7 +959,7 @@ static int stuff_buffer_soxr(short *inptr, short *outptr, int stuff) {
     if (fix_volume != 65536.0) {
       // pthread_mutex_lock(&vol_mutex);
       op = outptr;
-      for (i = 0; i < frame_size + stuff; i++) {
+      for (i = 0; i < length + stuff; i++) {
         *op = dithered_vol(*op);
         op++;
         *op = dithered_vol(*op);
@@ -949,13 +971,13 @@ static int stuff_buffer_soxr(short *inptr, short *outptr, int stuff) {
   } else { // the whole frame, if no stuffing
 
     // pthread_mutex_lock(&vol_mutex);
-    for (i = 0; i < frame_size; i++) {
+    for (i = 0; i < length; i++) {
       *op++ = dithered_vol(*ip++);
       *op++ = dithered_vol(*ip++);
     };
     // pthread_mutex_unlock(&vol_mutex);
   }
-  return frame_size + stuff;
+  return length + stuff;
 }
 #endif
 
@@ -1012,13 +1034,13 @@ static void *player_thread_func(void *arg) {
   initstate(time(NULL), rnstate, 256);
 
   signed short *inbuf, *outbuf, *silence;
-  outbuf = malloc(OUTFRAME_BYTES(frame_size));
+  outbuf = malloc(bytes_per_audio_frame*(frame_size+max_frame_size_change));
   if (outbuf==NULL)
     debug(1,"Failed to allocate memory for an output buffer.");
-  silence = malloc(OUTFRAME_BYTES(frame_size));
+  silence = malloc(bytes_per_audio_frame*frame_size);
   if (silence==NULL)
     debug(1,"Failed to allocate memory for a silence buffer.");
-  memset(silence, 0, OUTFRAME_BYTES(frame_size));
+  memset(silence, 0, bytes_per_audio_frame*frame_size);
   late_packet_message_sent = 0;
   first_packet_timestamp = 0;
   missing_packets = late_packets = too_late_packets = resend_requests = 0;
@@ -1066,21 +1088,20 @@ static void *player_thread_func(void *arg) {
   while (!please_stop) {
     abuf_t *inframe = buffer_get_frame();
     if (inframe) {
-      inbuf = inframe->data;
-      if (inbuf) {
+      if (inframe->data) {
         play_number++;
         // if it's a supplied silent frame, let us know...
         if (inframe->timestamp == 0) {
           // debug(1,"Player has a supplied silent frame.");
           last_seqno_read =
               (SUCCESSOR(last_seqno_read) & 0xffff); // manage the packet out of sequence minder
-          if (inbuf==NULL)
-            debug(1,"NULL inbuf to play -- skipping it.");
+          if (inframe->data==NULL)
+            debug(1,"NULL inframe->data to play -- skipping it.");
           else {
-            if (frame_size==0)
-              debug(1,"empty frame to play -- skipping it (1).");
+            if (inframe->length==0)
+              debug(1,"empty frame to play -- skipping it.");
             else
-              config.output->play(inbuf, frame_size);
+              config.output->play(inframe->data, inframe->length);
           }
         } else {
           // We have a frame of data. We need to see if we want to add or remove a frame from it to
@@ -1146,7 +1167,9 @@ static void *player_thread_func(void *arg) {
 					if (buffer_occupancy > maximum_buffer_occupancy)
 						maximum_buffer_occupancy = buffer_occupancy;
 
-          // here, we want to check (a) if we are meant to do synchronisation, (b) if we have a delay procedure, (b) if we can get the delay.
+          // here, we want to check (a) if we are meant to do synchronisation,
+          // (b) if we have a delay procedure, (c) if we can get the delay.
+
           // If any of these are false, we don't do any synchronisation stuff
 
 					int resp = -1; // use this as a flag -- if negative, we can't rely on a real known delay
@@ -1223,29 +1246,29 @@ static void *player_thread_func(void *arg) {
               // if no stuffing needed and no volume adjustment, then
               // don't send to stuff_buffer_* and don't copy to outbuf; just send directly to the
               // output device...
-              if (inbuf==NULL)
-                debug(1,"NULL inbuf to play -- skipping it.");
+              if (inframe->data==NULL)
+                debug(1,"NULL inframe->data to play -- skipping it.");
               else {
-                if (frame_size==0)
+                if (inframe->length==0)
                   debug(1,"empty frame to play -- skipping it (2).");
                 else
-                  config.output->play(inbuf, frame_size);
+                  config.output->play(inframe->data, inframe->length);
               }
             } else {
 #ifdef HAVE_LIBSOXR
               switch (config.packet_stuffing) {
               case ST_basic:
                 //                if (amount_to_stuff) debug(1,"Basic stuff...");
-                play_samples = stuff_buffer_basic(inbuf, outbuf, amount_to_stuff);
+                play_samples = stuff_buffer_basic(inframe->data, inframe->length, outbuf, amount_to_stuff);
                 break;
               case ST_soxr:
                 //                if (amount_to_stuff) debug(1,"Soxr stuff...");
-                play_samples = stuff_buffer_soxr(inbuf, outbuf, amount_to_stuff);
+                play_samples = stuff_buffer_soxr(inframe->data, inframe->length, outbuf, amount_to_stuff);
                 break;
               }
 #else
               //          if (amount_to_stuff) debug(1,"Standard stuff...");
-              play_samples = stuff_buffer_basic(inbuf, outbuf, amount_to_stuff);
+              play_samples = stuff_buffer_basic(inframe->data, inframe->length, outbuf, amount_to_stuff);
 #endif
 
               /*
@@ -1303,24 +1326,24 @@ static void *player_thread_func(void *arg) {
             
             if (fix_volume == 0x10000)
             
-              if (inbuf==NULL)
-                debug(1,"NULL inbuf to play -- skipping it.");
+              if (inframe->data==NULL)
+                debug(1,"NULL inframe->data to play -- skipping it.");
               else {
-                if (frame_size==0)
+                if (inframe->length==0)
                   debug(1,"empty frame to play -- skipping it (3).");
                 else
-                  config.output->play(inbuf, frame_size);
+                  config.output->play(inframe->data, inframe->length);
               }
             else {
-              play_samples = stuff_buffer_basic(inbuf, outbuf, 0); // no stuffing, but volume adjustment
+              play_samples = stuff_buffer_basic(inframe->data, inframe->length, outbuf, 0); // no stuffing, but volume adjustment
 
               if (outbuf==NULL)
                 debug(1,"NULL outbuf to play -- skipping it.");
               else {
-                if (frame_size==0)
+                if (inframe->length==0)
                   debug(1,"empty frame to play -- skipping it (4).");
                 else
-                  config.output->play(outbuf, frame_size);
+                  config.output->play(outbuf, play_samples);
               }
             }
           }

@@ -48,6 +48,7 @@ static void linear_volume(double vol);
 static void parameters(audio_parameters *info);
 static void mute(int do_mute);
 static double set_volume;
+static int output_method_signalled = 0;
 
 audio_output audio_alsa = {
     .name = "alsa",
@@ -84,6 +85,8 @@ static char *alsa_mix_ctrl = "Master";
 static int alsa_mix_index = 0;
 static int hardware_mixer = 0;
 static int has_softvol = 0;
+
+static snd_pcm_sframes_t (*alsa_pcm_write)(snd_pcm_t *, const void *, snd_pcm_uframes_t) = snd_pcm_writei;
 
 static int play_number;
 static int64_t accumulated_delay, accumulated_da_delay;
@@ -202,6 +205,15 @@ static int init(int argc, char **argv) {
         die("Invalid disable_synchronization option choice \"%s\". It should be \"yes\" or \"no\"");
     }
     
+    /* Get the use_mmap_if_available setting. */
+    if (config_lookup_string(config.cfg, "alsa.use_mmap_if_available", &str)) {
+      if (strcasecmp(str, "no") == 0)
+        config.no_mmap = 1;
+      else if (strcasecmp(str, "yes") == 0)
+        config.no_mmap = 0;
+      else
+        die("Invalid use_mmap_if_available option choice \"%s\". It should be \"yes\" or \"no\"");
+    }
     /* Get the optional period size value */
     if (config_lookup_int(config.cfg, "alsa.period_size",
                           &value)) {
@@ -373,6 +385,11 @@ int open_alsa_device(void) {
   unsigned int my_sample_rate = desired_sample_rate;
   // snd_pcm_uframes_t frames = 441 * 10;
   snd_pcm_uframes_t buffer_size, actual_buffer_length;
+  snd_pcm_access_t access;
+  
+  // ensure no calls are made to the alsa device enquiring about the buffer length if synchronisation is disabled.
+  if (config.no_sync!=0)
+  	audio_alsa.delay = NULL;
 
   ret = snd_pcm_open(&alsa_handle, alsa_out_dev, SND_PCM_STREAM_PLAYBACK, 0);
   if (ret < 0)
@@ -389,8 +406,23 @@ int open_alsa_device(void) {
         alsa_out_dev);
   }
 
-  ret = snd_pcm_hw_params_set_access(alsa_handle, alsa_params,
-                                     SND_PCM_ACCESS_RW_INTERLEAVED);
+  if ((config.no_mmap == 0) && (snd_pcm_hw_params_set_access(alsa_handle, alsa_params, SND_PCM_ACCESS_MMAP_INTERLEAVED) >= 0)) {
+  	if (output_method_signalled==0) {
+  		debug(1,"Output written using MMAP");
+  		output_method_signalled=1;
+  	}
+    access = SND_PCM_ACCESS_MMAP_INTERLEAVED;
+    alsa_pcm_write = snd_pcm_mmap_writei;
+  } else {
+  	if (output_method_signalled==0) {
+  		debug(1,"Output written with RW");
+  		output_method_signalled=1;
+  	}
+    access = SND_PCM_ACCESS_RW_INTERLEAVED;
+    alsa_pcm_write = snd_pcm_writei;
+  }
+
+  ret = snd_pcm_hw_params_set_access(alsa_handle, alsa_params, access);
   if (ret < 0) {
     die("audio_alsa: Access type not available for device \"%s\": %s",
         alsa_out_dev, snd_strerror(ret));
@@ -684,7 +716,7 @@ static void play(short buf[], int samples) {
       if (samples==0)
       	debug(1,"empty buffer being passed to pcm_writei -- skipping it");
       if ((samples!=0) && (buf!=NULL)) {
-				err = snd_pcm_writei(alsa_handle, (char *)buf, samples);
+				err = alsa_pcm_write(alsa_handle, (char *)buf, samples);
 				if (err < 0) {
 					debug(1, "Error %d writing %d samples in play(): \"%s\".", err, samples,
 								snd_strerror(err));

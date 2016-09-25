@@ -967,6 +967,9 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn,
 //    string to identify the source's remote control on the network.
 //    'acre' -- this is the source's Active-Remote token, necessary if you want
 //    to send commands to the source's remote control (if it has one).
+//		`clip` -- the payload is the IP number of the client, i.e. the sender of audio.
+//		Can be an IPv4 or an IPv6 number.
+
 //
 // including a simple base64 encoder to minimise malloc/free activity
 
@@ -1838,7 +1841,12 @@ void rtsp_listen_loop(void) {
       // strerror(errno));
       continue;
     }
-
+    // Set the RTSP socket to close on exec() of child processes
+    // otherwise background run_this_before_play_begins or run_this_after_play_ends commands
+    // that are sleeping prevent the daemon from being restarted because
+    // the listening RTSP port is still in use.
+    // See: https://github.com/mikebrady/shairport-sync/issues/329
+    fcntl(fd, F_SETFD, FD_CLOEXEC);
     ret = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
 
 #ifdef IPV6_V6ONLY
@@ -1877,7 +1885,7 @@ void rtsp_listen_loop(void) {
   freeaddrinfo(info);
 
   if (!nsock)
-    die("Could not establish a service on port %d -- program terminating. Is another Shairport Sync running?",config.port);
+    die("Could not establish a service on port %d -- program terminating. Is another Shairport Sync running on this device?",config.port);
 
   int maxfd = -1;
   fd_set fds;
@@ -1945,6 +1953,10 @@ void rtsp_listen_loop(void) {
           sa = (struct sockaddr_in*)&conn->remote;
           inet_ntop(AF_INET, &(sa->sin_addr), remote_ip4, INET_ADDRSTRLEN);
           unsigned short int rport = ntohs(sa->sin_port);
+#ifdef CONFIG_METADATA
+        	send_ssnc_metadata('clip', strdup(ip4), strlen(ip4) , 1);
+#endif
+
           debug(1,"New RTSP connection from %s:%u to self at %s:%u.",remote_ip4,rport,ip4,tport);
         }
 #ifdef AF_INET6
@@ -1960,7 +1972,9 @@ void rtsp_listen_loop(void) {
           sa6 = (struct sockaddr_in6*)&conn->remote;    // pretend this is loaded with something
           inet_ntop(AF_INET6, &(sa6->sin6_addr), remote_ip6, INET6_ADDRSTRLEN);
           u_int16_t rport = ntohs(sa6->sin6_port);
-
+#ifdef CONFIG_METADATA
+        	send_ssnc_metadata('clip', strdup(ip6), strlen(ip6), 1);
+#endif
           debug(1,"New RTSP connection from [%s]:%u to self at [%s]:%u.",remote_ip6,rport,ip6,tport);
         }
  #endif       

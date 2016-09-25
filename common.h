@@ -54,7 +54,6 @@ typedef struct {
   char *service_name; // the name for the shairport service, e.g. "Shairport Sync Version %v running on host %h"
 #ifdef CONFIG_METADATA
   int metadata_enabled;
-  int metadata_pipe_timeout; // in milliseconds
   char *metadata_pipename;
   char *metadata_sockaddr;
   int metadata_sockport;
@@ -67,6 +66,7 @@ typedef struct {
   int udp_port_range;
   int ignore_volume_control;
   int no_sync; // disable synchronisation, even if it's available
+  int no_mmap; // disable use of mmap-based output, even if it's available
   int resyncthreshold; // if it get's out of whack my more than this, resync. Zero means never
                        // resync.
   int allow_session_interruption;
