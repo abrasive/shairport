@@ -30,10 +30,10 @@ Now, while in the `shairport-sync` directory, perform the following commands (no
 $ autoreconf -fi
 
 #The following is the standard configuration for a Linux that uses the systemd initialisation system:
-$ ./configure --with-alsa --with-avahi --with-ssl=openssl --with-metadata --with-soxr --with-systemd
+$ ./configure --with-alsa --with-avahi --with-ssl=openssl --with-metadata --with-soxr --with-systemd --sysconfdir=/etc
 #OR
 #The following is the standard configuration for a Linux that uses the older System V initialisation system:
-$ ./configure --with-alsa --with-avahi --with-ssl=openssl --with-metadata --with-soxr --with-systemv
+$ ./configure --with-alsa --with-avahi --with-ssl=openssl --with-metadata --with-soxr --with-systemv --sysconfdir=/etc
 
 $ make
 $ sudo make install
