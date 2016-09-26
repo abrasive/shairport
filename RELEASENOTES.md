@@ -1,3 +1,9 @@
+Version 2.8.4.8 – Development Version
+----
+**Enhancements**
+* Add a new metadata item `clip` (for `CL`ient `IP`). This item is a string comprising the IP number of the "client", and is sent when a play session is starting. The "client" is the sender of the audio stream, e.g. iTunes on a Mac, or the Music player in iOS.
+* When synchronisation has been disabled on the ALSA device (you should only do this for testing), Shairport Sync now refrains from asking for buffer length information from the device.
+
 Version 2.8.4.7 – Development Version
 ----
 Pesky Changes You Cannot Ignore
