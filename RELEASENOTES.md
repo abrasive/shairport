@@ -1,3 +1,27 @@
+Version 3.0d15 – Development Version
+----
+
+Big Update
+====
+
+This is a big update, so please be careful, as there are likely to be lots of bugs and maybe even regressions. It's still very much a moving target. The processor load is about 25% higher.
+
+The most obvious audible change is if you are using software volume control and can take advantage of 32- or 24-bit DACs. Dithering can now occur on a 32-bit or 24-bit sample rather than on a 16-bit sample, making the noise floor very much lower. This is the case, for example, with a Pimoroni PHAT DAC.
+
+**New Features**
+* 8-bit, 16-bit, 24-bit and 32-bit output to ALSA. (Other back ends are not updated yet.)
+* 44,100, 88,200, 176,400 and 352,800 sample per second output.
+* Internal processing including software volume control and interpolation is done after sample size and rate conversion.
+* Apple ALAC decoder support. This needs the `libalac` library, available at [ALAC](https://github.com/mikebrady/alac). Add the flag `--with-apple-alac` to the `./configure` arguments. Then you can choose the Apple ALAC decoder in the configuration file.
+
+Pesky Changes You Cannot Ignore
+====
+* Settings have changed -- basically, any timings that were denominated in frames (44,100 frames per second assumed) are now denominated in seconds. Please refer to the shairport-sync.conf.sample file for details.
+* Sox-based interpolation at 176,400 samples per second may very well overload your CPU.
+
+**Bugs**
+* Documentation is not updated.
+
 Version 2.8.4.8 – Development Version
 ----
 **Enhancements**
