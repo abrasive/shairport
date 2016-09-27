@@ -4,7 +4,7 @@ Version 3.0d15 – Development Version
 Big Update
 ====
 
-This is a big update, so please be careful, as there are likely to be lots of bugs and maybe even regressions. It's still very much a moving target. The processor load is about 25% higher.
+This is a big update, so please be careful, as there are likely to be lots of bugs and maybe even regressions. It's still very much a moving target. The processor load is about 25% higher. There is still quite a bit of work to do, especially on the backends apart from ALSA.
 
 The most obvious audible change is if you are using software volume control and can take advantage of 32- or 24-bit DACs. Dithering can now occur on a 32-bit or 24-bit sample rather than on a 16-bit sample, making the noise floor very much lower. This is the case, for example, with a Pimoroni PHAT DAC.
 
