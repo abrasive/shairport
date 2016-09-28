@@ -9,15 +9,15 @@ This is a big update, so please be careful, as there are likely to be lots of bu
 The most obvious audible change is if you are using software volume control and can take advantage of 32- or 24-bit DACs. Dithering can now occur on a 32-bit or 24-bit sample rather than on a 16-bit sample, making the noise floor very much lower. This is the case, for example, with a Pimoroni PHAT DAC.
 
 **New Features**
-* 8-bit, 16-bit, 24-bit, 24-bit three-byte (S24_3LE and S24_3BE) and 32-bit output to ALSA. (Other back ends are not updated yet.)
-* 44,100, 88,200, 176,400 and 352,800 sample per second output.
+* 8-bit, 16-bit, 24-bit, 24-bit three-byte (S24_3LE and S24_3BE) and 32-bit output to ALSA devices. (Other back ends are not updated yet.)
+* 44,100, 88,200, 176,400 and 352,800 sample per second output. This is done using simple upsampling.
 * Internal processing including software volume control and interpolation is done after sample size and rate conversion.
 * Apple ALAC decoder support. This needs the `libalac` library, available at [ALAC](https://github.com/mikebrady/alac). Add the flag `--with-apple-alac` to the `./configure` arguments. Then you can choose the Apple ALAC decoder in the configuration file.
 
 Pesky Changes You Cannot Ignore
 ====
-* Settings have changed -- basically, any timings that were denominated in frames (44,100 frames per second assumed) are now denominated in seconds. Please refer to the shairport-sync.conf.sample file for details.
-* Sox-based interpolation at 176,400 samples per second may very well overload your CPU.
+* Settings have changed -- basically, any timings that were denominated in frames are now in seconds. Please refer to the shairport-sync.conf.sample file for details.
+* Sox-based interpolation at higher sample rates may overload your CPU -- yopu might have to choose between higher sample rates and sox-based interpolation.
 
 **Bugs**
 * Documentation is not updated.
