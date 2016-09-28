@@ -64,6 +64,8 @@ enum sps_format_t {
   SPS_FORMAT_U8,
   SPS_FORMAT_S16,
   SPS_FORMAT_S24,
+  SPS_FORMAT_S24_3LE,
+  SPS_FORMAT_S24_3BE,
   SPS_FORMAT_S32,
 } sps_format_t;
 

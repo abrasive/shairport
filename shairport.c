@@ -1092,7 +1092,8 @@ int main(int argc, char **argv) {
   debug(1, "disable_synchronization is %d.", config.no_sync);
   debug(1, "use_mmap_if_available is %d.", config.no_mmap ? 0 : 1);
   debug(1, "output_rate is %d.", config.output_rate);
-  debug(1, "output_format is %d (0-unknown, 1-S8, 2-U8, 3-S16, 4-S24, 5-S32).",
+  debug(1,
+        "output_format is %d (0-unknown, 1-S8, 2-U8, 3-S16, 4-S24, 5-S24_3LE, 6-S24_3BE, 7-S32).",
         config.output_format);
   debug(1, "audio backend desired buffer length is %f seconds.",
         config.audio_backend_buffer_desired_length);

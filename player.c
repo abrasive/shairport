@@ -651,6 +651,8 @@ static inline void process_sample(int32_t sample, char **outp, enum sps_format_t
       dither_mask = (int64_t)1 << (64 + 1 - 32);
       break;
     case SPS_FORMAT_S24:
+    case SPS_FORMAT_S24_3LE:
+    case SPS_FORMAT_S24_3BE:
       dither_mask = (int64_t)1 << (64 + 1 - 24);
       break;
     case SPS_FORMAT_S16:
@@ -682,11 +684,32 @@ static inline void process_sample(int32_t sample, char **outp, enum sps_format_t
 
   // move the result to the desired position in the int64_t
   char *op = *outp;
+  uint8_t byt;
   switch (format) {
   case SPS_FORMAT_S32:
     hyper_sample >>= (64 - 32);
     *(int32_t *)op = hyper_sample;
     result = 4;
+    break;
+  case SPS_FORMAT_S24_3LE:
+    hyper_sample >>= (64 - 24);
+    byt = (uint8_t)hyper_sample;
+    *op++ = byt;
+    byt = (uint8_t)(hyper_sample >> 8);
+    *op++ = byt;
+    byt = (uint8_t)(hyper_sample >> 16);
+    *op++ = byt;
+    result = 3;
+    break;
+  case SPS_FORMAT_S24_3BE:
+    hyper_sample >>= (64 - 24);
+    byt = (uint8_t)(hyper_sample >> 16);
+    *op++ = byt;
+    byt = (uint8_t)(hyper_sample >> 8);
+    *op++ = byt;
+    byt = (uint8_t)hyper_sample;
+    *op++ = byt;
+    result = 3;
     break;
   case SPS_FORMAT_S24:
     hyper_sample >>= (64 - 24);
@@ -1174,7 +1197,7 @@ static inline int32_t mean_32(int32_t a, int32_t b) {
 // (b) multiplies each sample by the fixedvolume (a 16-bit quantity)
 // (c) dithers the result to the output size 32/24/16 bits
 // (d) outputs the result in the approprate format
-// formats accepted so far include U8, S8, S16_LE, S24_LE and S32_LE on a little endian machine.
+// formats accepted so far include U8, S8, S16, S24, S24_3LE, S24_3BE and S32
 
 // stuff: 1 means add 1; 0 means do nothing; -1 means remove 1
 static int stuff_buffer_basic_32(int32_t *inptr, int length, enum sps_format_t l_output_format,
@@ -1282,7 +1305,7 @@ static int stuff_buffer_basic(short *inptr, int length, short *outptr, int stuff
 // (b) multiplies each sample by the fixedvolume (a 16-bit quantity)
 // (c) dithers the result to the output size 32/24/16 bits
 // (d) outputs the result in the approprate format
-// formats accepted so far include U8, S8, S16_LE, S24_LE and S32_LE on a little endian machine.
+// formats accepted so far include U8, S8, S16, S24, S24_3LE, S24_3BE and S32
 
 static int stuff_buffer_soxr_32(int32_t *inptr, int32_t *scratchBuffer, int length,
                                 enum sps_format_t l_output_format, char *outptr, int stuff,
@@ -1465,6 +1488,10 @@ static void *player_thread_func(void *arg) {
 
   output_bytes_per_frame = 4;
   switch (config.output_format) {
+  case SPS_FORMAT_S24_3LE:
+  case SPS_FORMAT_S24_3BE:
+    output_bytes_per_frame = 6;
+    break;
   case SPS_FORMAT_S24:
     output_bytes_per_frame = 8;
     break;
@@ -1542,6 +1569,8 @@ static void *player_thread_func(void *arg) {
     output_bit_depth = 16;
     break;
   case SPS_FORMAT_S24:
+  case SPS_FORMAT_S24_3LE:
+  case SPS_FORMAT_S24_3BE:
     output_bit_depth = 24;
     break;
   case SPS_FORMAT_S32:

@@ -219,6 +219,10 @@ static int init(int argc, char **argv) {
         config.output_format = SPS_FORMAT_S16;
       else if (strcasecmp(str, "S24") == 0)
         config.output_format = SPS_FORMAT_S24;
+      else if (strcasecmp(str, "S24_3LE") == 0)
+        config.output_format = SPS_FORMAT_S24_3LE;
+      else if (strcasecmp(str, "S24_3BE") == 0)
+        config.output_format = SPS_FORMAT_S24_3BE;
       else if (strcasecmp(str, "S32") == 0)
         config.output_format = SPS_FORMAT_S32;
       else if (strcasecmp(str, "U8") == 0)
@@ -226,7 +230,8 @@ static int init(int argc, char **argv) {
       else if (strcasecmp(str, "S8") == 0)
         config.output_format = SPS_FORMAT_S8;
       else
-        die("Invalid output format \"%s\". It should be \"U8\", \"S8\", \"S16\", \"S24\" or "
+        die("Invalid output format \"%s\". It should be \"U8\", \"S8\", \"S16\", \"S24\", "
+            "\"S24_3LE\", \"S24_3BE\" or "
             "\"S32\"",
             str);
     }
@@ -417,10 +422,11 @@ int open_alsa_device(void) {
   // snd_pcm_uframes_t frames = 441 * 10;
   snd_pcm_uframes_t buffer_size, actual_buffer_length;
   snd_pcm_access_t access;
-  
-  // ensure no calls are made to the alsa device enquiring about the buffer length if synchronisation is disabled.
-  if (config.no_sync!=0)
-  	audio_alsa.delay = NULL;
+
+  // ensure no calls are made to the alsa device enquiring about the buffer length if
+  // synchronisation is disabled.
+  if (config.no_sync != 0)
+    audio_alsa.delay = NULL;
 
   // ensure no calls are made to the alsa device enquiring about the buffer length if
   // synchronisation is disabled.
@@ -478,6 +484,12 @@ int open_alsa_device(void) {
     break;
   case SPS_FORMAT_S24:
     sf = SND_PCM_FORMAT_S24;
+    break;
+  case SPS_FORMAT_S24_3LE:
+    sf = SND_PCM_FORMAT_S24_3LE;
+    break;
+  case SPS_FORMAT_S24_3BE:
+    sf = SND_PCM_FORMAT_S24_3BE;
     break;
   case SPS_FORMAT_S32:
     sf = SND_PCM_FORMAT_S32;
