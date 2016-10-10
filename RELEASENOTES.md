@@ -2,7 +2,7 @@ Version 2.8.6 – Stable Candidate
 ----
 
 **Enhancements**
-* This release contains a small change – it identifies itself as a ShairportSync device rather than an AirPort device. This should make it possible for Tuneblade, and possibly other players, to recognise it correctly.
+* This release contains a small change – it identifies itself as a ShairportSync device rather than an AirPort device. This should make it possible for Tuneblade, and possibly other players, to recognise it correctly. 
 
 Version 2.8.5 – Stable Version
 ----
