@@ -474,7 +474,7 @@ void *rtp_timing_receiver(void *arg) {
       if (first_local_time==0) {
         first_local_time = local_time_chosen;
         first_remote_time = remote_time_chosen;
-        uint64_t clock_drift = 0;
+        clock_drift = 0;
       } else {
         uint64_t local_time_change = local_time_chosen - first_local_time;
         uint64_t remote_time_change = remote_time_chosen - first_remote_time;
