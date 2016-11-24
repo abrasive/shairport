@@ -234,6 +234,8 @@ static void register_service(AvahiClient *c) {
 
 static void client_callback(AvahiClient *c, AvahiClientState state,
                             AVAHI_GCC_UNUSED void *userdata) {
+  int err;
+
   switch (state) {
   case AVAHI_CLIENT_S_REGISTERING:
     if (group)
@@ -245,7 +247,25 @@ static void client_callback(AvahiClient *c, AvahiClientState state,
     break;
 
   case AVAHI_CLIENT_FAILURE:
-    debug(1, "avahi: client failure");
+    err = avahi_client_errno(c);
+    debug(1, "avahi: client failure: %s", avahi_strerror(err));
+
+    if (err == AVAHI_ERR_DISCONNECTED) {
+      /* We have been disconnected, so lets reconnect */
+      avahi_client_free(c);
+      c = NULL;
+      group = NULL;
+
+      if (!(client = avahi_client_new(avahi_threaded_poll_get(tpoll),
+                                      AVAHI_CLIENT_NO_FAIL, client_callback,
+                                      userdata, &err))) {
+        warn("avahi: failed to create client object: %s", avahi_strerror(err));
+        avahi_threaded_poll_quit(tpoll);
+      }
+    } else {
+      warn("avahi: client failure: %s", avahi_strerror(err));
+      avahi_threaded_poll_quit(tpoll);
+    }
     break;
 
   case AVAHI_CLIENT_S_COLLISION:
