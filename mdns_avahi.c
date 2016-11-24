@@ -273,7 +273,7 @@ static int avahi_register(char *srvname, int srvport) {
     return -1;
   }
   if (!(client =
-            avahi_client_new(avahi_threaded_poll_get(tpoll), 0, client_callback, NULL, &err))) {
+            avahi_client_new(avahi_threaded_poll_get(tpoll), AVAHI_CLIENT_NO_FAIL, client_callback, NULL, &err))) {
     warn("couldn't create avahi client: %s!", avahi_strerror(err));
     return -1;
   }
