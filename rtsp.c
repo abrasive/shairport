@@ -1954,7 +1954,8 @@ void rtsp_listen_loop(void) {
           inet_ntop(AF_INET, &(sa->sin_addr), remote_ip4, INET_ADDRSTRLEN);
           unsigned short int rport = ntohs(sa->sin_port);
 #ifdef CONFIG_METADATA
-        	send_ssnc_metadata('clip', strdup(ip4), strlen(ip4) , 1);
+        	send_ssnc_metadata('clip', strdup(remote_ip4), strlen(remote_ip4) , 1);
+        	send_ssnc_metadata('svip', strdup(ip4), strlen(ip4) , 1);
 #endif
 
           debug(1,"New RTSP connection from %s:%u to self at %s:%u.",remote_ip4,rport,ip4,tport);
@@ -1973,7 +1974,8 @@ void rtsp_listen_loop(void) {
           inet_ntop(AF_INET6, &(sa6->sin6_addr), remote_ip6, INET6_ADDRSTRLEN);
           u_int16_t rport = ntohs(sa6->sin6_port);
 #ifdef CONFIG_METADATA
-        	send_ssnc_metadata('clip', strdup(ip6), strlen(ip6), 1);
+        	send_ssnc_metadata('clip', strdup(remote_ip6), strlen(remote_ip6), 1);
+        	send_ssnc_metadata('svip', strdup(ip6), strlen(ip6), 1);
 #endif
           debug(1,"New RTSP connection from [%s]:%u to self at [%s]:%u.",remote_ip6,rport,ip6,tport);
         }
