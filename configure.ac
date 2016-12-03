@@ -214,6 +214,14 @@ AC_ARG_WITH(ao, [  --with-ao = choose AO (Audio Output?) API support. N.B. no sy
   AC_CHECK_LIB([ao], [ao_initialize], , AC_MSG_ERROR(AO support requires the ao library -- libao-dev suggested))], )
 AM_CONDITIONAL([USE_AO], [test "x$HAS_AO" = "x1"])
 
+# Look for Soundio flag
+AC_ARG_WITH(soundio, [  --with-soundio = choose soundio API support.], [
+  AC_MSG_RESULT(>>Including an soundio back end)
+  HAS_SOUNDIO=1
+  AC_DEFINE([CONFIG_SOUNDIO], 1, [Needed by the compiler.])
+  AC_CHECK_LIB([soundio], [soundio_create], , AC_MSG_ERROR(soundio support requires the soundio library!))], )
+AM_CONDITIONAL([USE_SOUNDIO], [test "x$HAS_SOUNDIO" = "x1"])
+
 # Look for pulseaudio flag
 AC_ARG_WITH(pulseaudio, [  --with-pulseaudio = choose PulseAudio API support. N.B. no synchronisation -- so underflow or overflow is inevitable!], [
   AC_MSG_RESULT(>>Including a PulseAudio back end. N.B. no synchronisation -- so underflow or overflow is inevitable!)

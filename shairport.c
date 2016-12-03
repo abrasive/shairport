@@ -136,6 +136,9 @@ char *get_version_string() {
 #ifdef CONFIG_PULSE
     strcat(version_string, "-pulse");
 #endif
+#ifdef CONFIG_SOUNDIO
+    strcat(version_string, "-soundio");
+#endif
 #ifdef CONFIG_DUMMY
     strcat(version_string, "-dummy");
 #endif

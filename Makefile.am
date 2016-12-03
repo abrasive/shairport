@@ -47,6 +47,10 @@ if USE_AO
 shairport_sync_SOURCES += audio_ao.c
 endif
 
+if USE_SOUNDIO
+shairport_sync_SOURCES += audio_soundio.c
+endif
+
 if USE_PULSE
 shairport_sync_SOURCES += audio_pulse.c
 endif
