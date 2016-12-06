@@ -43,3 +43,6 @@
 #RUN_ONSTART=
 #RUN_ONSTOP=
 
+# Path to the shairport executable
+#DAEMON=/path/to/shairport/executable
+

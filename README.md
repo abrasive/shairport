@@ -38,7 +38,7 @@ As an alternative, you may use the tinysvcmdns backend, which embeds a lightweig
 Check the [mDNS Backends] section for more information.
 
 How to get started
--------------
+------------------
 ```
 ./configure
 make
@@ -46,6 +46,42 @@ make
 ```
 
 The triangle-in-rectangle AirTunes (now AirPlay) logo will appear in the iTunes status bar of any machine on the network, or on iPod/iPhone play controls screen. Choose your access point name to start streaming to the ShairPort instance.
+
+
+How to install (the debian way)
+------------------------------
+To install the generated binary to `/usr/local/bin` simply run
+```
+sudo make install
+```
+
+If you want to install it to a specific directory you have to define the `PREFIX` variable on your own:
+```
+make install PREFIX=/path/to/installation/directory
+```
+
+If you want to install shairport as a service you need to copy the files and directories under `scripts/debian` to `/etc` by running
+```
+sudo cp -r scripts/debian/* /etc/
+```
+
+Shairport can be started and stopped by running `sudo service shairport start` and `sudo service shairport stop` now. If you want to start shairport upon boot run:
+```
+sudo update-rc.d shairport defaults
+```
+
+Do not change the init script. Instead modify `/etc/default/shairport`. The variables set in there override those of the init script. If you did not install shairport to `/usr/bin` you'll have to override the `DAEMON` variable in `/etc/default/shairport`. Simply remove the # in front the `DAEMON` variable and change it to your path:
+```
+# Path to the shairport executable
+DAEMON=/path/to/shairport/executable
+```
+
+Shairport expects a own user by default. This user is called `shairport` and can be created by running
+```
+sudo useradd shairport
+```
+
+If you want shairport to be executed by another user simply override the `USER` variable in `/etc/default/shairport`
 
 Audio Outputs
 -------------
