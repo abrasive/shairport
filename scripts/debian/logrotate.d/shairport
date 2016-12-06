@@ -7,7 +7,7 @@
 	compress
 	delaycompress
 	notifempty
-	create 0660 root nogroup
+	create 0660 root audio
 	sharedscripts
 
 	postrotate
