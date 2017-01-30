@@ -1,3 +1,15 @@
+Version 3.0d21 – Development Version
+----
+
+**Bug Fix**
+* Fixed a bug which turned off resync by default. Duh.
+
+Version 3.0d20 – Development Version
+----
+
+**Bug Fix**
+* Fix a small and generally silent error in configure.ac so that it only looks for the systemd direcotry if systemd has been chosen. It caused a warning when cross-compiling.
+
 Version 3.0d19 – Development Version
 ----
 
