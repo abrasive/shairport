@@ -2,7 +2,7 @@
  * Shairport, an Apple Airplay receiver
  * Copyright (c) James Laird 2013
  * All rights reserved.
- * Modifications (c) Mike Brady 2014--2016
+ * Modifications (c) Mike Brady 2014--2017
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -197,12 +197,12 @@ void usage(char *progname) {
   printf("    -v, --verbose           -v print debug information; -vv more; -vvv lots.\n");
   printf("    -p, --port=PORT         set RTSP listening port.\n");
   printf("    -a, --name=NAME         set advertised name.\n");
-  printf("    -A, --AirPlayLatency=FRAMES [Deprecated] Set the latency for audio sent from an "
-         "AirPlay device.\n");
-  printf("                            The default is to set it automatically.\n");
-  printf("    -i, --iTunesLatency=FRAMES [Deprecated] Set the latency for audio sent from iTunes "
-         "10 or later.\n");
-  printf("                            The default is to set it automatically.\n");
+//  printf("    -A, --AirPlayLatency=FRAMES [Deprecated] Set the latency for audio sent from an "
+//         "AirPlay device.\n");
+//  printf("                            The default is to set it automatically.\n");
+//  printf("    -i, --iTunesLatency=FRAMES [Deprecated] Set the latency for audio sent from iTunes "
+//         "10 or later.\n");
+//  printf("                            The default is to set it automatically.\n");
   printf("    -L, --latency=FRAMES    [Deprecated] Set the latency for audio sent from an unknown "
          "device.\n");
   printf("                            The default is to set it automatically.\n");
@@ -229,15 +229,14 @@ void usage(char *progname) {
   printf("    -m, --mdns=BACKEND      force the use of BACKEND to advertize the service.\n");
   printf("                            if no mdns provider is specified,\n");
   printf("                            shairport tries them all until one works.\n");
-  printf("    -r, --resync=THRESHOLD  resync if timing error exceeds this number of seconds. Set "
-         "to 0 to "
+  printf("    -r, --resync=THRESHOLD  [Deprecated] resync if error exceeds this number of frames. Set to 0 to "
          "stop resyncing.\n");
   printf("    -t, --timeout=SECONDS   go back to idle mode from play mode after a break in "
          "communications of this many seconds (default 120). Set to 0 never to exit play mode.\n");
   printf("    --statistics            print some interesting statistics -- output to the logfile "
          "if running as a daemon.\n");
-  printf("    --tolerance=TOLERANCE   allow a synchronization error of TOLERANCE seconds (default "
-         "0.002) before trying to correct it.\n");
+  printf("    --tolerance=TOLERANCE   [Deprecated] allow a synchronization error of TOLERANCE frames (default "
+         "88) before trying to correct it.\n");
   printf("    --password=PASSWORD     require PASSWORD to connect. Default is not to require a "
          "password.\n");
 #ifdef CONFIG_METADATA
@@ -259,6 +258,8 @@ int parse_options(int argc, char **argv) {
   char *stuffing = NULL;         /* used for picking up the stuffing option */
   signed char c;                 /* used for argument parsing */
   int i = 0;                     /* used for tracking options */
+  int fResyncthreshold = (int)config.resyncthreshold*44100;
+  int fTolerance = (int)config.tolerance*44100;
   poptContext optCon;            /* context for parsing command-line options */
   struct poptOption optionsTable[] = {
       {"verbose", 'v', POPT_ARG_NONE, NULL, 'v', NULL},
@@ -279,12 +280,12 @@ int parse_options(int argc, char **argv) {
       {"latency", 'L', POPT_ARG_INT, &config.userSuppliedLatency, 0, NULL},
       {"AirPlayLatency", 'A', POPT_ARG_INT, &config.AirPlayLatency, 0, NULL},
       {"iTunesLatency", 'i', POPT_ARG_INT, &config.iTunesLatency, 0, NULL},
-      {"forkedDaapdLatency", 0, POPT_ARG_INT, &config.ForkedDaapdLatency, 0, NULL},
+      {"forkedDaapdLatency", 'f', POPT_ARG_INT, &config.ForkedDaapdLatency, 0, NULL},
       {"stuffing", 'S', POPT_ARG_STRING, &stuffing, 'S', NULL},
-      {"resync", 'r', POPT_ARG_DOUBLE, &config.resyncthreshold, 0, NULL},
+      {"resync", 'r', POPT_ARG_INT, &fResyncthreshold, 0, NULL},
       {"timeout", 't', POPT_ARG_INT, &config.timeout, 't', NULL},
       {"password", 0, POPT_ARG_STRING, &config.password, 0, NULL},
-      {"tolerance", 0, POPT_ARG_DOUBLE, &config.tolerance, 0, NULL},
+      {"tolerance", 'z', POPT_ARG_INT, &fTolerance, 0, NULL},
 #ifdef CONFIG_METADATA
       {"metadata-pipename", 'M', POPT_ARG_STRING, &config.metadata_pipename, 'M', NULL},
       {"get-coverart", 'g', POPT_ARG_NONE, &config.get_coverart, 'g', NULL},
@@ -309,11 +310,35 @@ int parse_options(int argc, char **argv) {
     case 'v':
       debuglev++;
       break;
-    }
+    case 'D':
+      inform("Warning: the option -D or --disconnectFromOutput is deprecated.");
+      break;
+    case 'R':
+      inform("Warning: the option -R or --reconnectToOutput is deprecated.");
+      break;
+    case 'A':
+      inform("Warning: the option -A or --AirPlayLatency is deprecated. This setting is now automatically received from the AirPlay device.");
+      break;
+    case 'i':
+      inform("Warning: the option -i or --iTunesLatency is deprecated. This setting is now automatically received from iTunes");
+      break;
+    case 'f':
+      inform("Warning: the option --forkedDaapdLatency is deprecated. This setting is now automatically received from forkedDaapd");
+      break;
+    case 'r':
+      inform("Warning: the option -r or --resync is deprecated. Please use the \"resync_threshold_in_seconds\" setting in the config file instead.");
+      break;
+    case 'z':
+      inform("Warning: the option --tolerance is deprecated. Please use the \"drift_tolerance_in_seconds\" setting in the config file instead.");
+      break;
+   }
   }
   if (c < -1) {
     die("%s: %s", poptBadOption(optCon, POPT_BADOPTION_NOALIAS), poptStrerror(c));
   }
+  
+  config.resyncthreshold = 1.0*fResyncthreshold/44100;
+  config.tolerance = 1.0*fTolerance/44100;
 
   config_setting_t *setting;
   const char *str = 0;
@@ -408,14 +433,18 @@ int parse_options(int argc, char **argv) {
       }
 
       /* The old drift tolerance setting. */
-      if (config_lookup_int(config.cfg, "general.drift", &value))
-        inform("The drift setting is deprecated and has been ignored. Use "
+      if (config_lookup_int(config.cfg, "general.drift", &value)) {
+        inform("The drift setting is deprecated. Use "
                "drift_tolerance_in_seconds instead");
+        config.tolerance = 1.0*value/44100;
+      }
 
       /* The old resync setting. */
-      if (config_lookup_int(config.cfg, "general.resync_threshold", &value))
-        inform("The resync_threshold setting is deprecated and has been ignored. Use "
+      if (config_lookup_int(config.cfg, "general.resync_threshold", &value)) {
+        inform("The resync_threshold setting is deprecated. Use "
                "resync_threshold_in_seconds instead");
+        config.resyncthreshold = 1.0*value/44100;
+      }
 
       /* Get the drift tolerance setting. */
       if (config_lookup_float(config.cfg, "general.drift_tolerance_in_seconds", &dvalue))
