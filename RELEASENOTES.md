@@ -1,3 +1,9 @@
+Version 3.0d19 – Development Version
+----
+
+**New Feature**
+* Reduces processor load back to V2.X levels by using a precalculated array of pseudorandom numbers to do dithering. Doesn't seem to make any audible difference.
+
 Version 3.0d18 – Development Version
 ----
 
