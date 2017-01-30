@@ -258,8 +258,8 @@ int parse_options(int argc, char **argv) {
   char *stuffing = NULL;         /* used for picking up the stuffing option */
   signed char c;                 /* used for argument parsing */
   int i = 0;                     /* used for tracking options */
-  int fResyncthreshold = (int)config.resyncthreshold*44100;
-  int fTolerance = (int)config.tolerance*44100;
+  int fResyncthreshold = (int)(config.resyncthreshold*44100);
+  int fTolerance = (int)(config.tolerance*44100);
   poptContext optCon;            /* context for parsing command-line options */
   struct poptOption optionsTable[] = {
       {"verbose", 'v', POPT_ARG_NONE, NULL, 'v', NULL},
