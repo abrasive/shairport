@@ -1,4 +1,4 @@
-Version 3.0d17 – Development Version
+Version 3.0d18 – Development Version
 ----
 
 Big Update
@@ -14,7 +14,7 @@ The most obvious audible change is if you are using software volume control and 
 * Internal processing including software volume control and interpolation is done after sample size and rate conversion.
 * Apple ALAC decoder support. This needs the `libalac` library, available at [ALAC](https://github.com/mikebrady/alac). Add the flag `--with-apple-alac` to the `./configure` arguments. Then you can choose the Apple ALAC decoder in the configuration file.
 * Support for `mbed TLS` has been added and the use of `PolarSSL` is deprecated, as `mbed TLS` is a development of `PolarSSL` and `PolarSSL` itself is not being developed further.
-
+* Settings that were denominated in frames are now deprecated but still honoured. Deprecation warnings are issued.
 
 Pesky Changes You Cannot Ignore
 ====
