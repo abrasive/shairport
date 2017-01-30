@@ -757,6 +757,8 @@ uint64_t ranarrayval() {
   ranarraynext = (ranarraynext++)%ranarraylength;
 }
 
+void r64arrayinit() { ranarrayinit(); }
+
 uint64_t ranarray64u() { return (ranarrayval()); }
 
 int64_t ranarray64i() { return (ranarrayval(&rx) >> 1); }

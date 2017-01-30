@@ -858,6 +858,10 @@ int main(int argc, char **argv) {
   // initialise random number generator
 
   r64init(0);
+  
+  // initialise the randomw number array
+  
+  r64arrayinit();
 
   /* Check if we are called with -V or --version parameter */
   if (argc >= 2 && ((strcmp(argv[1], "-V") == 0) || (strcmp(argv[1], "--version") == 0))) {
