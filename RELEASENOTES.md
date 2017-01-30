@@ -1,9 +1,5 @@
 Version 3.0d17 – Development Version
 ----
-Add support for `mbed TLS` and deprecate the use of `PolarSSL`, as `mbed TLS` is a development of `PolarSSL` and `PolarSSL` itself is not being developed further.
-
-Version 3.0d16 – Development Version
-----
 
 Big Update
 ====
@@ -17,6 +13,8 @@ The most obvious audible change is if you are using software volume control and 
 * 44,100, 88,200, 176,400 and 352,800 sample per second output. This is done using simple upsampling.
 * Internal processing including software volume control and interpolation is done after sample size and rate conversion.
 * Apple ALAC decoder support. This needs the `libalac` library, available at [ALAC](https://github.com/mikebrady/alac). Add the flag `--with-apple-alac` to the `./configure` arguments. Then you can choose the Apple ALAC decoder in the configuration file.
+* Support for `mbed TLS` has been added and the use of `PolarSSL` is deprecated, as `mbed TLS` is a development of `PolarSSL` and `PolarSSL` itself is not being developed further.
+
 
 Pesky Changes You Cannot Ignore
 ====
