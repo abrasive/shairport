@@ -30,6 +30,7 @@ What else?
 --------------
 * Better Volume Control — Shairport Sync offers finer control at very top and very bottom of the volume range. See http://tangentsoft.net/audio/atten.html for a good discussion of audio "attenuators", upon which volume control in Shairport Sync is modelled. See also the diagram of the volume transfer function in the documents folder. In addition, Shairport Sync can offer an extended volume control range on devices with a restricted range.
 * Hardware Mute — Shairport Sync will mute properly if the hardware supports it.
+* Support for the Apple ALAC decoder.
 * Fast Response — With hardware volume control, response is instantaneous; otherwise the response time is 0.15 seconds.
 * Non-Interruptible — Shairport Sync sends back a "busy" signal if it's already playing audio from another source, so other sources can't disrupt an existing Shairport Sync session. (If a source disappears without warning, the session automatically terminates after two minutes and the device becomes available again.)
 * Metadata — Shairport Sync can deliver metadata supplied by the source, such as Album Name, Artist Name, Cover Art, etc. through a pipe or UDP socket to a recipient application program — see https://github.com/mikebrady/shairport-sync-metadata-reader for a sample recipient. Sources that supply metadata include iTunes and the Music app in iOS.
@@ -72,6 +73,7 @@ The following libraries are required:
 
 Optional:
 * libsoxr
+* libalac (This is a library containing the Apple ALAC decoder.)
 
 Many Linux distributions have Avahi and OpenSSL already in place, so normally it probably makes sense to choose those options rather than tinysvcmdns or mbed TLS. The `libsoxr` library is available in recent Linux distributions, but it requires lots of processor power — chances are an embedded processor won't be able to keep up.
 
@@ -83,6 +85,8 @@ Debian, Ubuntu and Raspbian users can get the basics with:
 - `apt-get install libssl-dev` if you want to use OpenSSL and libcrypto, or use mbed TLS otherwise.
 - `apt-get install libmbedtls-dev` if you want to use mbed TLS, or use OpenSSL/libcrypto otherwise. (You can still use PolarSSL with `apt-get install libpolarssl-dev` if you want to use PolarSSL, but it is deprecated as it's not longer being supported. It is suggested you use mbed TLS instead.)
 - `apt-get install libsoxr-dev` if you want support for libsoxr-based resampling. This library is in many recent distributions, including Jessie and Raspbian Jessie; if not, instructions for how to build it from source for Rasbpian/Debian Wheezy are available at [LIBSOXR.md](https://github.com/mikebrady/shairport-sync/blob/development/LIBSOXR.md).
+
+If you wish to include the Apple ALAC decoder, you need install it first -- please refer to the [ALAC](https://github.com/mikebrady/alac) repository for more information.
 
 **Download Shairport Sync:**
 
@@ -110,6 +114,7 @@ $ autoreconf -i -f
 - `--with-systemd` to install a systemd service description at the `make install` stage. Default is not to to install.
 - `--with-configfile` to install a configuration file and a separate sample file at the `make install` stage. Default is to install. An existing `/etc/shairport-sync.conf` will not be overwritten.
 - `--with-pkg-config` to use pkg-config to find libraries. Default is to use pkg-config — this option is for special purpose use.
+- `--with-apple-alac` to include the Apple ALAC Decoder.
 
 **Determine if it's a `systemd` or a "System V" installation:**
 
