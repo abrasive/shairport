@@ -42,6 +42,10 @@
 
 #include "config.h"
 
+#ifdef HAVE_LIBMBEDTLS
+#include <mbedtls/md5.h>
+#endif
+
 #ifdef HAVE_LIBPOLARSSL
 #include <polarssl/md5.h>
 #endif
@@ -109,6 +113,9 @@ char *get_version_string() {
   char *version_string = malloc(200);
   if (version_string) {
     strcpy(version_string, PACKAGE_VERSION);
+#ifdef HAVE_LIBMBEDTLS
+    strcat(version_string, "-mbedTLS");
+#endif
 #ifdef HAVE_LIBPOLARSSL
     strcat(version_string, "-PolarSSL");
 #endif
@@ -1131,6 +1138,13 @@ int main(int argc, char **argv) {
   MD5_Init(&ctx);
   MD5_Update(&ctx, config.service_name, strlen(config.service_name));
   MD5_Final(ap_md5, &ctx);
+#endif
+
+#ifdef HAVE_LIBMBEDTLS
+  mbedtls_md5_context tctx;
+  mbedtls_md5_starts(&tctx);
+  mbedtls_md5_update(&tctx, (unsigned char *)config.service_name, strlen(config.service_name));
+  mbedtls_md5_finish(&tctx, ap_md5);
 #endif
 
 #ifdef HAVE_LIBPOLARSSL

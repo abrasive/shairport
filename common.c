@@ -67,6 +67,17 @@
 #endif
 #endif
 
+#ifdef HAVE_LIBMBEDTLS
+#include <mbedtls/version.h>
+#include <mbedtls/base64.h>
+#include <mbedtls/x509.h>
+#include <mbedtls/md.h>
+#include "mbedtls/entropy.h"
+#include "mbedtls/ctr_drbg.h"
+
+#endif
+
+
 #include <libdaemon/dlog.h>
 
 // true if Shairport Sync is supposed to be sending output to the output device, false otherwise
@@ -124,6 +135,59 @@ void inform(char *format, ...) {
   va_end(args);
   daemon_log(LOG_INFO, "%s", s);
 }
+
+#ifdef HAVE_LIBMBEDTLS
+char *base64_enc(uint8_t *input, int length) {
+  char *buf = NULL;
+  size_t dlen = 0;
+  int rc = mbedtls_base64_encode(NULL, 0, &dlen, input, length);
+  if (rc && (rc != MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL))
+    debug(1, "Error %d getting length of base64 encode.", rc);
+  else {
+    buf = (char *)malloc(dlen);
+    rc = mbedtls_base64_encode((unsigned char *)buf, dlen, &dlen, input, length);
+    if (rc != 0)
+      debug(1, "Error %d encoding base64.", rc);
+  }
+  return buf;
+}
+
+uint8_t *base64_dec(char *input, int *outlen) {
+  // slight problem here is that Apple cut the padding off their challenges. We must restore it
+  // before passing it in to the decoder, it seems
+  uint8_t *buf = NULL;
+  size_t dlen = 0;
+  int inbufsize = ((strlen(input) + 3) / 4) * 4; // this is the size of the input buffer we will
+                                                 // send to the decoder, but we need space for 3
+                                                 // extra "="s and a NULL
+  char *inbuf = malloc(inbufsize + 4);
+  if (inbuf == 0)
+    debug(1, "Can't malloc memory  for inbuf in base64_decode.");
+  else {
+    strcpy(inbuf, input);
+    strcat(inbuf, "===");
+    // debug(1,"base64_dec called with string \"%s\", length %d, filled string: \"%s\", length %d.",
+    //		input,strlen(input),inbuf,inbufsize);
+    int rc = mbedtls_base64_decode(NULL, 0, &dlen, (unsigned char *)inbuf, inbufsize);
+    if (rc && (rc != MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL))
+      debug(1, "Error %d getting decode length, result is %d.", rc, dlen);
+    else {
+      // debug(1,"Decode size is %d.",dlen);
+      buf = malloc(dlen);
+      if (buf == 0)
+        debug(1, "Can't allocate memory in base64_dec.");
+      else {
+        rc = mbedtls_base64_decode(buf, dlen, &dlen, (unsigned char *)inbuf, inbufsize);
+        if (rc != 0)
+          debug(1, "Error %d in base64_dec.", rc);
+      }
+    }
+    free(inbuf);
+  }
+  *outlen = dlen;
+  return buf;
+}
+#endif
 
 #ifdef HAVE_LIBPOLARSSL
 char *base64_enc(uint8_t *input, int length) {
@@ -276,6 +340,62 @@ uint8_t *rsa_apply(uint8_t *input, int inlen, int *outlen, int mode) {
     die("bad rsa mode");
   }
   return out;
+}
+#endif
+
+#ifdef HAVE_LIBMBEDTLS
+uint8_t *rsa_apply(uint8_t *input, int inlen, int *outlen, int mode) {
+  mbedtls_pk_context pkctx;
+  mbedtls_rsa_context *trsa;
+  const char *pers = "rsa_encrypt";
+  size_t olen = *outlen;
+  int rc;
+
+  mbedtls_entropy_context entropy;
+  mbedtls_ctr_drbg_context ctr_drbg;
+
+  mbedtls_entropy_init(&entropy);
+
+  mbedtls_ctr_drbg_init(&ctr_drbg);
+  mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
+			(const unsigned char *)pers, strlen(pers));
+
+  mbedtls_pk_init(&pkctx);
+
+  rc = mbedtls_pk_parse_key(&pkctx, (unsigned char *)super_secret_key, sizeof(super_secret_key), NULL, 0);
+  if (rc != 0)
+    debug(1, "Error %d reading the private key.", rc);
+
+  uint8_t *outbuf = NULL;
+  trsa = mbedtls_pk_rsa(pkctx);  
+
+  switch (mode) {
+  case RSA_MODE_AUTH:
+    mbedtls_rsa_set_padding(trsa, MBEDTLS_RSA_PKCS_V15, MBEDTLS_MD_NONE);
+    outbuf = malloc(trsa->len);
+    rc = mbedtls_rsa_pkcs1_encrypt(trsa, mbedtls_ctr_drbg_random, &ctr_drbg, MBEDTLS_RSA_PRIVATE,
+			   inlen, input, outbuf);
+    if (rc != 0)
+      debug(1, "mbedtls_pk_encrypt error %d.", rc);
+    *outlen = trsa->len;
+    break;
+  case RSA_MODE_KEY:
+    mbedtls_rsa_set_padding(trsa, MBEDTLS_RSA_PKCS_V21, MBEDTLS_MD_SHA1);
+    outbuf = malloc(trsa->len);
+    rc = mbedtls_rsa_pkcs1_decrypt(trsa, mbedtls_ctr_drbg_random, &ctr_drbg, MBEDTLS_RSA_PRIVATE, 
+			   &olen, input, outbuf, trsa->len);
+    if (rc != 0)
+      debug(1, "mbedtls_pk_decrypt error %d.", rc);
+    *outlen = olen;
+    break;
+  default:
+    die("bad rsa mode");
+  }
+
+  mbedtls_ctr_drbg_free(&ctr_drbg);
+  mbedtls_entropy_free(&entropy);
+  mbedtls_pk_free(&pkctx);
+  return outbuf;
 }
 #endif
 
@@ -583,7 +703,7 @@ char *str_replace(const char *string, const char *substr, const char *replacemen
 
 /* from http://burtleburtle.net/bob/rand/smallprng.html */
 
-typedef uint64_t u8;
+// typedef uint64_t u8;
 typedef struct ranctx {
   uint64_t a;
   uint64_t b;
@@ -616,3 +736,28 @@ void r64init(uint64_t seed) { raninit(&rx, seed); }
 uint64_t r64u() { return (ranval(&rx)); }
 
 int64_t r64i() { return (ranval(&rx) >> 1); }
+
+/* generate an array of 64-bit random numbers */
+const int ranarraylength = 1009; // these will be 8-byte numbers.
+
+uint64_t *ranarray;
+
+int ranarraynext;
+
+void ranarrayinit() {
+  ranarray = (uint64_t*)malloc(ranarraylength*sizeof(uint64_t));
+  int i;
+  for (i=0;i<ranarraylength;i++)
+    ranarray[i]=r64u();
+  ranarraynext=0;
+}
+
+uint64_t ranarrayval() {
+  uint64_t v = ranarray[ranarraynext];
+  ranarraynext = (ranarraynext++)%ranarraylength;
+}
+
+uint64_t ranarray64u() { return (ranarrayval()); }
+
+int64_t ranarray64i() { return (ranarrayval(&rx) >> 1); }
+
