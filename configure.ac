@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.50])
-AC_INIT([shairport-sync], [3.0d19], [mikebrady@eircom.net])
+AC_INIT([shairport-sync], [3.0d20], [mikebrady@eircom.net])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([shairport.c])
 AC_CONFIG_HEADERS([config.h])
@@ -246,21 +246,25 @@ AC_ARG_WITH(dns_sd, [  --with-dns_sd = choose dns_sd mDNS support], [
   AC_SEARCH_LIBS([DNSServiceRefDeallocate], [dns_sd], , AC_MSG_ERROR(dns_sd support requires the dns_sd library!))], )
 AM_CONDITIONAL([USE_DNS_SD], [test "x$HAS_DNS_SD" = "x1"])
 
-# Find systemd unit dir
-AC_ARG_WITH([systemdsystemunitdir],
-     [AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files])],,
-     [with_systemdsystemunitdir=auto])
-AS_IF([test "x$with_systemdsystemunitdir" = "xyes" -o "x$with_systemdsystemunitdir" = "xauto"], [
-     def_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)
+if  test "x${with_systemd}" = xyes ; then
+  # Find systemd unit dir
+  AC_ARG_WITH([systemdsystemunitdir],
+       [AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files])],,
+       [with_systemdsystemunitdir=auto])
+  AS_IF([test "x$with_systemdsystemunitdir" = "xyes" -o "x$with_systemdsystemunitdir" = "xauto"], [
+       def_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)
 
-     AS_IF([test "x$def_systemdsystemunitdir" = "x"],
-   [AS_IF([test "x$with_systemdsystemunitdir" = "xyes"],
-    [AC_MSG_ERROR([systemd support requested but pkg-config unable to query systemd package])])
-    with_systemdsystemunitdir=no],
-   [with_systemdsystemunitdir="$def_systemdsystemunitdir"])])
-AS_IF([test "x$with_systemdsystemunitdir" != "xno"],
-      [AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])])
-AM_CONDITIONAL([HAVE_SYSTEMD], [test "x$with_systemdsystemunitdir" != "xno"])
+       AS_IF([test "x$def_systemdsystemunitdir" = "x"],
+     [AS_IF([test "x$with_systemdsystemunitdir" = "xyes"],
+      [AC_MSG_ERROR([systemd support requested but pkg-config unable to query systemd package])])
+      with_systemdsystemunitdir=no],
+     [with_systemdsystemunitdir="$def_systemdsystemunitdir"])])
+  AS_IF([test "x$with_systemdsystemunitdir" != "xno"],
+        [AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])])
+  AM_CONDITIONAL([HAVE_SYSTEMD], [test "x$with_systemdsystemunitdir" != "xno"])
+else
+  AM_CONDITIONAL([HAVE_SYSTEMD], false)  
+fi
 
 # Look for xmltoman
 AC_CHECK_PROGS([XMLTOMAN], [xmltoman])
