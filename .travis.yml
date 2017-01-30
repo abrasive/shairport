@@ -19,7 +19,7 @@ script:
 
 before_install:
   - sudo apt-get -qq update
-  - sudo apt-get install -y libdaemon-dev avahi-daemon libavahi-client-dev 
+  - sudo apt-get install -y libdaemon-dev avahi-daemon libavahi-client-dev
   
 addons:
   apt:
@@ -32,3 +32,4 @@ addons:
     - libconfig-dev
     - xmltoman
     - libao-dev
+    - libmbedtls-dev
