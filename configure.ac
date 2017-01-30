@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.50])
-AC_INIT([shairport-sync], [3.0d16], [mikebrady@eircom.net])
+AC_INIT([shairport-sync], [3.0d17], [mikebrady@eircom.net])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([shairport.c])
 AC_CONFIG_HEADERS([config.h])
@@ -125,11 +125,11 @@ AC_ARG_WITH(piddir, [ --with-piddir=<pathname> Specify a pathname to a directory
 AM_CONDITIONAL([USE_CUSTOMPIDDIR], [test "x$HAS_CUSTOMPIDDIR" = "x1"])
 
 # Check --with-ssl=argument
-AC_ARG_WITH(ssl, [ choose --with-ssl=openssl or --with-ssl=polarssl for encryption services], [
+AC_ARG_WITH(ssl, [ choose --with-ssl=openssl, --with-ssl=mbedtls or --with-ssl=polarssl (deprecated) for encryption services  ], [
   AC_MSG_CHECKING(encryption libraries chosen)
   if test "x${with_ssl}" = x -o "x${with_ssl}" = xyes ; then
     AC_MSG_RESULT(not found)
-    AC_MSG_ERROR(choose either "openssl" or "polarssl" encryption)
+    AC_MSG_ERROR(choose "openssl", "mbedtls" or "polarssl" encryption)
   fi
   if test "x${with_ssl}" = xopenssl ; then
     if  test "x${with_pkg_config}" = xyes ; then
@@ -144,10 +144,17 @@ AC_ARG_WITH(ssl, [ choose --with-ssl=openssl or --with-ssl=polarssl for encrypti
       AC_DEFINE([HAVE_LIBCRYPTO],[1],[Define to 1 if you have libcrypto])
       AC_DEFINE([HAVE_LIBSSL],[1],[Define to 1 if you have libssl])
     fi
+  elif test "x${with_ssl}" = xmbedtls ; then
+    AC_CHECK_LIB([mbedtls],[mbedtls_ssl_init],,
+		[AC_MSG_ERROR([Cannot find required libray: libmbedtls],1)])
+    AC_CHECK_LIB([mbedcrypto], [mbedtls_entropy_func],,
+                [AC_MSG_ERROR([Cannot find required library: libmbedcrypto],1)])
+    AC_CHECK_LIB([mbedx509], [mbedtls_pk_init],,
+                [AC_MSG_ERROR([Cannot find required library: libmbedx509],1)])
   elif test "x${with_ssl}" = xpolarssl ; then
-    AC_CHECK_LIB([polarssl],[ssl_init], , AC_MSG_ERROR(PolarSSL selected but the library cannot be found!))
+    AC_CHECK_LIB([polarssl],[ssl_init], , AC_MSG_ERROR(PolarSSL is selected but the library cannot be found and is deprecated. Consider selecting mbed TLS instead using --with-ssl=mbedtls.))
   else
-    AC_MSG_ERROR(unknown option "${with_ssl}"." Please choose with "openssl" or "polarssl")
+    AC_MSG_ERROR(unknown option "${with_ssl}"." Please choose with "openssl", "mbedtls" or "polarssl")
   fi
 ], )
 
