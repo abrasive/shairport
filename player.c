@@ -676,8 +676,8 @@ static inline void process_sample(int32_t sample, char **outp, enum sps_format_t
       break;
     }
     dither_mask -= 1;
-    int64_t r = r64i();
-    // int64_t r = ranarray64i();
+    // int64_t r = r64i();
+    int64_t r = ranarray64i(); // use an array of precalculated pseudorandom numbers rather than calculating them on the fly. Should be easier on low-powered processors
     
     int64_t tpdf = (r & dither_mask) - (previous_random_number & dither_mask);
     previous_random_number = r;
