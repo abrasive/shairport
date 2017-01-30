@@ -1,3 +1,7 @@
+Version 3.0d17 – Development Version
+----
+Add support for mbed TLS and deprecate the use of PolarSSL, as mbed TLS is a development of PolarSSL and PolarSSL itself is not being supported.
+
 Version 3.0d16 – Development Version
 ----
 
