@@ -72,7 +72,9 @@
 
 #include "alac.h"
 
+#ifdef HAVE_APPLE_ALAC
 #include "apple_alac.h"
+#endif
 
 // parameters from the source
 static unsigned char *aesiv;
