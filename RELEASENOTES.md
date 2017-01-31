@@ -2,7 +2,7 @@ Version 3.0d22 – Development Version
 ----
 
 **Bug Fix**
-* Fixed a bug which prevented successful building in the OpenWrt toolchain. The problem was caused by an unconditional inclusion of a reference to apple_alac.h in player.c whether apple_alac was selected or not. This caused the OpenWrt build system to expect the standard C++ library to be referenced, and it was not there. Solution was to make the `#include` conditional on apple_alac having been selected.
+* Fixed a bug which prevented successful building in the OpenWrt build system. The problem was caused by an `#include apple_alac.h` in `player.c` which was actioned even if the apple alac decoder was not selected. This caused the OpenWrt build system to expect the standard C++ library – required by the apple alac code – to be referenced, but it was not specified on the build manifest and therefore stopped the build. The solution was to make the `#include` conditional on selecting the apple alac decoder.
 
 Version 3.0d21 – Development Version
 ----
