@@ -1,3 +1,10 @@
+Version 3.0d23 – Development Version
+----
+Version 3 is a big update -- please see below.
+
+**New Feature**
+* Add a new setting, for advanced users only, in the `general` section. Use the `interface` setting to allow you to specify the interface on which to provide the AirPlay service. Omit the setting to get the default, which is to choose the interfaces automatically.
+
 Version 3.0d22 – Development Version
 ----
 
