@@ -474,6 +474,13 @@ int parse_options(int argc, char **argv) {
         else
           die("Invalid ignore_volume_control option choice \"%s\". It should be \"yes\" or \"no\"");
       }
+      
+     /* Get the optional volume_max_db setting. */
+      if (config_lookup_float(config.cfg, "general.volume_max_db", &dvalue)) {
+        debug(1,"Max volume setting of %f dB",dvalue);
+        config.volume_max_db = dvalue;
+        config.volume_max_db_set = 1;
+      }
 
       /* Get the playback_mode setting */
       if (config_lookup_string(config.cfg, "general.playback_mode", &str)) {
@@ -491,9 +498,6 @@ int parse_options(int argc, char **argv) {
           die("Invalid playback_mode choice \"%s\". It should be \"stereo\" (default), \"mono\", "
               "\"reverse stereo\", \"both left\", \"both right\"");
       }
-      
-      
-      
 
       /* Get the interface to listen on, if specified Default is all interfaces */
       /* we keep the interface name and the index */

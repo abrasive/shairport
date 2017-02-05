@@ -559,7 +559,7 @@ double vol2attn(double vol, long max_db, long min_db) {
   double vol_setting = 0;
 
   if ((vol <= 0.0) && (vol >= -30.0)) {
-    long range_db = max_db - min_db; // this will be a positive nunmber
+    long range_db = max_db - min_db; // this will be a positive number
     // debug(1,"Volume min %ddB, max %ddB, range %ddB.",min_db,max_db,range_db);
     // double first_slope = -3000.0; // this is the slope of the attenuation at the high end -- 30dB
     // for the full rotation.

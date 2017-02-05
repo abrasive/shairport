@@ -87,6 +87,8 @@ typedef struct {
   int udp_port_base;
   int udp_port_range;
   int ignore_volume_control;
+  int volume_max_db_set;  // set to 1 if a maximum volume db has been set
+  int volume_max_db;
   int no_sync;            // disable synchronisation, even if it's available
   int no_mmap;            // disable use of mmap-based output, even if it's available
   double resyncthreshold; // if it get's out of whack my more than this number of seconds, resync.
