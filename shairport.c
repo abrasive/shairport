@@ -1173,6 +1173,10 @@ int main(int argc, char **argv) {
   debug(1, "drift tolerance is %f seconds.", config.tolerance);
   debug(1, "password is \"%s\".", config.password);
   debug(1, "ignore_volume_control is %d.", config.ignore_volume_control);
+  if (config.volume_max_db_set)
+    debug(1, "volume_max_db is %d.", config.volume_max_db);
+  else
+    debug(1, "volume_max_db is not set");
   debug(1, "playback_mode is %d (0-stereo, 1-mono, 1-reverse_stereo, 2-both_left, 3-both_right).",
         config.playback_mode);
   debug(1, "disable_synchronization is %d.", config.no_sync);
