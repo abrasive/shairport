@@ -38,6 +38,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <net/if.h>
 #include <unistd.h>
 
 #include "config.h"
@@ -490,7 +491,45 @@ int parse_options(int argc, char **argv) {
           die("Invalid playback_mode choice \"%s\". It should be \"stereo\" (default), \"mono\", "
               "\"reverse stereo\", \"both left\", \"both right\"");
       }
+      
+      
+      
 
+      /* Get the interface to listen on, if specified Default is all interfaces */
+      /* we keep the interface name and the index */
+      
+       if (config_lookup_string(config.cfg, "general.interface", &str))
+        config.interface = strdup(str);
+
+     if (config_lookup_string(config.cfg, "general.interface", &str)) {
+        int specified_interface_found = 0;
+        
+        struct if_nameindex *if_ni, *i;
+
+        if_ni = if_nameindex();
+        if (if_ni == NULL) {
+            debug(1,"Can't get a list of interface names.");
+        } else {
+          for (i = if_ni; ! (i->if_index == 0 && i->if_name == NULL); i++) {
+              // printf("%u: %s\n", i->if_index, i->if_name);
+            if (strcmp(i->if_name,str)==0) {
+              config.interface_index = i->if_index;
+              specified_interface_found = 1;
+            }
+          }
+          
+        }
+
+        if_freenameindex(if_ni);
+        
+        if (specified_interface_found==0) {
+          inform("The mdns service interface \"%s\" was not found, so the setting has been ignored.",config.interface);
+          free(config.interface);
+          config.interface = NULL;
+          config.interface_index = 0; 
+        }    
+      }
+      
       /* Get the regtype -- the service type and protocol, separated by a dot. Default is
        * "_raop._tcp" */
       if (config_lookup_string(config.cfg, "general.regtype", &str))
@@ -762,7 +801,6 @@ void shairport_startup_complete(void) {
 const char *pid_file_proc(void) {
 #ifdef HAVE_ASPRINTF
   static char *fn = NULL;
-  free(fn);
   asprintf(&fn, "%s/%s.pid", PIDDIR, daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
 #else
   static char fn[8192];
@@ -777,6 +815,7 @@ const char *pid_file_proc(void) {
 void exit_function() {
   if (config.cfg)
     config_destroy(config.cfg);
+  // probably should be freeing malloc'ed memory here, including strdup-created strings...
 }
 
 int main(int argc, char **argv) {
@@ -1146,7 +1185,10 @@ int main(int argc, char **argv) {
   debug(1, "zeroconf regtype is \"%s\".", config.regtype);
   debug(1, "decoders_supported field is %d.", config.decoders_supported);
   debug(1, "use_apple_decoder is %d.", config.use_apple_decoder);
-
+  if (config.interface)
+    debug(1, "mdns service interface \"%s\" requested.",config.interface);
+  else
+    debug(1, "no special mdns service interface was requested.");
   char *realConfigPath = realpath(config.configfile, NULL);
   if (realConfigPath) {
     debug(1, "configuration file name \"%s\" resolves to \"%s\".", config.configfile,

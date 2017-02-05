@@ -204,16 +204,21 @@ static void register_service(AvahiClient *c) {
       return;
 
     int ret;
+    AvahiIfIndex selected_interface;
+    if (config.interface!=NULL)
+      selected_interface = config.interface_index;
+    else
+      selected_interface = AVAHI_IF_UNSPEC;
 #ifdef CONFIG_METADATA
     if (config.metadata_enabled) {
-      ret = avahi_entry_group_add_service(group, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC, 0, name,
+      ret = avahi_entry_group_add_service(group, selected_interface, AVAHI_PROTO_UNSPEC, 0, name,
                                           config.regtype, NULL, NULL, port,
                                           MDNS_RECORD_WITH_METADATA, NULL);
       if (ret == 0)
         debug(1, "avahi: request to add \"%s\" service with metadata", config.regtype);
     } else {
 #endif
-      ret = avahi_entry_group_add_service(group, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC, 0, name,
+      ret = avahi_entry_group_add_service(group, selected_interface, AVAHI_PROTO_UNSPEC, 0, name,
                                           config.regtype, NULL, NULL, port,
                                           MDNS_RECORD_WITHOUT_METADATA, NULL);
       if (ret == 0)
