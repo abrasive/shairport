@@ -22,7 +22,7 @@ To maintain the exact latency required, if an output device is running slow rela
 
 Shairport Sync is a substantial rewrite of the fantastic work done in Shairport 1.0 by James Laird and others — please see https://github.com/abrasive/shairport/blob/master/README.md#contributors-to-version-1x for a list of the contributors to Shairport 1.x and Shairport 0.x. From a "heritage" point of view, Shairport Sync is a fork of Shairport 1.0.
 
-Shairport Sync is mainly designed for `alsa` and thus for Linux, although since `alsa` has been ported to FreeBSD, Shairport Sync runs in FreeBSD too. It must have direct access to the output device, which must be a real sound card capable of working with 44,100, 88,200 or 176,400 samples per second, interleaved PCM stereo of 8, 16, 24 or 32 bits. the default is 44,100 samples per second / 16 bits (you'll get a message in the logfile if there's a problem).
+Shairport Sync is mainly designed for `alsa` and thus for Linux, although since `alsa` has been ported to FreeBSD, Shairport Sync runs in FreeBSD too. It must have direct access to the output device, which must be a real sound card capable of working with 44,100, 88,200 or 176,400 samples per second, interleaved PCM stereo of 8, 16, 24 or 32 bits. The default is 44,100 samples per second / 16 bits (you'll get a message in the logfile if there's a problem).
 
 For more about the motivation behind Shairport Sync, please see the wiki at https://github.com/mikebrady/shairport-sync/wiki.
 
