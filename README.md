@@ -14,7 +14,7 @@ More Information
 ----------
 Shairport Sync works by using timing information and timestamps present in data coming from the audio source (e.g. an iPhone) to play audio at exactly the right time. It does this by monitoring and controlling the *latency* — the time-gap between when a sound frame is supposed to be played, as specified by its `timestamp`, and the time when it is actually played by the audio output device, usually a Digital to Audio Converter (DAC).
 
-The latency to be used is specified by the source when it negotiates with Shairport Sync. Most sources set a latency of 88,200 frames — exactly two seconds. Recent versions of iTunes and forkedDaapd use a latency of 99,577 frames.
+The latency to be used is specified by the source when it negotiates with Shairport Sync. Most sources set a latency of exactly two seconds. Recent versions of iTunes and forkedDaapd use a latency of just over 2.25 seconds.
 
 Timestamps are measured relative to the source computer's clock – the `source clock`, but timing must be done relative to the clock of the computer running Shairport Sync – the `local clock`. This is done by synchronising the two clocks, usually to within a fraction of a millisecond, using a variant of NTP synchronisation protocols. 
 
@@ -31,6 +31,7 @@ What else?
 * Better Volume Control — Shairport Sync offers finer control at very top and very bottom of the volume range. See http://tangentsoft.net/audio/atten.html for a good discussion of audio "attenuators", upon which volume control in Shairport Sync is modelled. See also the diagram of the volume transfer function in the documents folder. In addition, Shairport Sync can offer an extended volume control range on devices with a restricted range.
 * Hardware Mute — Shairport Sync will mute properly if the hardware supports it.
 * Support for the Apple ALAC decoder.
+* Bit depths of 8, 16, 24 and 32 bits, rahter than the standard 16 bits.
 * Fast Response — With hardware volume control, response is instantaneous; otherwise the response time is 0.15 seconds.
 * Non-Interruptible — Shairport Sync sends back a "busy" signal if it's already playing audio from another source, so other sources can't disrupt an existing Shairport Sync session. (If a source disappears without warning, the session automatically terminates after two minutes and the device becomes available again.)
 * Metadata — Shairport Sync can deliver metadata supplied by the source, such as Album Name, Artist Name, Cover Art, etc. through a pipe or UDP socket to a recipient application program — see https://github.com/mikebrady/shairport-sync-metadata-reader for a sample recipient. Sources that supply metadata include iTunes and the Music app in iOS.
@@ -41,7 +42,7 @@ Status
 ------
 Shairport Sync works on a wide variety of Linux devices. It works on standard Ubuntu laptops, on the Raspberry Pi with Raspbian Wheezy and Jessie, Arch Linux and OpenWrt, and it runs on a Linksys NSLU2 and a TP-Link 710N using OpenWrt. It works with built-in audio and with a variety of USB-connected audio amplifiers and DACs, including a cheapo USB "3D Sound" dongle, a first generation iMic and a Topping TP30 amplifier with a USB DAC input. It will not work properly — if at all — with a PulseAudio (pseudo-)output device. Using a port of the `alsa` system, Shairport Sync runs rather well on FreeBSD.
 
-Shairport Sync runs well on the Raspberry Pi. It can drive the built-in sound card, though the audio out of the card is of poor quality (see the note below on configuring the Raspberry Pi to make best use of it). USB-connected sound cards work well, though [very] old versions of Raspbian appear to suffer from a problem — see http://www.raspberrypi.org/forums/viewtopic.php?t=23544, so it is wise to update. Shairport Sync works well with the IQAudIO Pi-DAC — see http://www.iqaudio.com.
+Shairport Sync runs well on the Raspberry Pi on USB and I2S cards. It can drive the built-in sound card, though the audio out of the card is of poor quality – see the note below on configuring the Raspberry Pi to make best use of it. 
 
 At the time of writing, OpenWrt trunk does not support USB audio well on the Raspberry Pi.
 
@@ -56,7 +57,6 @@ Note: Historically, Shairport Sync has taken its settings from command line argu
 Building And Installing the Development Version
 ---------------------
 The following procedures will install the shairport-sync application into your system. Before continuing, you should check to see if shairport-sync is already installed – you can use the command `$ which shairport-sync` to find where it is located, if installed. If it is installed you should delete it – you may need superuser privileges. After deleting, check again in case further copies are installed elsewhere.
-(If the existing installation of shairport-sync is where the new copy will be installed into, it will be overwritten;  sometimes, however, the installation is to another location, so it is safer, initially, to delete previous versions manually.)
 
 To build Shairport Sync from sources on Debian, Ubuntu, Raspbian, etc. follow these instructions.
 
@@ -181,7 +181,7 @@ To enable Shairport Sync to start automatically at system startup, enter:
 `$sudo systemctl enable shairport-sync`
 
 **Install into a System V system**
-If you are installing onto a System V system:
+If you are installing onto a System V system, enter:
 
 ```
 $sudo make install
@@ -370,38 +370,43 @@ Latency
 -------
 Latency is the exact time from a sound signal's original timestamp until that signal actually "appears" on the output of the audio output device, usually a Digital to Audio Converter (DAC), irrespective of any internal delays, processing times, etc. in the computer. 
 
-Shairport Sync uses latencies supplied by the source, typically either 88,200 or 99,577 frames. You shouldn't need to change them. (The `latencies` stanza in the configuration file and the various latency command-line options are now obselete and are deprecated.)
+Shairport Sync uses latencies supplied by the source, typically either 2 seconds or just over 2.25 seconds. You shouldn't need to change them. (The `latencies` stanza in the configuration file and the various latency command-line options are now obselete and are deprecated.)
 
-Problems can arise when you are trying to synchronise with speaker systems — typically surround-sound home theatre systems — that have their own inherent delays. You can compensate for an inherent delay using the appropriate backend (typically `alsa`) `audio_backend_latency_offset`. Set this offset (in frames) to compensate for a fixed delay in the audio back end; for example, if the output device delays by 100 ms, set this to -4410.
+Problems can arise when you are trying to synchronise with speaker systems — typically surround-sound home theatre systems — that have their own inherent delays. You can compensate for an inherent delay using the appropriate backend (typically `alsa`) `audio_backend_latency_offset_in_seconds`. Set this offset (in frames) to compensate for a fixed delay in the audio back end; for example, if the output device delays by 100 ms, set this to -0.1.
 
 Resynchronisation
 -------------
 Shairport Sync actively maintains synchronisation with the source. 
-If synchronisation is lost — say due to a busy source or a congested network — Shairport Sync will mute its output and resynchronise. The loss-of-sync threshold is a very conservative 50 ms — i.e. the actual time and the expected time must differ by more than 50 ms to trigger a resynchronisation. Smaller disparities are corrected by insertions or deletions, as described above.
-* You can vary the resync threshold, or turn resync off completely, with the `general` `resync_threshold` setting.
+If synchronisation is lost — say due to a busy source or a congested network — Shairport Sync will mute its output and resynchronise. The loss-of-sync threshold is a very conservative 0.050 seconds — i.e. the actual time and the expected time must differ by more than 50 ms to trigger a resynchronisation. Smaller disparities are corrected by insertions or deletions, as described above.
+* You can vary the resync threshold, or turn resync off completely, with the `general` `resync_threshold_in_seconds` setting.
 
 Tolerance
 ---------
-Playback synchronisation is allowed to wander — to "drift" — a small amount before attempting to correct it. The default is 88 frames, i.e. 2 ms. The smaller the tolerance, the  more  likely it is that overcorrection will occur. Overcorrection is when more corrections (insertions and deletions) are made than are strictly necessary to keep the stream in sync. Use the `statistics` setting to monitor correction levels. Corrections should not greatly exceed net corrections.
-* You can vary the tolerance with the `general` `drift` setting.
+Playback synchronisation is allowed to wander — to "drift" — a small amount before attempting to correct it. The default is 0.002 seconds, i.e. 2 ms. The smaller the tolerance, the  more  likely it is that overcorrection will occur. Overcorrection is when more corrections (insertions and deletions) are made than are strictly necessary to keep the stream in sync. Use the `statistics` setting to monitor correction levels. Corrections should not greatly exceed net corrections.
+* You can vary the tolerance with the `general` `drift_tolerance_in_seconds` setting.
 
 Some Statistics
 ---------------
-If you turn on the `general`  `statistics` setting, statistics like this will be printed at intervals on the console (or in the logfile if running in daemon mode):
+If you turn on the `general`  `statistics` setting, a heading like this will be output to the console or log file:
+```
+sync error in milliseconds, net correction in ppm, corrections in ppm, total packets, missing packets, late packets, too late packets, resend requests, min DAC queue size, min buffer occupancy, max buffer occupancy
+```
+This will be followed by the statistics themselves at regular intervals, for example:
+```
+      -1.3,      25.9,      25.9,        3758,      0,      0,      0,      0,   4444,  263,  270
+```
 
-`Sync error: -35.4 (frames); net correction: 24.2 (ppm); corrections: 24.2 (ppm); missing packets 0; late packets 5; too late packets 0; resend requests 6; min DAC queue size 4430.`
+"Sync error in milliseconds" is the average deviation from exact synchronisation. The example above indicates that the output is on average 1.3 milliseconds behind exact synchronisation. Sync is allowed to drift by the `general` `drift_tolerance_in_seconds` setting — (± 0.002 seconds) by default — before a correction will be made.
 
-"Sync error" is the average deviation from exact synchronisation. The example above indicates that the output is on average 35.4 frames ahead of exact synchronisation. Sync is allowed to drift by the `general` `drift` setting — 88 frames (± 2 milliseconds) by default — before a correction will be made.
+"Net correction in ppm" is actually the net sum of corrections — the number of frame insertions less the number of frame deletions — given as a moving average in parts per million. After an initial settling period, it represents the drift — the divergence between the rate at which frames are generated at the source and the rate at which the output device consumes them. The example above indicates that the output device is consuming frames 24.2 ppm faster than the source is generating them.
 
-"Net correction" is actually the net sum of corrections — the number of frame insertions less the number of frame deletions — given as a moving average in parts per million. After an initial settling period, it represents the drift — the divergence between the rate at which frames are generated at the source and the rate at which the output device consumes them. The example above indicates that the output device is consuming frames 24.2 ppm faster than the source is generating them.
-
-"Corrections" is the number of frame insertions plus the number of frame deletions (i.e. the total number of corrections), given as a moving average in parts per million. The closer this is to the net corrections, the fewer "unnecessary" corrections that are being made. Third party programs tend to have much larger levels of corrections.
+"Corrections in ppm" is the number of frame insertions plus the number of frame deletions (i.e. the total number of corrections), given as a moving average in parts per million. The closer this is to the net corrections, the fewer "unnecessary" corrections that are being made. Third party programs tend to have much larger levels of corrections.
 
 For reference, a drift of one second per day is approximately 11.57 ppm. Left uncorrected, even a drift this small between two audio outputs will be audible after a short time. The above sample is from a second-generation iPod driving the Raspberry Pi which is connected over Ethernet.
 
 It's not unusual to have resend requests, late packets and even missing packets if some part of the connection to the Shairport Sync device is over WiFi. Late packets can sometimes be asked for and received multiple times. Sometimes late packets are sent and arrive too late, but have already been sent and received in time, so weren't needed anyway...
 
-"Min DAC queue size" is the minimum size the queue of samples in the output device's hardware buffer was measured at. It is meant to stand at 0.15 seconds = 6,615 samples, and will go low if the processor is very busy. If it goes below about 2,000 then it's a sign that the processor can't really keep up.
+"Min DAC queue size" is the minimum size the queue of samples in the output device's hardware buffer was measured at. It is meant to stand at 0.15 seconds = 6,615 frames at 44,100 frames per second, and will go low if the processor is very busy. If it goes below about 2,000 then it's a sign that the processor can't really keep up.
 
 Troubleshooting
 ---------------
