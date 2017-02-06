@@ -120,8 +120,8 @@
 		<p>The following substitutions are allowed:
 		<opt>%h</opt> for the computer's hostname,
 		<opt>%H</opt> for the computer's hostname with the first letter capitalised (ASCII only),
-		<opt>%v</opt> for the shairport-sync version number, e.g. "2.8.4" and
-		<opt>%V</opt> for the shairport-sync version string, e.g. "2.8.4-OpenSSL-Avahi-ALSA-soxr-metadata".</p>
+		<opt>%v</opt> for the shairport-sync version number, e.g. "3.0.1" and
+		<opt>%V</opt> for the shairport-sync version string, e.g. "3.0.1-OpenSSL-Avahi-ALSA-soxr-metadata-sysconfdir:/etc".</p>
     <p>The default is "%H", which is replaced by the hostname with the first letter capitalised.</p>
     </optdesc>
 	  </option>
