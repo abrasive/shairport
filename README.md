@@ -31,7 +31,7 @@ What else?
 * Better Volume Control — Shairport Sync offers finer control at very top and very bottom of the volume range. See http://tangentsoft.net/audio/atten.html for a good discussion of audio "attenuators", upon which volume control in Shairport Sync is modelled. See also the diagram of the volume transfer function in the documents folder. In addition, Shairport Sync can offer an extended volume control range on devices with a restricted range.
 * Hardware Mute — Shairport Sync will mute properly if the hardware supports it.
 * Support for the Apple ALAC decoder.
-* Bit depths of 8, 16, 24 and 32 bits, rahter than the standard 16 bits.
+* Bit depths of 8, 16, 24 and 32 bits, rather than the standard 16 bits.
 * Fast Response — With hardware volume control, response is instantaneous; otherwise the response time is 0.15 seconds.
 * Non-Interruptible — Shairport Sync sends back a "busy" signal if it's already playing audio from another source, so other sources can't disrupt an existing Shairport Sync session. (If a source disappears without warning, the session automatically terminates after two minutes and the device becomes available again.)
 * Metadata — Shairport Sync can deliver metadata supplied by the source, such as Album Name, Artist Name, Cover Art, etc. through a pipe or UDP socket to a recipient application program — see https://github.com/mikebrady/shairport-sync-metadata-reader for a sample recipient. Sources that supply metadata include iTunes and the Music app in iOS.
