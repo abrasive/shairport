@@ -396,19 +396,24 @@ This will be followed by the statistics themselves at regular intervals, for exa
       -1.3,      25.9,      25.9,        3758,      0,      0,      0,      0,   4444,  263,  270
       -2.0,      96.0,      96.0,        7516,      0,      0,      0,      0,   5357,  260,  267
       -2.0,      96.0,      96.0,       11274,      0,      0,      0,      0,   4956,  262,  268
+      -2.0,      94.5,      94.5,       15032,      0,      0,      0,      0,   5430,  263,  267
+      -2.0,      99.8,      99.8,       18790,      0,      0,      0,      0,   5047,  261,  268
+      -2.0,      91.5,      91.5,       22548,      0,      0,      0,      0,   5258,  260,  267
+      -2.0,      90.7,      90.7,       26306,      0,      0,      0,      0,   5279,  262,  267
+      -2.0,      96.0,      96.0,       30064,      0,      0,      0,      0,   5551,  260,  266
 ```
 
 "Sync error in milliseconds" is the average deviation from exact synchronisation. The first line of the example above indicates that the output is on average 1.3 milliseconds behind exact synchronisation. Sync is allowed to drift by the `general` `drift_tolerance_in_seconds` setting — (± 0.002 seconds) by default — before a correction will be made.
 
-"Net correction in ppm" is actually the net sum of corrections — the number of frame insertions less the number of frame deletions — given as a moving average in parts per million. After an initial settling period, it represents the drift — the divergence between the rate at which frames are generated at the source and the rate at which the output device consumes them. The first line of the example above indicates that the output device is consuming frames 25.9 ppm faster than the source is generating them.
+"Net correction in ppm" is actually the net sum of corrections — the number of frame insertions less the number of frame deletions — given as a moving average in parts per million. After an initial settling period, it represents the drift — the divergence between the rate at which frames are generated at the source and the rate at which the output device consumes them. The first line of the example above indicates that the output device is consuming frames 25.9 ppm faster than the source is generating them. The subsequent lines indicate that the stable actual difference in the clocks is around 95 ppm.
 
 "Corrections in ppm" is the number of frame insertions plus the number of frame deletions (i.e. the total number of corrections), given as a moving average in parts per million. The closer this is to the net corrections, the fewer "unnecessary" corrections that are being made. Third party programs tend to have much larger levels of corrections.
 
-For reference, a drift of one second per day is approximately 11.57 ppm. Left uncorrected, even a drift this small between two audio outputs will be audible after a short time. The above sample is from an Ethernet-connected iMac driving a WiFi-connected Raspberry Pi 3.
+For reference, a drift of one second per day is approximately 11.57 ppm. Left uncorrected, even a drift this small between two audio outputs will be audible after a short time. The above sample is from an Ethernet-connected iMac driving a WiFi-connected Raspberry Pi 3 using an IQaudIO Pi-DigiAMP+.
 
 It's not unusual to have resend requests, late packets and even missing packets if some part of the connection to the Shairport Sync device is over WiFi. Late packets can sometimes be asked for and received multiple times. Sometimes late packets are sent and arrive too late, but have already been sent and received in time, so weren't needed anyway...
 
-"Min DAC queue size" is the minimum size the queue of samples in the output device's hardware buffer was measured at. It is meant to stand at 0.15 seconds = 6,615 frames at 44,100 frames per second, and will go low if the processor is very busy. If it goes below about 2,000 then it's a sign that the processor can't really keep up.
+"Min DAC queue size" is the minimum size the queue of samples in the output device's hardware buffer was measured at. It is meant to stand at 0.15 seconds = 6,615 frames at 44,100 frames per second, and will go low if the processor is very busy. If it goes below about 2,000 then it's an indication that the processor can't really keep up.
 
 Troubleshooting
 ---------------
