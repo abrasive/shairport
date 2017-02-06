@@ -4,7 +4,7 @@
 
   <!--
   This man page source file is part of shairport-sync.
-  Copyright (c) Mike Brady 2014-2016
+  Copyright (c) Mike Brady 2014-2017
 
   All rights reserved.
  
@@ -41,9 +41,7 @@
       <opt>[-B </opt><arg>command</arg><opt>]</opt>
       <opt>[-c </opt><arg>configurationfile</arg><opt>]</opt>
       <opt>[-E </opt><arg>command</arg><opt>]</opt>
-      <opt>[--forkedDaapdLatency=</opt><arg>latency</arg><opt>]</opt>
       <opt>[--get-cover-art]</opt>
-      <opt>[-i </opt><arg>latency</arg><opt>]</opt>
       <opt>[-L </opt><arg>latency</arg><opt>]</opt>
       <opt>[-m </opt><arg>backend</arg><opt>]</opt>
       <opt>[--meta-dir=</opt><arg>directory</arg><opt>]</opt>
@@ -172,20 +170,22 @@
     <optdesc>Use this in conjunction with the prevous setting to specify the <arg>range</arg> of ports that can be checked for availability. Only three ports are needed. The default is 100, thus 100 ports will be checked from port 6001 upwards until three are found.</optdesc>
     </option>
     <option>
-    <p><opt>drift=</opt><arg>frames</arg><opt>;</opt></p>
-    <optdesc>Allow playback to drift up to <arg>frames</arg> out of exact synchronization before attempting to correct it.
-		The default is 88 frames, i.e. 2 ms. The smaller the tolerance, the more likely it is that overcorrection will occur.
+    <p><opt>drift_tolerance_in_seconds=</opt><arg>seconds</arg><opt>;</opt></p>
+    <optdesc>Allow playback to drift up to <arg>seconds</arg> out of exact synchronization before attempting to correct it.
+		The default is 0.002 seconds, i.e. 2 milliseconds. The smaller the tolerance, the more likely it is that overcorrection will occur.
 		Overcorrection is when more corrections (insertions and deletions) are made than are strictly necessary to keep the stream in sync. Use the <opt>statistics</opt> setting to
-		monitor correction levels. Corrections should not greatly exceed net corrections.
+		monitor correction levels. Corrections should not greatly exceed net corrections. This setting replaces the deprecated <opt>drift</opt> setting.
 		</optdesc>
     </option>
     <option>
-    <p><opt>resync_threshold=</opt><arg>threshold</arg><opt>;</opt></p>
-    <optdesc>Resynchronise if timings differ by more than <arg>threshold</arg> frames.
+    <p><opt>resync_threshold_in_seconds=</opt><arg>threshold</arg><opt>;</opt></p>
+    <optdesc>Resynchronise if timings differ by more than <arg>threshold</arg> seconds.
     If the output timing differs from the source timing by more than
     the threshold, output will be muted and a full resynchronisation
-    will occur. The default threshold is 2,205 frames, i.e. 50
-    milliseconds. Specify 0 to disable resynchronisation.</optdesc>
+    will occur. The default threshold is 0.050 seconds, i.e. 50
+    milliseconds. Specify 0.0 to disable resynchronisation.
+    This setting replaces the deprecated <opt>resync_threshold</opt> setting.
+    </optdesc>
     </option>
     <option>
     <p><opt>log_verbosity=</opt><arg>0</arg><opt>;</opt></p>
@@ -194,6 +194,12 @@
     <option>
     <p><opt>ignore_volume_control=</opt><arg>"choice"</arg><opt>;</opt></p>
     <optdesc>Set this <arg>choice</arg> to "yes" if you want the volume to be at 100% no matter what the source's volume control is set to. This might be useful if you want to set the volume on the output device, independently of the setting at the source. The default is "no".</optdesc>
+    </option>
+    
+    <option>
+    <p><opt>volume_max_db=</opt><arg>dBvalue</arg><opt>;</opt></p>
+    <optdesc><p>Specify the maximum output level to be used with the hardware mixer, if used. If no hardware mixed is used, this setting speciies the maximum setting permissible in the software mixer, which has an attenuation of from 0.0 dB down to -96.3 dB.</p>
+    </optdesc>
     </option>
     
     <option>
@@ -214,7 +220,6 @@
     will be combined to give the specified range.</p>
     <p>If you omit this setting, the full "native" range of the mixer is used.</p></optdesc>
     </option>
-    
     <option>
     <p><opt>regtype=</opt><arg>"regTypeString"</arg><opt>;</opt></p>
     <optdesc>Use this advanced setting to set the service type and transport to be advertised by Zeroconf/Bonjour. Default is "_raop._tcp".</optdesc>
@@ -222,10 +227,19 @@
     
     <option>
     <p><opt>playback_mode=</opt><arg>"mode"</arg><opt>;</opt></p>
-    <optdesc>The <arg>mode</arg> can be "stereo" or "mono". Default is "stereo".</optdesc>
+    <optdesc>The <arg>mode</arg> can be "stereo", "mono", "reverse stereo", "both left" or "both right". Default is "stereo".</optdesc>
     </option>
     
+    <option>
+    <p><opt>interface=</opt><arg>"name"</arg><opt>;</opt></p>
+    <optdesc>Use this advanced setting if you want to confine Shairport Sync to the named interface. Leave it commented out to get the default bahaviour.</optdesc>
+    </option>
     
+    <option>
+    <p><opt>alac_decoder=</opt><arg>"decodername"</arg><opt>;</opt></p>
+    <optdesc>This can be "hammerton" or "apple". This advanced setting allows you to choose the original Shairport decoder by David Hammerton or the Apple Lossless Audio Codec (ALAC) decoder written by Apple. Shairport Sync must have been compiled with the configuration setting "--with-apple-alac" and the Apple ALAC decoder library must be present for this to work.</optdesc>
+    </option>
+
     
     <option><p><opt>"ALSA" SETTINGS</opt></p></option>
     <p>These settings are for the ALSA back end, used to communicate with audio output devices in the ALSA system.
@@ -253,19 +267,31 @@
     <optdesc>By default, the mixer is assumed to be output_device. Use this setting to specify a device other than the output device.</optdesc>
     </option>
     <option>
-    <p><opt>audio_backend_latency_offset=</opt><arg>offset</arg><opt>;</opt></p>
-    <optdesc>Set this <arg>offset</arg>, in frames, to compensate for a fixed delay in the audio back end.
-    For example, if the output device delays by 100 ms, set this to -4410.</optdesc>
+    <p><opt>audio_backend_latency_offset_in_seconds=</opt><arg>offset</arg><opt>;</opt></p>
+    <optdesc>Set this <arg>offset</arg>, in seconds, to compensate for a fixed delay in the audio back end.
+    For example, if the output device delays by 100 ms, set this to -0.1.</optdesc>
     </option>
     <option>
-    <p><opt>audio_backend_buffer_desired_length=</opt><arg>length</arg><opt>;</opt></p>
-    <optdesc>Use this to set the desired number frames to be in the output device's hardware output buffer.
-    The default is 6,615 frames, or 0.15 seconds. If set too small, buffer underflow may occur on low-powered machines.
+    <p><opt>audio_backend_buffer_desired_length_in_seconds=</opt><arg>length</arg><opt>;</opt></p>
+    <optdesc>Use this to set the desired length, in seconds, of the queue of audio frames in the output device's hardware output buffer.
+    The default is 0.15 seconds. If set too small, buffer underflow may occur on low-powered machines.
     If too large, the response times when using software volume control (i.e. when not using a mixer control to control volume) become annoying,
     or it may exceed the hardware buffer size.
     It may need to be larger on low-powered machines that are also performing other tasks, such as processing metadata.</optdesc>
     </option>
     
+    <option>
+    <p><opt>output_rate=</opt><arg>frame rate</arg><opt>;</opt></p>
+    <optdesc>Use this setting to specify the frame rate to output to the ALSA device. Allowable values are 44100 (default), 88200, 176400 and 352800. The device must have the capability to accept the format you specify. There is no particular reason to use anything other than 44100 if it is available.
+    </optdesc>
+    </option>
+
+    <option>
+    <p><opt>output_format=</opt><arg>"format"</arg><opt>;</opt></p>
+    <optdesc>Use this setting to specify the format that should be used to send data to the ALSA device. Allowable values are "U8", "S8", "S16", "S24", "S24_3LE", "S24_3BE" or "S32". The device must have the capability to accept the format you specify. "S" means signed; "U" means unsigned; BE means big-endian and LE means little-endian. Except where stated (using *LE or *BE), endianness matches that of the processor. The default is "S16". If you are using a hardware mixer, the best setting is S16, as audio will pass through Shairport Sync unmodifed except for interpolation. If you are using the software mixer, use 32- or 24-bit, if your device is capable of it, to get the lowest possible levels of dither.
+    </optdesc>
+    </option>
+
     <option>
     <p><opt>disable_synchronization=</opt><arg>"no"</arg><opt>;</opt></p>
     <optdesc>This is an advanced setting and is for debugging only. Set to "yes" to disable synchronization. Default is "no".
@@ -287,9 +313,9 @@
     interleaved stereo.</p>
     <p>Use the <arg>name</arg> setting to set the name and location of the pipe.</p>
     <p>There are two further settings affecting timing that might be useful if the pipe reader is, for example,
-    a program to play an audio stream such as <opt>aplay</opt>. The <arg>audio_backend_latency_offset</arg> affects precisely
+    a program to play an audio stream such as <opt>aplay</opt>. The <arg>audio_backend_latency_offset_in_seconds</arg> affects precisely
     when the first audio packet is sent
-    and the <arg>audio_backend_buffer_desired_length</arg> setting affects the nominal output buffer size.</p>
+    and the <arg>audio_backend_buffer_desired_length_in_seconds</arg> setting affects the nominal output buffer size.</p>
     <p>These are the settings available within the <opt>pipe</opt> group:</p>
 
     <option>
@@ -301,75 +327,75 @@
     </option>
 
     <option>
-    <p><opt>audio_backend_latency_offset=</opt><arg>offset_in_frames</arg><opt>;</opt></p>
+    <p><opt>audio_backend_latency_offset_in_seconds=</opt><arg>offset_in_seconds</arg><opt>;</opt></p>
     <optdesc>
     Packets of audio frames are written to the pipe synchronously -- that is, they are written at exactly the time they should be played.
     You can offset the time of initial audio output relative to its nominal time using this setting.
-    For example to send an audio stream to the pipe 100 milliseconds before it is due to be played, set this to -4410. Default setting is 0.</optdesc>
+    For example to send an audio stream to the pipe 100 milliseconds before it is due to be played, set this to -0.1. Default setting is 0.0.</optdesc>
     </option>
     
     <option>
-    <p><opt>audio_backend_buffer_desired_length=</opt><arg>buffer_length_in_frames</arg><opt>;</opt></p>
+    <p><opt>audio_backend_buffer_desired_length_in_seconds=</opt><arg>buffer_length_in_seconds</arg><opt>;</opt></p>
     <optdesc>    
-    Use this setting, in frames, to set the size of the output buffer. It works by determining how soon the second and subsequent packets of audio frames are sent to the pipe.
-    For example, if you send the first packet of audio exactly when it is due and, using a <arg>audio_backend_buffer_desired_length</arg> setting of 44100,
-    send subsequent packets of audio a second before they are due to be played, they will be buffered in the pipe reader's buffer, giving it a nominal buffer size of 44,100 frames.
+    Use this setting, in seconds, to set the size of the output buffer. It works by determining how soon the second and subsequent packets of audio frames are sent to the pipe.
+    For example, if you send the first packet of audio exactly when it is due and, using a <arg>audio_backend_buffer_desired_length_in_seconds</arg> setting of 1.0,
+    send subsequent packets of audio a second before they are due to be played, they will be buffered in the pipe reader's buffer, giving it a nominal buffer size of 1 second.
     Note that if the pipe reader consumes audio packets faster or slower than they are supplied, the buffer will eventually empty or overflow --
-    shairport-sync performs no stuffing or interpolation when writing to a pipe. Default setting is 44,100 frames.
+    shairport-sync performs no stuffing or interpolation when writing to a pipe. Default setting is 1.0 seconds.
     </optdesc>
     </option>
      
     <option><p><opt>"STDOUT" SETTINGS</opt></p></option>
     <p>These settings are for the STDOUT backend, used to route audio to standard output ("stdout").
-    The audio is in raw CD audio format: PCM 16 bit little endian, 44,100 samples per second, interleaved stereo.</p>
+    The audio is in raw CD audio format, usually PCM 16 bit little endian, 44,100 samples per second, interleaved stereo.</p>
     <p>There are two settings affecting timing that might be useful if the stdout reader is, for example,
-    a program to play an audio stream such as <opt>aplay</opt>. The <arg>audio_backend_latency_offset</arg> affects precisely when the first audio packet is sent
-    and the <arg>audio_backend_buffer_desired_length</arg> setting affects the nominal output buffer size.</p>
+    a program to play an audio stream such as <opt>aplay</opt>. The <arg>audio_backend_latency_offset_in_seconds</arg> affects precisely when the first audio packet is sent
+    and the <arg>audio_backend_buffer_desired_length_in_seconds</arg> setting affects the nominal output buffer size.</p>
     <p>These are the settings available within the <opt>stdout</opt> group:</p>
 
     <option>
-    <p><opt>audio_backend_latency_offset=</opt><arg>offset_in_frames</arg><opt>;</opt></p>
+    <p><opt>audio_backend_latency_offset_in_seconds=</opt><arg>offset_in_seconds</arg><opt>;</opt></p>
     <optdesc>
     Packets of audio frames are written to stdout synchronously -- that is, they are written at exactly the time they should be played.
     You can offset the time of initial audio output relative to its nominal time using this setting.
-    For example to send an audio stream to stdout 100 milliseconds before it is due to be played, set this to -4410. Default setting is 0.</optdesc>
+    For example to send an audio stream to stdout 100 milliseconds before it is due to be played, set this to -0.1. Default setting is 0.0.</optdesc>
     </option>
 
     <option>
-    <p><opt>audio_backend_buffer_desired_length=</opt><arg>buffer_length_in_frames</arg><opt>;</opt></p>
+    <p><opt>audio_backend_buffer_desired_length_in_seconds=</opt><arg>buffer_length_in_seconds</arg><opt>;</opt></p>
     <optdesc>    
     Use this setting, in frames, to set the size of the output buffer. It works by determining how soon the second and subsequent packets of audio frames are sent to stdout.
-    For example, if you send the first packet of audio exactly when it is due and, using a <arg>audio_backend_buffer_desired_length</arg> setting of 44100,
-    send subsequent packets of audio a second before they are due to be played, they will be buffered in the stdout reader's buffer, giving it a nominal buffer size of 44,100 frames.
+    For example, if you send the first packet of audio exactly when it is due and, using a <arg>audio_backend_buffer_desired_length_in_seconds</arg> setting of 1.0,
+    send subsequent packets of audio a second before they are due to be played, they will be buffered in the stdout reader's buffer, giving it a nominal buffer size of 1 second.
     Note that if the stdout reader consumes audio packets faster or slower than they are supplied, the buffer will eventually empty or overflow --
-    shairport-sync performs no stuffing or interpolation when writing to stdout. Default setting is 44,100 frames.
+    shairport-sync performs no stuffing or interpolation when writing to stdout. Default setting is 1.0 seconds.
     </optdesc>
     </option>
     
     <option><p><opt>"AO" SETTINGS</opt></p></option>
     <p>These settings are for the AO backend, used for the libao audio library.</p>
-    <p>There are two settings affecting timing. The <arg>audio_backend_latency_offset</arg> affects precisely when the first audio packet is sent
-    and the <arg>audio_backend_buffer_desired_length</arg> setting affects the nominal output buffer size.</p>
+    <p>There are two settings affecting timing. The <arg>audio_backend_latency_offset_in_seconds</arg> affects precisely when the first audio packet is sent
+    and the <arg>audio_backend_buffer_desired_length_in_seconds</arg> setting affects the nominal output buffer size.</p>
     <p>These are the settings available within the <opt>ao</opt> group:</p>
 
 
     <option>
-    <p><opt>audio_backend_latency_offset=</opt><arg>offset_in_frames</arg><opt>;</opt></p>
+    <p><opt>audio_backend_latency_offset_in_seconds=</opt><arg>offset_in_seconds</arg><opt>;</opt></p>
     <optdesc>
     Packets of audio frames are written to the libao system synchronously -- that is, they are written at exactly the time they should be played.
     You can offset the time of initial audio output relative to its nominal time using this setting.
-    For example to send an audio stream to stdout 100 milliseconds before it is due to be played, set this to -4410. Default setting is 0.</optdesc>
+    For example to send an audio stream to stdout 100 milliseconds before it is due to be played, set this to -0.1. Default setting is 0.0.</optdesc>
     </option>
     
     <option>
-    <p><opt>audio_backend_buffer_desired_length=</opt><arg>buffer_length_in_frames</arg><opt>;</opt></p>
+    <p><opt>audio_backend_buffer_desired_length_in_seconds=</opt><arg>buffer_length_in_seconds</arg><opt>;</opt></p>
     <optdesc>    
-    Use this setting, in frames, to set the size of the output buffer. It works by determining how soon the second and subsequent packets of
+    Use this setting, in seconds, to set the size of the output buffer. It works by determining how soon the second and subsequent packets of
     audio frames are sent to the libao system.
-    For example, if you send the first packet of audio exactly when it is due and, using a <arg>audio_backend_buffer_desired_length</arg> setting of 44100,
-    send subsequent packets of audio a second before they are due to be played, they will be buffered in the stdout reader's buffer, giving it a nominal buffer size of 44,100 frames.
+    For example, if you send the first packet of audio exactly when it is due and, using a <arg>audio_backend_buffer_desired_length_in_seconds</arg> setting of 1.0,
+    send subsequent packets of audio a second before they are due to be played, they will be buffered in the stdout reader's buffer, giving it a nominal buffer size of 1 second.
     Note that if the libao system consumes audio packets faster or slower than they are supplied, the buffer will eventually empty or overflow --
-    shairport-sync performs no stuffing or interpolation when writing to libao. Default setting is 44,100 frames.
+    shairport-sync performs no stuffing or interpolation when writing to libao. Default setting is 1.0 seconds.
     </optdesc>
     </option>
     
@@ -443,39 +469,6 @@
     then wait for <arg>seconds</arg> seconds before ending the session. Once the session has terminated, other devices can use it.
     The default is 120 seconds.</optdesc>
     </option>
-
-     <option><p><opt>"LATENCIES" SETTINGS</opt></p></option>
-     <p>The latencies settings are now deprecated. Do not use them for new installations. They will be removed from a future version of shairport-sync.</p>
-     <p>Latency is the exact time from a sound signal's original timestamp until that signal actually "appears" on the output of the audio output device,
-     usually a Digital to Audio Converter (DAC), irrespective of any internal delays, processing times, etc. in the computer.</p>
-     
-     <p>shairport-sync now sets latencies automatically using information supplied by the source, typically either 88,200 or 99,577 frames.</p>
-          
-    <p>The following relates to the old scheme of using fixed latencies, which ignored the latency information supplied by the source.
-    There are four default latency settings. One latency matches the latency used by recent versions of
-    iTunes when playing audio and another matches the latency
-    used by so-called "AirPlay" devices, including iOS devices and iTunes and Quicktime Player when they are playing video.
-    A third latency is used when the audio source is forked-daapd. The fourth latency is the default if no other latency is chosen and is used for older versions of iTunes.</p>
-    <p>Note: If you are thinking of changing latencies to compensate for a delay in the audio output device, then
-    instead of changing these individual latencies, use the <opt>audio_backend_latency_offset</opt> setting in the <opt>alsa</opt> group
-    (or the appropriate other group if you're not outputing through the alsa backend).</p>
-
-    <option>
-    <p><opt>itunes=</opt><arg>latency</arg><opt>;</opt></p>
-    <optdesc>This is the <arg>latency</arg>, in frames, used for iTunes 10 or later. Default is 99,400.</optdesc>
-    </option>
-    <option>
-    <p><opt>airplay=</opt><arg>latency</arg><opt>;</opt></p>
-   <optdesc>This is the <arg>latency</arg>, in frames, used for AirPlay devices, including iOS devices and iTunes and Quicktime Player when they are playing video. Default is 88,200.</optdesc>
-    </option>
-    <option>
-    <p><opt>forkedDaapd=</opt><arg>latency</arg><opt>;</opt></p>
-   <optdesc>This is the <arg>latency</arg>, in frames, used for forkedDaapd sources. Default is 99,400.</optdesc>
-   </option>
-    <option>
-    <p><opt>default=</opt><arg>latency</arg><opt>;</opt></p>
-   <optdesc>This is the <arg>latency</arg>, in frames, used when the source is unrecognised. Default is 88,200.</optdesc>
-   </option>
     
 	</section>
 
@@ -507,21 +500,10 @@
 		<p>The following substitutions are allowed:
 		<opt>%h</opt> for the computer's hostname,
 		<opt>%H</opt> for the computer's hostname with the first letter capitalised (ASCII only),
-		<opt>%v</opt> for the shairport-sync version number, e.g. "2.8.4" and
-		<opt>%V</opt> for the shairport-sync version string, e.g. "2.8.4-OpenSSL-Avahi-ALSA-soxr-metadata".</p> 
+		<opt>%v</opt> for the shairport-sync version number, e.g. "3.0.1" and
+		<opt>%V</opt> for the shairport-sync version string, e.g. "3.0.1-OpenSSL-Avahi-ALSA-soxr-metadata-sysconfdir:/etc".</p> 
     <p>The default is "%H", which is replaced by the hostname with the first letter capitalised.</p>
     </p></optdesc>
-	  </option>
-
-	  <option>
-		<p><opt>-A | --AirPlayLatency=</opt><arg>latency</arg></p>
-		<optdesc><p>
-		Use this <arg>latency</arg>, in frames, for audio streamed from an AirPlay
-    device. The default is 88,200 frames, where there are 44,100
-    frames to the second.
-    </p>
-    <p>Please note that this feature is deprecated and will be removed in a future version of shairport-sync.</p>
-    </optdesc>
 	  </option>
 
 	  <option>
@@ -579,17 +561,6 @@
 	  </option>
 
 	  <option>
-		<p><opt>--forkedDaapdLatency=</opt><arg>latency</arg></p>
-		<optdesc><p>
-		Use this <arg>latency</arg>, in frames, for audio streamed from a forked-daapd based
-    source. The default is 99,400 frames, where there are 44,100
-    frames to the second.
-    </p>
-    <p>Please note that this feature is deprecated and will be removed in a future version of shairport-sync.</p>
-    </optdesc>
-	  </option>
-	  
-	  <option>
 		<p><opt>--get-coverart</opt></p>
 		<optdesc><p>
 		This option requires the <opt>--meta-dir</opt> option to be set, and enables
@@ -605,17 +576,6 @@
 		<optdesc><p>
 		Print brief help message and exit.
 		</p></optdesc>
-	  </option>
-
-	  <option>
-		<p><opt>-i | --iTunesLatency=</opt><arg>latency</arg></p>
-		<optdesc><p>
-		Use this <arg>latency</arg>, in frames, for audio streamed from an iTunes
-    source, where iTunes is Version 10 or later. The default is 99,400 frames, where there are 44,100
-    frames to the second. If the source is iTunes but is earler than Version 10, the <arg>default latency</arg> is used (see the <opt>-L</opt> option). Some third party programs masquerade as older versions of iTunes.
-    </p>
-    <p>Please note that this feature is deprecated and will be removed in a future version of shairport-sync.</p>
-    </optdesc>
 	  </option>
 
 	  <option>
@@ -699,7 +659,7 @@
     If the output timing differs from the source timing by more than
     the threshold, output will be muted and a full resynchronisation
     will occur. The default threshold is 2,205 frames, i.e. 50
-    milliseconds. Specify <opt>0</opt> to disable resynchronisation.
+    milliseconds. Specify <opt>0</opt> to disable resynchronisation. This setting is deprecated and will be removed in a future version of shairport-sync.
 		</p></optdesc>
 	  </option>
 
@@ -747,7 +707,7 @@
 		Allow playback to be up to <arg>frames</arg> out of exact synchronization before attempting to correct it.
 		The default is 88 frames, i.e. 2 ms. The smaller the tolerance, the more likely it is that overcorrection will occur.
 		Overcorrection is when more corrections (insertions and deletions) are made than are strictly necessary to keep the stream in sync. Use the <opt>--statistics</opt> option to
-		monitor correction levels. Corrections should not greatly exceed net corrections.
+		monitor correction levels. Corrections should not greatly exceed net corrections. This setting is deprecated and will be removed in a future version of shairport-sync.
 		</p></optdesc>
 	  </option>
 

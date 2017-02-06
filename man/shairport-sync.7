@@ -2,7 +2,7 @@
 .SH NAME
 shairport-sync \- Synchronised Audio Player for iTunes / AirPlay
 .SH SYNOPSIS
-\fBshairport-sync [-dvw]\fB [-a \fB\fIname\fB]\fB [-A \fB\fIlatency\fB]\fB [-B \fB\fIcommand\fB]\fB [-c \fB\fIconfigurationfile\fB]\fB [-E \fB\fIcommand\fB]\fB [--forkedDaapdLatency=\fB\fIlatency\fB]\fB [--get-cover-art]\fB [-i \fB\fIlatency\fB]\fB [-L \fB\fIlatency\fB]\fB [-m \fB\fIbackend\fB]\fB [--meta-dir=\fB\fIdirectory\fB]\fB [-o \fB\fIbackend\fB]\fB [--password=\fB\fIsecret\fB]\fB [-r \fB\fIthreshold\fB]\fB [--statistics]\fB [-S \fB\fImode\fB]\fB [-t \fB\fItimeout\fB]\fB [--tolerance=\fB\fIframes\fB]\fB [-- \fB\fIaudio_backend_options\fB]\fB
+\fBshairport-sync [-dvw]\fB [-a \fB\fIname\fB]\fB [-A \fB\fIlatency\fB]\fB [-B \fB\fIcommand\fB]\fB [-c \fB\fIconfigurationfile\fB]\fB [-E \fB\fIcommand\fB]\fB [--get-cover-art]\fB [-L \fB\fIlatency\fB]\fB [-m \fB\fIbackend\fB]\fB [--meta-dir=\fB\fIdirectory\fB]\fB [-o \fB\fIbackend\fB]\fB [--password=\fB\fIsecret\fB]\fB [-r \fB\fIthreshold\fB]\fB [--statistics]\fB [-S \fB\fImode\fB]\fB [-t \fB\fItimeout\fB]\fB [--tolerance=\fB\fIframes\fB]\fB [-- \fB\fIaudio_backend_options\fB]\fB
 
 shairport-sync -D\fB
 
@@ -89,17 +89,20 @@ When shairport-sync starts to play audio, it establises three UDP connections to
 \fBudp_port_range=\f1\fIrange\f1\fB;\f1
 Use this in conjunction with the prevous setting to specify the \fIrange\f1 of ports that can be checked for availability. Only three ports are needed. The default is 100, thus 100 ports will be checked from port 6001 upwards until three are found. 
 .TP
-\fBdrift=\f1\fIframes\f1\fB;\f1
-Allow playback to drift up to \fIframes\f1 out of exact synchronization before attempting to correct it. The default is 88 frames, i.e. 2 ms. The smaller the tolerance, the more likely it is that overcorrection will occur. Overcorrection is when more corrections (insertions and deletions) are made than are strictly necessary to keep the stream in sync. Use the \fBstatistics\f1 setting to monitor correction levels. Corrections should not greatly exceed net corrections. 
+\fBdrift_tolerance_in_seconds=\f1\fIseconds\f1\fB;\f1
+Allow playback to drift up to \fIseconds\f1 out of exact synchronization before attempting to correct it. The default is 0.002 seconds, i.e. 2 milliseconds. The smaller the tolerance, the more likely it is that overcorrection will occur. Overcorrection is when more corrections (insertions and deletions) are made than are strictly necessary to keep the stream in sync. Use the \fBstatistics\f1 setting to monitor correction levels. Corrections should not greatly exceed net corrections. This setting replaces the deprecated \fBdrift\f1 setting. 
 .TP
-\fBresync_threshold=\f1\fIthreshold\f1\fB;\f1
-Resynchronise if timings differ by more than \fIthreshold\f1 frames. If the output timing differs from the source timing by more than the threshold, output will be muted and a full resynchronisation will occur. The default threshold is 2,205 frames, i.e. 50 milliseconds. Specify 0 to disable resynchronisation. 
+\fBresync_threshold_in_seconds=\f1\fIthreshold\f1\fB;\f1
+Resynchronise if timings differ by more than \fIthreshold\f1 seconds. If the output timing differs from the source timing by more than the threshold, output will be muted and a full resynchronisation will occur. The default threshold is 0.050 seconds, i.e. 50 milliseconds. Specify 0.0 to disable resynchronisation. This setting replaces the deprecated \fBresync_threshold\f1 setting. 
 .TP
 \fBlog_verbosity=\f1\fI0\f1\fB;\f1
 Use this to specify how much debugging information should be output or logged. "0" means no debug information, "3" means most debug information. The default is "0". 
 .TP
 \fBignore_volume_control=\f1\fI"choice"\f1\fB;\f1
 Set this \fIchoice\f1 to "yes" if you want the volume to be at 100% no matter what the source's volume control is set to. This might be useful if you want to set the volume on the output device, independently of the setting at the source. The default is "no". 
+.TP
+\fBvolume_max_db=\f1\fIdBvalue\f1\fB;\f1
+Specify the maximum output level to be used with the hardware mixer, if used. If no hardware mixed is used, this setting speciies the maximum setting permissible in the software mixer, which has an attenuation of from 0.0 dB down to -96.3 dB.
 .TP
 \fBvolume_range_db=\f1\fIdBvalue\f1\fB;\f1
 Use this \fIdBvalue\f1 to reduce or increase the attenuation range, in decibels, between the minimum and maximum volume.
@@ -116,7 +119,13 @@ If you omit this setting, the full "native" range of the mixer is used.
 Use this advanced setting to set the service type and transport to be advertised by Zeroconf/Bonjour. Default is "_raop._tcp". 
 .TP
 \fBplayback_mode=\f1\fI"mode"\f1\fB;\f1
-The \fImode\f1 can be "stereo" or "mono". Default is "stereo". 
+The \fImode\f1 can be "stereo", "mono", "reverse stereo", "both left" or "both right". Default is "stereo". 
+.TP
+\fBinterface=\f1\fI"name"\f1\fB;\f1
+Use this advanced setting if you want to confine Shairport Sync to the named interface. Leave it commented out to get the default bahaviour. 
+.TP
+\fBalac_decoder=\f1\fI"decodername"\f1\fB;\f1
+This can be "hammerton" or "apple". This advanced setting allows you to choose the original Shairport decoder by David Hammerton or the Apple Lossless Audio Codec (ALAC) decoder written by Apple. Shairport Sync must have been compiled with the configuration setting "--with-apple-alac" and the Apple ALAC decoder library must be present for this to work. 
 .TP
 \fB"ALSA" SETTINGS\f1
 These settings are for the ALSA back end, used to communicate with audio output devices in the ALSA system. (By the way, you can use tools such as \fBalsamixer\f1 or \fBaplay\f1 to discover what devices are available.) Use these settings to select the output device and the mixer control to be used to control the output volume. You can additionally set the desired size of the output buffer and you can adjust overall latency. Here are the \fBalsa\f1 group settings:
@@ -132,11 +141,17 @@ This setting is deprecated and is ignored. For your information, its functionali
 \fBmixer_device=\f1\fI"mixer_device"\f1\fB;\f1
 By default, the mixer is assumed to be output_device. Use this setting to specify a device other than the output device. 
 .TP
-\fBaudio_backend_latency_offset=\f1\fIoffset\f1\fB;\f1
-Set this \fIoffset\f1, in frames, to compensate for a fixed delay in the audio back end. For example, if the output device delays by 100 ms, set this to -4410. 
+\fBaudio_backend_latency_offset_in_seconds=\f1\fIoffset\f1\fB;\f1
+Set this \fIoffset\f1, in seconds, to compensate for a fixed delay in the audio back end. For example, if the output device delays by 100 ms, set this to -0.1. 
 .TP
-\fBaudio_backend_buffer_desired_length=\f1\fIlength\f1\fB;\f1
-Use this to set the desired number frames to be in the output device's hardware output buffer. The default is 6,615 frames, or 0.15 seconds. If set too small, buffer underflow may occur on low-powered machines. If too large, the response times when using software volume control (i.e. when not using a mixer control to control volume) become annoying, or it may exceed the hardware buffer size. It may need to be larger on low-powered machines that are also performing other tasks, such as processing metadata. 
+\fBaudio_backend_buffer_desired_length_in_seconds=\f1\fIlength\f1\fB;\f1
+Use this to set the desired length, in seconds, of the queue of audio frames in the output device's hardware output buffer. The default is 0.15 seconds. If set too small, buffer underflow may occur on low-powered machines. If too large, the response times when using software volume control (i.e. when not using a mixer control to control volume) become annoying, or it may exceed the hardware buffer size. It may need to be larger on low-powered machines that are also performing other tasks, such as processing metadata. 
+.TP
+\fBoutput_rate=\f1\fIframe rate\f1\fB;\f1
+Use this setting to specify the frame rate to output to the ALSA device. Allowable values are 44100 (default), 88200, 176400 and 352800. The device must have the capability to accept the format you specify. There is no particular reason to use anything other than 44100 if it is available. 
+.TP
+\fBoutput_format=\f1\fI"format"\f1\fB;\f1
+Use this setting to specify the format that should be used to send data to the ALSA device. Allowable values are "U8", "S8", "S16", "S24", "S24_3LE", "S24_3BE" or "S32". The device must have the capability to accept the format you specify. "S" means signed; "U" means unsigned; BE means big-endian and LE means little-endian. Except where stated (using *LE or *BE), endianness matches that of the processor. The default is "S16". If you are using a hardware mixer, the best setting is S16, as audio will pass through Shairport Sync unmodifed except for interpolation. If you are using the software mixer, use 32- or 24-bit, if your device is capable of it, to get the lowest possible levels of dither. 
 .TP
 \fBdisable_synchronization=\f1\fI"no"\f1\fB;\f1
 This is an advanced setting and is for debugging only. Set to "yes" to disable synchronization. Default is "no". If you use it to disable synchronisation, then sooner or later you'll experience audio glitches due to audio buffer overflow or underflow. 
@@ -152,44 +167,44 @@ These settings are for the PIPE backend, used to route audio to a named unix pip
 
 Use the \fIname\f1 setting to set the name and location of the pipe.
 
-There are two further settings affecting timing that might be useful if the pipe reader is, for example, a program to play an audio stream such as \fBaplay\f1. The \fIaudio_backend_latency_offset\f1 affects precisely when the first audio packet is sent and the \fIaudio_backend_buffer_desired_length\f1 setting affects the nominal output buffer size.
+There are two further settings affecting timing that might be useful if the pipe reader is, for example, a program to play an audio stream such as \fBaplay\f1. The \fIaudio_backend_latency_offset_in_seconds\f1 affects precisely when the first audio packet is sent and the \fIaudio_backend_buffer_desired_length_in_seconds\f1 setting affects the nominal output buffer size.
 
 These are the settings available within the \fBpipe\f1 group:
 .TP
 \fBname=\f1\fI"/path/to/pipe"\f1\fB;\f1
 Use this to specify the name and location of the pipe. The pipe will be created and opened when shairport-sync starts up and will be closed upon shutdown. Frames of audio will be sent to the pipe in packets of 352 frames and will be discarded if the pipe has not have a reader attached. The sender will wait for up to five seconds for a packet to be written before discarding it. 
 .TP
-\fBaudio_backend_latency_offset=\f1\fIoffset_in_frames\f1\fB;\f1
-Packets of audio frames are written to the pipe synchronously -- that is, they are written at exactly the time they should be played. You can offset the time of initial audio output relative to its nominal time using this setting. For example to send an audio stream to the pipe 100 milliseconds before it is due to be played, set this to -4410. Default setting is 0. 
+\fBaudio_backend_latency_offset_in_seconds=\f1\fIoffset_in_seconds\f1\fB;\f1
+Packets of audio frames are written to the pipe synchronously -- that is, they are written at exactly the time they should be played. You can offset the time of initial audio output relative to its nominal time using this setting. For example to send an audio stream to the pipe 100 milliseconds before it is due to be played, set this to -0.1. Default setting is 0.0. 
 .TP
-\fBaudio_backend_buffer_desired_length=\f1\fIbuffer_length_in_frames\f1\fB;\f1
-Use this setting, in frames, to set the size of the output buffer. It works by determining how soon the second and subsequent packets of audio frames are sent to the pipe. For example, if you send the first packet of audio exactly when it is due and, using a \fIaudio_backend_buffer_desired_length\f1 setting of 44100, send subsequent packets of audio a second before they are due to be played, they will be buffered in the pipe reader's buffer, giving it a nominal buffer size of 44,100 frames. Note that if the pipe reader consumes audio packets faster or slower than they are supplied, the buffer will eventually empty or overflow -- shairport-sync performs no stuffing or interpolation when writing to a pipe. Default setting is 44,100 frames. 
+\fBaudio_backend_buffer_desired_length_in_seconds=\f1\fIbuffer_length_in_seconds\f1\fB;\f1
+Use this setting, in seconds, to set the size of the output buffer. It works by determining how soon the second and subsequent packets of audio frames are sent to the pipe. For example, if you send the first packet of audio exactly when it is due and, using a \fIaudio_backend_buffer_desired_length_in_seconds\f1 setting of 1.0, send subsequent packets of audio a second before they are due to be played, they will be buffered in the pipe reader's buffer, giving it a nominal buffer size of 1 second. Note that if the pipe reader consumes audio packets faster or slower than they are supplied, the buffer will eventually empty or overflow -- shairport-sync performs no stuffing or interpolation when writing to a pipe. Default setting is 1.0 seconds. 
 .TP
 \fB"STDOUT" SETTINGS\f1
-These settings are for the STDOUT backend, used to route audio to standard output ("stdout"). The audio is in raw CD audio format: PCM 16 bit little endian, 44,100 samples per second, interleaved stereo.
+These settings are for the STDOUT backend, used to route audio to standard output ("stdout"). The audio is in raw CD audio format, usually PCM 16 bit little endian, 44,100 samples per second, interleaved stereo.
 
-There are two settings affecting timing that might be useful if the stdout reader is, for example, a program to play an audio stream such as \fBaplay\f1. The \fIaudio_backend_latency_offset\f1 affects precisely when the first audio packet is sent and the \fIaudio_backend_buffer_desired_length\f1 setting affects the nominal output buffer size.
+There are two settings affecting timing that might be useful if the stdout reader is, for example, a program to play an audio stream such as \fBaplay\f1. The \fIaudio_backend_latency_offset_in_seconds\f1 affects precisely when the first audio packet is sent and the \fIaudio_backend_buffer_desired_length_in_seconds\f1 setting affects the nominal output buffer size.
 
 These are the settings available within the \fBstdout\f1 group:
 .TP
-\fBaudio_backend_latency_offset=\f1\fIoffset_in_frames\f1\fB;\f1
-Packets of audio frames are written to stdout synchronously -- that is, they are written at exactly the time they should be played. You can offset the time of initial audio output relative to its nominal time using this setting. For example to send an audio stream to stdout 100 milliseconds before it is due to be played, set this to -4410. Default setting is 0. 
+\fBaudio_backend_latency_offset_in_seconds=\f1\fIoffset_in_seconds\f1\fB;\f1
+Packets of audio frames are written to stdout synchronously -- that is, they are written at exactly the time they should be played. You can offset the time of initial audio output relative to its nominal time using this setting. For example to send an audio stream to stdout 100 milliseconds before it is due to be played, set this to -0.1. Default setting is 0.0. 
 .TP
-\fBaudio_backend_buffer_desired_length=\f1\fIbuffer_length_in_frames\f1\fB;\f1
-Use this setting, in frames, to set the size of the output buffer. It works by determining how soon the second and subsequent packets of audio frames are sent to stdout. For example, if you send the first packet of audio exactly when it is due and, using a \fIaudio_backend_buffer_desired_length\f1 setting of 44100, send subsequent packets of audio a second before they are due to be played, they will be buffered in the stdout reader's buffer, giving it a nominal buffer size of 44,100 frames. Note that if the stdout reader consumes audio packets faster or slower than they are supplied, the buffer will eventually empty or overflow -- shairport-sync performs no stuffing or interpolation when writing to stdout. Default setting is 44,100 frames. 
+\fBaudio_backend_buffer_desired_length_in_seconds=\f1\fIbuffer_length_in_seconds\f1\fB;\f1
+Use this setting, in frames, to set the size of the output buffer. It works by determining how soon the second and subsequent packets of audio frames are sent to stdout. For example, if you send the first packet of audio exactly when it is due and, using a \fIaudio_backend_buffer_desired_length_in_seconds\f1 setting of 1.0, send subsequent packets of audio a second before they are due to be played, they will be buffered in the stdout reader's buffer, giving it a nominal buffer size of 1 second. Note that if the stdout reader consumes audio packets faster or slower than they are supplied, the buffer will eventually empty or overflow -- shairport-sync performs no stuffing or interpolation when writing to stdout. Default setting is 1.0 seconds. 
 .TP
 \fB"AO" SETTINGS\f1
 These settings are for the AO backend, used for the libao audio library.
 
-There are two settings affecting timing. The \fIaudio_backend_latency_offset\f1 affects precisely when the first audio packet is sent and the \fIaudio_backend_buffer_desired_length\f1 setting affects the nominal output buffer size.
+There are two settings affecting timing. The \fIaudio_backend_latency_offset_in_seconds\f1 affects precisely when the first audio packet is sent and the \fIaudio_backend_buffer_desired_length_in_seconds\f1 setting affects the nominal output buffer size.
 
 These are the settings available within the \fBao\f1 group:
 .TP
-\fBaudio_backend_latency_offset=\f1\fIoffset_in_frames\f1\fB;\f1
-Packets of audio frames are written to the libao system synchronously -- that is, they are written at exactly the time they should be played. You can offset the time of initial audio output relative to its nominal time using this setting. For example to send an audio stream to stdout 100 milliseconds before it is due to be played, set this to -4410. Default setting is 0. 
+\fBaudio_backend_latency_offset_in_seconds=\f1\fIoffset_in_seconds\f1\fB;\f1
+Packets of audio frames are written to the libao system synchronously -- that is, they are written at exactly the time they should be played. You can offset the time of initial audio output relative to its nominal time using this setting. For example to send an audio stream to stdout 100 milliseconds before it is due to be played, set this to -0.1. Default setting is 0.0. 
 .TP
-\fBaudio_backend_buffer_desired_length=\f1\fIbuffer_length_in_frames\f1\fB;\f1
-Use this setting, in frames, to set the size of the output buffer. It works by determining how soon the second and subsequent packets of audio frames are sent to the libao system. For example, if you send the first packet of audio exactly when it is due and, using a \fIaudio_backend_buffer_desired_length\f1 setting of 44100, send subsequent packets of audio a second before they are due to be played, they will be buffered in the stdout reader's buffer, giving it a nominal buffer size of 44,100 frames. Note that if the libao system consumes audio packets faster or slower than they are supplied, the buffer will eventually empty or overflow -- shairport-sync performs no stuffing or interpolation when writing to libao. Default setting is 44,100 frames. 
+\fBaudio_backend_buffer_desired_length_in_seconds=\f1\fIbuffer_length_in_seconds\f1\fB;\f1
+Use this setting, in seconds, to set the size of the output buffer. It works by determining how soon the second and subsequent packets of audio frames are sent to the libao system. For example, if you send the first packet of audio exactly when it is due and, using a \fIaudio_backend_buffer_desired_length_in_seconds\f1 setting of 1.0, send subsequent packets of audio a second before they are due to be played, they will be buffered in the stdout reader's buffer, giving it a nominal buffer size of 1 second. Note that if the libao system consumes audio packets faster or slower than they are supplied, the buffer will eventually empty or overflow -- shairport-sync performs no stuffing or interpolation when writing to libao. Default setting is 1.0 seconds. 
 .TP
 \fB"METADATA" SETTINGS\f1
 shairport-sync can process metadata provided by the source, such as Track Number, Album Name, cover art, etc. and can provide additional metadata such as volume level, pause/resume, etc. It sends the metadata to a pipe, by default \fI/tmp/shairport-sync-metadata\f1. To process metadata, shairport-sync must have been compiled with metadata support included. You can check that this is so by running the command \fB$ shairport-sync -V\f1; the identification string will contain the word \fBmetadata\f1.
@@ -233,29 +248,6 @@ If \fBchoice\f1 is set to "yes", then another source will be able to interrupt a
 .TP
 \fBsession_timeout=\f1\fIseconds\f1\fB;\f1
 If a play session has been established and the source disappears without warning (such as a device going out of range of a network) then wait for \fIseconds\f1 seconds before ending the session. Once the session has terminated, other devices can use it. The default is 120 seconds. 
-.TP
-\fB"LATENCIES" SETTINGS\f1
-The latencies settings are now deprecated. Do not use them for new installations. They will be removed from a future version of shairport-sync.
-
-Latency is the exact time from a sound signal's original timestamp until that signal actually "appears" on the output of the audio output device, usually a Digital to Audio Converter (DAC), irrespective of any internal delays, processing times, etc. in the computer.
-
-shairport-sync now sets latencies automatically using information supplied by the source, typically either 88,200 or 99,577 frames.
-
-The following relates to the old scheme of using fixed latencies, which ignored the latency information supplied by the source. There are four default latency settings. One latency matches the latency used by recent versions of iTunes when playing audio and another matches the latency used by so-called "AirPlay" devices, including iOS devices and iTunes and Quicktime Player when they are playing video. A third latency is used when the audio source is forked-daapd. The fourth latency is the default if no other latency is chosen and is used for older versions of iTunes.
-
-Note: If you are thinking of changing latencies to compensate for a delay in the audio output device, then instead of changing these individual latencies, use the \fBaudio_backend_latency_offset\f1 setting in the \fBalsa\f1 group (or the appropriate other group if you're not outputing through the alsa backend).
-.TP
-\fBitunes=\f1\fIlatency\f1\fB;\f1
-This is the \fIlatency\f1, in frames, used for iTunes 10 or later. Default is 99,400. 
-.TP
-\fBairplay=\f1\fIlatency\f1\fB;\f1
-This is the \fIlatency\f1, in frames, used for AirPlay devices, including iOS devices and iTunes and Quicktime Player when they are playing video. Default is 88,200. 
-.TP
-\fBforkedDaapd=\f1\fIlatency\f1\fB;\f1
-This is the \fIlatency\f1, in frames, used for forkedDaapd sources. Default is 99,400. 
-.TP
-\fBdefault=\f1\fIlatency\f1\fB;\f1
-This is the \fIlatency\f1, in frames, used when the source is unrecognised. Default is 88,200. 
 .SH OPTIONS
 This section is about the command-line options available in shairport-sync.
 
@@ -268,14 +260,9 @@ There are two kinds of command-line options for shairport-sync: regular \fBprogr
 These command-line options are used by shairport-sync itself.
 .TP
 \fB-a \f1\fIservice name\f1\fB | --name=\f1\fIservice name\f1
-Use this \fIservice name\f1 to identify this player in iTunes, etc. The following substitutions are allowed: \fB%h\f1 for the computer's hostname, \fB%H\f1 for the computer's hostname with the first letter capitalised (ASCII only), \fB%v\f1 for the shairport-sync version number, e.g. "2.8.4" and \fB%V\f1 for the shairport-sync version string, e.g. "2.8.4-OpenSSL-Avahi-ALSA-soxr-metadata".
+Use this \fIservice name\f1 to identify this player in iTunes, etc. The following substitutions are allowed: \fB%h\f1 for the computer's hostname, \fB%H\f1 for the computer's hostname with the first letter capitalised (ASCII only), \fB%v\f1 for the shairport-sync version number, e.g. "3.0.1" and \fB%V\f1 for the shairport-sync version string, e.g. "3.0.1-OpenSSL-Avahi-ALSA-soxr-metadata-sysconfdir:/etc".
 
 The default is "%H", which is replaced by the hostname with the first letter capitalised.
-.TP
-\fB-A | --AirPlayLatency=\f1\fIlatency\f1
-Use this \fIlatency\f1, in frames, for audio streamed from an AirPlay device. The default is 88,200 frames, where there are 44,100 frames to the second. 
-
-Please note that this feature is deprecated and will be removed in a future version of shairport-sync.
 .TP
 \fB-B \f1\fIprogram\f1\fB | --on-start=\f1\fIprogram\f1
 Execute \fIprogram\f1 when playback is about to begin. Specify the full path to the program, e.g. \fI/usr/bin/logger\f1. Executable scripts can be used, but they must have \fI#!/bin/sh\f1 (or whatever is appropriate) in the headline.
@@ -298,11 +285,6 @@ Execute \fIprogram\f1 when playback has ended. Specify the full path to the prog
 
 If you want shairport-sync to wait until the command has completed before continuing, select the \fB-w\f1 option as well. 
 .TP
-\fB--forkedDaapdLatency=\f1\fIlatency\f1
-Use this \fIlatency\f1, in frames, for audio streamed from a forked-daapd based source. The default is 99,400 frames, where there are 44,100 frames to the second. 
-
-Please note that this feature is deprecated and will be removed in a future version of shairport-sync.
-.TP
 \fB--get-coverart\f1
 This option requires the \fB--meta-dir\f1 option to be set, and enables shairport-sync to request cover art from the source and to transmit it through the metadata pipe.
 
@@ -310,11 +292,6 @@ Please note that cover art data may be very large, and may place too great a bur
 .TP
 \fB-h | --help\f1
 Print brief help message and exit. 
-.TP
-\fB-i | --iTunesLatency=\f1\fIlatency\f1
-Use this \fIlatency\f1, in frames, for audio streamed from an iTunes source, where iTunes is Version 10 or later. The default is 99,400 frames, where there are 44,100 frames to the second. If the source is iTunes but is earler than Version 10, the \fIdefault latency\f1 is used (see the \fB-L\f1 option). Some third party programs masquerade as older versions of iTunes. 
-
-Please note that this feature is deprecated and will be removed in a future version of shairport-sync.
 .TP
 \fB-k | --kill\f1
 Kill the shairport-sync daemon and exit. (Requires that the daemon has written its PID to an agreed file -- see the \fB-d\f1 option). 
@@ -345,7 +322,7 @@ Reconnect the shairport-sync daemon to the output device and exit. It may take a
 Please note that this feature is deprecated and will be removed in a future version of shairport-sync.
 .TP
 \fB-r \f1\fIthreshold\f1\fB | --resync=\f1\fIthreshold\f1
-Resynchronise if timings differ by more than \fIthreshold\f1 frames. If the output timing differs from the source timing by more than the threshold, output will be muted and a full resynchronisation will occur. The default threshold is 2,205 frames, i.e. 50 milliseconds. Specify \fB0\f1 to disable resynchronisation. 
+Resynchronise if timings differ by more than \fIthreshold\f1 frames. If the output timing differs from the source timing by more than the threshold, output will be muted and a full resynchronisation will occur. The default threshold is 2,205 frames, i.e. 50 milliseconds. Specify \fB0\f1 to disable resynchronisation. This setting is deprecated and will be removed in a future version of shairport-sync. 
 .TP
 \fB--statistics\f1
 Print some statistics in the standard output, or in the logfile if in daemon mode. 
@@ -359,7 +336,7 @@ Exit play mode if the stream disappears for more than \fItimeout\f1 seconds.
 When shairport-sync plays an audio stream, it starts a play session and will return a busy signal to any other sources that attempt to use it. If the audio stream disappears for longer than \fItimeout\f1 seconds, the play session will be terminated. If you specify a timeout time of \fB0\f1, shairport-sync will never signal that it is busy and will not prevent other sources from "barging in" on an existing play session. The default value is 120 seconds. 
 .TP
 \fB--tolerance=\f1\fIframes\f1
-Allow playback to be up to \fIframes\f1 out of exact synchronization before attempting to correct it. The default is 88 frames, i.e. 2 ms. The smaller the tolerance, the more likely it is that overcorrection will occur. Overcorrection is when more corrections (insertions and deletions) are made than are strictly necessary to keep the stream in sync. Use the \fB--statistics\f1 option to monitor correction levels. Corrections should not greatly exceed net corrections. 
+Allow playback to be up to \fIframes\f1 out of exact synchronization before attempting to correct it. The default is 88 frames, i.e. 2 ms. The smaller the tolerance, the more likely it is that overcorrection will occur. Overcorrection is when more corrections (insertions and deletions) are made than are strictly necessary to keep the stream in sync. Use the \fB--statistics\f1 option to monitor correction levels. Corrections should not greatly exceed net corrections. This setting is deprecated and will be removed in a future version of shairport-sync. 
 .TP
 \fB-V | --version\f1
 Print version information and exit. 
