@@ -86,7 +86,7 @@ Debian, Ubuntu and Raspbian users can get the basics with:
 - `apt-get install libmbedtls-dev` if you want to use mbed TLS, or use OpenSSL/libcrypto otherwise. (You can still use PolarSSL with `apt-get install libpolarssl-dev` if you want to use PolarSSL, but it is deprecated as it's not longer being supported. It is suggested you use mbed TLS instead.)
 - `apt-get install libsoxr-dev` if you want support for libsoxr-based resampling. This library is in many recent distributions, including Jessie and Raspbian Jessie; if not, instructions for how to build it from source for Rasbpian/Debian Wheezy are available at [LIBSOXR.md](https://github.com/mikebrady/shairport-sync/blob/development/LIBSOXR.md).
 
-If you wish to include the Apple ALAC decoder, you need install it first -- please refer to the [ALAC](https://github.com/mikebrady/alac) repository for more information.
+If you wish to include the Apple ALAC decoder, you need install it first – please refer to the [ALAC](https://github.com/mikebrady/alac) repository for more information.
 
 **Download Shairport Sync:**
 
@@ -246,11 +246,11 @@ Please note that the full path to the programs must be specified, and script fil
 Note: Shairport Sync can take configuration settings from command line options. This is mainly for backward compatability, but sometimes still useful. For normal use, it is strongly recommended that you use the configuration file method.
 
 **Raspberry Pi**
-The Raspberry Pi has a built-in audio DAC that is connected to the device's headphone jack. This provides a low-quality output that is nevertheless useful for testing purposes and may be adequate for [very] casual listening. It is not HiFi -- it is quite noisy and can't play anything above about 15kHz. A further problem is that it declares itself to have a very large mixer volume control range -- all the way from -102.38dB up to +4dB, a range of 106.38 dB. In reality, only the top 30dB of it is in any way usable. To help get the most from the DAC, consider using the `volume_range_db` setting in the `general` stanza to instruct Shairport Sync to use the top of the DAC mixer's declared range. For example, if you set the `volume_range_db` figure to 30, the top 30 dB of the range will the used. With this setting on the Raspberry Pi, maximum volume will be +4dB and minimum volume will be -26dB, below which muting will occur.
+The Raspberry Pi has a built-in audio DAC that is connected to the device's headphone jack. This provides a low-quality output that is nevertheless useful for testing purposes and may be adequate for [very] casual listening. It is not HiFi – it is quite noisy and can't play anything above about 15kHz. A further problem is that it declares itself to have a very large mixer volume control range – all the way from -102.38dB up to +4dB, a range of 106.38 dB. In reality, only the top 30dB of it is in any way usable. To help get the most from the DAC, consider using the `volume_range_db` setting in the `general` stanza to instruct Shairport Sync to use the top of the DAC mixer's declared range. For example, if you set the `volume_range_db` figure to 30, the top 30 dB of the range will the used. With this setting on the Raspberry Pi, maximum volume will be +4dB and minimum volume will be -26dB, below which muting will occur.
 
 From a user's point of view, the effect of using this setting is to move the minimum usable volume all the way down to the bottom of the user's volume control, rather than have the minimum usable volume concentrated very close to the maximum volume.
 
-Another setting to consider is the `general` `drift` setting: you should set it to a larger number, such as 352, to reduce the amount of overcorrection that seems to occur when using the Raspberry Pi's built-in DAC. 
+Another setting to consider is the `general` `drift_tolerance_in_seconds` setting: you should set it to a larger tolerance, say 10 milliseconds – `drift_tolerance_in_seconds=0.010;` – to reduce the amount of overcorrection that seems to occur when using the Raspberry Pi's built-in DAC. 
 
 *Command Line Arguments*
 
@@ -370,7 +370,7 @@ Latency
 -------
 Latency is the exact time from a sound signal's original timestamp until that signal actually "appears" on the output of the audio output device, usually a Digital to Audio Converter (DAC), irrespective of any internal delays, processing times, etc. in the computer. 
 
-Shairport Sync uses latencies supplied by the source, typically either 2 seconds or just over 2.25 seconds. You shouldn't need to change them. (The `latencies` stanza in the configuration file and the various latency command-line options are now obselete and are deprecated.)
+Shairport Sync uses latencies supplied by the source, typically either 2 seconds or just over 2.25 seconds. You shouldn't need to change them.
 
 Problems can arise when you are trying to synchronise with speaker systems — typically surround-sound home theatre systems — that have their own inherent delays. You can compensate for an inherent delay using the appropriate backend (typically `alsa`) `audio_backend_latency_offset_in_seconds`. Set this offset (in frames) to compensate for a fixed delay in the audio back end; for example, if the output device delays by 100 ms, set this to -0.1.
 
