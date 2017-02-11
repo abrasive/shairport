@@ -1,6 +1,15 @@
-Version 3.0d24 – Development Version
+Version 3.0rc0 – Release Candidate 0
 ----
 Version 3 is a big update -- please see below.
+
+**New Feature**
+* An experimental new back end for `libsoundio`, a C library for cross-platform real-time audio input and output. Many thanks to [shtirlic](https://github.com/shtirlic). Please see https://github.com/mikebrady/shairport-sync/pull/433 for more details.
+
+**Other changes**
+* Updates to `man` page and  [README](https://github.com/mikebrady/shairport-sync/blob/development/README.md). Reports of typos or suggestions for improvement are welcome!
+
+Version 3.0d24 – Development Version
+----
 
 **New Feature**
 * Set Max Volume. Add a new setting, for advanced users only, in the `general` section. Use the `volume_max_db` setting to allow you to specify the maximum level to set on the hardware mixer (if chosen) or the built-in software mixer otherwise. The software mixer's range is 0.0 dB to -96.1 dB. The setting must be a number with a decimal point, e.g. 21.3.
