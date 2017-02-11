@@ -205,7 +205,7 @@ static void register_service(AvahiClient *c) {
 
     int ret;
     AvahiIfIndex selected_interface;
-    if (config.interface!=NULL)
+    if (config.interface != NULL)
       selected_interface = config.interface_index;
     else
       selected_interface = AVAHI_IF_UNSPEC;
@@ -261,9 +261,8 @@ static void client_callback(AvahiClient *c, AvahiClientState state,
       c = NULL;
       group = NULL;
 
-      if (!(client = avahi_client_new(avahi_threaded_poll_get(tpoll),
-                                      AVAHI_CLIENT_NO_FAIL, client_callback,
-                                      userdata, &err))) {
+      if (!(client = avahi_client_new(avahi_threaded_poll_get(tpoll), AVAHI_CLIENT_NO_FAIL,
+                                      client_callback, userdata, &err))) {
         warn("avahi: failed to create client object: %s", avahi_strerror(err));
         avahi_threaded_poll_quit(tpoll);
       }
@@ -297,8 +296,8 @@ static int avahi_register(char *srvname, int srvport) {
     warn("couldn't create avahi threaded tpoll!");
     return -1;
   }
-  if (!(client =
-            avahi_client_new(avahi_threaded_poll_get(tpoll), AVAHI_CLIENT_NO_FAIL, client_callback, NULL, &err))) {
+  if (!(client = avahi_client_new(avahi_threaded_poll_get(tpoll), AVAHI_CLIENT_NO_FAIL,
+                                  client_callback, NULL, &err))) {
     warn("couldn't create avahi client: %s!", avahi_strerror(err));
     return -1;
   }

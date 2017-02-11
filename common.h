@@ -87,7 +87,7 @@ typedef struct {
   int udp_port_base;
   int udp_port_range;
   int ignore_volume_control;
-  int volume_max_db_set;  // set to 1 if a maximum volume db has been set
+  int volume_max_db_set; // set to 1 if a maximum volume db has been set
   int volume_max_db;
   int no_sync;            // disable synchronisation, even if it's available
   int no_mmap;            // disable use of mmap-based output, even if it's available
@@ -125,7 +125,7 @@ typedef struct {
   char *configfile;
   char *regtype; // The regtype is the service type followed by the protocol, separated by a dot, by
                  // default “_raop._tcp.”.
-  char *interface; // a string containg the interface name, or NULL if nothing specified
+  char *interface;     // a string containg the interface name, or NULL if nothing specified
   int interface_index; // only valid if the interface string is non-NULL
   double audio_backend_buffer_desired_length; // this will be the length in seconds of the
                                               // audio backend buffer -- the DAC buffer for ALSA

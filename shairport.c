@@ -31,6 +31,7 @@
 #include <libconfig.h>
 #include <libgen.h>
 #include <memory.h>
+#include <net/if.h>
 #include <popt.h>
 #include <signal.h>
 #include <stdio.h>
@@ -38,7 +39,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <net/if.h>
 #include <unistd.h>
 
 #include "config.h"
@@ -198,12 +198,13 @@ void usage(char *progname) {
   printf("    -v, --verbose           -v print debug information; -vv more; -vvv lots.\n");
   printf("    -p, --port=PORT         set RTSP listening port.\n");
   printf("    -a, --name=NAME         set advertised name.\n");
-//  printf("    -A, --AirPlayLatency=FRAMES [Deprecated] Set the latency for audio sent from an "
-//         "AirPlay device.\n");
-//  printf("                            The default is to set it automatically.\n");
-//  printf("    -i, --iTunesLatency=FRAMES [Deprecated] Set the latency for audio sent from iTunes "
-//         "10 or later.\n");
-//  printf("                            The default is to set it automatically.\n");
+  //  printf("    -A, --AirPlayLatency=FRAMES [Deprecated] Set the latency for audio sent from an "
+  //         "AirPlay device.\n");
+  //  printf("                            The default is to set it automatically.\n");
+  //  printf("    -i, --iTunesLatency=FRAMES [Deprecated] Set the latency for audio sent from iTunes
+  //  "
+  //         "10 or later.\n");
+  //  printf("                            The default is to set it automatically.\n");
   printf("    -L, --latency=FRAMES    [Deprecated] Set the latency for audio sent from an unknown "
          "device.\n");
   printf("                            The default is to set it automatically.\n");
@@ -230,13 +231,15 @@ void usage(char *progname) {
   printf("    -m, --mdns=BACKEND      force the use of BACKEND to advertize the service.\n");
   printf("                            if no mdns provider is specified,\n");
   printf("                            shairport tries them all until one works.\n");
-  printf("    -r, --resync=THRESHOLD  [Deprecated] resync if error exceeds this number of frames. Set to 0 to "
+  printf("    -r, --resync=THRESHOLD  [Deprecated] resync if error exceeds this number of frames. "
+         "Set to 0 to "
          "stop resyncing.\n");
   printf("    -t, --timeout=SECONDS   go back to idle mode from play mode after a break in "
          "communications of this many seconds (default 120). Set to 0 never to exit play mode.\n");
   printf("    --statistics            print some interesting statistics -- output to the logfile "
          "if running as a daemon.\n");
-  printf("    --tolerance=TOLERANCE   [Deprecated] allow a synchronization error of TOLERANCE frames (default "
+  printf("    --tolerance=TOLERANCE   [Deprecated] allow a synchronization error of TOLERANCE "
+         "frames (default "
          "88) before trying to correct it.\n");
   printf("    --password=PASSWORD     require PASSWORD to connect. Default is not to require a "
          "password.\n");
@@ -259,9 +262,9 @@ int parse_options(int argc, char **argv) {
   char *stuffing = NULL;         /* used for picking up the stuffing option */
   signed char c;                 /* used for argument parsing */
   int i = 0;                     /* used for tracking options */
-  int fResyncthreshold = (int)(config.resyncthreshold*44100);
-  int fTolerance = (int)(config.tolerance*44100);
-  poptContext optCon;            /* context for parsing command-line options */
+  int fResyncthreshold = (int)(config.resyncthreshold * 44100);
+  int fTolerance = (int)(config.tolerance * 44100);
+  poptContext optCon; /* context for parsing command-line options */
   struct poptOption optionsTable[] = {
       {"verbose", 'v', POPT_ARG_NONE, NULL, 'v', NULL},
       {"disconnectFromOutput", 'D', POPT_ARG_NONE, NULL, 0, NULL},
@@ -318,28 +321,33 @@ int parse_options(int argc, char **argv) {
       inform("Warning: the option -R or --reconnectToOutput is deprecated.");
       break;
     case 'A':
-      inform("Warning: the option -A or --AirPlayLatency is deprecated. This setting is now automatically received from the AirPlay device.");
+      inform("Warning: the option -A or --AirPlayLatency is deprecated. This setting is now "
+             "automatically received from the AirPlay device.");
       break;
     case 'i':
-      inform("Warning: the option -i or --iTunesLatency is deprecated. This setting is now automatically received from iTunes");
+      inform("Warning: the option -i or --iTunesLatency is deprecated. This setting is now "
+             "automatically received from iTunes");
       break;
     case 'f':
-      inform("Warning: the option --forkedDaapdLatency is deprecated. This setting is now automatically received from forkedDaapd");
+      inform("Warning: the option --forkedDaapdLatency is deprecated. This setting is now "
+             "automatically received from forkedDaapd");
       break;
     case 'r':
-      inform("Warning: the option -r or --resync is deprecated. Please use the \"resync_threshold_in_seconds\" setting in the config file instead.");
+      inform("Warning: the option -r or --resync is deprecated. Please use the "
+             "\"resync_threshold_in_seconds\" setting in the config file instead.");
       break;
     case 'z':
-      inform("Warning: the option --tolerance is deprecated. Please use the \"drift_tolerance_in_seconds\" setting in the config file instead.");
+      inform("Warning: the option --tolerance is deprecated. Please use the "
+             "\"drift_tolerance_in_seconds\" setting in the config file instead.");
       break;
-   }
+    }
   }
   if (c < -1) {
     die("%s: %s", poptBadOption(optCon, POPT_BADOPTION_NOALIAS), poptStrerror(c));
   }
-  
-  config.resyncthreshold = 1.0*fResyncthreshold/44100;
-  config.tolerance = 1.0*fTolerance/44100;
+
+  config.resyncthreshold = 1.0 * fResyncthreshold / 44100;
+  config.tolerance = 1.0 * fTolerance / 44100;
 
   config_setting_t *setting;
   const char *str = 0;
@@ -437,14 +445,14 @@ int parse_options(int argc, char **argv) {
       if (config_lookup_int(config.cfg, "general.drift", &value)) {
         inform("The drift setting is deprecated. Use "
                "drift_tolerance_in_seconds instead");
-        config.tolerance = 1.0*value/44100;
+        config.tolerance = 1.0 * value / 44100;
       }
 
       /* The old resync setting. */
       if (config_lookup_int(config.cfg, "general.resync_threshold", &value)) {
         inform("The resync_threshold setting is deprecated. Use "
                "resync_threshold_in_seconds instead");
-        config.resyncthreshold = 1.0*value/44100;
+        config.resyncthreshold = 1.0 * value / 44100;
       }
 
       /* Get the drift tolerance setting. */
@@ -474,10 +482,10 @@ int parse_options(int argc, char **argv) {
         else
           die("Invalid ignore_volume_control option choice \"%s\". It should be \"yes\" or \"no\"");
       }
-      
-     /* Get the optional volume_max_db setting. */
+
+      /* Get the optional volume_max_db setting. */
       if (config_lookup_float(config.cfg, "general.volume_max_db", &dvalue)) {
-        debug(1,"Max volume setting of %f dB",dvalue);
+        debug(1, "Max volume setting of %f dB", dvalue);
         config.volume_max_db = dvalue;
         config.volume_max_db_set = 1;
       }
@@ -501,39 +509,40 @@ int parse_options(int argc, char **argv) {
 
       /* Get the interface to listen on, if specified Default is all interfaces */
       /* we keep the interface name and the index */
-      
-       if (config_lookup_string(config.cfg, "general.interface", &str))
+
+      if (config_lookup_string(config.cfg, "general.interface", &str))
         config.interface = strdup(str);
 
-     if (config_lookup_string(config.cfg, "general.interface", &str)) {
+      if (config_lookup_string(config.cfg, "general.interface", &str)) {
         int specified_interface_found = 0;
-        
+
         struct if_nameindex *if_ni, *i;
 
         if_ni = if_nameindex();
         if (if_ni == NULL) {
-            debug(1,"Can't get a list of interface names.");
+          debug(1, "Can't get a list of interface names.");
         } else {
-          for (i = if_ni; ! (i->if_index == 0 && i->if_name == NULL); i++) {
-              // printf("%u: %s\n", i->if_index, i->if_name);
-            if (strcmp(i->if_name,str)==0) {
+          for (i = if_ni; !(i->if_index == 0 && i->if_name == NULL); i++) {
+            // printf("%u: %s\n", i->if_index, i->if_name);
+            if (strcmp(i->if_name, str) == 0) {
               config.interface_index = i->if_index;
               specified_interface_found = 1;
             }
           }
-          
         }
 
         if_freenameindex(if_ni);
-        
-        if (specified_interface_found==0) {
-          inform("The mdns service interface \"%s\" was not found, so the setting has been ignored.",config.interface);
+
+        if (specified_interface_found == 0) {
+          inform(
+              "The mdns service interface \"%s\" was not found, so the setting has been ignored.",
+              config.interface);
           free(config.interface);
           config.interface = NULL;
-          config.interface_index = 0; 
-        }    
+          config.interface_index = 0;
+        }
       }
-      
+
       /* Get the regtype -- the service type and protocol, separated by a dot. Default is
        * "_raop._tcp" */
       if (config_lookup_string(config.cfg, "general.regtype", &str))
@@ -901,9 +910,9 @@ int main(int argc, char **argv) {
   // initialise random number generator
 
   r64init(0);
-  
+
   // initialise the randomw number array
-  
+
   r64arrayinit();
 
   /* Check if we are called with -V or --version parameter */
@@ -1194,7 +1203,7 @@ int main(int argc, char **argv) {
   debug(1, "decoders_supported field is %d.", config.decoders_supported);
   debug(1, "use_apple_decoder is %d.", config.use_apple_decoder);
   if (config.interface)
-    debug(1, "mdns service interface \"%s\" requested.",config.interface);
+    debug(1, "mdns service interface \"%s\" requested.", config.interface);
   else
     debug(1, "no special mdns service interface was requested.");
   char *realConfigPath = realpath(config.configfile, NULL);

@@ -679,8 +679,10 @@ static inline void process_sample(int32_t sample, char **outp, enum sps_format_t
     }
     dither_mask -= 1;
     // int64_t r = r64i();
-    int64_t r = ranarray64i(); // use an array of precalculated pseudorandom numbers rather than calculating them on the fly. Should be easier on low-powered processors
-    
+    int64_t r = ranarray64i(); // use an array of precalculated pseudorandom numbers rather than
+                               // calculating them on the fly. Should be easier on low-powered
+                               // processors
+
     int64_t tpdf = (r & dither_mask) - (previous_random_number & dither_mask);
     previous_random_number = r;
     // add dither, allowing for clipping
@@ -2269,7 +2271,7 @@ void player_volume(double airplay_volume) {
     // don't have a hardware mixer
     hw_max_db = hw_min_db = hw_range_db = 0;
   }
-  
+
   int32_t sw_min_db = -9630;
   int32_t sw_max_db = 0;
   int32_t sw_range_db = sw_max_db - sw_min_db;
@@ -2278,25 +2280,29 @@ void player_volume(double airplay_volume) {
   if (config.volume_range_db)
     desired_range_db = (int32_t)trunc(config.volume_range_db * 100);
 
-   if (config.volume_max_db_set) {
+  if (config.volume_max_db_set) {
     if (hw_range_db) {
-      if (((config.volume_max_db*100)<hw_max_db) && ((config.volume_max_db*100)>hw_min_db)) {
-        hw_max_db = (int)config.volume_max_db*100;
-        hw_range_db = hw_max_db-hw_min_db;
+      if (((config.volume_max_db * 100) < hw_max_db) &&
+          ((config.volume_max_db * 100) > hw_min_db)) {
+        hw_max_db = (int)config.volume_max_db * 100;
+        hw_range_db = hw_max_db - hw_min_db;
       } else {
-        inform("The volume_max_db setting is out of range of the hardware mixers's limits of %d dB to %d dB. It will be ignored.", (int)(hw_max_db/100), (int)(hw_min_db/100));
+        inform("The volume_max_db setting is out of range of the hardware mixers's limits of %d dB "
+               "to %d dB. It will be ignored.",
+               (int)(hw_max_db / 100), (int)(hw_min_db / 100));
       }
     } else {
-      if (((config.volume_max_db*100)<sw_max_db) && ((config.volume_max_db*100)>sw_min_db)) {
-        sw_max_db = (int)config.volume_max_db*100;
-        sw_range_db = sw_max_db-sw_min_db;
+      if (((config.volume_max_db * 100) < sw_max_db) &&
+          ((config.volume_max_db * 100) > sw_min_db)) {
+        sw_max_db = (int)config.volume_max_db * 100;
+        sw_range_db = sw_max_db - sw_min_db;
       } else {
-        inform("The volume_max_db setting is out of range of the software attenuation's limits of 0 dB to -96.3 dB. It will be ignored.");
+        inform("The volume_max_db setting is out of range of the software attenuation's limits of "
+               "0 dB to -96.3 dB. It will be ignored.");
       }
-    }      
-   }
+    }
+  }
 
-  
   if (desired_range_db) {
     // debug(1,"An attenuation range of %d is requested.",desired_range_db);
     // we have a desired volume range.
@@ -2339,16 +2345,17 @@ void player_volume(double airplay_volume) {
     }
   }
 
-/*
-  if (config.volume_max_db_set) {
-    if ((config.volume_max_db*100<=max_db) && (config.volume_max_db*100>=min_db)) {
-      debug(1,"Reducing the maximum volume from %d to %d.",max_db/100,config.volume_max_db);
-      max_db = (int)(config.volume_max_db*100);
-    } else {
-      inform("The value of volume_max_db is invalid. It must be in the range %d to %d.",max_db,min_db);
-    }  
-  }
-*/
+  /*
+    if (config.volume_max_db_set) {
+      if ((config.volume_max_db*100<=max_db) && (config.volume_max_db*100>=min_db)) {
+        debug(1,"Reducing the maximum volume from %d to %d.",max_db/100,config.volume_max_db);
+        max_db = (int)(config.volume_max_db*100);
+      } else {
+        inform("The value of volume_max_db is invalid. It must be in the range %d to
+    %d.",max_db,min_db);
+      }
+    }
+  */
   double hardware_attenuation, software_attenuation;
   double scaled_attenuation = hw_min_db + sw_min_db;
 

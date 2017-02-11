@@ -56,19 +56,18 @@ static int init(int argc, char **argv) {
 
   if (config.cfg != NULL) {
     /* Get the desired buffer size setting. */
-    if (config_lookup_int(config.cfg,
-                          "stdout.audio_backend_buffer_desired_length", &value)) {
+    if (config_lookup_int(config.cfg, "stdout.audio_backend_buffer_desired_length", &value)) {
       if ((value < 0) || (value > 66150)) {
         inform("The setting audio_backend_buffer_desired_length is deprecated. "
-             "Use audio_backend_buffer_desired_length_in_seconds instead.");
+               "Use audio_backend_buffer_desired_length_in_seconds instead.");
         die("Invalid stdout audio backend buffer desired length \"%d\". It "
             "should be between 0 and "
             "66150, default is 6615",
             value);
       } else {
         inform("The stdout.setting audio_backend_buffer_desired_length is deprecated. "
-             "Use stdout.audio_backend_buffer_desired_length_in_seconds instead.");
-        config.audio_backend_buffer_desired_length = 1.0*value/44100;
+               "Use stdout.audio_backend_buffer_desired_length_in_seconds instead.");
+        config.audio_backend_buffer_desired_length = 1.0 * value / 44100;
       }
     }
 
@@ -86,23 +85,23 @@ static int init(int argc, char **argv) {
     }
 
     /* Get the latency offset. */
-    if (config_lookup_int(config.cfg, "stdout.audio_backend_latency_offset",
-                          &value)) {
+    if (config_lookup_int(config.cfg, "stdout.audio_backend_latency_offset", &value)) {
       if ((value < -66150) || (value > 66150)) {
         inform("The setting stdout.audio_backend_latency_offset is deprecated. "
-             "Use stdout.audio_backend_latency_offset_in_seconds instead.");
+               "Use stdout.audio_backend_latency_offset_in_seconds instead.");
         die("Invalid stdout audio backend buffer latency offset \"%d\". It "
             "should be between -66150 and +66150, default is 0",
             value);
       } else {
         inform("The setting stdout.audio_backend_latency_offset is deprecated. "
-             "Use stdout.audio_backend_latency_offset_in_seconds instead.");
-        config.audio_backend_latency_offset = 1.0*value/44100;
+               "Use stdout.audio_backend_latency_offset_in_seconds instead.");
+        config.audio_backend_latency_offset = 1.0 * value / 44100;
       }
     }
 
     /* Get the latency offset. */
-    if (config_lookup_float(config.cfg, "stdout.audio_backend_latency_offset_in_seconds", &dvalue)) {
+    if (config_lookup_float(config.cfg, "stdout.audio_backend_latency_offset_in_seconds",
+                            &dvalue)) {
       if ((dvalue < -1.0) || (dvalue > 1.5)) {
         die("Invalid stdout audio backend buffer latency offset time \"%f\". It "
             "should be between -1.0 and +1.5, default is 0 seconds",
@@ -111,8 +110,6 @@ static int init(int argc, char **argv) {
         config.audio_backend_latency_offset = dvalue;
       }
     }
-
-
   }
   return 0;
 }

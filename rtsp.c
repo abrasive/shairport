@@ -1625,8 +1625,7 @@ static int rtsp_auth(char **nonce, rtsp_message *req, rtsp_message *resp) {
   mbedtls_md5_update(&tctx, (unsigned char *)":", 1);
   mbedtls_md5_update(&tctx, (const unsigned char *)realm, strlen(realm));
   mbedtls_md5_update(&tctx, (unsigned char *)":", 1);
-  mbedtls_md5_update(&tctx, (const unsigned char *)config.password,
-             strlen(config.password));
+  mbedtls_md5_update(&tctx, (const unsigned char *)config.password, strlen(config.password));
   mbedtls_md5_finish(&tctx, digest_urp);
   mbedtls_md5_starts(&tctx);
   mbedtls_md5_update(&tctx, (const unsigned char *)req->method, strlen(req->method));
@@ -1951,8 +1950,8 @@ void rtsp_listen_loop(void) {
           inet_ntop(AF_INET, &(sa->sin_addr), remote_ip4, INET_ADDRSTRLEN);
           unsigned short int rport = ntohs(sa->sin_port);
 #ifdef CONFIG_METADATA
-          send_ssnc_metadata('clip', strdup(remote_ip4), strlen(remote_ip4) , 1);
-          send_ssnc_metadata('svip', strdup(ip4), strlen(ip4) , 1);
+          send_ssnc_metadata('clip', strdup(remote_ip4), strlen(remote_ip4), 1);
+          send_ssnc_metadata('svip', strdup(ip4), strlen(ip4), 1);
 #endif
           debug(1, "New RTSP connection from %s:%u to self at %s:%u.", remote_ip4, rport, ip4,
                 tport);

@@ -68,15 +68,14 @@
 #endif
 
 #ifdef HAVE_LIBMBEDTLS
-#include <mbedtls/version.h>
-#include <mbedtls/base64.h>
-#include <mbedtls/x509.h>
-#include <mbedtls/md.h>
-#include "mbedtls/entropy.h"
 #include "mbedtls/ctr_drbg.h"
+#include "mbedtls/entropy.h"
+#include <mbedtls/base64.h>
+#include <mbedtls/md.h>
+#include <mbedtls/version.h>
+#include <mbedtls/x509.h>
 
 #endif
-
 
 #include <libdaemon/dlog.h>
 
@@ -357,24 +356,25 @@ uint8_t *rsa_apply(uint8_t *input, int inlen, int *outlen, int mode) {
   mbedtls_entropy_init(&entropy);
 
   mbedtls_ctr_drbg_init(&ctr_drbg);
-  mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
-			(const unsigned char *)pers, strlen(pers));
+  mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, (const unsigned char *)pers,
+                        strlen(pers));
 
   mbedtls_pk_init(&pkctx);
 
-  rc = mbedtls_pk_parse_key(&pkctx, (unsigned char *)super_secret_key, sizeof(super_secret_key), NULL, 0);
+  rc = mbedtls_pk_parse_key(&pkctx, (unsigned char *)super_secret_key, sizeof(super_secret_key),
+                            NULL, 0);
   if (rc != 0)
     debug(1, "Error %d reading the private key.", rc);
 
   uint8_t *outbuf = NULL;
-  trsa = mbedtls_pk_rsa(pkctx);  
+  trsa = mbedtls_pk_rsa(pkctx);
 
   switch (mode) {
   case RSA_MODE_AUTH:
     mbedtls_rsa_set_padding(trsa, MBEDTLS_RSA_PKCS_V15, MBEDTLS_MD_NONE);
     outbuf = malloc(trsa->len);
     rc = mbedtls_rsa_pkcs1_encrypt(trsa, mbedtls_ctr_drbg_random, &ctr_drbg, MBEDTLS_RSA_PRIVATE,
-			   inlen, input, outbuf);
+                                   inlen, input, outbuf);
     if (rc != 0)
       debug(1, "mbedtls_pk_encrypt error %d.", rc);
     *outlen = trsa->len;
@@ -382,8 +382,8 @@ uint8_t *rsa_apply(uint8_t *input, int inlen, int *outlen, int mode) {
   case RSA_MODE_KEY:
     mbedtls_rsa_set_padding(trsa, MBEDTLS_RSA_PKCS_V21, MBEDTLS_MD_SHA1);
     outbuf = malloc(trsa->len);
-    rc = mbedtls_rsa_pkcs1_decrypt(trsa, mbedtls_ctr_drbg_random, &ctr_drbg, MBEDTLS_RSA_PRIVATE, 
-			   &olen, input, outbuf, trsa->len);
+    rc = mbedtls_rsa_pkcs1_decrypt(trsa, mbedtls_ctr_drbg_random, &ctr_drbg, MBEDTLS_RSA_PRIVATE,
+                                   &olen, input, outbuf, trsa->len);
     if (rc != 0)
       debug(1, "mbedtls_pk_decrypt error %d.", rc);
     *outlen = olen;
@@ -745,16 +745,16 @@ uint64_t *ranarray;
 int ranarraynext;
 
 void ranarrayinit() {
-  ranarray = (uint64_t*)malloc(ranarraylength*sizeof(uint64_t));
+  ranarray = (uint64_t *)malloc(ranarraylength * sizeof(uint64_t));
   int i;
-  for (i=0;i<ranarraylength;i++)
-    ranarray[i]=r64u();
-  ranarraynext=0;
+  for (i = 0; i < ranarraylength; i++)
+    ranarray[i] = r64u();
+  ranarraynext = 0;
 }
 
 uint64_t ranarrayval() {
   uint64_t v = ranarray[ranarraynext];
-  ranarraynext = (ranarraynext++)%ranarraylength;
+  ranarraynext = (ranarraynext++) % ranarraylength;
 }
 
 void r64arrayinit() { ranarrayinit(); }
@@ -762,4 +762,3 @@ void r64arrayinit() { ranarrayinit(); }
 uint64_t ranarray64u() { return (ranarrayval()); }
 
 int64_t ranarray64i() { return (ranarrayval(&rx) >> 1); }
-

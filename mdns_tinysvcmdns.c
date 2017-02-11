@@ -71,9 +71,10 @@ static int mdns_tinysvcmdns_register(char *apname, int port) {
   // Look for an ipv4/ipv6 non-loopback interface to use as the main one.
   for (ifa = ifalist; ifa != NULL; ifa = ifa->ifa_next) {
     // only check for the named interface, if specified
-    if ((config.interface==NULL) || (strcmp(config.interface,ifa->ifa_name)==0)) {
- 
-      if (!(ifa->ifa_flags & IFF_LOOPBACK) && ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET) {
+    if ((config.interface == NULL) || (strcmp(config.interface, ifa->ifa_name) == 0)) {
+
+      if (!(ifa->ifa_flags & IFF_LOOPBACK) && ifa->ifa_addr &&
+          ifa->ifa_addr->sa_family == AF_INET) {
         uint32_t main_ip = ((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr;
 
         mdnsd_set_hostname(svr, hostname, main_ip); // TTL should be 120 seconds
@@ -96,21 +97,22 @@ static int mdns_tinysvcmdns_register(char *apname, int port) {
   // Skip the first one, it was already added by set_hostname
   for (ifa = ifa->ifa_next; ifa != NULL; ifa = ifa->ifa_next) {
     if (ifa->ifa_flags & IFF_LOOPBACK) // Skip loop-back interfaces
-      continue;    
+      continue;
     // only check for the named interface, if specified
-    if ((config.interface==NULL) || (strcmp(config.interface,ifa->ifa_name)==0)) {
+    if ((config.interface == NULL) || (strcmp(config.interface, ifa->ifa_name) == 0)) {
       switch (ifa->ifa_addr->sa_family) {
-        case AF_INET: { // ipv4
-          uint32_t ip = ((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr;
-          struct rr_entry *a_e = rr_create_a(create_nlabel(hostname), ip); // TTL should be 120 seconds
-          mdnsd_add_rr(svr, a_e);
-        } break;
-        case AF_INET6: { // ipv6
-          struct in6_addr *addr = &((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr;
-          struct rr_entry *aaaa_e =
-              rr_create_aaaa(create_nlabel(hostname), addr); // TTL should be 120 seconds
-          mdnsd_add_rr(svr, aaaa_e);
-        } break;
+      case AF_INET: { // ipv4
+        uint32_t ip = ((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr;
+        struct rr_entry *a_e =
+            rr_create_a(create_nlabel(hostname), ip); // TTL should be 120 seconds
+        mdnsd_add_rr(svr, a_e);
+      } break;
+      case AF_INET6: { // ipv6
+        struct in6_addr *addr = &((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr;
+        struct rr_entry *aaaa_e =
+            rr_create_aaaa(create_nlabel(hostname), addr); // TTL should be 120 seconds
+        mdnsd_add_rr(svr, aaaa_e);
+      } break;
       }
     }
   }
