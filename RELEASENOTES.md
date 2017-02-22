@@ -1,6 +1,34 @@
+Version 3.0
+====
+
+Big Update
+----
+Version 3 brings in support for 24-bit and 32-bit (and 8 bit!) DACs and for DACs running at multiples of 44,100 samples per second.
+
+The most obvious audible change is if you are using software volume control and can take advantage of 32- or 24-bit DACs. Dithering can now occur on a 32-bit or 24-bit sample rather than on a 16-bit sample, making the noise floor very much lower. This is the case, for example, with a Pimoroni PHAT DAC.
+
+**New Features**
+* 8-bit, 16-bit, 24-bit, 24-bit three-byte (S24_3LE and S24_3BE) and 32-bit output to ALSA devices. This will give audibly better results if you are using software volume control. (Other back ends are not updated yet.)
+* 44,100, 88,200, 176,400 and 352,800 sample per second output. This is done using simple upsampling. It's only worth doing if 44,100 samples per second output is not available.
+* Internal processing including software volume control and interpolation is done after sample size and rate conversion.
+* Apple ALAC decoder support. This needs the `libalac` library, available at [ALAC](https://github.com/mikebrady/alac). Add the flag `--with-apple-alac` to the `./configure` arguments. Then you can choose the Apple ALAC decoder in the configuration file. There is no obvious audible different between this and the original decoder by David Hammerton.
+* Support for `mbed TLS` has been added and the use of `PolarSSL` is deprecated, as `mbed TLS` is a development of `PolarSSL` and `PolarSSL` itself is not being developed further.
+* Settings that were denominated in frames are now deprecated but still honoured. Deprecation warnings are issued.
+* Choose Network Interface. Add a new setting, for advanced users only, in the `general` section. Use the `interface` setting to allow you to specify the interface on which to provide the AirPlay service. Omit the setting to get the default, which is to choose the interfaces automatically.
+* Set Max Volume. Add a new setting, for advanced users only, in the `general` section. Use the `volume_max_db` setting to allow you to specify the maximum level to set on the hardware mixer (if chosen) or the built-in software mixer otherwise. The software mixer's range is 0.0 dB to -96.1 dB. The setting must be a number with a decimal point, e.g. 21.3.
+* An experimental new back end for `libsoundio`, a C library for cross-platform real-time audio input and output. Many thanks to [Serg Podtynnyi](https://github.com/shtirlic). Please see https://github.com/mikebrady/shairport-sync/pull/433 for more details.
+
+
+Pesky Changes You Cannot Ignore
+----
+* Processor load is up by about 10%.
+* Settings have changed -- basically, any timings that were denominated in frames are now in seconds. Please refer to the shairport-sync.conf.sample file for details.
+* Sox-based interpolation at higher sample rates may overload your CPU -- yopu might have to choose between higher sample rates and sox-based interpolation.
+
+
 Version 3.0rc0 – Release Candidate 0
 ----
-Version 3 is a big update -- please see below.
+Note: all Version 3 changes are summarized above.
 
 **New Feature**
 * An experimental new back end for `libsoundio`, a C library for cross-platform real-time audio input and output. Many thanks to [Serg Podtynnyi](https://github.com/shtirlic). Please see https://github.com/mikebrady/shairport-sync/pull/433 for more details.
@@ -10,49 +38,49 @@ Version 3 is a big update -- please see below.
 
 Version 3.0d24 – Development Version
 ----
+Note: all Version 3 changes are summarized above.
 
 **New Feature**
 * Set Max Volume. Add a new setting, for advanced users only, in the `general` section. Use the `volume_max_db` setting to allow you to specify the maximum level to set on the hardware mixer (if chosen) or the built-in software mixer otherwise. The software mixer's range is 0.0 dB to -96.1 dB. The setting must be a number with a decimal point, e.g. 21.3.
 
 Version 3.0d23 – Development Version
 ----
+Note: all Version 3 changes are summarized above.
 
 **New Feature**
 * Choose Interface. Add a new setting, for advanced users only, in the `general` section. Use the `interface` setting to allow you to specify the interface on which to provide the AirPlay service. Omit the setting to get the default, which is to choose the interfaces automatically.
 
 Version 3.0d22 – Development Version
 ----
+Note: all Version 3 changes are summarized above.
 
 **Bug Fix**
 * Fixed a bug which prevented successful building in the OpenWrt build system. The problem was caused by an `#include apple_alac.h` in `player.c` which was actioned even if the apple alac decoder was not selected. This caused the OpenWrt build system to expect the standard C++ library – required by the apple alac code – to be referenced, but it was not specified on the build manifest and therefore stopped the build. The solution was to make the `#include` conditional on selecting the apple alac decoder.
 
 Version 3.0d21 – Development Version
 ----
+Note: all Version 3 changes are summarized above.
 
 **Bug Fix**
 * Fixed a bug which turned off resync by default. Duh.
 
 Version 3.0d20 – Development Version
 ----
+Note: all Version 3 changes are summarized above.
 
 **Bug Fix**
 * Fix a small and generally silent error in configure.ac so that it only looks for the systemd direcotry if systemd has been chosen. It caused a warning when cross-compiling.
 
 Version 3.0d19 – Development Version
 ----
+Note: all Version 3 changes are summarized above.
 
 **New Feature**
 * Reduces processor load back to V2.X levels by using a precalculated array of pseudorandom numbers to do dithering. Doesn't seem to make any audible difference.
 
 Version 3.0d18 – Development Version
 ----
-
-Big Update
-====
-
-This is a big update, so please be careful, as there are likely to be lots of bugs and maybe even regressions. It's still very much a moving target. The processor load is about 25% higher. There is still quite a bit of work to do, especially on the backends apart from ALSA.
-
-The most obvious audible change is if you are using software volume control and can take advantage of 32- or 24-bit DACs. Dithering can now occur on a 32-bit or 24-bit sample rather than on a 16-bit sample, making the noise floor very much lower. This is the case, for example, with a Pimoroni PHAT DAC.
+Note: all Version 3 changes are summarized above.
 
 **New Features**
 * 8-bit, 16-bit, 24-bit, 24-bit three-byte (S24_3LE and S24_3BE) and 32-bit output to ALSA devices. (Other back ends are not updated yet.)
