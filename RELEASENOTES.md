@@ -22,7 +22,7 @@ Here is the list of new features:
 
 Pesky Changes You Cannot Ignore
 ----
-* Processor load is up by about 10%.
+* Processor load is up by about 11%.
 * Settings have changed -- basically, any timings that were denominated in frames are now in seconds. Please refer to the shairport-sync.conf.sample file for details.
 * Sox-based interpolation at higher sample rates may overload your CPU -- you might have to choose between higher sample rates and sox-based interpolation.
 
