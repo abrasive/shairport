@@ -8,7 +8,7 @@ Version 3 brings in support for 24-bit and 32-bit (and 8 bit!) DACs and for DACs
 The most obvious audible change is if you are using software volume control and can take advantage of 32- or 24-bit DACs. Dithering can now occur on a 32-bit or 24-bit sample rather than on a 16-bit sample, making the noise floor very much lower. This is the case, for example, with a Pimoroni PHAT DAC.
 
 **New Features**
-* 8-bit, 16-bit, 24-bit, 24-bit three-byte (S24_3LE and S24_3BE) and 32-bit output to ALSA devices. This will give audibly better results if you are using software volume control. (Other back ends are not updated yet.)
+* 8-bit, 16-bit, 24-bit, 24-bit three-byte (S24_3LE and S24_3BE) and 32-bit output to ALSA devices. This will give audibly better results if you are using software volume control on a 24- or 32-bit-capable DAC. (Other back ends are not updated yet.)
 * 44,100, 88,200, 176,400 and 352,800 sample per second output. This is done using simple upsampling. It's only worth doing if 44,100 samples per second output is not available.
 * Internal processing including software volume control and interpolation is done after sample size and rate conversion.
 * Apple ALAC decoder support. This needs the `libalac` library, available at [ALAC](https://github.com/mikebrady/alac). Add the flag `--with-apple-alac` to the `./configure` arguments. Then you can choose the Apple ALAC decoder in the configuration file. There is no obvious audible different between this and the original decoder by David Hammerton.
