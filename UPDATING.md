@@ -28,7 +28,9 @@ $ cd shairport-sync
 Now, while in the `shairport-sync` directory, perform the following commands (note that there is a choice you must make in there):
 ```
 $ autoreconf -fi
-
+```
+Please review the release notes to see if any configuration settings have been changed. For instance, in the transitions from version 2 to version 3, the `--with-ssl=polarssl` has been deprecated in favour of `--with-ssl=mbedtls`.
+```
 #The following is the standard configuration for a Linux that uses the systemd initialisation system:
 $ ./configure --with-alsa --with-avahi --with-ssl=openssl --with-metadata --with-soxr --with-systemd --sysconfdir=/etc
 #OR
