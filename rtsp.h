@@ -5,7 +5,6 @@ void rtsp_listen_loop(void);
 // void rtsp_shutdown_stream(void);
 void rtsp_request_shutdown_stream(void);
 
-
 // initialise the metadata stuff
 
 void metadata_init(void);

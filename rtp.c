@@ -24,19 +24,19 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <time.h>
+#include <arpa/inet.h>
+#include <errno.h>
+#include <math.h>
+#include <memory.h>
+#include <netdb.h>
+#include <netinet/in.h>
 #include <pthread.h>
 #include <signal.h>
-#include <unistd.h>
-#include <memory.h>
-#include <math.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
 #include <stdio.h>
-#include <errno.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <time.h>
+#include <unistd.h>
 
 #include "common.h"
 #include "player.h"
@@ -59,19 +59,20 @@ typedef struct time_ping_record {
 static int running = 0;
 
 static char client_ip_string[INET6_ADDRSTRLEN]; // the ip string pointing to the client
-static char self_ip_string[INET6_ADDRSTRLEN]; // the ip string being used by this program -- it could be one of many, so we need to know it
-static uint32_t self_scope_id; // if it's an ipv6 connection, this will be its scope
-static short connection_ip_family;                  // AF_INET / AF_INET6
-static uint32_t client_active_remote;           // used when you want to control the client...
+static char self_ip_string[INET6_ADDRSTRLEN];   // the ip string being used by this program -- it
+                                                // could be one of many, so we need to know it
+static uint32_t self_scope_id;        // if it's an ipv6 connection, this will be its scope
+static short connection_ip_family;    // AF_INET / AF_INET6
+static uint32_t client_active_remote; // used when you want to control the client...
 
 static SOCKADDR rtp_client_control_socket; // a socket pointing to the control port of the client
 static SOCKADDR rtp_client_timing_socket;  // a socket pointing to the timing port of the client
 static int audio_socket;                   // our local [server] audio socket
 static int control_socket;                 // our local [server] control socket
 static int timing_socket;                  // local timing socket
-//static pthread_t rtp_audio_thread, rtp_control_thread, rtp_timing_thread;
+// static pthread_t rtp_audio_thread, rtp_control_thread, rtp_timing_thread;
 
-static uint32_t reference_timestamp;
+static int64_t reference_timestamp;
 static uint64_t reference_timestamp_time;
 static uint64_t remote_reference_timestamp_time;
 
@@ -104,29 +105,33 @@ void *rtp_audio_receiver(void *arg) {
 
   uint64_t time_of_previous_packet_fp = 0;
   float longest_packet_time_interval_us = 0.0;
-  
-  // mean and variance calculations from "online_variance" algorithm at https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online_algorithm
-  
+
+  // mean and variance calculations from "online_variance" algorithm at
+  // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online_algorithm
+
   int32_t stat_n = 0;
   float stat_mean = 0.0;
   float stat_M2 = 0.0;
-  
+
   ssize_t nread;
-  while (itr->please_stop==0) {
+  while (itr->please_stop == 0) {
     nread = recv(audio_socket, packet, sizeof(packet), 0);
-    
+
     uint64_t local_time_now_fp = get_absolute_time_in_fp();
     if (time_of_previous_packet_fp) {
-      float time_interval_us = (((local_time_now_fp - time_of_previous_packet_fp)*1000000)>>32)*1.0;
+      float time_interval_us =
+          (((local_time_now_fp - time_of_previous_packet_fp) * 1000000) >> 32) * 1.0;
       time_of_previous_packet_fp = local_time_now_fp;
-      if (time_interval_us>longest_packet_time_interval_us)
-        longest_packet_time_interval_us=time_interval_us;
-      stat_n+=1;
+      if (time_interval_us > longest_packet_time_interval_us)
+        longest_packet_time_interval_us = time_interval_us;
+      stat_n += 1;
       float stat_delta = time_interval_us - stat_mean;
-      stat_mean += stat_delta/stat_n;
-      stat_M2 += stat_delta*(time_interval_us - stat_mean);
+      stat_mean += stat_delta / stat_n;
+      stat_M2 += stat_delta * (time_interval_us - stat_mean);
       if (stat_n % 2500 == 0) {
-        debug(2,"Packet reception interval stats: mean, standard deviation and max for the last 2,500 packets in microseconds: %10.1f, %10.1f, %10.1f.",stat_mean, sqrtf(stat_M2 / (stat_n-1)),longest_packet_time_interval_us);
+        debug(2, "Packet reception interval stats: mean, standard deviation and max for the last "
+                 "2,500 packets in microseconds: %10.1f, %10.1f, %10.1f.",
+              stat_mean, sqrtf(stat_M2 / (stat_n - 1)), longest_packet_time_interval_us);
         stat_n = 0;
         stat_mean = 0.0;
         stat_M2 = 0.0;
@@ -155,11 +160,11 @@ void *rtp_audio_receiver(void *arg) {
         last_seqno = seqno;
       else {
         last_seqno = (last_seqno + 1) & 0xffff;
-        //if (seqno != last_seqno)
+        // if (seqno != last_seqno)
         //  debug(3, "RTP: Packets out of sequence: expected: %d, got %d.", last_seqno, seqno);
         last_seqno = seqno; // reset warning...
       }
-      uint32_t timestamp = ntohl(*(unsigned long *)(pktp + 4));
+      int64_t timestamp = monotonic_timestamp(ntohl(*(unsigned long *)(pktp + 4)));
 
       // if (packet[1]&0x10)
       //	debug(1,"Audio packet Extension bit set.");
@@ -198,9 +203,9 @@ void *rtp_control_receiver(void *arg) {
   uint8_t packet[2048], *pktp;
   struct timespec tn;
   uint64_t remote_time_of_sync, local_time_now, remote_time_now;
-  uint32_t sync_rtp_timestamp, rtp_timestamp_less_latency;
+  int64_t sync_rtp_timestamp, rtp_timestamp_less_latency;
   ssize_t nread;
-  while (itr->please_stop==0) {
+  while (itr->please_stop == 0) {
     nread = recv(control_socket, packet, sizeof(packet), 0);
     local_time_now = get_absolute_time_in_fp();
     //        clock_gettime(CLOCK_MONOTONIC,&tn);
@@ -229,17 +234,17 @@ void *rtp_control_receiver(void *arg) {
 
         // debug(1,"Remote Sync Time: %0llx.",remote_time_of_sync);
 
-        rtp_timestamp_less_latency = ntohl(*((uint32_t *)&packet[4]));
-        sync_rtp_timestamp = ntohl(*((uint32_t *)&packet[16]));
-        
+        rtp_timestamp_less_latency = monotonic_timestamp(ntohl(*((uint32_t *)&packet[4])));
+        sync_rtp_timestamp = monotonic_timestamp(ntohl(*((uint32_t *)&packet[16])));
+
         if (config.use_negotiated_latencies) {
-          uint32_t la = sync_rtp_timestamp-rtp_timestamp_less_latency+11025;
-          if (la!=config.latency) {
+          int64_t la = sync_rtp_timestamp - rtp_timestamp_less_latency + 11025;
+          if (la != config.latency) {
             config.latency = la;
             // debug(1,"Using negotiated latency of %u frames.",config.latency);
           }
         }
-        
+
         if (packet[0] & 0x10) {
           // if it's a packet right after a flush or resume
           sync_rtp_timestamp += 352; // add frame_size -- can't see a reference to this anywhere,
@@ -265,11 +270,11 @@ void *rtp_control_receiver(void *arg) {
       }
     } else if (packet[1] == 0xd6) { // resent audio data in the control path -- whaale only?
       // debug(1, "Control Port -- Retransmitted Audio Data Packet received.");
-      pktp = packet+4;
+      pktp = packet + 4;
       plen -= 4;
       seq_t seqno = ntohs(*(unsigned short *)(pktp + 2));
 
-      uint32_t timestamp = ntohl(*(unsigned long *)(pktp + 4));
+      int64_t timestamp = monotonic_timestamp(ntohl(*(unsigned long *)(pktp + 4)));
 
       pktp += 12;
       plen -= 12;
@@ -293,7 +298,7 @@ void *rtp_control_receiver(void *arg) {
 
 void *rtp_timing_sender(void *arg) {
   debug(2, "Timing sender thread starting.");
-	int *stop = arg; // the parameter points to this request to stop thing
+  int *stop = arg; // the parameter points to this request to stop thing
   struct timing_request {
     char leader;
     char type;
@@ -314,8 +319,8 @@ void *rtp_timing_sender(void *arg) {
   time_ping_count = 0;
 
   // we inherit the signal mask (SIGUSR1)
-  while (*stop==0) {
-  	// debug(1,"Send a timing request");
+  while (*stop == 0) {
+    // debug(1,"Send a timing request");
 
     if (!running)
       die("rtp_timing_sender called without active stream!");
@@ -351,7 +356,7 @@ void *rtp_timing_receiver(void *arg) {
   debug(2, "Timing receiver -- Server RTP thread starting.");
   // we inherit the signal mask (SIGUSR1)
 
-	struct inter_threads_record *itr = arg;
+  struct inter_threads_record *itr = arg;
 
   uint8_t packet[2048], *pktp;
   ssize_t nread;
@@ -365,11 +370,11 @@ void *rtp_timing_receiver(void *arg) {
   local_to_remote_time_jitters_count = 0;
   uint64_t first_remote_time = 0;
   uint64_t first_local_time = 0;
-  
+
   uint64_t first_local_to_remote_time_difference = 0;
   uint64_t first_local_to_remote_time_difference_time;
   uint64_t l2rtd = 0;
-  while (itr->please_stop==0) {
+  while (itr->please_stop == 0) {
     nread = recv(timing_socket, packet, sizeof(packet), 0);
     arrival_time = get_absolute_time_in_fp();
     //      clock_gettime(CLOCK_MONOTONIC,&att);
@@ -428,13 +433,14 @@ void *rtp_timing_receiver(void *arg) {
       // these are for diagnostics only -- not used
       time_pings[0].local_time = arrival_time;
       time_pings[0].remote_time = distant_transmit_time;
-      
+
       time_pings[0].local_to_remote_difference = local_time_by_remote_clock - arrival_time;
       time_pings[0].dispersion = return_time;
       if (time_ping_count < time_ping_history)
         time_ping_count++;
-      
-      uint64_t local_time_chosen = arrival_time;;
+
+      uint64_t local_time_chosen = arrival_time;
+      ;
       uint64_t remote_time_chosen = distant_transmit_time;
       // now pick the timestamp with the lowest dispersion
       uint64_t l2rtd = time_pings[0].local_to_remote_difference;
@@ -465,69 +471,81 @@ void *rtp_timing_receiver(void *arg) {
       // with dispersion of %lld us with delta of %lld us",rtus,ji);
 
       local_to_remote_time_difference = l2rtd;
-      if (first_local_to_remote_time_difference==0) {
+      if (first_local_to_remote_time_difference == 0) {
         first_local_to_remote_time_difference = local_to_remote_time_difference;
         first_local_to_remote_time_difference_time = get_absolute_time_in_fp();
       }
-      
+
       int64_t clock_drift, clock_drift_in_usec;
-      if (first_local_time==0) {
+      if (first_local_time == 0) {
         first_local_time = local_time_chosen;
         first_remote_time = remote_time_chosen;
         clock_drift = 0;
       } else {
         uint64_t local_time_change = local_time_chosen - first_local_time;
         uint64_t remote_time_change = remote_time_chosen - first_remote_time;
-        
 
         if (remote_time_change >= local_time_change)
           clock_drift = remote_time_change - local_time_change;
         else
           clock_drift = -(local_time_change - remote_time_change);
       }
-      if (clock_drift>=0)
-        clock_drift_in_usec = (clock_drift * 1000000)>>32;
+      if (clock_drift >= 0)
+        clock_drift_in_usec = (clock_drift * 1000000) >> 32;
       else
-        clock_drift_in_usec = -(((-clock_drift) * 1000000)>>32);
-      
-      
-     
-     int64_t source_drift_usec;
-     if (play_segment_reference_frame!=0) {
-      uint32_t reference_timestamp;
-      uint64_t reference_timestamp_time,remote_reference_timestamp_time;
-      get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time, &remote_reference_timestamp_time);
-      uint64_t frame_difference = 0;
-      if (reference_timestamp>=play_segment_reference_frame)
-        frame_difference = (uint64_t)reference_timestamp-(uint64_t)play_segment_reference_frame;
-      else // rollover
-        frame_difference = (uint64_t)reference_timestamp+UINT64_C(0x100000000)-(uint64_t)play_segment_reference_frame;
-      uint64_t frame_time_difference_calculated = (((uint64_t)frame_difference<<32)/44100);
-      uint64_t frame_time_difference_actual = remote_reference_timestamp_time-play_segment_reference_frame_remote_time; // this is all done by reference to the sources' system clock
-      // debug(1,"%llu frames since play started, %llu usec calculated, %llu usec actual",frame_difference, (frame_time_difference_calculated*1000000)>>32, (frame_time_difference_actual*1000000)>>32);
-      if (frame_time_difference_calculated>=frame_time_difference_actual) // i.e. if the time it should have taken to send the packets is greater than the actual time difference measured on the source clock
-        // then the source DAC's clock is running fast relative to the source system clock
-        source_drift_usec = frame_time_difference_calculated-frame_time_difference_actual;
-      else
-        // otherwise the source DAC's clock is running slow relative to the source system clock
-        source_drift_usec = -(frame_time_difference_actual-frame_time_difference_calculated);
-     } else
-       source_drift_usec = 0;
-     source_drift_usec = (source_drift_usec*1000000)>>32; // turn it to microseconds
-      
-     //long current_delay = 0;
-     //if (config.output->delay) {
-     //       config.output->delay(&current_delay);
-     //}
-     //  Useful for troubleshooting:
-     //    clock_drift between source and local clock -- +ve means source is faster
-     //    session_corrections -- the amount of correction done, in microseconds. +ve means frames added
-     //    current_delay = delay in DAC buffer in frames
-     //    source_drift_usec = how much faster (+ve) or slower the source DAC is running relative to the source clock
-     //    buffer_occupancy = the number of buffers occupied. Crude, but should show no long term trend if source and device are in sync.
-     //    return_time = the time from soliciting a timing packet to getting it back. It should be short ( < 5 ms) and pretty consistent.
-     // debug(1, "%lld\t%lld\t%ld\t%lld\t%u\t%llu", clock_drift_in_usec,(session_corrections*1000000)/44100,current_delay,source_drift_usec,buffer_occupancy,(return_time*1000000)>>32);
-      
+        clock_drift_in_usec = -(((-clock_drift) * 1000000) >> 32);
+
+      int64_t source_drift_usec;
+      if (play_segment_reference_frame != 0) {
+        int64_t reference_timestamp;
+        uint64_t reference_timestamp_time, remote_reference_timestamp_time;
+        get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time,
+                                      &remote_reference_timestamp_time);
+        uint64_t frame_difference = 0;
+        if (reference_timestamp >= play_segment_reference_frame)
+          frame_difference = (uint64_t)reference_timestamp - (uint64_t)play_segment_reference_frame;
+        else // rollover
+          frame_difference =
+              (uint64_t)reference_timestamp + 0x100000000 - (uint64_t)play_segment_reference_frame;
+        uint64_t frame_time_difference_calculated = (((uint64_t)frame_difference << 32) / 44100);
+        uint64_t frame_time_difference_actual =
+            remote_reference_timestamp_time -
+            play_segment_reference_frame_remote_time; // this is all done by reference to the
+                                                      // sources' system clock
+        // debug(1,"%llu frames since play started, %llu usec calculated, %llu usec
+        // actual",frame_difference, (frame_time_difference_calculated*1000000)>>32,
+        // (frame_time_difference_actual*1000000)>>32);
+        if (frame_time_difference_calculated >=
+            frame_time_difference_actual) // i.e. if the time it should have taken to send the
+                                          // packets is greater than the actual time difference
+                                          // measured on the source clock
+          // then the source DAC's clock is running fast relative to the source system clock
+          source_drift_usec = frame_time_difference_calculated - frame_time_difference_actual;
+        else
+          // otherwise the source DAC's clock is running slow relative to the source system clock
+          source_drift_usec = -(frame_time_difference_actual - frame_time_difference_calculated);
+      } else
+        source_drift_usec = 0;
+      source_drift_usec = (source_drift_usec * 1000000) >> 32; // turn it to microseconds
+
+      // long current_delay = 0;
+      // if (config.output->delay) {
+      //       config.output->delay(&current_delay);
+      //}
+      //  Useful for troubleshooting:
+      //    clock_drift between source and local clock -- +ve means source is faster
+      //    session_corrections -- the amount of correction done, in microseconds. +ve means frames
+      //    added
+      //    current_delay = delay in DAC buffer in frames
+      //    source_drift_usec = how much faster (+ve) or slower the source DAC is running relative
+      //    to the source clock
+      //    buffer_occupancy = the number of buffers occupied. Crude, but should show no long term
+      //    trend if source and device are in sync.
+      //    return_time = the time from soliciting a timing packet to getting it back. It should be
+      //    short ( < 5 ms) and pretty consistent.
+      // debug(1, "%lld\t%lld\t%ld\t%lld\t%u\t%llu",
+      // clock_drift_in_usec,(session_corrections*1000000)/44100,current_delay,source_drift_usec,buffer_occupancy,(return_time*1000000)>>32);
+
     } else {
       debug(1, "Timing port -- Unknown RTP packet of type 0x%02X length %d.", packet[1], nread);
     }
@@ -545,44 +563,45 @@ void *rtp_timing_receiver(void *arg) {
   return NULL;
 }
 
-static int bind_port(int ip_family,const char *self_ip_address,uint32_t scope_id,int *sock) { 
+static int bind_port(int ip_family, const char *self_ip_address, uint32_t scope_id, int *sock) {
   // look for a port in the range, if any was specified.
   int desired_port = config.udp_port_base;
   int ret;
-  
+
   int local_socket = socket(ip_family, SOCK_DGRAM, IPPROTO_UDP);
-  if (local_socket== -1)
+  if (local_socket == -1)
     die("Could not allocate a socket.");
   SOCKADDR myaddr;
   do {
-    memset(&myaddr,0,sizeof(myaddr));
-    if (ip_family==AF_INET) {
+    memset(&myaddr, 0, sizeof(myaddr));
+    if (ip_family == AF_INET) {
       struct sockaddr_in *sa = (struct sockaddr_in *)&myaddr;
       sa->sin_family = AF_INET;
       sa->sin_port = ntohs(desired_port);
-      inet_pton(AF_INET,self_ip_address,&(sa->sin_addr));
-      ret = bind(local_socket,(struct sockaddr*)sa, sizeof(struct sockaddr_in));
+      inet_pton(AF_INET, self_ip_address, &(sa->sin_addr));
+      ret = bind(local_socket, (struct sockaddr *)sa, sizeof(struct sockaddr_in));
     }
 #ifdef AF_INET6
-    if (ip_family==AF_INET6) {
+    if (ip_family == AF_INET6) {
       struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)&myaddr;
       sa6->sin6_family = AF_INET6;
       sa6->sin6_port = ntohs(desired_port);
-      inet_pton(AF_INET6,self_ip_address,&(sa6->sin6_addr));
-      sa6->sin6_scope_id=scope_id;
-      ret = bind(local_socket,(struct sockaddr*)sa6, sizeof(struct sockaddr_in6));
+      inet_pton(AF_INET6, self_ip_address, &(sa6->sin6_addr));
+      sa6->sin6_scope_id = scope_id;
+      ret = bind(local_socket, (struct sockaddr *)sa6, sizeof(struct sockaddr_in6));
     }
-#endif   
-    
-  } while ((ret<0) && (errno==EADDRINUSE) && (desired_port!=0) && (desired_port++ < config.udp_port_base+config.udp_port_range));
-  
+#endif
+
+  } while ((ret < 0) && (errno == EADDRINUSE) && (desired_port != 0) &&
+           (desired_port++ < config.udp_port_base + config.udp_port_range));
+
   // debug(1,"UDP port chosen: %d.",desired_port);
-  
+
   if (ret < 0) {
-     close(local_socket);
-     die("error: could not bind a UDP port!");
+    close(local_socket);
+    die("error: could not bind a UDP port!");
   }
- 
+
   int sport;
   SOCKADDR local;
   socklen_t local_len = sizeof(local);
@@ -597,18 +616,18 @@ static int bind_port(int ip_family,const char *self_ip_address,uint32_t scope_id
     struct sockaddr_in *sa = (struct sockaddr_in *)&local;
     sport = ntohs(sa->sin_port);
   }
-  
+
   *sock = local_socket;
   return sport;
 }
 
-void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t active_remote, int *lsport,
-               int *lcport, int *ltport) {
-               
+void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t active_remote,
+               int *lsport, int *lcport, int *ltport) {
+
   // this gets the local and remote ip numbers (and ports used for the TCD stuff)
   // we use the local stuff to specify the address we are coming from and
   // we use the remote stuff to specify where we're goint to
-  
+
   if (running)
     die("rtp_setup called with active stream!");
 
@@ -617,13 +636,13 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
   client_active_remote = active_remote;
 
   // print out what we know about the client
-  void *client_addr,*self_addr;
-  int client_port,self_port;
+  void *client_addr, *self_addr;
+  int client_port, self_port;
   char client_port_str[64];
   char self_addr_str[64];
-  
+
   connection_ip_family = remote->SAFAMILY; // keep information about the kind of ip of the client
-  
+
 #ifdef AF_INET6
   if (connection_ip_family == AF_INET6) {
     struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)remote;
@@ -644,13 +663,10 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
     self_port = ntohs(sa4->sin_port);
   }
 
-  inet_ntop(connection_ip_family, client_addr, client_ip_string,
-            sizeof(client_ip_string));
-  inet_ntop(connection_ip_family, self_addr, self_ip_string,
-            sizeof(self_ip_string));
+  inet_ntop(connection_ip_family, client_addr, client_ip_string, sizeof(client_ip_string));
+  inet_ntop(connection_ip_family, self_addr, self_ip_string, sizeof(self_ip_string));
 
-  debug(1, "Set up play connection from %s to self at %s.", client_ip_string,self_ip_string);
-
+  debug(1, "Set up play connection from %s to self at %s.", client_ip_string, self_ip_string);
 
   // set up a the record of the remote's control socket
   struct addrinfo hints;
@@ -698,23 +714,24 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
   // now, we open three sockets -- one for the audio stream, one for the timing and one for the
   // control
 
-  *lsport = bind_port(connection_ip_family,self_ip_string,self_scope_id,&audio_socket);
-  *lcport = bind_port(connection_ip_family,self_ip_string,self_scope_id,&control_socket);
-  *ltport = bind_port(connection_ip_family,self_ip_string,self_scope_id,&timing_socket);
+  *lsport = bind_port(connection_ip_family, self_ip_string, self_scope_id, &audio_socket);
+  *lcport = bind_port(connection_ip_family, self_ip_string, self_scope_id, &control_socket);
+  *ltport = bind_port(connection_ip_family, self_ip_string, self_scope_id, &timing_socket);
 
   debug(2, "listening for audio, control and timing on ports %d, %d, %d.", *lsport, *lcport,
         *ltport);
 
   reference_timestamp = 0;
-  //pthread_create(&rtp_audio_thread, NULL, &rtp_audio_receiver, NULL);
-  //pthread_create(&rtp_control_thread, NULL, &rtp_control_receiver, NULL);
-  //pthread_create(&rtp_timing_thread, NULL, &rtp_timing_receiver, NULL);
+  // pthread_create(&rtp_audio_thread, NULL, &rtp_audio_receiver, NULL);
+  // pthread_create(&rtp_control_thread, NULL, &rtp_control_receiver, NULL);
+  // pthread_create(&rtp_timing_thread, NULL, &rtp_timing_receiver, NULL);
 
   running = 1;
   request_sent = 0;
 }
 
-void get_reference_timestamp_stuff(uint32_t *timestamp, uint64_t *timestamp_time, uint64_t *remote_timestamp_time) {
+void get_reference_timestamp_stuff(int64_t *timestamp, uint64_t *timestamp_time,
+                                   uint64_t *remote_timestamp_time) {
   // types okay
   pthread_mutex_lock(&reference_time_mutex);
   *timestamp = reference_timestamp;
@@ -732,25 +749,25 @@ void clear_reference_timestamp(void) {
 
 void rtp_shutdown(void) {
   if (!running)
-    debug(1,"rtp_shutdown called without active stream!");
+    debug(1, "rtp_shutdown called without active stream!");
 
   debug(2, "shutting down RTP thread");
   clear_reference_timestamp();
-//  debug(1,"Shut down audio, control and timing threads");
-//  usleep(3000000); // hack
-//  pthread_kill(rtp_audio_thread, SIGUSR1);
-//  pthread_kill(rtp_control_thread, SIGUSR1);
-//  pthread_kill(rtp_timing_thread, SIGUSR1);
-//  pthread_join(rtp_audio_thread, &retval);
-//  pthread_join(rtp_control_thread, &retval);
-//  pthread_join(rtp_timing_thread, &retval);
+  //  debug(1,"Shut down audio, control and timing threads");
+  //  usleep(3000000); // hack
+  //  pthread_kill(rtp_audio_thread, SIGUSR1);
+  //  pthread_kill(rtp_control_thread, SIGUSR1);
+  //  pthread_kill(rtp_timing_thread, SIGUSR1);
+  //  pthread_join(rtp_audio_thread, &retval);
+  //  pthread_join(rtp_control_thread, &retval);
+  //  pthread_join(rtp_timing_thread, &retval);
   running = 0;
 }
 
 void rtp_request_resend(seq_t first, uint32_t count) {
   if (running) {
-    //if (!request_sent) {
-      debug(3, "requesting resend of %d packets starting at %u.", count, first);
+    // if (!request_sent) {
+    debug(3, "requesting resend of %d packets starting at %u.", count, first);
     //  request_sent = 1;
     //}
 
@@ -771,8 +788,8 @@ void rtp_request_resend(seq_t first, uint32_t count) {
       perror("Error sendto-ing to audio socket");
     }
   } else {
-    //if (!request_sent) {
-      debug(2, "rtp_request_resend called without active stream!");
+    // if (!request_sent) {
+    debug(2, "rtp_request_resend called without active stream!");
     //  request_sent = 1;
     //}
   }

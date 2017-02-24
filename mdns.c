@@ -24,13 +24,13 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include "mdns.h"
+#include "common.h"
+#include "config.h"
 #include <memory.h>
-#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "config.h"
-#include "common.h"
-#include "mdns.h"
+#include <string.h>
 
 #ifdef CONFIG_AVAHI
 extern mdns_backend mdns_avahi;
@@ -46,10 +46,12 @@ extern mdns_backend mdns_tinysvcmdns;
 
 static mdns_backend *mdns_backends[] = {
 #ifdef CONFIG_AVAHI
-    &mdns_avahi,       &mdns_external_avahi,
+    &mdns_avahi,
+    &mdns_external_avahi,
 #endif
 #ifdef CONFIG_HAVE_DNS_SD_H
-    &mdns_dns_sd,      &mdns_external_dns_sd,
+    &mdns_dns_sd,
+    &mdns_external_dns_sd,
 #endif
 #ifdef CONFIG_TINYSVCMDNS
     &mdns_tinysvcmdns,

@@ -28,11 +28,11 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <stdio.h>
-#include <unistd.h>
-#include <sys/time.h>
-#include "common.h"
 #include "audio.h"
+#include "common.h"
+#include <stdio.h>
+#include <sys/time.h>
+#include <unistd.h>
 
 int Fs;
 long long starttime, samples_played;
@@ -41,7 +41,7 @@ static int init(int argc, char **argv) { return 0; }
 
 static void deinit(void) {}
 
-static void start(int sample_rate) {
+static void start(int sample_rate, int sample_format) {
   Fs = sample_rate;
   starttime = 0;
   samples_played = 0;

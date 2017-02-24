@@ -19,10 +19,10 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "audio.h"
+#include <sndio.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <sndio.h>
-#include "audio.h"
 
 static struct sio_hdl *sio;
 static struct sio_par par;
@@ -56,6 +56,8 @@ static void deinit(void) { sio_close(sio); }
 static void start(int sample_rate) {
   if (sample_rate != par.rate)
     die("unexpected sample rate!");
+  if (sample_format != 0)
+    die("unexpected sample format!");
   sio_start(sio);
 }
 
@@ -86,4 +88,4 @@ audio_output audio_sndio = {.name = "sndio",
                             .play = &play,
                             .volume = &volume,
                             .parameters = NULL,
-                            .mute= NULL};
+                            .mute = NULL};

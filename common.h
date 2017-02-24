@@ -1,12 +1,12 @@
 #ifndef _COMMON_H
 #define _COMMON_H
 
+#include <libconfig.h>
 #include <stdint.h>
 #include <sys/socket.h>
-#include <libconfig.h>
 
-#include "config.h"
 #include "audio.h"
+#include "config.h"
 #include "mdns.h"
 
 #if defined(__APPLE__) && defined(__MACH__)
@@ -46,12 +46,34 @@ enum stuffing_type {
 enum playback_mode_type {
   ST_stereo = 0,
   ST_mono,
+  ST_reverse_stereo,
+  ST_left_only,
+  ST_right_only,
 } playback_mode_type;
+
+enum decoders_supported_type {
+  decoder_hammerton = 0,
+  decoder_apple_alac,
+} decoders_supported_type;
+
+// the following enum must _exactly match the snd_pcm_format_t definition in the alsa pcm.h file.
+
+enum sps_format_t {
+  SPS_FORMAT_UNKNOWN = 0,
+  SPS_FORMAT_S8,
+  SPS_FORMAT_U8,
+  SPS_FORMAT_S16,
+  SPS_FORMAT_S24,
+  SPS_FORMAT_S24_3LE,
+  SPS_FORMAT_S24_3BE,
+  SPS_FORMAT_S32,
+} sps_format_t;
 
 typedef struct {
   config_t *cfg;
   char *password;
-  char *service_name; // the name for the shairport service, e.g. "Shairport Sync Version %v running on host %h"
+  char *service_name; // the name for the shairport service, e.g. "Shairport Sync Version %v running
+                      // on host %h"
 #ifdef CONFIG_METADATA
   int metadata_enabled;
   char *metadata_pipename;
@@ -65,10 +87,13 @@ typedef struct {
   int udp_port_base;
   int udp_port_range;
   int ignore_volume_control;
-  int no_sync; // disable synchronisation, even if it's available
-  int no_mmap; // disable use of mmap-based output, even if it's available
-  int resyncthreshold; // if it get's out of whack my more than this, resync. Zero means never
-                       // resync.
+  int volume_max_db_set; // set to 1 if a maximum volume db has been set
+  int volume_max_db;
+  int no_sync;            // disable synchronisation, even if it's available
+  int no_mmap;            // disable use of mmap-based output, even if it's available
+  double resyncthreshold; // if it get's out of whack my more than this number of seconds, resync.
+                          // Zero means never
+                          // resync.
   int allow_session_interruption;
   int timeout; // while in play mode, exit if no packets of audio come in for more than this number
                // of seconds . Zero means never exit.
@@ -79,27 +104,37 @@ typedef struct {
   char *mdns_name;
   mdns_backend *mdns;
   int buffer_start_fill;
-  int32_t latency;
-  int32_t userSuppliedLatency; // overrides all other latencies -- use with caution
-  int32_t iTunesLatency;       // supplied with --iTunesLatency option
-  int32_t AirPlayLatency; // supplied with --AirPlayLatency option
-  int32_t ForkedDaapdLatency; // supplied with --ForkedDaapdLatency option
+  int64_t latency;
+  int64_t userSuppliedLatency; // overrides all other latencies -- use with caution
+  int64_t iTunesLatency;       // supplied with --iTunesLatency option
+  int64_t AirPlayLatency;      // supplied with --AirPlayLatency option
+  int64_t ForkedDaapdLatency;  // supplied with --ForkedDaapdLatency option
   int daemonise;
-  int statistics_requested,use_negotiated_latencies;
+  int statistics_requested, use_negotiated_latencies;
   enum playback_mode_type playback_mode;
   char *cmd_start, *cmd_stop;
   int cmd_blocking;
-  int tolerance; // allow this much drift before attempting to correct it
+  double tolerance; // allow this much drift before attempting to correct it
   enum stuffing_type packet_stuffing;
+  int decoders_supported;
+  int use_apple_decoder; // set to 1 if you want to use the apple decoder instead of the original by
+                         // David Hammerton
   char *pidfile;
   // char *logfile;
   // char *errfile;
   char *configfile;
-  char *regtype; // The regtype is the service type followed by the protocol, separated by a dot, by default “_raop._tcp.”.
-  long audio_backend_buffer_desired_length; // this will be the desired number of frames in the
-                                            // audio backend buffer -- the DAC buffer for ALSA
-  long audio_backend_latency_offset; // this will be the offset to compensate for any fixed latency there might be in the audio path
-  uint32_t volume_range_db; // the range, in dB, from max dB to min dB. Zero means use the mixer's native range.
+  char *regtype; // The regtype is the service type followed by the protocol, separated by a dot, by
+                 // default “_raop._tcp.”.
+  char *interface;     // a string containg the interface name, or NULL if nothing specified
+  int interface_index; // only valid if the interface string is non-NULL
+  double audio_backend_buffer_desired_length; // this will be the length in seconds of the
+                                              // audio backend buffer -- the DAC buffer for ALSA
+  double audio_backend_latency_offset; // this will be the offset in seconds to compensate for any
+                                       // fixed latency there might be in the audio path
+  uint32_t volume_range_db; // the range, in dB, from max dB to min dB. Zero means use the mixer's
+                            // native range.
+  enum sps_format_t output_format;
+  int output_rate;
 } shairport_cfg;
 
 // true if Shairport Sync is supposed to be sending output to the output device, false otherwise
@@ -110,8 +145,20 @@ void set_requested_connection_state_to_output(int v);
 
 ssize_t non_blocking_write(int fd, const void *buf, size_t count); // used in a few places
 
-/* from http://coding.debuntu.org/c-implementing-str_replace-replace-all-occurrences-substring#comment-722 */
-char *str_replace ( const char *string, const char *substr, const char *replacement );
+/* from
+ * http://coding.debuntu.org/c-implementing-str_replace-replace-all-occurrences-substring#comment-722
+ */
+char *str_replace(const char *string, const char *substr, const char *replacement);
+
+// based on http://burtleburtle.net/bob/rand/smallprng.html
+
+void r64init(uint64_t seed);
+uint64_t r64u();
+int64_t r64i();
+
+void r64arrayinit();
+uint64_t ranarray64u();
+int64_t ranarray64i();
 
 int debuglev;
 void die(char *format, ...);
@@ -144,7 +191,7 @@ config_t config_file_stuff;
 
 int32_t buffer_occupancy; // allow it to be negative because seq_diff may be negative
 int64_t session_corrections;
-uint32_t play_segment_reference_frame;
+int64_t play_segment_reference_frame;
 uint64_t play_segment_reference_frame_remote_time;
 
 void command_start(void);

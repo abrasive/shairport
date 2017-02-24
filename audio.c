@@ -24,16 +24,19 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <stdio.h>
-#include <string.h>
 #include "audio.h"
 #include "config.h"
+#include <stdio.h>
+#include <string.h>
 
 #ifdef CONFIG_SNDIO
 extern audio_output audio_sndio;
 #endif
 #ifdef CONFIG_AO
 extern audio_output audio_ao;
+#endif
+#ifdef CONFIG_SOUNDIO
+extern audio_output audio_soundio;
 #endif
 #ifdef CONFIG_PULSE
 extern audio_output audio_pulse;
@@ -64,10 +67,13 @@ static audio_output *outputs[] = {
 #ifdef CONFIG_AO
     &audio_ao,
 #endif
+#ifdef CONFIG_SOUNDIO
+    &audio_soundio,
+#endif
 #ifdef CONFIG_DUMMY
     &audio_dummy,
 #endif
-#ifdef CONFIG_PIPE 
+#ifdef CONFIG_PIPE
     &audio_pipe,
 #endif
 #ifdef CONFIG_STDOUT

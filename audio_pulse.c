@@ -28,14 +28,14 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include "audio.h"
+#include "common.h"
+#include <memory.h>
+#include <pulse/def.h>
+#include <pulse/error.h>
+#include <pulse/simple.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <memory.h>
-#include <pulse/simple.h>
-#include <pulse/error.h>
-#include <pulse/def.h>
-#include "common.h"
-#include "audio.h"
 
 static pa_simple *pa_dev = NULL;
 
@@ -110,9 +110,11 @@ static void deinit(void) {
   pa_dev = NULL;
 }
 
-static void start(int sample_rate) {
-  if (sample_rate != 44100)
+static void start(int sample_rate, int sample_format) {
+  if (sample_rate != 0)
     die("unexpected sample rate!");
+  if (sample_format != 0)
+    die("unexpected sample format!");
 }
 
 static void play(short buf[], int samples) {

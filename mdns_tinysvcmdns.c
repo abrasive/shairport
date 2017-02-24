@@ -24,15 +24,15 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <net/if.h>
-#include <ifaddrs.h>
-#include <unistd.h>
-#include <netinet/in.h>
-#include "common.h"
 #include "mdns.h"
+#include "common.h"
+#include <ifaddrs.h>
+#include <net/if.h>
+#include <netinet/in.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "tinysvcmdns.h"
 
@@ -70,17 +70,22 @@ static int mdns_tinysvcmdns_register(char *apname, int port) {
 
   // Look for an ipv4/ipv6 non-loopback interface to use as the main one.
   for (ifa = ifalist; ifa != NULL; ifa = ifa->ifa_next) {
-    if (!(ifa->ifa_flags & IFF_LOOPBACK) && ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET) {
-      uint32_t main_ip = ((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr;
+    // only check for the named interface, if specified
+    if ((config.interface == NULL) || (strcmp(config.interface, ifa->ifa_name) == 0)) {
 
-      mdnsd_set_hostname(svr, hostname, main_ip); // TTL should be 120 seconds
-      break;
-    } else if (!(ifa->ifa_flags & IFF_LOOPBACK) && ifa->ifa_addr &&
-               ifa->ifa_addr->sa_family == AF_INET6) {
-      struct in6_addr *addr = &((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr;
+      if (!(ifa->ifa_flags & IFF_LOOPBACK) && ifa->ifa_addr &&
+          ifa->ifa_addr->sa_family == AF_INET) {
+        uint32_t main_ip = ((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr;
 
-      mdnsd_set_hostname_v6(svr, hostname, addr); // TTL should be 120 seconds
-      break;
+        mdnsd_set_hostname(svr, hostname, main_ip); // TTL should be 120 seconds
+        break;
+      } else if (!(ifa->ifa_flags & IFF_LOOPBACK) && ifa->ifa_addr &&
+                 ifa->ifa_addr->sa_family == AF_INET6) {
+        struct in6_addr *addr = &((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr;
+
+        mdnsd_set_hostname_v6(svr, hostname, addr); // TTL should be 120 seconds
+        break;
+      }
     }
   }
 
@@ -93,19 +98,22 @@ static int mdns_tinysvcmdns_register(char *apname, int port) {
   for (ifa = ifa->ifa_next; ifa != NULL; ifa = ifa->ifa_next) {
     if (ifa->ifa_flags & IFF_LOOPBACK) // Skip loop-back interfaces
       continue;
-
-    switch (ifa->ifa_addr->sa_family) {
-    case AF_INET: { // ipv4
-      uint32_t ip = ((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr;
-      struct rr_entry *a_e = rr_create_a(create_nlabel(hostname), ip); // TTL should be 120 seconds
-      mdnsd_add_rr(svr, a_e);
-    } break;
-    case AF_INET6: { // ipv6
-      struct in6_addr *addr = &((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr;
-      struct rr_entry *aaaa_e =
-          rr_create_aaaa(create_nlabel(hostname), addr); // TTL should be 120 seconds
-      mdnsd_add_rr(svr, aaaa_e);
-    } break;
+    // only check for the named interface, if specified
+    if ((config.interface == NULL) || (strcmp(config.interface, ifa->ifa_name) == 0)) {
+      switch (ifa->ifa_addr->sa_family) {
+      case AF_INET: { // ipv4
+        uint32_t ip = ((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr;
+        struct rr_entry *a_e =
+            rr_create_a(create_nlabel(hostname), ip); // TTL should be 120 seconds
+        mdnsd_add_rr(svr, a_e);
+      } break;
+      case AF_INET6: { // ipv6
+        struct in6_addr *addr = &((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr;
+        struct rr_entry *aaaa_e =
+            rr_create_aaaa(create_nlabel(hostname), addr); // TTL should be 120 seconds
+        mdnsd_add_rr(svr, aaaa_e);
+      } break;
+      }
     }
   }
 
@@ -124,22 +132,23 @@ static int mdns_tinysvcmdns_register(char *apname, int port) {
 #endif
 
     txt = txtwithoutmetadata;
-  
+
   if (config.regtype == NULL)
     die("tinysvcmdns: regtype is null");
 
-  char* extendedregtype = malloc(strlen(config.regtype)+strlen(".local")+1);
+  char *extendedregtype = malloc(strlen(config.regtype) + strlen(".local") + 1);
 
-  if (extendedregtype==NULL)
+  if (extendedregtype == NULL)
     die("tinysvcmdns: could not allocated memory to request a Zeroconf service");
-    
-  strcpy(extendedregtype,config.regtype);
-  strcat(extendedregtype,".local");
 
-  struct mdns_service *svc = mdnsd_register_svc(svr, apname, extendedregtype, port, NULL,
+  strcpy(extendedregtype, config.regtype);
+  strcat(extendedregtype, ".local");
+
+  struct mdns_service *svc =
+      mdnsd_register_svc(svr, apname, extendedregtype, port, NULL,
                          (const char **)txt); // TTL should be 75 minutes, i.e. 4500 seconds
   mdns_service_destroy(svc);
-  
+
   free(extendedregtype);
 
   return 0;

@@ -25,20 +25,20 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <stdio.h>
-#include <stdarg.h>
-#include <stdlib.h>
-#include <memory.h>
 #include <errno.h>
-#include <time.h>
-#include <unistd.h>
-#include <popt.h>
+#include <memory.h>
 #include <poll.h>
+#include <popt.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <time.h>
+#include <unistd.h>
 
-#include <assert.h>
 #include "common.h"
+#include <assert.h>
 
 #ifdef COMPILE_FOR_OSX
 #include <CoreServices/CoreServices.h>
@@ -47,27 +47,36 @@
 #endif
 
 #ifdef HAVE_LIBSSL
-#include <openssl/rsa.h>
-#include <openssl/pem.h>
-#include <openssl/evp.h>
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
+#include <openssl/evp.h>
+#include <openssl/pem.h>
+#include <openssl/rsa.h>
 #endif
 
 #ifdef HAVE_LIBPOLARSSL
-#include <polarssl/version.h>
-#include <polarssl/base64.h>
-#include <polarssl/x509.h>
-#include <polarssl/md.h>
-#include "polarssl/entropy.h"
 #include "polarssl/ctr_drbg.h"
+#include "polarssl/entropy.h"
+#include <polarssl/base64.h>
+#include <polarssl/md.h>
+#include <polarssl/version.h>
+#include <polarssl/x509.h>
 
 #if POLARSSL_VERSION_NUMBER >= 0x01030000
 #include "polarssl/compat-1.2.h"
 #endif
 #endif
 
-#include "common.h"
+#ifdef HAVE_LIBMBEDTLS
+#include "mbedtls/ctr_drbg.h"
+#include "mbedtls/entropy.h"
+#include <mbedtls/base64.h>
+#include <mbedtls/md.h>
+#include <mbedtls/version.h>
+#include <mbedtls/x509.h>
+
+#endif
+
 #include <libdaemon/dlog.h>
 
 // true if Shairport Sync is supposed to be sending output to the output device, false otherwise
@@ -125,6 +134,59 @@ void inform(char *format, ...) {
   va_end(args);
   daemon_log(LOG_INFO, "%s", s);
 }
+
+#ifdef HAVE_LIBMBEDTLS
+char *base64_enc(uint8_t *input, int length) {
+  char *buf = NULL;
+  size_t dlen = 0;
+  int rc = mbedtls_base64_encode(NULL, 0, &dlen, input, length);
+  if (rc && (rc != MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL))
+    debug(1, "Error %d getting length of base64 encode.", rc);
+  else {
+    buf = (char *)malloc(dlen);
+    rc = mbedtls_base64_encode((unsigned char *)buf, dlen, &dlen, input, length);
+    if (rc != 0)
+      debug(1, "Error %d encoding base64.", rc);
+  }
+  return buf;
+}
+
+uint8_t *base64_dec(char *input, int *outlen) {
+  // slight problem here is that Apple cut the padding off their challenges. We must restore it
+  // before passing it in to the decoder, it seems
+  uint8_t *buf = NULL;
+  size_t dlen = 0;
+  int inbufsize = ((strlen(input) + 3) / 4) * 4; // this is the size of the input buffer we will
+                                                 // send to the decoder, but we need space for 3
+                                                 // extra "="s and a NULL
+  char *inbuf = malloc(inbufsize + 4);
+  if (inbuf == 0)
+    debug(1, "Can't malloc memory  for inbuf in base64_decode.");
+  else {
+    strcpy(inbuf, input);
+    strcat(inbuf, "===");
+    // debug(1,"base64_dec called with string \"%s\", length %d, filled string: \"%s\", length %d.",
+    //		input,strlen(input),inbuf,inbufsize);
+    int rc = mbedtls_base64_decode(NULL, 0, &dlen, (unsigned char *)inbuf, inbufsize);
+    if (rc && (rc != MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL))
+      debug(1, "Error %d getting decode length, result is %d.", rc, dlen);
+    else {
+      // debug(1,"Decode size is %d.",dlen);
+      buf = malloc(dlen);
+      if (buf == 0)
+        debug(1, "Can't allocate memory in base64_dec.");
+      else {
+        rc = mbedtls_base64_decode(buf, dlen, &dlen, (unsigned char *)inbuf, inbufsize);
+        if (rc != 0)
+          debug(1, "Error %d in base64_dec.", rc);
+      }
+    }
+    free(inbuf);
+  }
+  *outlen = dlen;
+  return buf;
+}
+#endif
 
 #ifdef HAVE_LIBPOLARSSL
 char *base64_enc(uint8_t *input, int length) {
@@ -277,6 +339,63 @@ uint8_t *rsa_apply(uint8_t *input, int inlen, int *outlen, int mode) {
     die("bad rsa mode");
   }
   return out;
+}
+#endif
+
+#ifdef HAVE_LIBMBEDTLS
+uint8_t *rsa_apply(uint8_t *input, int inlen, int *outlen, int mode) {
+  mbedtls_pk_context pkctx;
+  mbedtls_rsa_context *trsa;
+  const char *pers = "rsa_encrypt";
+  size_t olen = *outlen;
+  int rc;
+
+  mbedtls_entropy_context entropy;
+  mbedtls_ctr_drbg_context ctr_drbg;
+
+  mbedtls_entropy_init(&entropy);
+
+  mbedtls_ctr_drbg_init(&ctr_drbg);
+  mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, (const unsigned char *)pers,
+                        strlen(pers));
+
+  mbedtls_pk_init(&pkctx);
+
+  rc = mbedtls_pk_parse_key(&pkctx, (unsigned char *)super_secret_key, sizeof(super_secret_key),
+                            NULL, 0);
+  if (rc != 0)
+    debug(1, "Error %d reading the private key.", rc);
+
+  uint8_t *outbuf = NULL;
+  trsa = mbedtls_pk_rsa(pkctx);
+
+  switch (mode) {
+  case RSA_MODE_AUTH:
+    mbedtls_rsa_set_padding(trsa, MBEDTLS_RSA_PKCS_V15, MBEDTLS_MD_NONE);
+    outbuf = malloc(trsa->len);
+    rc = mbedtls_rsa_pkcs1_encrypt(trsa, mbedtls_ctr_drbg_random, &ctr_drbg, MBEDTLS_RSA_PRIVATE,
+                                   inlen, input, outbuf);
+    if (rc != 0)
+      debug(1, "mbedtls_pk_encrypt error %d.", rc);
+    *outlen = trsa->len;
+    break;
+  case RSA_MODE_KEY:
+    mbedtls_rsa_set_padding(trsa, MBEDTLS_RSA_PKCS_V21, MBEDTLS_MD_SHA1);
+    outbuf = malloc(trsa->len);
+    rc = mbedtls_rsa_pkcs1_decrypt(trsa, mbedtls_ctr_drbg_random, &ctr_drbg, MBEDTLS_RSA_PRIVATE,
+                                   &olen, input, outbuf, trsa->len);
+    if (rc != 0)
+      debug(1, "mbedtls_pk_decrypt error %d.", rc);
+    *outlen = olen;
+    break;
+  default:
+    die("bad rsa mode");
+  }
+
+  mbedtls_ctr_drbg_free(&ctr_drbg);
+  mbedtls_entropy_free(&entropy);
+  mbedtls_pk_free(&pkctx);
+  return outbuf;
 }
 #endif
 
@@ -440,7 +559,7 @@ double vol2attn(double vol, long max_db, long min_db) {
   double vol_setting = 0;
 
   if ((vol <= 0.0) && (vol >= -30.0)) {
-    long range_db = max_db - min_db; // this will be a positive nunmber
+    long range_db = max_db - min_db; // this will be a positive number
     // debug(1,"Volume min %ddB, max %ddB, range %ddB.",min_db,max_db,range_db);
     // double first_slope = -3000.0; // this is the slope of the attenuation at the high end -- 30dB
     // for the full rotation.
@@ -479,7 +598,8 @@ uint64_t get_absolute_time_in_fp() {
   struct timespec tn;
   // can't use CLOCK_MONOTONIC_RAW as it's not implemented in OpenWrt
   clock_gettime(CLOCK_MONOTONIC, &tn);
-  time_now_fp = ((uint64_t)tn.tv_sec << 32) + ((uint64_t)tn.tv_nsec << 32) / 1000000000; // types okay
+  time_now_fp =
+      ((uint64_t)tn.tv_sec << 32) + ((uint64_t)tn.tv_nsec << 32) / 1000000000; // types okay
 #endif
 #ifdef COMPILE_FOR_OSX
   uint64_t time_now_mach;
@@ -514,13 +634,13 @@ uint64_t get_absolute_time_in_fp() {
 }
 
 ssize_t non_blocking_write(int fd, const void *buf, size_t count) {
-	void *ibuf = (void *)buf;
-	size_t bytes_remaining = count;
-	int rc = 0;
+  void *ibuf = (void *)buf;
+  size_t bytes_remaining = count;
+  int rc = 0;
   struct pollfd ufds[1];
-	while ((bytes_remaining>0) && (rc==0)) {
-		// check that we can do some writing
-		ufds[0].fd = fd;
+  while ((bytes_remaining > 0) && (rc == 0)) {
+    // check that we can do some writing
+    ufds[0].fd = fd;
     ufds[0].events = POLLOUT;
     rc = poll(ufds, 1, 5000);
     if (rc < 0) {
@@ -528,51 +648,117 @@ ssize_t non_blocking_write(int fd, const void *buf, size_t count) {
     } else if (rc == 0) {
       // warn("non-blocking write timeout waiting for pipe to become ready for writing");
       rc = -2;
-    } else { //rc > 0, implying it might be ready
-    	size_t bytes_written = write(fd,ibuf,bytes_remaining);
-    	if (bytes_written==-1) {
-    	  // debug(1,"Error %d in non_blocking_write: \"%s\".",errno,strerror(errno));
-    		rc = -1;
-    	} else {
-    		ibuf += bytes_written;
-    		bytes_remaining -= bytes_written;
-    	}    		
+    } else { // rc > 0, implying it might be ready
+      size_t bytes_written = write(fd, ibuf, bytes_remaining);
+      if (bytes_written == -1) {
+        // debug(1,"Error %d in non_blocking_write: \"%s\".",errno,strerror(errno));
+        rc = -1;
+      } else {
+        ibuf += bytes_written;
+        bytes_remaining -= bytes_written;
+      }
     }
-	}
-	if (rc==0)
-		return count-bytes_remaining; // this is just to mimic a normal write/3.
-	else
-		return rc;
+  }
+  if (rc == 0)
+    return count - bytes_remaining; // this is just to mimic a normal write/3.
+  else
+    return rc;
   //  return write(fd,buf,count);
 }
 
-/* from http://coding.debuntu.org/c-implementing-str_replace-replace-all-occurrences-substring#comment-722 */
+/* from
+ * http://coding.debuntu.org/c-implementing-str_replace-replace-all-occurrences-substring#comment-722
+ */
 
-char *str_replace ( const char *string, const char *substr, const char *replacement ){
+char *str_replace(const char *string, const char *substr, const char *replacement) {
   char *tok = NULL;
   char *newstr = NULL;
   char *oldstr = NULL;
   char *head = NULL;
- 
+
   /* if either substr or replacement is NULL, duplicate string a let caller handle it */
-  if ( substr == NULL || replacement == NULL ) return strdup (string);
-  newstr = strdup (string);
+  if (substr == NULL || replacement == NULL)
+    return strdup(string);
+  newstr = strdup(string);
   head = newstr;
-  while ( (tok = strstr ( head, substr ))){
+  while ((tok = strstr(head, substr))) {
     oldstr = newstr;
-    newstr = malloc ( strlen ( oldstr ) - strlen ( substr ) + strlen ( replacement ) + 1 );
+    newstr = malloc(strlen(oldstr) - strlen(substr) + strlen(replacement) + 1);
     /*failed to alloc mem, free old string and return NULL */
-    if ( newstr == NULL ){
-      free (oldstr);
+    if (newstr == NULL) {
+      free(oldstr);
       return NULL;
     }
-    memcpy ( newstr, oldstr, tok - oldstr );
-    memcpy ( newstr + (tok - oldstr), replacement, strlen ( replacement ) );
-    memcpy ( newstr + (tok - oldstr) + strlen( replacement ), tok + strlen ( substr ), strlen ( oldstr ) - strlen ( substr ) - ( tok - oldstr ) );
-    memset ( newstr + strlen ( oldstr ) - strlen ( substr ) + strlen ( replacement ) , 0, 1 );
+    memcpy(newstr, oldstr, tok - oldstr);
+    memcpy(newstr + (tok - oldstr), replacement, strlen(replacement));
+    memcpy(newstr + (tok - oldstr) + strlen(replacement), tok + strlen(substr),
+           strlen(oldstr) - strlen(substr) - (tok - oldstr));
+    memset(newstr + strlen(oldstr) - strlen(substr) + strlen(replacement), 0, 1);
     /* move back head right after the last replacement */
-    head = newstr + (tok - oldstr) + strlen( replacement );
-    free (oldstr);
+    head = newstr + (tok - oldstr) + strlen(replacement);
+    free(oldstr);
   }
   return newstr;
 }
+
+/* from http://burtleburtle.net/bob/rand/smallprng.html */
+
+// typedef uint64_t u8;
+typedef struct ranctx {
+  uint64_t a;
+  uint64_t b;
+  uint64_t c;
+  uint64_t d;
+} ranctx;
+
+static struct ranctx rx;
+
+#define rot(x, k) (((x) << (k)) | ((x) >> (64 - (k))))
+uint64_t ranval(ranctx *x) {
+  uint64_t e = x->a - rot(x->b, 7);
+  x->a = x->b ^ rot(x->c, 13);
+  x->b = x->c + rot(x->d, 37);
+  x->c = x->d + e;
+  x->d = e + x->a;
+  return x->d;
+}
+
+void raninit(ranctx *x, uint64_t seed) {
+  uint64_t i;
+  x->a = 0xf1ea5eed, x->b = x->c = x->d = seed;
+  for (i = 0; i < 20; ++i) {
+    (void)ranval(x);
+  }
+}
+
+void r64init(uint64_t seed) { raninit(&rx, seed); }
+
+uint64_t r64u() { return (ranval(&rx)); }
+
+int64_t r64i() { return (ranval(&rx) >> 1); }
+
+/* generate an array of 64-bit random numbers */
+const int ranarraylength = 1009; // these will be 8-byte numbers.
+
+uint64_t *ranarray;
+
+int ranarraynext;
+
+void ranarrayinit() {
+  ranarray = (uint64_t *)malloc(ranarraylength * sizeof(uint64_t));
+  int i;
+  for (i = 0; i < ranarraylength; i++)
+    ranarray[i] = r64u();
+  ranarraynext = 0;
+}
+
+uint64_t ranarrayval() {
+  uint64_t v = ranarray[ranarraynext];
+  ranarraynext = (ranarraynext++) % ranarraylength;
+}
+
+void r64arrayinit() { ranarrayinit(); }
+
+uint64_t ranarray64u() { return (ranarrayval()); }
+
+int64_t ranarray64i() { return (ranarrayval(&rx) >> 1); }

@@ -1,9 +1,14 @@
 SUBDIRS = man
 
 bin_PROGRAMS = shairport-sync
-shairport_sync_SOURCES = shairport.c rtsp.c mdns.c mdns_external.c common.c rtp.c player.c alac.c audio.c 
+shairport_sync_SOURCES = shairport.c rtsp.c mdns.c mdns_external.c common.c rtp.c player.c alac.c audio.c
 
 AM_CFLAGS = -Wno-multichar -DSYSCONFDIR=\"$(sysconfdir)\"
+AM_CPPFLAGS = -Wno-multichar -DSYSCONFDIR=\"$(sysconfdir)\"
+
+if USE_APPLE_ALAC
+  shairport_sync_SOURCES += apple_alac.cpp
+endif
 
 if USE_CUSTOMPIDDIR
 AM_CFLAGS+= \
@@ -40,6 +45,10 @@ endif
 
 if USE_AO
 shairport_sync_SOURCES += audio_ao.c
+endif
+
+if USE_SOUNDIO
+shairport_sync_SOURCES += audio_soundio.c
 endif
 
 if USE_PULSE
