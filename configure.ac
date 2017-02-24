@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.50])
-AC_INIT([shairport-sync], [2.8.6], [mikebrady@eircom.net])
+AC_INIT([shairport-sync], [3.0], [mikebrady@eircom.net])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([shairport.c])
 AC_CONFIG_HEADERS([config.h])
@@ -20,6 +20,7 @@ with_os_type=`echo ${with_os_type} | tr '[[:upper:]]' '[[:lower:]]' `
 
 # Checks for programs.
 AC_PROG_CC
+AC_PROG_CXX
 AC_PROG_INSTALL
 
 PKG_PROG_PKG_CONFIG([0.9.0])
@@ -93,6 +94,22 @@ AC_ARG_WITH([configfiles],
 [  --with-configfiles = install configuration files during a make install ], ,[with_configfiles=yes])
 AM_CONDITIONAL([INSTALL_CONFIG_FILES], [test "x$with_configfiles" = "xyes"])
 
+# Look for Apple ALAC flag
+AC_ARG_WITH(apple-alac, [  --with-apple-alac = include support for the Apple ALAC decoder],
+  [AC_MSG_RESULT(>>Including the Apple ALAC Decoder)
+  HAS_APPLE_ALAC=1
+  AM_CONDITIONAL([USE_APPLE_ALAC], [test 0])
+  AC_DEFINE([CONFIG_APPLE_ALAC], 1, [Needed by the compiler.])
+  if  test "x${with_pkg_config}" = xyes ; then
+    PKG_CHECK_MODULES(
+      [ALAC], [alac],
+      [LIBS="${ALAC_LIBS} ${LIBS}"
+       AC_DEFINE([HAVE_APPLE_ALAC],[1],[Define to 1 if you are using the Apple ALAC Decoder])])
+  else
+    AC_CHECK_LIB([alac], [BitBufferInit], , AC_MSG_ERROR(Apple ALAC Decoder support requires the alac library!))
+    AC_DEFINE([HAVE_APPLE_ALAC],[1],[Define to 1 if you have the Apple ALAC library])
+  fi ])
+AM_CONDITIONAL([USE_APPLE_ALAC], [test "x$HAS_APPLE_ALAC" = "x1"])
 
 # Look for piddir flag
 AC_ARG_WITH(piddir, [ --with-piddir=<pathname> Specify a pathname to a directory in which to write the PID file.], [
@@ -108,11 +125,11 @@ AC_ARG_WITH(piddir, [ --with-piddir=<pathname> Specify a pathname to a directory
 AM_CONDITIONAL([USE_CUSTOMPIDDIR], [test "x$HAS_CUSTOMPIDDIR" = "x1"])
 
 # Check --with-ssl=argument
-AC_ARG_WITH(ssl, [ choose --with-ssl=openssl or --with-ssl=polarssl for encryption services], [
+AC_ARG_WITH(ssl, [ choose --with-ssl=openssl, --with-ssl=mbedtls or --with-ssl=polarssl (deprecated) for encryption services  ], [
   AC_MSG_CHECKING(encryption libraries chosen)
   if test "x${with_ssl}" = x -o "x${with_ssl}" = xyes ; then
     AC_MSG_RESULT(not found)
-    AC_MSG_ERROR(choose either "openssl" or "polarssl" encryption)
+    AC_MSG_ERROR(choose "openssl", "mbedtls" or "polarssl" encryption)
   fi
   if test "x${with_ssl}" = xopenssl ; then
     if  test "x${with_pkg_config}" = xyes ; then
@@ -127,10 +144,17 @@ AC_ARG_WITH(ssl, [ choose --with-ssl=openssl or --with-ssl=polarssl for encrypti
       AC_DEFINE([HAVE_LIBCRYPTO],[1],[Define to 1 if you have libcrypto])
       AC_DEFINE([HAVE_LIBSSL],[1],[Define to 1 if you have libssl])
     fi
+  elif test "x${with_ssl}" = xmbedtls ; then
+    AC_CHECK_LIB([mbedtls],[mbedtls_ssl_init],,
+		[AC_MSG_ERROR([Cannot find required libray: libmbedtls],1)])
+    AC_CHECK_LIB([mbedcrypto], [mbedtls_entropy_func],,
+                [AC_MSG_ERROR([Cannot find required library: libmbedcrypto],1)])
+    AC_CHECK_LIB([mbedx509], [mbedtls_pk_init],,
+                [AC_MSG_ERROR([Cannot find required library: libmbedx509],1)])
   elif test "x${with_ssl}" = xpolarssl ; then
-    AC_CHECK_LIB([polarssl],[ssl_init], , AC_MSG_ERROR(PolarSSL selected but the library cannot be found!))
+    AC_CHECK_LIB([polarssl],[ssl_init], , AC_MSG_ERROR(PolarSSL is selected but the library cannot be found and is deprecated. Consider selecting mbed TLS instead using --with-ssl=mbedtls.))
   else
-    AC_MSG_ERROR(unknown option "${with_ssl}"." Please choose with "openssl" or "polarssl")
+    AC_MSG_ERROR(unknown option "${with_ssl}"." Please choose with "openssl", "mbedtls" or "polarssl")
   fi
 ], )
 
@@ -194,8 +218,16 @@ AC_ARG_WITH(ao, [  --with-ao = choose AO (Audio Output?) API support. N.B. no sy
   AC_MSG_RESULT(>>Including an AO back end. N.B. no synchronisation -- so underflow or overflow is inevitable!)
   HAS_AO=1
   AC_DEFINE([CONFIG_AO], 1, [Needed by the compiler.])
-  AC_CHECK_LIB([ao], [ao_initialize], , AC_MSG_ERROR(AO support requires the ao library!))], )
+  AC_CHECK_LIB([ao], [ao_initialize], , AC_MSG_ERROR(AO support requires the ao library -- libao-dev suggested))], )
 AM_CONDITIONAL([USE_AO], [test "x$HAS_AO" = "x1"])
+
+# Look for Soundio flag
+AC_ARG_WITH(soundio, [  --with-soundio = choose soundio API support.], [
+  AC_MSG_RESULT(>>Including an soundio back end)
+  HAS_SOUNDIO=1
+  AC_DEFINE([CONFIG_SOUNDIO], 1, [Needed by the compiler.])
+  AC_CHECK_LIB([soundio], [soundio_create], , AC_MSG_ERROR(soundio support requires the soundio library!))], )
+AM_CONDITIONAL([USE_SOUNDIO], [test "x$HAS_SOUNDIO" = "x1"])
 
 # Look for pulseaudio flag
 AC_ARG_WITH(pulseaudio, [  --with-pulseaudio = choose PulseAudio API support. N.B. no synchronisation -- so underflow or overflow is inevitable!], [
@@ -214,21 +246,25 @@ AC_ARG_WITH(dns_sd, [  --with-dns_sd = choose dns_sd mDNS support], [
   AC_SEARCH_LIBS([DNSServiceRefDeallocate], [dns_sd], , AC_MSG_ERROR(dns_sd support requires the dns_sd library!))], )
 AM_CONDITIONAL([USE_DNS_SD], [test "x$HAS_DNS_SD" = "x1"])
 
-# Find systemd unit dir
-AC_ARG_WITH([systemdsystemunitdir],
-     [AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files])],,
-     [with_systemdsystemunitdir=auto])
-AS_IF([test "x$with_systemdsystemunitdir" = "xyes" -o "x$with_systemdsystemunitdir" = "xauto"], [
-     def_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)
+if  test "x${with_systemd}" = xyes ; then
+  # Find systemd unit dir
+  AC_ARG_WITH([systemdsystemunitdir],
+       [AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files])],,
+       [with_systemdsystemunitdir=auto])
+  AS_IF([test "x$with_systemdsystemunitdir" = "xyes" -o "x$with_systemdsystemunitdir" = "xauto"], [
+       def_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)
 
-     AS_IF([test "x$def_systemdsystemunitdir" = "x"],
-   [AS_IF([test "x$with_systemdsystemunitdir" = "xyes"],
-    [AC_MSG_ERROR([systemd support requested but pkg-config unable to query systemd package])])
-    with_systemdsystemunitdir=no],
-   [with_systemdsystemunitdir="$def_systemdsystemunitdir"])])
-AS_IF([test "x$with_systemdsystemunitdir" != "xno"],
-      [AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])])
-AM_CONDITIONAL([HAVE_SYSTEMD], [test "x$with_systemdsystemunitdir" != "xno"])
+       AS_IF([test "x$def_systemdsystemunitdir" = "x"],
+     [AS_IF([test "x$with_systemdsystemunitdir" = "xyes"],
+      [AC_MSG_ERROR([systemd support requested but pkg-config unable to query systemd package])])
+      with_systemdsystemunitdir=no],
+     [with_systemdsystemunitdir="$def_systemdsystemunitdir"])])
+  AS_IF([test "x$with_systemdsystemunitdir" != "xno"],
+        [AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])])
+  AM_CONDITIONAL([HAVE_SYSTEMD], [test "x$with_systemdsystemunitdir" != "xno"])
+else
+  AM_CONDITIONAL([HAVE_SYSTEMD], false)  
+fi
 
 # Look for xmltoman
 AC_CHECK_PROGS([XMLTOMAN], [xmltoman])
