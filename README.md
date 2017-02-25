@@ -1,7 +1,5 @@
 Shairport Sync
 =============
-**Welcome to Version 3 of Shairport Sync. This is a big update from version 2.X and is still a work in progress. Please see the Release Notes for more information.**
-
 Shairport Sync is an AirPlay audio player – it plays audio streamed from iTunes, iOS devices and other AirPlay sources such as Quicktime Player and ForkedDaapd, among others.
 Audio played by a Shairport Sync-powered device stays synchronised with the source and hence with similar devices playing the same source. In this way, synchronised multi-room audio is possible without difficulty. (Hence the name Shairport Sync, BTW.)
 
@@ -105,6 +103,7 @@ $ autoreconf -i -f
 - `--with-alsa` for the ALSA audio back end. This is required.
 - `--with-stdout` include an optional backend module to enable raw audio to be output through standard output (stdout).
 - `--with-pipe` include an optional backend module to enable raw audio to be output through a unix pipe.
+- `--with-soundio` include an optional backend module to enable raw audio to be output through the soundio system.
 - `--with-avahi` or `--with-tinysvcmdns` for mdns support. Avahi is a widely-used system-wide zero-configuration networking (zeroconf) service — it may already be in your system. If you don't have Avahi, or similar, then consider including tinysvcmdns, which is a tiny zeroconf service embedded inside the shairport-sync application itself. To enable multicast for `tinysvcmdns`, you may have to add a default route with the following command: `route add -net 224.0.0.0 netmask 224.0.0.0 eth0` (substitute the correct network port for `eth0`). You should not have more than one zeroconf service on the same system — bad things may happen, according to RFC 6762, §15.
 - `--with-ssl=openssl`, `--with-ssl=mbedtls` or `--with-ssl=polarssl` (deprecated) for encryption and related utilities using either OpenSSL, mbed TLS or PolarSSL.
 - `--with-soxr` for libsoxr-based resampling.
