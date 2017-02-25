@@ -80,8 +80,12 @@
 	
 	<section name="Configuration File Settings">
 	   <p>You should use the configuration file for setting up shairport-sync.
-	  This file is normally <file>/etc/shairport-sync.conf</file>.
+	  This file is usually <file>shairport-sync.conf</file> and is generally located in the System Configuration Directory, which is normally the <file>/etc</file> directory in Linux or the <file>/usr/local/etc</file> directory in BSD unixes.
 	  You may need to have root privileges to modify it.</p>
+	  
+	  <p>(Note: Shairport Sync may have been compiled to use a different configuration directory. You can determine which by performing the command <file>$ shairport-sync -V</file>. One of the items in the output string is the value of the <opt>sysconfdir</opt>,
+	  i.e. the System Configuration Directory.)</p>
+	  
 	  
 	  <p>Settings are organised into <i>groups</i>, for example, there is a "general" group of
 	  standard settings, and there is an "alsa" group with settings that pertain to the ALSA
@@ -101,7 +105,7 @@
 	  <p>Most settings have sensible default values, so -- as in the example above -- users generally only need to set (1) the service name, (2) a password (if desired) and
 	  (3) the output device. If the output device has a mixer that can be used for volume control, then (4) the volume control's name should be specified. It is highly desirable to use the output device's mixer for volume control, if available -- response time is reduced to zero and the processor load is reduced. In the example above, "soxr" interpolation was also enabled.</p>
 	  
-	  <p>A sample configuration file with all possible settings, but with all of them commented out, is installed at <file>/etc/shairport-sync.conf.sample</file>.</p>
+	  <p>A sample configuration file with all possible settings, but with all of them commented out, is installed at <file>shairport-sync.conf.sample</file>, within the System Configuration Directory -- <file>/etc</file> in Linux, <file>/usr/local/etc</file> in BSD unixes.</p>
 	  
 	  <p>To retain backwards compatibility with previous versions of shairport-sync
 	  you can use still use command line options, but any new features, etc. will
@@ -167,7 +171,8 @@
     </option>
     <option>
     <p><opt>udp_port_range=</opt><arg>range</arg><opt>;</opt></p>
-    <optdesc>Use this in conjunction with the prevous setting to specify the <arg>range</arg> of ports that can be checked for availability. Only three ports are needed. The default is 100, thus 100 ports will be checked from port 6001 upwards until three are found.</optdesc>
+    <optdesc>Use this in conjunction with the prevous setting to specify the <arg>range</arg> of ports that can be checked for availability. Only three ports are needed.
+    The default is 100, thus 100 ports will be checked from port 6001 upwards until three are found.</optdesc>
     </option>
     <option>
     <p><opt>drift_tolerance_in_seconds=</opt><arg>seconds</arg><opt>;</opt></p>
@@ -189,11 +194,12 @@
     </option>
     <option>
     <p><opt>log_verbosity=</opt><arg>0</arg><opt>;</opt></p>
-    <optdesc>Use this to specify how much debugging information should be output or logged. "0" means no debug information, "3" means most debug information. The default is "0".</optdesc>
+    <optdesc>Use this to specify how much debugging information should be output or logged. The value <arg>0</arg> means no debug information, <arg>3</arg> means most debug information. The default is <arg>0</arg>.</optdesc>
     </option>
     <option>
     <p><opt>ignore_volume_control=</opt><arg>"choice"</arg><opt>;</opt></p>
-    <optdesc>Set this <arg>choice</arg> to "yes" if you want the volume to be at 100% no matter what the source's volume control is set to. This might be useful if you want to set the volume on the output device, independently of the setting at the source. The default is "no".</optdesc>
+    <optdesc>Set this <arg>choice</arg> to <arg>"yes"</arg> if you want the volume to be at 100% no matter what the source's volume control is set to.
+    This might be useful if you want to set the volume on the output device, independently of the setting at the source. The default is <arg>"no"</arg>.</optdesc>
     </option>
     
     <option>
@@ -218,11 +224,11 @@
     Many cheaper DACs have hardware mixers that offer a restricted attenuation range.
     If you specify a volume range greater than the range of the mixer, software attenuation and hardware attenuation
     will be combined to give the specified range.</p>
-    <p>If you omit this setting, the full "native" range of the mixer is used.</p></optdesc>
+    <p>If you omit this setting, the native range of the mixer is used.</p></optdesc>
     </option>
     <option>
     <p><opt>regtype=</opt><arg>"regTypeString"</arg><opt>;</opt></p>
-    <optdesc>Use this advanced setting to set the service type and transport to be advertised by Zeroconf/Bonjour. Default is "_raop._tcp".</optdesc>
+    <optdesc>Use this advanced setting to set the service type and transport to be advertised by Zeroconf/Bonjour. Default is <arg>"_raop._tcp"</arg>.</optdesc>
     </option>
     
     <option>
@@ -249,7 +255,7 @@
 
     <option>
     <p><opt>output_device=</opt><arg>"output_device"</arg><opt>;</opt></p>
-    <optdesc>Use the output device called <arg>output_device</arg>. The default is the device called "default".</optdesc>
+    <optdesc>Use the output device called <arg>output_device</arg>. The default is the device called <arg>"default"</arg>.</optdesc>
     </option>
     <option>
     <option>
@@ -259,8 +265,8 @@
     If you do not specify a mixer control name, shairport-sync will adjust the volume in software.</optdesc>
     </option>
     <p><opt>mixer_type=</opt><arg>"mixer_type"</arg><opt>;</opt></p>
-    <optdesc>This setting is deprecated and is ignored. For your information, its functionality has been automatically incorporated in the mixer_control_name setting
-  -- if you specify a mixer name with the mixer_control_name setting, it is assumed that the mixer is implemented in hardware.</optdesc>
+    <optdesc>This setting is deprecated and is ignored. For your information, its functionality has been automatically incorporated in the <opt>mixer_control_name</opt> setting
+  -- if you specify a mixer name with the <opt>mixer_control_name</opt> setting, it is assumed that the mixer is implemented in hardware.</optdesc>
     </option>
     <option>
     <p><opt>mixer_device=</opt><arg>"mixer_device"</arg><opt>;</opt></p>
@@ -294,7 +300,7 @@
 
     <option>
     <p><opt>disable_synchronization=</opt><arg>"no"</arg><opt>;</opt></p>
-    <optdesc>This is an advanced setting and is for debugging only. Set to "yes" to disable synchronization. Default is "no".
+    <optdesc>This is an advanced setting and is for debugging only. Set to <arg>"yes"</arg> to disable synchronization. Default is <arg>"no"</arg>.
     If you use it to disable synchronisation, then sooner or later you'll experience audio glitches due to
     audio buffer overflow or underflow.
     </optdesc>
@@ -307,7 +313,11 @@
     <p><opt>buffer_size=</opt><arg>number</arg><opt>;</opt></p>
     <optdesc>Use this optional advanced setting to set the alsa buffer size near to this value.</optdesc>
     </option>
-    
+    <option>
+    <p><opt>use_mmap_if_available=</opt><arg>"yes"</arg><opt>;</opt></p>
+    <optdesc> Use this optional advanced setting to control whether MMAP-based output is used to communicate  with the DAC. Default is <arg>"yes"</arg>.</optdesc>
+    </option>
+     
     <option><p><opt>"PIPE" SETTINGS</opt></p></option>
     <p>These settings are for the PIPE backend, used to route audio to a named unix pipe. The audio is in raw CD audio format: PCM 16 bit little endian, 44,100 samples per second,
     interleaved stereo.</p>
@@ -522,7 +532,8 @@
 	  <option>
 		<p><opt>-c </opt><arg>filename</arg><opt> | --configfile=</opt><arg>filename</arg></p>
 		<optdesc><p>
-		Read configuration settings from <arg>filename</arg>. The default is to read them from <file>/etc/shairport-sync.conf</file>. For information about configuration settings, see the  "Configuration File Settings" section above.
+		Read configuration settings from <arg>filename</arg>. The default is to read them from the <file>shairport-sync.conf</file> in the System Configuration Directory -- <file>/etc</file> in Linux, <file>/usr/local/etc</file> in BSD unixes.
+		For information about configuration settings, see the  "Configuration File Settings" section above.
     </p></optdesc>
 	  </option>
 

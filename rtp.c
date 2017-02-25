@@ -682,9 +682,12 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
     die("Can't get address of client's control port");
 
 #ifdef AF_INET6
-  if (servinfo->ai_family == AF_INET6)
+  if (servinfo->ai_family == AF_INET6) {
     memcpy(&rtp_client_control_socket, servinfo->ai_addr, sizeof(struct sockaddr_in6));
-  else
+    // ensure the scope id matches that of remote. this is needed for link-local addresses.
+    struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)&rtp_client_control_socket;
+    sa6->sin6_scope_id = self_scope_id;
+  } else
 #endif
     memcpy(&rtp_client_control_socket, servinfo->ai_addr, sizeof(struct sockaddr_in));
   freeaddrinfo(servinfo);
@@ -698,9 +701,12 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
   if (getaddrinfo(client_ip_string, portstr, &hints, &servinfo) != 0)
     die("Can't get address of client's timing port");
 #ifdef AF_INET6
-  if (servinfo->ai_family == AF_INET6)
+  if (servinfo->ai_family == AF_INET6) {
     memcpy(&rtp_client_timing_socket, servinfo->ai_addr, sizeof(struct sockaddr_in6));
-  else
+    // ensure the scope id matches that of remote. this is needed for link-local addresses.
+    struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)&rtp_client_timing_socket;
+    sa6->sin6_scope_id = self_scope_id;
+  } else
 #endif
     memcpy(&rtp_client_timing_socket, servinfo->ai_addr, sizeof(struct sockaddr_in));
   freeaddrinfo(servinfo);

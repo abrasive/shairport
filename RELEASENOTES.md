@@ -99,6 +99,27 @@ Pesky Changes You Cannot Ignore
 **Bugs**
 * Documentation is not updated.
 
+Version 2.8.6 – Stable Candidate
+----
+
+**Enhancements**
+* This release contains a small change – it identifies itself as a ShairportSync device rather than an AirPort device. This should make it possible for Tuneblade, and possibly other players, to recognise it correctly. 
+
+Version 2.8.5 – Stable Version
+----
+This release includes bug fixes and minor enhancements and is recommended for all users.
+
+Note: if you're upgrading, there is a new `./configure` option:  
+====
+The build process now uses the directory path `sysconfdir` to determine where to place the configuration file `shairport-sync.conf`.
+The default value for `sysconfdir` is `/usr/local/etc` which is used in the BSD family, whereas `/etc` is normally used in Linux.
+To retain the present behaviour of Shairport Sync, *you must add an extra parameter to the `./configure... ` command.* The parameter you must add is `--sysconfdir=/etc`. (This has been added to the sample configuration command line in README.md.)
+
+The enhancements and bug fixes in 2.8.5 were made in versions 2.8.4.1 to 2.8.4.8 inclusive. Please read below for the full list.
+
+For advice on updating an installation you built yourself,
+please visit the [UPDATING](https://github.com/mikebrady/shairport-sync/blob/master/UPDATING.md) page.
+
 Version 2.8.4.8 – Development Version
 ----
 **Enhancements**
@@ -107,8 +128,6 @@ Version 2.8.4.8 – Development Version
 
 Version 2.8.4.7 – Development Version
 ----
-Pesky Changes You Cannot Ignore
-====
 
 * This update means the build process now uses the directory path `sysconfdir` to determine where to place the configuration file `shairport-sync.conf`. The default value for `sysconfdir` is `/usr/local/etc` which is used in the BSD family, whereas `/etc` is normally used in Linux. So, to retain the present behaviour of Shairport Sync, you must add an extra parameter to the `./configure... ` command. The parameter you must add is `--sysconfdir=/etc`. (This has been added to the sample configuration command line in README.md.)
 * Shairport Sync has been updated to use the value of `sysconfdir` to determine where to look for the configuration file. If `sysconfdir` has been left with its default value of `/usr/local/etc`, then Shairport Sync will look for `/usr/local/etc/shairport-sync.conf`. If, as recommended for Linux, `sysconfdir` has been set to `/etc`, then Shairport Sync will look, as before, for `/etc/shairport-sync.conf`.
@@ -155,7 +174,7 @@ Version 2.8.4.1 – Development Version
 * Fixed two issues when including support for `pulseaudio`.
 * Corrected two small errors in sample parameters for the UDP metadata stream settings, thanks to [rkam](https://github.com/rkam).
 
-Version 2.8.4 – Stable Version (Candidate Release)
+Version 2.8.4 – Stable Version
 ----
 This release includes important bug fixes and minor enhancements and is recommended for all users. No settings need to be changed. For advice on updating an installation you built yourself, please visit the [UPDATING](https://github.com/mikebrady/shairport-sync/blob/master/UPDATING.md) page.
 

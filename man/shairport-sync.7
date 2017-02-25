@@ -23,7 +23,9 @@ shairport-sync can be compiled to stream audio, without synchronisation, to a pi
 
 Settings can be made using the configuration file (recommended for all new installations) or by using command-line options.
 .SH CONFIGURATION FILE SETTINGS
-You should use the configuration file for setting up shairport-sync. This file is normally \fI/etc/shairport-sync.conf\f1. You may need to have root privileges to modify it.
+You should use the configuration file for setting up shairport-sync. This file is usually \fIshairport-sync.conf\f1 and is generally located in the System Configuration Directory, which is normally the \fI/etc\f1 directory in Linux or the \fI/usr/local/etc\f1 directory in BSD unixes. You may need to have root privileges to modify it.
+
+(Note: Shairport Sync may have been compiled to use a different configuration directory. You can determine which by performing the command \fI$ shairport-sync -V\f1. One of the items in the output string is the value of the \fBsysconfdir\f1, i.e. the System Configuration Directory.)
 
 Settings are organised into groups, for example, there is a "general" group of standard settings, and there is an "alsa" group with settings that pertain to the ALSA back end. Here is an example of a typical configuration file:
 
@@ -49,7 +51,7 @@ Settings are organised into groups, for example, there is a "general" group of s
 
 Most settings have sensible default values, so -- as in the example above -- users generally only need to set (1) the service name, (2) a password (if desired) and (3) the output device. If the output device has a mixer that can be used for volume control, then (4) the volume control's name should be specified. It is highly desirable to use the output device's mixer for volume control, if available -- response time is reduced to zero and the processor load is reduced. In the example above, "soxr" interpolation was also enabled.
 
-A sample configuration file with all possible settings, but with all of them commented out, is installed at \fI/etc/shairport-sync.conf.sample\f1.
+A sample configuration file with all possible settings, but with all of them commented out, is installed at \fIshairport-sync.conf.sample\f1, within the System Configuration Directory -- \fI/etc\f1 in Linux, \fI/usr/local/etc\f1 in BSD unixes.
 
 To retain backwards compatibility with previous versions of shairport-sync you can use still use command line options, but any new features, etc. will be available only via configuration file settings.
 
@@ -96,10 +98,10 @@ Allow playback to drift up to \fIseconds\f1 out of exact synchronization before 
 Resynchronise if timings differ by more than \fIthreshold\f1 seconds. If the output timing differs from the source timing by more than the threshold, output will be muted and a full resynchronisation will occur. The default threshold is 0.050 seconds, i.e. 50 milliseconds. Specify 0.0 to disable resynchronisation. This setting replaces the deprecated \fBresync_threshold\f1 setting. 
 .TP
 \fBlog_verbosity=\f1\fI0\f1\fB;\f1
-Use this to specify how much debugging information should be output or logged. "0" means no debug information, "3" means most debug information. The default is "0". 
+Use this to specify how much debugging information should be output or logged. The value \fI0\f1 means no debug information, \fI3\f1 means most debug information. The default is \fI0\f1. 
 .TP
 \fBignore_volume_control=\f1\fI"choice"\f1\fB;\f1
-Set this \fIchoice\f1 to "yes" if you want the volume to be at 100% no matter what the source's volume control is set to. This might be useful if you want to set the volume on the output device, independently of the setting at the source. The default is "no". 
+Set this \fIchoice\f1 to \fI"yes"\f1 if you want the volume to be at 100% no matter what the source's volume control is set to. This might be useful if you want to set the volume on the output device, independently of the setting at the source. The default is \fI"no"\f1. 
 .TP
 \fBvolume_max_db=\f1\fIdBvalue\f1\fB;\f1
 Specify the maximum output level to be used with the hardware mixer, if used. If no hardware mixed is used, this setting speciies the maximum setting permissible in the software mixer, which has an attenuation of from 0.0 dB down to -96.3 dB.
@@ -113,10 +115,10 @@ Another potential use might be where the range specified by the mixer does not m
 
 As a third example, you can actually extend the range provided by a mixer. Many cheaper DACs have hardware mixers that offer a restricted attenuation range. If you specify a volume range greater than the range of the mixer, software attenuation and hardware attenuation will be combined to give the specified range.
 
-If you omit this setting, the full "native" range of the mixer is used.
+If you omit this setting, the native range of the mixer is used.
 .TP
 \fBregtype=\f1\fI"regTypeString"\f1\fB;\f1
-Use this advanced setting to set the service type and transport to be advertised by Zeroconf/Bonjour. Default is "_raop._tcp". 
+Use this advanced setting to set the service type and transport to be advertised by Zeroconf/Bonjour. Default is \fI"_raop._tcp"\f1. 
 .TP
 \fBplayback_mode=\f1\fI"mode"\f1\fB;\f1
 The \fImode\f1 can be "stereo", "mono", "reverse stereo", "both left" or "both right". Default is "stereo". 
@@ -131,12 +133,12 @@ This can be "hammerton" or "apple". This advanced setting allows you to choose t
 These settings are for the ALSA back end, used to communicate with audio output devices in the ALSA system. (By the way, you can use tools such as \fBalsamixer\f1 or \fBaplay\f1 to discover what devices are available.) Use these settings to select the output device and the mixer control to be used to control the output volume. You can additionally set the desired size of the output buffer and you can adjust overall latency. Here are the \fBalsa\f1 group settings:
 .TP
 \fBoutput_device=\f1\fI"output_device"\f1\fB;\f1
-Use the output device called \fIoutput_device\f1. The default is the device called "default". 
+Use the output device called \fIoutput_device\f1. The default is the device called \fI"default"\f1. 
 .TP
 .TP
 \fBmixer_control_name=\f1\fI"name"\f1\fB;\f1
 Specify the \fIname\f1 of the mixer control to be used by shairport-sync to control the volume. The mixer control must be on the mixer device, which by default is the output device. If you do not specify a mixer control name, shairport-sync will adjust the volume in software. \fBmixer_type=\f1\fI"mixer_type"\f1\fB;\f1
-This setting is deprecated and is ignored. For your information, its functionality has been automatically incorporated in the mixer_control_name setting -- if you specify a mixer name with the mixer_control_name setting, it is assumed that the mixer is implemented in hardware. 
+This setting is deprecated and is ignored. For your information, its functionality has been automatically incorporated in the \fBmixer_control_name\f1 setting -- if you specify a mixer name with the \fBmixer_control_name\f1 setting, it is assumed that the mixer is implemented in hardware. 
 .TP
 \fBmixer_device=\f1\fI"mixer_device"\f1\fB;\f1
 By default, the mixer is assumed to be output_device. Use this setting to specify a device other than the output device. 
@@ -154,13 +156,16 @@ Use this setting to specify the frame rate to output to the ALSA device. Allowab
 Use this setting to specify the format that should be used to send data to the ALSA device. Allowable values are "U8", "S8", "S16", "S24", "S24_3LE", "S24_3BE" or "S32". The device must have the capability to accept the format you specify. "S" means signed; "U" means unsigned; BE means big-endian and LE means little-endian. Except where stated (using *LE or *BE), endianness matches that of the processor. The default is "S16". If you are using a hardware mixer, the best setting is S16, as audio will pass through Shairport Sync unmodifed except for interpolation. If you are using the software mixer, use 32- or 24-bit, if your device is capable of it, to get the lowest possible levels of dither. 
 .TP
 \fBdisable_synchronization=\f1\fI"no"\f1\fB;\f1
-This is an advanced setting and is for debugging only. Set to "yes" to disable synchronization. Default is "no". If you use it to disable synchronisation, then sooner or later you'll experience audio glitches due to audio buffer overflow or underflow. 
+This is an advanced setting and is for debugging only. Set to \fI"yes"\f1 to disable synchronization. Default is \fI"no"\f1. If you use it to disable synchronisation, then sooner or later you'll experience audio glitches due to audio buffer overflow or underflow. 
 .TP
 \fBperiod_size=\f1\fInumber\f1\fB;\f1
 Use this optional advanced setting to set the alsa period size near to this value. 
 .TP
 \fBbuffer_size=\f1\fInumber\f1\fB;\f1
 Use this optional advanced setting to set the alsa buffer size near to this value. 
+.TP
+\fBuse_mmap_if_available=\f1\fI"yes"\f1\fB;\f1
+Use this optional advanced setting to control whether MMAP-based output is used to communicate with the DAC. Default is \fI"yes"\f1. 
 .TP
 \fB"PIPE" SETTINGS\f1
 These settings are for the PIPE backend, used to route audio to a named unix pipe. The audio is in raw CD audio format: PCM 16 bit little endian, 44,100 samples per second, interleaved stereo.
@@ -270,7 +275,7 @@ Execute \fIprogram\f1 when playback is about to begin. Specify the full path to 
 If you want shairport-sync to wait until the command has completed before starting to play, select the \fB-w\f1 option as well. 
 .TP
 \fB-c \f1\fIfilename\f1\fB | --configfile=\f1\fIfilename\f1
-Read configuration settings from \fIfilename\f1. The default is to read them from \fI/etc/shairport-sync.conf\f1. For information about configuration settings, see the "Configuration File Settings" section above. 
+Read configuration settings from \fIfilename\f1. The default is to read them from the \fIshairport-sync.conf\f1 in the System Configuration Directory -- \fI/etc\f1 in Linux, \fI/usr/local/etc\f1 in BSD unixes. For information about configuration settings, see the "Configuration File Settings" section above. 
 .TP
 \fB-D | --disconnectFromOutput\f1
 Disconnect the shairport-sync daemon from the output device and exit. (Requires that the daemon has written its PID to an agreed file -- see the \fB-d\f1 option). 
