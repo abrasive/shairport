@@ -1,7 +1,7 @@
 SUBDIRS = man
 
 bin_PROGRAMS = shairport-sync
-shairport_sync_SOURCES = shairport.c rtsp.c mdns.c mdns_external.c common.c rtp.c player.c alac.c audio.c
+shairport_sync_SOURCES = shairport.c rtsp.c mdns.c mdns_external.c common.c rtp.c player.c alac.c audio.c loudness.c
 
 AM_CFLAGS = -Wno-multichar -DSYSCONFDIR=\"$(sysconfdir)\"
 AM_CPPFLAGS = -Wno-multichar -DSYSCONFDIR=\"$(sysconfdir)\"
@@ -53,6 +53,10 @@ endif
 
 if USE_PULSE
 shairport_sync_SOURCES += audio_pulse.c
+endif
+
+if USE_CONVOLUTION
+shairport_sync_SOURCES += FFTConvolver/AudioFFT.cpp FFTConvolver/FFTConvolver.cpp FFTConvolver/Utilities.cpp FFTConvolver/convolver.cpp
 endif
 
 if USE_DNS_SD

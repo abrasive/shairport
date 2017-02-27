@@ -135,6 +135,17 @@ typedef struct {
                             // native range.
   enum sps_format_t output_format;
   int output_rate;
+  
+#ifdef CONFIG_CONVOLUTION
+  int convolution;
+  const char* convolution_ir_file;
+  float convolution_gain;
+  int convolution_max_length;
+#endif
+  
+  int loudness;
+  float loudness_reference_volume_db;
+  
 } shairport_cfg;
 
 // true if Shairport Sync is supposed to be sending output to the output device, false otherwise
@@ -160,7 +171,7 @@ void r64arrayinit();
 uint64_t ranarray64u();
 int64_t ranarray64i();
 
-int debuglev;
+extern int debuglev;
 void die(char *format, ...);
 void warn(char *format, ...);
 void inform(char *format, ...);

@@ -65,6 +65,10 @@
 #include <soxr.h>
 #endif
 
+#ifdef CONFIG_CONVOLUTION
+#include <FFTConvolver/convolver.h>
+#endif
+
 #include "common.h"
 #include "player.h"
 #include "rtp.h"
@@ -75,6 +79,8 @@
 #ifdef HAVE_APPLE_ALAC
 #include "apple_alac.h"
 #endif
+
+#include "loudness.h"
 
 // parameters from the source
 static unsigned char *aesiv;
@@ -639,11 +645,16 @@ static inline void process_sample(int32_t sample, char **outp, enum sps_format_t
                                   int dither) {
   int64_t hyper_sample = sample;
   int result;
-  int64_t hyper_volume = (int64_t)volume << 16;
-  hyper_sample = hyper_sample * hyper_volume; // this is 64 bit bit multiplication -- we may need to
-                                              // dither it down to its
-                                              // target resolution
-
+  
+  if (config.loudness) {
+    hyper_sample <<= 32; // Do not apply volume as it has already been done with the Loudness DSP filter
+  } else {
+    int64_t hyper_volume = (int64_t)volume << 16;
+    hyper_sample = hyper_sample * hyper_volume; // this is 64 bit bit multiplication -- we may need to
+                                                // dither it down to its
+                                                // target resolution
+  }
+  
   // next, do dither, if necessary
   if (dither) {
 
@@ -1815,6 +1826,67 @@ static void *player_thread_func(void *arg) {
             if (config.no_sync != 0)
               amount_to_stuff = 0; // no stuffing if it's been disabled
 
+            
+            // Apply DSP here
+            if (config.loudness
+#ifdef CONFIG_CONVOLUTION
+                || config.convolution
+#endif
+                )
+            {
+              int32_t *tbuf32 = (int32_t*)tbuf;
+              float fbuf_l[inbuflength];
+              float fbuf_r[inbuflength];
+              
+              // Deinterleave, and convert to float
+              int i;
+              for (i=0; i<inbuflength; ++i)
+              {
+                fbuf_l[i] = tbuf32[2*i];
+                fbuf_r[i] = tbuf32[2*i+1];
+              }
+              
+#ifdef CONFIG_CONVOLUTION
+              // Apply convolution
+              if (config.convolution)
+              {
+                convolver_process_l(fbuf_l, inbuflength);
+                convolver_process_r(fbuf_r, inbuflength);
+                
+                float gain = pow(10.0, config.convolution_gain/20.0);
+                for (i=0; i<inbuflength; ++i)
+                {
+                  fbuf_l[i] *= gain;
+                  fbuf_r[i] *= gain;
+                }
+                
+              }
+#endif
+              
+              if (config.loudness)
+              {
+                // Apply volume and loudness
+                // Volume must be applied here because the loudness filter will increase the signal level and it would saturate the int32_t otherwise                
+                float gain = fix_volume / 65536.0f;
+                float gain_db = 20*log10(gain);
+                //debug(1, "Applying soft volume dB: %f k: %f", gain_db, gain);
+                
+                for (i=0; i<inbuflength; ++i)
+                {
+                  fbuf_l[i] = loudness_process(&loudness_l, fbuf_l[i] * gain);
+                  fbuf_r[i] = loudness_process(&loudness_r, fbuf_r[i] * gain);
+                }
+              }
+              
+              // Interleave and convert back to int32_t
+              for (i=0; i<inbuflength; ++i)
+              {
+                tbuf32[2*i]   = fbuf_l[i];
+                tbuf32[2*i+1] = fbuf_r[i];
+              }
+              
+            }
+            
 #ifdef HAVE_LIBSOXR
             switch (config.packet_stuffing) {
             case ST_basic:
@@ -2257,6 +2329,9 @@ void player_volume(double airplay_volume) {
   pthread_mutex_lock(&vol_mutex);
   fix_volume = temp_fix_volume;
   pthread_mutex_unlock(&vol_mutex);
+  
+  if (config.loudness)
+    loudness_set_volume(software_attenuation/100);
 
 #ifdef CONFIG_METADATA
   char *dv = malloc(128); // will be freed in the metadata thread
