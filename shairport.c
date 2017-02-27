@@ -721,6 +721,9 @@ int parse_options(int argc, char **argv) {
           die("Invalid value \"%f\" for dsp.loudness_reference_volume_db. It should be between -100 and 0", dvalue);
       }
       
+      if (config.loudness == 1 && config_lookup_string(config.cfg, "alsa.mixer_control_name", &str))
+        die("Loudness activated but hardware volume is active. You must remove \"alsa.mixer_control_name\" to use the loudness filter.");
+      
     } else {
       if (config_error_type(&config_file_stuff) == CONFIG_ERR_FILE_IO)
         debug(1, "Error reading configuration file \"%s\": \"%s\".",
