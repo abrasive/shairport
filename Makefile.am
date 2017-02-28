@@ -3,8 +3,8 @@ SUBDIRS = man
 bin_PROGRAMS = shairport-sync
 shairport_sync_SOURCES = shairport.c rtsp.c mdns.c mdns_external.c common.c rtp.c player.c alac.c audio.c loudness.c
 
-AM_CFLAGS = -Wno-multichar -DSYSCONFDIR=\"$(sysconfdir)\"
-AM_CPPFLAGS = -Wno-multichar -DSYSCONFDIR=\"$(sysconfdir)\"
+AM_CFLAGS = -Wno-multichar -DSYSCONFDIR=\"$(sysconfdir)\" -O2
+AM_CPPFLAGS = -Wno-multichar -DSYSCONFDIR=\"$(sysconfdir)\" -O2
 
 if USE_APPLE_ALAC
   shairport_sync_SOURCES += apple_alac.cpp
