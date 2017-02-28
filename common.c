@@ -91,7 +91,7 @@ int get_requested_connection_state_to_output() { return requested_connection_sta
 
 void set_requested_connection_state_to_output(int v) { requested_connection_state_to_output = v; }
 
-void die(char *format, ...) {
+void die(const char *format, ...) {
   char s[1024];
   s[0] = 0;
   va_list args;
@@ -103,7 +103,7 @@ void die(char *format, ...) {
   exit(1);
 }
 
-void warn(char *format, ...) {
+void warn(const char *format, ...) {
   char s[1024];
   s[0] = 0;
   va_list args;
@@ -113,7 +113,7 @@ void warn(char *format, ...) {
   daemon_log(LOG_WARNING, "%s", s);
 }
 
-void debug(int level, char *format, ...) {
+void debug(int level, const char *format, ...) {
   if (level > debuglev)
     return;
   char s[1024];
@@ -125,7 +125,7 @@ void debug(int level, char *format, ...) {
   daemon_log(LOG_DEBUG, "%s", s);
 }
 
-void inform(char *format, ...) {
+void inform(const char *format, ...) {
   char s[1024];
   s[0] = 0;
   va_list args;

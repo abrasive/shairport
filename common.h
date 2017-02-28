@@ -172,10 +172,10 @@ uint64_t ranarray64u();
 int64_t ranarray64i();
 
 extern int debuglev;
-void die(char *format, ...);
-void warn(char *format, ...);
-void inform(char *format, ...);
-void debug(int level, char *format, ...);
+void die(const char *format, ...);
+void warn(const char *format, ...);
+void inform(const char *format, ...);
+void debug(int level, const char *format, ...);
 
 uint8_t *base64_dec(char *input, int *outlen);
 char *base64_enc(uint8_t *input, int length);
