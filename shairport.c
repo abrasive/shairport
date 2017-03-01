@@ -66,6 +66,10 @@
 #include <libdaemon/dpid.h>
 #include <libdaemon/dsignal.h>
 
+#ifdef CONFIG_CONVOLUTION
+#include <FFTConvolver/convolver.h>
+#endif
+
 static int shutting_down = 0;
 static char *appName = NULL;
 char configuration_file_path[4096 + 1];
@@ -158,6 +162,9 @@ char *get_version_string() {
 #endif
 #ifdef HAVE_LIBSOXR
     strcat(version_string, "-soxr");
+#endif
+#ifdef CONFIG_CONVOLUTION
+    strcat(version_string, "-convolution");
 #endif
 #ifdef CONFIG_METADATA
     strcat(version_string, "-metadata");
@@ -661,7 +668,62 @@ int parse_options(int argc, char **argv) {
         config.timeout = value;
         config.dont_check_timeout = 0; // this is for legacy -- only set by -t 0
       }
-
+      
+#ifdef CONFIG_CONVOLUTION
+      
+      if (config_lookup_string(config.cfg, "dsp.convolution", &str)) {
+        if (strcasecmp(str, "no") == 0)
+          config.convolution = 0;
+        else if (strcasecmp(str, "yes") == 0)
+          config.convolution = 1;
+        else
+          die("Invalid dsp.convolution. It should be \"yes\" or \"no\"");
+        
+      }
+      
+      if (config_lookup_float(config.cfg, "dsp.convolution_gain", &dvalue)) {
+        config.convolution_gain = dvalue;
+        if (dvalue > 10 || dvalue < -50)
+          die("Invalid value \"%f\" for dsp.convolution_gain. It should be between -50 and +10 dB", dvalue);
+      }
+      
+      config.convolution_max_length = 8192;
+      if (config_lookup_int(config.cfg, "dsp.convolution_max_length", &value)) {
+        config.convolution_max_length = value;
+        
+        if (value < 1 || value > 200000)
+          die("dsp.convolution_max_length must be within 1 and 200000");
+      }
+      
+      if (config_lookup_string(config.cfg, "dsp.convolution_ir_file", &str)) {
+        config.convolution_ir_file = str;
+        convolver_init(config.convolution_ir_file, config.convolution_max_length);
+      }
+      
+      if (config.convolution && config.convolution_ir_file == NULL) {
+        die("Convolution enabled but no convolution_ir_file provided");
+      }
+#endif
+      
+      if (config_lookup_string(config.cfg, "dsp.loudness", &str)) {
+        if (strcasecmp(str, "no") == 0)
+          config.loudness = 0;
+        else if (strcasecmp(str, "yes") == 0)
+          config.loudness = 1;
+        else
+          die("Invalid dsp.convolution. It should be \"yes\" or \"no\"");
+      }
+      
+      config.loudness_reference_volume_db = -20;
+      if (config_lookup_float(config.cfg, "dsp.loudness_reference_volume_db", &dvalue)) {
+        config.loudness_reference_volume_db = dvalue;
+        if (dvalue > 0 || dvalue < -100)
+          die("Invalid value \"%f\" for dsp.loudness_reference_volume_db. It should be between -100 and 0", dvalue);
+      }
+      
+      if (config.loudness == 1 && config_lookup_string(config.cfg, "alsa.mixer_control_name", &str))
+        die("Loudness activated but hardware volume is active. You must remove \"alsa.mixer_control_name\" to use the loudness filter.");
+      
     } else {
       if (config_error_type(&config_file_stuff) == CONFIG_ERR_FILE_IO)
         debug(1, "Error reading configuration file \"%s\": \"%s\".",
@@ -1223,6 +1285,15 @@ int main(int argc, char **argv) {
   debug(1, "get-coverart is %d.", config.get_coverart);
 #endif
 
+#ifdef CONFIG_CONVOLUTION
+  debug(1, "convolution is %d.", config.convolution);
+  debug(1, "convolution IR file is \"%s\"", config.convolution_ir_file);
+  debug(1, "convolution max length %d", config.convolution_max_length);
+  debug(1, "convolution gain is %f", config.convolution_gain);
+#endif
+  debug(1, "loudness is %d.", config.loudness);
+  debug(1, "loudness reference level is %f", config.loudness_reference_volume_db);
+  
   uint8_t ap_md5[16];
 
 #ifdef HAVE_LIBSSL

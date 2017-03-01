@@ -238,6 +238,15 @@ AC_ARG_WITH(pulseaudio, [  --with-pulseaudio = choose PulseAudio API support. N.
   AC_CHECK_LIB([pulse], [pa_stream_peek], , AC_MSG_ERROR(PulseAudio support requires the libpulse-dev library.))], )
 AM_CONDITIONAL([USE_PULSE], [test "x$HAS_PULSE" = "x1"])
 
+# Look for Convolution flag
+AC_ARG_WITH(convolution, [  --with-convolution = choose audio DSP convolution support], [
+  AC_MSG_RESULT(>>Including convolution support)
+  HAS_CONVOLUTION=1
+  AM_INIT_AUTOMAKE([subdir-objects])
+  AC_DEFINE([CONFIG_CONVOLUTION], 1, [Needed by the compiler.])
+  AC_CHECK_LIB([sndfile], [sf_open], , AC_MSG_ERROR(Convolution support requires the sndfile library!))], )
+AM_CONDITIONAL([USE_CONVOLUTION], [test "x$HAS_CONVOLUTION" = "x1"])
+
 # Look for dns_sd flag
 AC_ARG_WITH(dns_sd, [  --with-dns_sd = choose dns_sd mDNS support], [
   AC_MSG_RESULT(>>Including dns_sd for mDNS support)
@@ -295,8 +304,6 @@ AC_TYPE_UINT8_T
 AC_FUNC_ALLOCA
 AC_FUNC_ERROR_AT_LINE
 AC_FUNC_FORK
-AC_FUNC_MALLOC
-AC_FUNC_REALLOC
 AC_CHECK_FUNCS([atexit clock_gettime gethostname inet_ntoa memchr memmove memset mkfifo pow select socket stpcpy strcasecmp strchr strdup strerror strstr strtol strtoul])
 
 AC_CONFIG_FILES([Makefile man/Makefile scripts/shairport-sync.service])
