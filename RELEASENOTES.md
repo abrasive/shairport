@@ -1,8 +1,14 @@
+Version 3.1d0
+====
+**New Features**
+* Two audio filters added – a volume-dependent-loudness and a convolution filter. Many thanks to [yannpom](https://github.com/yannpom) for this. for more information right now, please refer to the conversation at [#484](https://github.com/mikebrady/shairport-sync/pull/484).
+
+**Note**
+* Some housekeeping needs to be done on the location of configuration files and convolution impulse response files, and maybe compilation configuration settings, but they can wait for a little while.
+* Documentation isn't updated
+
 Version 3.0
 ====
-
-Big Update
-----
 Version 3 brings in support for 24-bit and 32-bit (and 8 bit!) DACs and for DACs running at multiples of 44,100 samples per second.
 
 The most obvious audible change is if you are using software volume control and can take advantage of 32- or 24-bit DACs. Dithering can now occur on a 32-bit or 24-bit sample rather than on a 16-bit sample, making the noise floor very much lower. This is the case, for example, with a Pimoroni PHAT DAC.
