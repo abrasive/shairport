@@ -118,7 +118,7 @@ Debian, Ubuntu and Raspbian users can get the basics with:
 - `apt-get install autoconf automake libtool libdaemon-dev libasound2-dev libpopt-dev libconfig-dev`
 - `apt-get install avahi-daemon libavahi-client-dev` if you want to use Avahi (recommended).
 - `apt-get install libssl-dev` if you want to use OpenSSL and libcrypto, or use mbed TLS otherwise.
-- `apt-get install libmbedtls-dev` if you want to use mbed TLS, or use OpenSSL/libcrypto otherwise. (You can still use PolarSSL with `apt-get install libpolarssl-dev` if you want to use PolarSSL, but it is deprecated as it's not longer being supported. It is suggested you use mbed TLS instead.)
+- `apt-get install libmbedtls-dev` if you want to use mbed TLS, or use OpenSSL/libcrypto otherwise. You can still use PolarSSL with `apt-get install libpolarssl-dev` if you want to use PolarSSL, but it is deprecated as it's not longer being supported. (It is suggested you use mbed TLS, where available. It doesn't seem to be in Raspbian at the time of writing, March 2017.)
 - `apt-get install libsoxr-dev` if you want support for libsoxr-based resampling. This library is in many recent distributions, including Jessie and Raspbian Jessie; if not, instructions for how to build it from source for Rasbpian/Debian Wheezy are available at [LIBSOXR.md](https://github.com/mikebrady/shairport-sync/blob/development/LIBSOXR.md).
 
 If you wish to include the Apple ALAC decoder, you need install it first – please refer to the [ALAC](https://github.com/mikebrady/alac) repository for more information.
