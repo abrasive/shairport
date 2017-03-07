@@ -90,17 +90,6 @@ static pthread_mutex_t reference_counter_lock = PTHREAD_MUTEX_INITIALIZER;
 // static int please_shutdown = 0;
 // static pthread_t playing_thread = 0;
 
-typedef struct {
-  int fd;
-  int authorized; // set is a password is required and has been supplied
-  stream_cfg stream;
-  SOCKADDR remote, local;
-  int stop;
-  int running;
-  pthread_t thread;
-  pthread_t player_thread;
-} rtsp_conn_info;
-
 static rtsp_conn_info *playing_conn =
     NULL; // the data structure representing the connection that has the player.
 static rtsp_conn_info **conns = NULL;
@@ -819,7 +808,7 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
       strcat(hdr, q); // should unsplice the timing port entry
   }
 
-  player_play(&conn->stream, &conn->player_thread); // the thread better be 0
+   player_play(&conn->player_thread,conn); // the thread better be 0
 
   char *resphdr = alloca(200);
   *resphdr = 0;
@@ -1764,7 +1753,7 @@ static void *rtsp_conversation_thread_func(void *pconn) {
 
   debug(1, "Closing down RTSP conversation thread...");
   if (rtsp_playing()) {
-    player_stop(&conn->player_thread); // might be less noisy doing this first
+    player_stop(&conn->player_thread,conn); // might be less noisy doing this first
     rtp_shutdown();
     // usleep(400000); // let an angel pass...
     pthread_mutex_unlock(&play_lock);

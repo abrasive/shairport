@@ -76,11 +76,6 @@
 #include "apple_alac.h"
 #endif
 
-// parameters from the source
-static unsigned char *aesiv;
-#ifdef HAVE_LIBSSL
-static AES_KEY aes;
-#endif
 static int input_rate, input_bit_depth, input_num_channels, max_frames_per_packet;
 
 static uint32_t timestamp_epoch, last_timestamp,
@@ -99,17 +94,8 @@ static int max_frame_size_change;
 // maximal resampling shift - conservative
 //#define OUTFRAME_BYTES(max_frames_per_packet) (4 * (max_frames_per_packet + 3))
 
-#ifdef HAVE_LIBMBEDTLS
-static mbedtls_aes_context dctx;
-#endif
-
-#ifdef HAVE_LIBPOLARSSL
-static aes_context dctx;
-#endif
-
 // static pthread_t player_thread = NULL;
 static int please_stop;
-static int encrypted; // Normally the audio is encrypted, but it may not be
 
 static int
     connection_state_to_output; // if true, then play incoming stuff; if false drop everything
@@ -118,7 +104,6 @@ static alac_file *decoder_info;
 
 // debug variables
 static int late_packet_message_sent;
-static uint64_t packet_count = 0;
 static int32_t last_seqno_read;
 static int decoder_in_use = 0;
 
@@ -305,7 +290,7 @@ static inline int seq32_order(uint32_t a, uint32_t b) {
   return (C & 0x80000000) == 0;
 }
 
-static int alac_decode(short *dest, int *destlen, uint8_t *buf, int len) {
+static int alac_decode(short *dest, int *destlen, uint8_t *buf, int len, rtsp_conn_info* conn) {
   // parameters: where the decoded stuff goes, its length in samples,
   // the incoming packet, the length of the incoming packet in bytes
   // destlen should contain the allowed max number of samples on entry
@@ -322,18 +307,18 @@ static int alac_decode(short *dest, int *destlen, uint8_t *buf, int len) {
   int outsize = input_bytes_per_frame * (*destlen); // the size the output should be, in bytes
   int toutsize = outsize;
 
-  if (encrypted) {
+  if (conn->stream.encrypted) {
     unsigned char iv[16];
     int aeslen = len & ~0xf;
-    memcpy(iv, aesiv, sizeof(iv));
+    memcpy(iv, conn->stream.aesiv, sizeof(iv));
 #ifdef HAVE_LIBMBEDTLS
-    mbedtls_aes_crypt_cbc(&dctx, MBEDTLS_AES_DECRYPT, aeslen, iv, buf, packet);
+    mbedtls_aes_crypt_cbc(&conn->dctx, MBEDTLS_AES_DECRYPT, aeslen, iv, buf, packet);
 #endif
 #ifdef HAVE_LIBPOLARSSL
-    aes_crypt_cbc(&dctx, AES_DECRYPT, aeslen, iv, buf, packet);
+    aes_crypt_cbc(&conn->dctx, AES_DECRYPT, aeslen, iv, buf, packet);
 #endif
 #ifdef HAVE_LIBSSL
-    AES_cbc_encrypt(buf, packet, aeslen, &aes, iv, AES_DECRYPT);
+    AES_cbc_encrypt(buf, packet, aeslen, &conn->aes, iv, AES_DECRYPT);
 #endif
     memcpy(packet + aeslen, buf + aeslen, len - aeslen);
 #ifdef HAVE_APPLE_ALAC
@@ -377,7 +362,7 @@ static int alac_decode(short *dest, int *destlen, uint8_t *buf, int len) {
   if (outsize > toutsize) {
     debug(2, "Output from alac_decode larger (%d bytes, not frames) than expected (%d bytes) -- "
              "truncated, but buffer overflow possible! Encrypted = %d.",
-          outsize, toutsize, encrypted);
+          outsize, toutsize, conn->stream.encrypted);
     reply = -1; // output packet is the wrong size
   }
 
@@ -524,14 +509,14 @@ static void free_buffer(void) {
     free(audio_buffer[i].data);
 }
 
-void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len) {
+void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len, rtsp_conn_info *itr) {
 
   // all timestamps are done at the output rate
 
   int64_t ltimestamp = timestamp * output_sample_ratio;
 
   // ignore a request to flush that has been made before the first packet...
-  if (packet_count == 0) {
+  if (itr->packet_count == 0) {
     pthread_mutex_lock(&flush_mutex);
     flush_requested = 0;
     flush_rtp_timestamp = 0;
@@ -539,7 +524,7 @@ void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len) {
   }
 
   pthread_mutex_lock(&ab_mutex);
-  packet_count++;
+  itr->packet_count++;
   time_of_last_audio_packet = get_absolute_time_in_fp();
   if (connection_state_to_output) { // if we are supposed to be processing these packets
 
@@ -603,7 +588,7 @@ void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len) {
 
       if (abuf) {
         int datalen = max_frames_per_packet;
-        if (alac_decode(abuf->data, &datalen, data, len) == 0) {
+        if (alac_decode(abuf->data, &datalen, data, len, itr) == 0) {
           abuf->ready = 1;
           abuf->length = datalen;
           abuf->timestamp = ltimestamp;
@@ -1490,8 +1475,28 @@ typedef struct stats { // statistics for running averages
 } stats_t;
 
 static void *player_thread_func(void *arg) {
-  struct inter_threads_record itr;
-  itr.please_stop = 0;
+
+  rtsp_conn_info *conn = (rtsp_conn_info *)arg;
+  
+  conn->please_stop = 0;
+  conn->packet_count = 0;
+  
+  if (conn->stream.encrypted) {
+#ifdef HAVE_LIBMBEDTLS
+    memset(&conn->dctx, 0, sizeof(mbedtls_aes_context));
+    mbedtls_aes_setkey_dec(&conn->dctx, conn->stream.aeskey, 128);
+#endif
+
+#ifdef HAVE_LIBPOLARSSL
+    memset(&conn->dctx, 0, sizeof(aes_context));
+    aes_setkey_dec(&conn->dctx, conn->stream.aeskey, 128);
+#endif
+
+#ifdef HAVE_LIBSSL
+    AES_set_decrypt_key(conn->stream.aeskey, 128, &conn->aes);
+#endif
+  }  
+  
   timestamp_epoch = 0; // indicate that the next timestamp will be the first one.
   maximum_timestamp_interval = input_rate * 60; // actually there shouldn't be more than about 13v
                                                 // seconds of a gap between successive rtptimes, at
@@ -1522,9 +1527,9 @@ static void *player_thread_func(void *arg) {
 
   // create and start the timing, control and audio receiver threads
   pthread_t rtp_audio_thread, rtp_control_thread, rtp_timing_thread;
-  pthread_create(&rtp_audio_thread, NULL, &rtp_audio_receiver, (void *)&itr);
-  pthread_create(&rtp_control_thread, NULL, &rtp_control_receiver, (void *)&itr);
-  pthread_create(&rtp_timing_thread, NULL, &rtp_timing_receiver, (void *)&itr);
+  pthread_create(&rtp_audio_thread, NULL, &rtp_audio_receiver, (void *)conn);
+  pthread_create(&rtp_control_thread, NULL, &rtp_control_receiver, (void *)conn);
+  pthread_create(&rtp_timing_thread, NULL, &rtp_timing_receiver, (void *)conn);
 
   session_corrections = 0;
   play_segment_reference_frame = 0; // zero signals that we are not in a play segment
@@ -2211,7 +2216,7 @@ static void *player_thread_func(void *arg) {
   if (sbuf)
     free(sbuf);
   debug(1, "Shut down audio, control and timing threads");
-  itr.please_stop = 1;
+  conn->please_stop = 1;
   pthread_kill(rtp_audio_thread, SIGUSR1);
   pthread_kill(rtp_control_thread, SIGUSR1);
   pthread_kill(rtp_timing_thread, SIGUSR1);
@@ -2430,31 +2435,15 @@ void player_flush(int64_t timestamp) {
 #endif
 }
 
-int player_play(stream_cfg *stream, pthread_t *player_thread) {
+int player_play(pthread_t *player_thread, rtsp_conn_info *conn) {
+
+// need to use conn in place of streram below. Need to put the stream as a parameter to he 
   // if (*player_thread!=NULL)
   //	die("Trying to create a second player thread for this RTSP session");
-  packet_count = 0;
-  encrypted = stream->encrypted;
   if (config.buffer_start_fill > BUFFER_FRAMES)
     die("specified buffer starting fill %d > buffer size %d", config.buffer_start_fill,
         BUFFER_FRAMES);
-  if (encrypted) {
-#ifdef HAVE_LIBMBEDTLS
-    memset(&dctx, 0, sizeof(mbedtls_aes_context));
-    mbedtls_aes_setkey_dec(&dctx, stream->aeskey, 128);
-#endif
-
-#ifdef HAVE_LIBPOLARSSL
-    memset(&dctx, 0, sizeof(aes_context));
-    aes_setkey_dec(&dctx, stream->aeskey, 128);
-#endif
-
-#ifdef HAVE_LIBSSL
-    AES_set_decrypt_key(stream->aeskey, 128, &aes);
-#endif
-    aesiv = stream->aesiv;
-  }
-  init_decoder(stream->fmtp); // this sets up incoming rate, bit depth, channels
+  init_decoder((int32_t *)&conn->stream.fmtp); // this sets up incoming rate, bit depth, channels
   // must be after decoder init
   init_buffer();
   please_stop = 0;
@@ -2482,12 +2471,12 @@ int player_play(stream_cfg *stream, pthread_t *player_thread) {
   rc = pthread_attr_setstacksize(&tattr, size);
   if (rc)
     debug(1, "Error setting stack size for player_thread: %s", strerror(errno));
-  pthread_create(player_thread, &tattr, player_thread_func, NULL);
+  pthread_create(player_thread, &tattr, player_thread_func, (void*)conn);
   pthread_attr_destroy(&tattr);
   return 0;
 }
 
-void player_stop(pthread_t *player_thread) {
+void player_stop(pthread_t *player_thread, rtsp_conn_info *conn) {
   // if (*thread==NULL)
   //	debug(1,"Trying to stop a non-existent player thread");
   // else {
