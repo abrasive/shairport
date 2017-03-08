@@ -113,20 +113,13 @@ static pthread_mutex_t vol_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // default buffer size
 // needs to be a power of 2 because of the way BUFIDX(seqno) works
-#define BUFFER_FRAMES 512
+//#define BUFFER_FRAMES 512
 #define MAX_PACKET 2048
 
 // DAC buffer occupancy stuff
 #define DAC_BUFFER_QUEUE_MINIMUM_LENGTH 600
 
-typedef struct audio_buffer_entry { // decoded audio packets
-  int ready;
-  int64_t timestamp;
-  seq_t sequence_number;
-  signed short *data;
-  int length; // the length of the decoded data
-} abuf_t;
-static abuf_t audio_buffer[BUFFER_FRAMES];
+//static abuf_t audio_buffer[BUFFER_FRAMES];
 #define BUFIDX(seqno) ((seq_t)(seqno) % BUFFER_FRAMES)
 
 // mutex-protected variables
@@ -205,11 +198,11 @@ int64_t monotonic_timestamp(uint32_t timestamp) {
 // add an epoch to the seq_no. Uses the accompanying timestamp to determine the correct epoch
 uint64_t monotonic_seqno(uint16_t seq_no) {}
 
-static void ab_resync(void) {
+static void ab_resync(rtsp_conn_info* conn) {
   int i;
   for (i = 0; i < BUFFER_FRAMES; i++) {
-    audio_buffer[i].ready = 0;
-    audio_buffer[i].sequence_number = 0;
+    conn->audio_buffer[i].ready = 0;
+    conn->audio_buffer[i].sequence_number = 0;
   }
   ab_synced = 0;
   last_seqno_read = -1;
@@ -495,28 +488,28 @@ static void terminate_decoders(void) {
 #endif
 }
 
-static void init_buffer(void) {
+static void init_buffer(rtsp_conn_info* conn) {
   int i;
   for (i = 0; i < BUFFER_FRAMES; i++)
-    audio_buffer[i].data =
+    conn->audio_buffer[i].data =
         malloc(input_bytes_per_frame * (max_frames_per_packet + max_frame_size_change));
-  ab_resync();
+  ab_resync(conn);
 }
 
-static void free_buffer(void) {
+static void free_buffer(rtsp_conn_info* conn) {
   int i;
   for (i = 0; i < BUFFER_FRAMES; i++)
-    free(audio_buffer[i].data);
+    free(conn->audio_buffer[i].data);
 }
 
-void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len, rtsp_conn_info *itr) {
+void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len, rtsp_conn_info *conn) {
 
   // all timestamps are done at the output rate
 
   int64_t ltimestamp = timestamp * output_sample_ratio;
 
   // ignore a request to flush that has been made before the first packet...
-  if (itr->packet_count == 0) {
+  if (conn->packet_count == 0) {
     pthread_mutex_lock(&flush_mutex);
     flush_requested = 0;
     flush_rtp_timestamp = 0;
@@ -524,7 +517,7 @@ void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len, r
   }
 
   pthread_mutex_lock(&ab_mutex);
-  itr->packet_count++;
+  conn->packet_count++;
   time_of_last_audio_packet = get_absolute_time_in_fp();
   if (connection_state_to_output) { // if we are supposed to be processing these packets
 
@@ -550,7 +543,7 @@ void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len, r
         ab_synced = 1;
       }
       if (ab_write == seqno) { // expected packet
-        abuf = audio_buffer + BUFIDX(seqno);
+        abuf = conn->audio_buffer + BUFIDX(seqno);
         ab_write = SUCCESSOR(seqno);
       } else if (seq_order(ab_write, seqno)) { // newer than expected
         // if (ORDINATE(seqno)>(BUFFER_FRAMES*7)/8)
@@ -561,19 +554,19 @@ void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len, r
           debug(1, "Unexpected gap size: %d.", gap);
         int i;
         for (i = 0; i < gap; i++) {
-          abuf = audio_buffer + BUFIDX(seq_sum(ab_write, i));
+          abuf = conn->audio_buffer + BUFIDX(seq_sum(ab_write, i));
           abuf->ready = 0; // to be sure, to be sure
           abuf->timestamp = 0;
           abuf->sequence_number = 0;
         }
         // debug(1,"N %d s %u.",seq_diff(ab_write,PREDECESSOR(seqno))+1,ab_write);
-        abuf = audio_buffer + BUFIDX(seqno);
+        abuf = conn->audio_buffer + BUFIDX(seqno);
         //        rtp_request_resend(ab_write, gap);
         //        resend_requests++;
         ab_write = SUCCESSOR(seqno);
       } else if (seq_order(ab_read, seqno)) { // late but not yet played
         late_packets++;
-        abuf = audio_buffer + BUFIDX(seqno);
+        abuf = conn->audio_buffer + BUFIDX(seqno);
       } else { // too late.
         too_late_packets++;
         /*
@@ -588,7 +581,7 @@ void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len, r
 
       if (abuf) {
         int datalen = max_frames_per_packet;
-        if (alac_decode(abuf->data, &datalen, data, len, itr) == 0) {
+        if (alac_decode(abuf->data, &datalen, data, len, conn) == 0) {
           abuf->ready = 1;
           abuf->length = datalen;
           abuf->timestamp = ltimestamp;
@@ -776,7 +769,7 @@ static inline short dithered_vol(short sample) {
 }
 
 // get the next frame, when available. return 0 if underrun/stream reset.
-static abuf_t *buffer_get_frame(void) {
+static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
   int16_t buf_fill;
   uint64_t local_time_now;
   // struct timespec tn;
@@ -823,7 +816,7 @@ static abuf_t *buffer_get_frame(void) {
     if (flush_requested == 1) {
       if (config.output->flush)
         config.output->flush();
-      ab_resync();
+      ab_resync(conn);
       first_packet_timestamp = 0;
       first_packet_time_to_play = 0;
       time_since_play_started = 0;
@@ -834,7 +827,7 @@ static abuf_t *buffer_get_frame(void) {
     uint32_t flush_limit = 0;
     if (ab_synced) {
       do {
-        curframe = audio_buffer + BUFIDX(ab_read);
+        curframe = conn->audio_buffer + BUFIDX(ab_read);
         if ((ab_read != ab_write) && (curframe->ready)) { // it could be synced and empty, under
                                                           // exceptional circumstances, with the
                                                           // frame unused, thus apparently ready
@@ -869,7 +862,7 @@ static abuf_t *buffer_get_frame(void) {
         flush_limit = 0;
       }
 
-      curframe = audio_buffer + BUFIDX(ab_read);
+      curframe = conn->audio_buffer + BUFIDX(ab_read);
 
       if (curframe->ready) {
         notified_buffer_empty = 0; // at least one buffer now -- diagnostic only.
@@ -968,7 +961,7 @@ static abuf_t *buffer_get_frame(void) {
 
               if (config.output->flush)
                 config.output->flush();
-              ab_resync();
+              ab_resync(conn);
               first_packet_timestamp = 0;
               first_packet_time_to_play = 0;
               time_since_play_started = 0;
@@ -993,7 +986,7 @@ static abuf_t *buffer_get_frame(void) {
                 // ab_write));
                 if (config.output->flush)
                   config.output->flush();
-                ab_resync();
+                ab_resync(conn);
                 first_packet_timestamp = 0;
                 first_packet_time_to_play = 0;
               } else {
@@ -1154,7 +1147,7 @@ static abuf_t *buffer_get_frame(void) {
   if (!ab_buffering) {
     for (i = 8; i < (seq_diff(ab_read, ab_write) / 2); i = (i * 2)) {
       seq_t next = seq_sum(ab_read, i);
-      abuf = audio_buffer + BUFIDX(next);
+      abuf = conn->audio_buffer + BUFIDX(next);
       if (!abuf->ready) {
         rtp_request_resend(next, 1);
         // debug(1,"Resend %u.",next);
@@ -1521,6 +1514,8 @@ static void *player_thread_func(void *arg) {
     output_bytes_per_frame = 8;
     break;
   }
+  
+  init_buffer(conn);
 
   debug(1, "Output frame bytes is %d.", output_bytes_per_frame);
 
@@ -1691,7 +1686,7 @@ static void *player_thread_func(void *arg) {
 
   uint64_t tens_of_seconds = 0;
   while (!please_stop) {
-    abuf_t *inframe = buffer_get_frame();
+    abuf_t *inframe = buffer_get_frame(conn);
     if (inframe) {
       inbuf = inframe->data;
       inbuflength = inframe->length;
@@ -2218,6 +2213,7 @@ static void *player_thread_func(void *arg) {
   debug(1, "audio thread joined");
   pthread_join(rtp_control_thread, NULL);
   debug(1, "control thread joined");
+  free_buffer(conn);
   debug(1, "Player thread exit");
   return 0;
 }
@@ -2437,7 +2433,6 @@ int player_play(pthread_t *player_thread, rtsp_conn_info *conn) {
         BUFFER_FRAMES);
   init_decoder((int32_t *)&conn->stream.fmtp); // this sets up incoming rate, bit depth, channels
   // must be after decoder init
-  init_buffer();
   please_stop = 0;
   command_start();
 #ifdef CONFIG_METADATA
@@ -2479,7 +2474,6 @@ void player_stop(pthread_t *player_thread, rtsp_conn_info *conn) {
   send_ssnc_metadata('pend', NULL, 0, 1);
 #endif
   command_stop();
-  free_buffer();
   terminate_decoders();
   int rc = pthread_cond_destroy(&flowcontrol);
   if (rc)

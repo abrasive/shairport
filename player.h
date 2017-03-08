@@ -19,6 +19,20 @@
 
 #include "audio.h"
 
+typedef uint16_t seq_t;
+
+typedef struct audio_buffer_entry { // decoded audio packets
+  int ready;
+  int64_t timestamp;
+  seq_t sequence_number;
+  signed short *data;
+  int length; // the length of the decoded data
+} abuf_t;
+
+// default buffer size
+// needs to be a power of 2 because of the way BUFIDX(seqno) works
+#define BUFFER_FRAMES 512
+
 typedef struct {
   int encrypted;
   uint8_t aesiv[16], aeskey[16];
@@ -35,6 +49,7 @@ typedef struct {
   pthread_t thread;
   pthread_t player_thread;
 
+  abuf_t audio_buffer[BUFFER_FRAMES];
   uint32_t please_stop;
   uint64_t packet_count;
 #ifdef HAVE_LIBMBEDTLS
@@ -49,9 +64,6 @@ typedef struct {
   AES_KEY aes;
 #endif
 } rtsp_conn_info;
-
-
-typedef uint16_t seq_t;
 
 // wrapped number between two seq_t.
 int32_t seq_diff(seq_t a, seq_t b);
