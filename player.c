@@ -1515,6 +1515,8 @@ static void *player_thread_func(void *arg) {
     break;
   }
   
+  init_decoder((int32_t *)&conn->stream.fmtp); // this sets up incoming rate, bit depth, channels
+  // must be after decoder init
   init_buffer(conn);
 
   debug(1, "Output frame bytes is %d.", output_bytes_per_frame);
@@ -2214,6 +2216,7 @@ static void *player_thread_func(void *arg) {
   pthread_join(rtp_control_thread, NULL);
   debug(1, "control thread joined");
   free_buffer(conn);
+  terminate_decoders();
   debug(1, "Player thread exit");
   return 0;
 }
@@ -2431,8 +2434,6 @@ int player_play(pthread_t *player_thread, rtsp_conn_info *conn) {
   if (config.buffer_start_fill > BUFFER_FRAMES)
     die("specified buffer starting fill %d > buffer size %d", config.buffer_start_fill,
         BUFFER_FRAMES);
-  init_decoder((int32_t *)&conn->stream.fmtp); // this sets up incoming rate, bit depth, channels
-  // must be after decoder init
   please_stop = 0;
   command_start();
 #ifdef CONFIG_METADATA
@@ -2474,7 +2475,6 @@ void player_stop(pthread_t *player_thread, rtsp_conn_info *conn) {
   send_ssnc_metadata('pend', NULL, 0, 1);
 #endif
   command_stop();
-  terminate_decoders();
   int rc = pthread_cond_destroy(&flowcontrol);
   if (rc)
     debug(1, "Error destroying condition variable.");
