@@ -50,6 +50,7 @@ typedef struct {
   pthread_t player_thread;
 
   abuf_t audio_buffer[BUFFER_FRAMES];
+  int max_frames_per_packet,input_num_channels,input_bit_depth,input_rate;
   uint32_t please_stop;
   uint64_t packet_count;
 #ifdef HAVE_LIBMBEDTLS

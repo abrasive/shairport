@@ -76,8 +76,6 @@
 #include "apple_alac.h"
 #endif
 
-static int input_rate, input_bit_depth, input_num_channels, max_frames_per_packet;
-
 static uint32_t timestamp_epoch, last_timestamp,
     maximum_timestamp_interval; // timestamp_epoch of zero means not initialised, could start at 2
                                 // or 1.
@@ -367,7 +365,7 @@ static int alac_decode(short *dest, int *destlen, uint8_t *buf, int len, rtsp_co
   return reply;
 }
 
-static int init_decoder(int32_t fmtp[12]) {
+static int init_decoder(int32_t fmtp[12],rtsp_conn_info* conn) {
 
   // This is a guess, but the format of the fmtp looks identical to the format of an
   // ALACSpecificCOnfig
@@ -448,22 +446,22 @@ static int init_decoder(int32_t fmtp[12]) {
 
   alac_file *alac;
 
-  max_frames_per_packet = fmtp[1]; // number of audio frames per packet.
+  conn->max_frames_per_packet = fmtp[1]; // number of audio frames per packet.
 
-  input_rate = fmtp[11];
-  input_num_channels = fmtp[7];
-  input_bit_depth = fmtp[3];
+  conn->input_rate = fmtp[11];
+  conn->input_num_channels = fmtp[7];
+  conn->input_bit_depth = fmtp[3];
 
-  input_bytes_per_frame = input_num_channels * ((input_bit_depth + 7) / 8);
+  input_bytes_per_frame = conn->input_num_channels * ((conn->input_bit_depth + 7) / 8);
 
-  alac = alac_create(input_bit_depth, input_num_channels);
+  alac = alac_create(conn->input_bit_depth, conn->input_num_channels);
   if (!alac)
     return 1;
   decoder_info = alac;
 
-  alac->setinfo_max_samples_per_frame = max_frames_per_packet;
+  alac->setinfo_max_samples_per_frame = conn->max_frames_per_packet;
   alac->setinfo_7a = fmtp[2];
-  alac->setinfo_sample_size = input_bit_depth;
+  alac->setinfo_sample_size = conn->input_bit_depth;
   alac->setinfo_rice_historymult = fmtp[4];
   alac->setinfo_rice_initialhistory = fmtp[5];
   alac->setinfo_rice_kmodifier = fmtp[6];
@@ -492,7 +490,7 @@ static void init_buffer(rtsp_conn_info* conn) {
   int i;
   for (i = 0; i < BUFFER_FRAMES; i++)
     conn->audio_buffer[i].data =
-        malloc(input_bytes_per_frame * (max_frames_per_packet + max_frame_size_change));
+        malloc(input_bytes_per_frame * (conn->max_frames_per_packet + max_frame_size_change));
   ab_resync(conn);
 }
 
@@ -580,7 +578,7 @@ void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len, r
       // pthread_mutex_unlock(&ab_mutex);
 
       if (abuf) {
-        int datalen = max_frames_per_packet;
+        int datalen = conn->max_frames_per_packet;
         if (alac_decode(abuf->data, &datalen, data, len, conn) == 0) {
           abuf->ready = 1;
           abuf->length = datalen;
@@ -998,7 +996,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
                         max_dac_delay, dac_delay);
                   fs = 0;
                 }
-                if ((exact_frame_gap <= fs) || (exact_frame_gap <= max_frames_per_packet * 2)) {
+                if ((exact_frame_gap <= fs) || (exact_frame_gap <= conn->max_frames_per_packet * 2)) {
                   fs = exact_frame_gap;
                   // debug(1,"Exact frame gap is %llu; play %d frames of silence. Dac_delay is %d,
                   // with %d packets, ab_read is %04x, ab_write is
@@ -1105,7 +1103,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
 
     if (wait) {
       uint64_t time_to_wait_for_wakeup_fp =
-          ((uint64_t)1 << 32) / input_rate;  // this is time period of one frame
+          ((uint64_t)1 << 32) / conn->input_rate;  // this is time period of one frame
       time_to_wait_for_wakeup_fp *= 4 * 352; // four full 352-frame packets
       time_to_wait_for_wakeup_fp /= 3;       // four thirds of a packet time
 
@@ -1473,7 +1471,7 @@ static void *player_thread_func(void *arg) {
   conn->please_stop = 0;
   conn->packet_count = 0;
   
-  init_decoder((int32_t *)&conn->stream.fmtp); // this sets up incoming rate, bit depth, channels
+  init_decoder((int32_t *)&conn->stream.fmtp,conn); // this sets up incoming rate, bit depth, channels
   // must be after decoder init
   init_buffer(conn);
 
@@ -1496,11 +1494,11 @@ static void *player_thread_func(void *arg) {
   }  
   
   timestamp_epoch = 0; // indicate that the next timestamp will be the first one.
-  maximum_timestamp_interval = input_rate * 60; // actually there shouldn't be more than about 13v
+  maximum_timestamp_interval = conn->input_rate * 60; // actually there shouldn't be more than about 13v
                                                 // seconds of a gap between successive rtptimes, at
                                                 // worst
 
-  output_sample_ratio = config.output_rate / input_rate;
+  output_sample_ratio = config.output_rate / conn->input_rate;
 
   debug(1, "Output sample ratio is %d.", output_sample_ratio);
 
@@ -1532,7 +1530,7 @@ static void *player_thread_func(void *arg) {
 
   // check that there are enough buffers to accommodate the desired latency and the latency offset
 
-  int maximum_latency = config.latency + config.audio_backend_latency_offset * input_rate;
+  int maximum_latency = config.latency + config.audio_backend_latency_offset * conn->input_rate;
   if ((maximum_latency + (352 - 1)) / 352 + 10 > BUFFER_FRAMES)
     die("Not enough buffers available for a total latency of %d frames. A maximum of %d 352-frame "
         "packets may be accommodated.",
@@ -1599,7 +1597,7 @@ static void *player_thread_func(void *arg) {
 
   debug(1, "Output bit depth is %d.", output_bit_depth);
 
-  if (input_bit_depth > output_bit_depth) {
+  if (conn->input_bit_depth > output_bit_depth) {
     debug(1, "Dithering will be enabled because the input bit depth is greater than the output bit "
              "depth");
   }
@@ -1616,13 +1614,13 @@ static void *player_thread_func(void *arg) {
     // debug(1,"Define tbuf of length
     // %d.",output_bytes_per_frame*(max_frames_per_packet*output_sample_ratio+max_frame_size_change));
     tbuf = malloc(sizeof(int32_t) * 2 *
-                  (max_frames_per_packet * output_sample_ratio + max_frame_size_change));
+                  (conn->max_frames_per_packet * output_sample_ratio + max_frame_size_change));
     if (tbuf == NULL)
       debug(1, "Failed to allocate memory for the transition buffer.");
     sbuf = 0;
     if (config.packet_stuffing == ST_soxr) { // needed for stuffing
       sbuf = malloc(sizeof(int32_t) * 2 *
-                    (max_frames_per_packet * output_sample_ratio + max_frame_size_change));
+                    (conn->max_frames_per_packet * output_sample_ratio + max_frame_size_change));
       if (sbuf == NULL)
         debug(1, "Failed to allocate memory for the transition buffer.");
     }
@@ -1634,13 +1632,13 @@ static void *player_thread_func(void *arg) {
   // The size of these dependents on the number of frames, the size of each frame and the maximum
   // size change
   outbuf = malloc(output_bytes_per_frame *
-                  (max_frames_per_packet * output_sample_ratio + max_frame_size_change));
+                  (conn->max_frames_per_packet * output_sample_ratio + max_frame_size_change));
   if (outbuf == NULL)
     debug(1, "Failed to allocate memory for an output buffer.");
-  silence = malloc(output_bytes_per_frame * max_frames_per_packet * output_sample_ratio);
+  silence = malloc(output_bytes_per_frame * conn->max_frames_per_packet * output_sample_ratio);
   if (silence == NULL)
     debug(1, "Failed to allocate memory for a silence buffer.");
-  memset(silence, 0, output_bytes_per_frame * max_frames_per_packet * output_sample_ratio);
+  memset(silence, 0, output_bytes_per_frame * conn->max_frames_per_packet * output_sample_ratio);
   late_packet_message_sent = 0;
   first_packet_timestamp = 0;
   missing_packets = late_packets = too_late_packets = resend_requests = 0;
@@ -1698,17 +1696,17 @@ static void *player_thread_func(void *arg) {
           // debug(1,"Player has a supplied silent frame.");
           last_seqno_read =
               (SUCCESSOR(last_seqno_read) & 0xffff); // manage the packet out of sequence minder
-          config.output->play(silence, max_frames_per_packet * output_sample_ratio);
+          config.output->play(silence, conn->max_frames_per_packet * output_sample_ratio);
         } else {
 
           int enable_dither = 0;
-          if ((fix_volume != 0x10000) || (input_bit_depth > output_bit_depth))
+          if ((fix_volume != 0x10000) || (conn->input_bit_depth > output_bit_depth))
             enable_dither = 1;
 
           // here, let's transform the frame of data, if necessary
 
           if (tbuf != NULL) { // this will be null if no changes are needed
-            switch (input_bit_depth) {
+            switch (conn->input_bit_depth) {
             case 16: {
               int i, j;
               int16_t ls, rs;
