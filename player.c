@@ -1473,6 +1473,12 @@ static void *player_thread_func(void *arg) {
   conn->please_stop = 0;
   conn->packet_count = 0;
   
+  init_decoder((int32_t *)&conn->stream.fmtp); // this sets up incoming rate, bit depth, channels
+  // must be after decoder init
+  init_buffer(conn);
+
+  debug(1, "Output frame bytes is %d.", output_bytes_per_frame);
+
   if (conn->stream.encrypted) {
 #ifdef HAVE_LIBMBEDTLS
     memset(&conn->dctx, 0, sizeof(mbedtls_aes_context));
@@ -1515,12 +1521,6 @@ static void *player_thread_func(void *arg) {
     break;
   }
   
-  init_decoder((int32_t *)&conn->stream.fmtp); // this sets up incoming rate, bit depth, channels
-  // must be after decoder init
-  init_buffer(conn);
-
-  debug(1, "Output frame bytes is %d.", output_bytes_per_frame);
-
   // create and start the timing, control and audio receiver threads
   pthread_t rtp_audio_thread, rtp_control_thread, rtp_timing_thread;
   pthread_create(&rtp_audio_thread, NULL, &rtp_audio_receiver, (void *)conn);
