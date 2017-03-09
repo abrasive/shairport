@@ -155,9 +155,6 @@ int64_t monotonic_timestamp(uint32_t timestamp) {
   return return_value;
 }
 
-// add an epoch to the seq_no. Uses the accompanying timestamp to determine the correct epoch
-uint64_t monotonic_seqno(uint16_t seq_no) {}
-
 static void ab_resync(rtsp_conn_info* conn) {
   int i;
   for (i = 0; i < BUFFER_FRAMES; i++) {
@@ -1260,13 +1257,33 @@ static void *player_thread_func(void *arg) {
 
   rtsp_conn_info *conn = (rtsp_conn_info *)arg;
   
+  
   conn->please_stop = 0;
   conn->packet_count = 0;
   conn->previous_random_number = 0;
   conn->input_bytes_per_frame = 4;
   conn->player_thread_please_stop = 0;
   conn->decoder_in_use = 0;
-
+  
+  int rc = pthread_mutex_init(&conn->ab_mutex, NULL);
+  if (rc)
+    debug(1, "Error initialising ab_mutex.");
+	rc = pthread_mutex_init(&conn->flush_mutex, NULL);
+  if (rc)
+    debug(1, "Error initialising flush_mutex.");
+// set the flowcontrol condition variable to wait on a monotonic clock
+#ifdef COMPILE_FOR_LINUX_AND_FREEBSD_AND_CYGWIN
+  pthread_condattr_t attr;
+  pthread_condattr_init(&attr);
+  pthread_condattr_setclock(&attr, CLOCK_MONOTONIC); // can't do this in OS X, and don't need it.
+  rc = pthread_cond_init(&conn->flowcontrol, &attr);
+#endif
+#ifdef COMPILE_FOR_OSX
+  rc = pthread_cond_init(&conn->flowcontrol, NULL);
+#endif
+  if (rc)
+    debug(1, "Error initialising flowcontrol condition variable.");
+  config.output->start(config.output_rate, config.output_format);
   
   init_decoder((int32_t *)&conn->stream.fmtp,conn); // this sets up incoming rate, bit depth, channels
   // must be after decoder init
@@ -1990,6 +2007,16 @@ static void *player_thread_func(void *arg) {
   debug(1, "control thread joined");
   free_buffer(conn);
   terminate_decoders(conn);
+  // remove flow control and mutexes
+  rc = pthread_cond_destroy(&conn->flowcontrol);
+  if (rc)
+    debug(1, "Error destroying flowcontrol condition variable.");
+  rc = pthread_mutex_destroy(&conn->flush_mutex);
+  if (rc)
+    debug(1, "Error destroying flush_mutex variable.");
+  rc = pthread_mutex_destroy(&conn->ab_mutex);
+  if (rc)
+    debug(1, "Error destroying ab_mutex variable.");
   debug(1, "Player thread exit");
   return 0;
 }
@@ -2212,31 +2239,10 @@ int player_play(pthread_t *player_thread, rtsp_conn_info *conn) {
 #ifdef CONFIG_METADATA
   send_ssnc_metadata('pbeg', NULL, 0, 1);
 #endif
-
-
-	int rc = pthread_mutex_init(&conn->ab_mutex, NULL);
-  if (rc)
-    debug(1, "Error initialising ab_mutex.");
-	rc = pthread_mutex_init(&conn->flush_mutex, NULL);
-  if (rc)
-    debug(1, "Error initialising flush_mutex.");
-// set the flowcontrol condition variable to wait on a monotonic clock
-#ifdef COMPILE_FOR_LINUX_AND_FREEBSD_AND_CYGWIN
-  pthread_condattr_t attr;
-  pthread_condattr_init(&attr);
-  pthread_condattr_setclock(&attr, CLOCK_MONOTONIC); // can't do this in OS X, and don't need it.
-  rc = pthread_cond_init(&conn->flowcontrol, &attr);
-#endif
-#ifdef COMPILE_FOR_OSX
-  rc = pthread_cond_init(&conn->flowcontrol, NULL);
-#endif
-  if (rc)
-    debug(1, "Error initialising flowcontrol condition variable.");
-  config.output->start(config.output_rate, config.output_format);
-  size_t size = (PTHREAD_STACK_MIN + 256 * 1024);
+	size_t size = (PTHREAD_STACK_MIN + 256 * 1024);
   pthread_attr_t tattr;
   pthread_attr_init(&tattr);
-  rc = pthread_attr_setstacksize(&tattr, size);
+  int rc = pthread_attr_setstacksize(&tattr, size);
   if (rc)
     debug(1, "Error setting stack size for player_thread: %s", strerror(errno));
   pthread_create(player_thread, &tattr, player_thread_func, (void*)conn);
@@ -2255,14 +2261,4 @@ void player_stop(pthread_t *player_thread, rtsp_conn_info *conn) {
   send_ssnc_metadata('pend', NULL, 0, 1);
 #endif
   command_stop();
-  int rc = pthread_cond_destroy(&conn->flowcontrol);
-  if (rc)
-    debug(1, "Error destroying flowcontrol condition variable.");
-  rc = pthread_mutex_destroy(&conn->flush_mutex);
-  if (rc)
-    debug(1, "Error destroying flush_mutex variable.");
-  rc = pthread_mutex_destroy(&conn->ab_mutex);
-  if (rc)
-    debug(1, "Error destroying ab_mutex variable.");
-  //	}
 }
