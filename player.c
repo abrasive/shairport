@@ -88,7 +88,6 @@ static uint32_t timestamp_epoch, last_timestamp,
 
 // debug variables
 static int32_t last_seqno_read;
-static int decoder_in_use = 0;
 
 // interthread variables
 static int fix_volume = 0x10000;
@@ -119,11 +118,6 @@ static pthread_mutex_t flush_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t flowcontrol;
 
 static int64_t first_packet_time_to_play, time_since_play_started; // nanoseconds
-
-static audio_parameters audio_information;
-
-// stats
-static uint64_t missing_packets, late_packets, too_late_packets, resend_requests;
 
 // make timestamps and seqnos definitely monotonic
 
@@ -298,18 +292,18 @@ static int alac_decode(short *dest, int *destlen, uint8_t *buf, int len, rtsp_co
     memcpy(packet + aeslen, buf + aeslen, len - aeslen);
 #ifdef HAVE_APPLE_ALAC
     if (config.use_apple_decoder) {
-      if (decoder_in_use != 1 << decoder_apple_alac) {
+      if (conn->decoder_in_use != 1 << decoder_apple_alac) {
         debug(1, "Apple ALAC Decoder used on encrypted audio.");
-        decoder_in_use = 1 << decoder_apple_alac;
+        conn->decoder_in_use = 1 << decoder_apple_alac;
       }
       apple_alac_decode_frame(packet, len, (unsigned char *)dest, &outsize);
       outsize = outsize * 4; // bring the size to bytes
     } else
 #endif
     {
-      if (decoder_in_use != 1 << decoder_hammerton) {
+      if (conn->decoder_in_use != 1 << decoder_hammerton) {
         debug(1, "Hammerton Decoder used on encrypted audio.");
-        decoder_in_use = 1 << decoder_hammerton;
+        conn->decoder_in_use = 1 << decoder_hammerton;
       }
       alac_decode_frame(conn->decoder_info, packet, (unsigned char *)dest, &outsize);
     }
@@ -317,18 +311,18 @@ static int alac_decode(short *dest, int *destlen, uint8_t *buf, int len, rtsp_co
 // not encrypted
 #ifdef HAVE_APPLE_ALAC
     if (config.use_apple_decoder) {
-      if (decoder_in_use != 1 << decoder_apple_alac) {
+      if (conn->decoder_in_use != 1 << decoder_apple_alac) {
         debug(1, "Apple ALAC Decoder used on unencrypted audio.");
-        decoder_in_use = 1 << decoder_apple_alac;
+        conn->decoder_in_use = 1 << decoder_apple_alac;
       }
       apple_alac_decode_frame(buf, len, (unsigned char *)dest, &outsize);
       outsize = outsize * 4; // bring the size to bytes
     } else
 #endif
     {
-      if (decoder_in_use != 1 << decoder_hammerton) {
+      if (conn->decoder_in_use != 1 << decoder_hammerton) {
         debug(1, "Hammerton Decoder used on unencrypted audio.");
-        decoder_in_use = 1 << decoder_hammerton;
+        conn->decoder_in_use = 1 << decoder_hammerton;
       }
       alac_decode_frame(conn->decoder_info, buf, dest, &outsize);
     }
@@ -547,10 +541,10 @@ void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len, r
         //        resend_requests++;
         ab_write = SUCCESSOR(seqno);
       } else if (seq_order(ab_read, seqno)) { // late but not yet played
-        late_packets++;
+        conn->late_packets++;
         abuf = conn->audio_buffer + BUFIDX(seqno);
       } else { // too late.
-        too_late_packets++;
+        conn->too_late_packets++;
       }
       // pthread_mutex_unlock(&ab_mutex);
 
@@ -1091,14 +1085,14 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
       if (!abuf->ready) {
         rtp_request_resend(next, 1);
         // debug(1,"Resend %u.",next);
-        resend_requests++;
+        conn->resend_requests++;
       }
     }
   }
 
   if (!curframe->ready) {
     // debug(1, "Supplying a silent frame for frame %u", read);
-    missing_packets++;
+    conn->missing_packets++;
     curframe->timestamp = 0; // indicate a silent frame should be substituted
   }
   curframe->ready = 0;
@@ -1287,6 +1281,8 @@ static void *player_thread_func(void *arg) {
   conn->previous_random_number = 0;
   conn->input_bytes_per_frame = 4;
   conn->player_thread_please_stop = 0;
+  conn->decoder_in_use = 0;
+
   
   init_decoder((int32_t *)&conn->stream.fmtp,conn); // this sets up incoming rate, bit depth, channels
   // must be after decoder init
@@ -1451,7 +1447,7 @@ static void *player_thread_func(void *arg) {
     debug(1, "Failed to allocate memory for a silence buffer.");
   memset(silence, 0, conn->output_bytes_per_frame * conn->max_frames_per_packet * conn->output_sample_ratio);
   first_packet_timestamp = 0;
-  missing_packets = late_packets = too_late_packets = resend_requests = 0;
+  conn->missing_packets = conn->late_packets = conn->too_late_packets = conn->resend_requests = 0;
   flush_rtp_timestamp = 0; // it seems this number has a special significance -- it seems to be used
                            // as a null operand, so we'll use it like that too
   int sync_error_out_of_bounds =
@@ -1932,8 +1928,8 @@ static void *player_thread_func(void *arg) {
                          moving_average_correction * 1000000 / (352 * conn->output_sample_ratio), 10,
                          moving_average_insertions_plus_deletions * 1000000 /
                              (352 * conn->output_sample_ratio),
-                         12, play_number, 7, missing_packets, 7, late_packets, 7, too_late_packets,
-                         7, resend_requests, 7, minimum_dac_queue_size, 5, minimum_buffer_occupancy,
+                         12, play_number, 7, conn->missing_packets, 7, conn->late_packets, 7, conn->too_late_packets,
+                         7, conn->resend_requests, 7, minimum_dac_queue_size, 5, minimum_buffer_occupancy,
                          5, maximum_buffer_occupancy);
                 } else {
                   inform("%*.1f," /* Sync error in milliseconds */
@@ -1947,7 +1943,7 @@ static void *player_thread_func(void *arg) {
                          "%*d",   /* max buffer occupancy */
                          10,
                          1000 * moving_average_sync_error / config.output_rate, 12, play_number, 7,
-                         missing_packets, 7, late_packets, 7, too_late_packets, 7, resend_requests,
+                         conn->missing_packets, 7, conn->late_packets, 7, conn->too_late_packets, 7, conn->resend_requests,
                          7, minimum_dac_queue_size, 5, minimum_buffer_occupancy, 5,
                          maximum_buffer_occupancy);
                 }
@@ -1962,7 +1958,7 @@ static void *player_thread_func(void *arg) {
                        "%*d",   /* max buffer occupancy */
                        10,
                        1000 * moving_average_sync_error / config.output_rate, 12, play_number, 7,
-                       missing_packets, 7, late_packets, 7, too_late_packets, 7, resend_requests, 5,
+                       conn->missing_packets, 7, conn->late_packets, 7, conn->too_late_packets, 7, conn->resend_requests, 5,
                        minimum_buffer_occupancy, 5, maximum_buffer_occupancy);
               }
             } else {
@@ -2051,6 +2047,7 @@ void player_volume(double airplay_volume) {
       max_db; // hw_range_db is a flag; if 0 means no mixer
 
   if (config.output->parameters) {
+  	audio_parameters audio_information;
     // have a hardware mixer
     config.output->parameters(&audio_information);
     hw_max_db = audio_information.maximum_volume_dB;

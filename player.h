@@ -61,6 +61,11 @@ typedef struct {
   int shutdown_requested;
   int connection_state_to_output;
   int player_thread_please_stop;
+  // stats
+	uint64_t missing_packets, late_packets, too_late_packets, resend_requests;
+	int decoder_in_use;
+	// debug variables
+	int32_t last_seqno_read;
 
 #ifdef HAVE_LIBMBEDTLS
   mbedtls_aes_context dctx;
