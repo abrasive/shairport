@@ -18,6 +18,7 @@
 #endif
 
 #include "audio.h"
+#include "alac.h"
 
 typedef uint16_t seq_t;
 
@@ -51,9 +52,16 @@ typedef struct {
 
   abuf_t audio_buffer[BUFFER_FRAMES];
   int max_frames_per_packet,input_num_channels,input_bit_depth,input_rate;
+  int input_bytes_per_frame,output_bytes_per_frame,output_sample_ratio;
+  int max_frame_size_change;
   int64_t previous_random_number;
+  alac_file *decoder_info;
   uint32_t please_stop;
   uint64_t packet_count;
+  int shutdown_requested;
+  int connection_state_to_output;
+  int player_thread_please_stop;
+
 #ifdef HAVE_LIBMBEDTLS
   mbedtls_aes_context dctx;
 #endif
