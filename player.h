@@ -61,11 +61,15 @@ typedef struct {
   int shutdown_requested;
   int connection_state_to_output;
   int player_thread_please_stop;
+  int64_t first_packet_time_to_play, time_since_play_started; // nanoseconds
   // stats
 	uint64_t missing_packets, late_packets, too_late_packets, resend_requests;
 	int decoder_in_use;
 	// debug variables
 	int32_t last_seqno_read;
+// mutexes and condition variables
+	pthread_cond_t flowcontrol;
+	pthread_mutex_t ab_mutex,flush_mutex;
 
 #ifdef HAVE_LIBMBEDTLS
   mbedtls_aes_context dctx;
@@ -86,8 +90,8 @@ int32_t seq_diff(seq_t a, seq_t b);
 int player_play(pthread_t *thread, rtsp_conn_info* conn);
 void player_stop(pthread_t *thread, rtsp_conn_info* conn);
 
-void player_volume(double f);
-void player_flush(int64_t timestamp);
+void player_volume(double f, rtsp_conn_info* conn);
+void player_flush(int64_t timestamp, rtsp_conn_info* conn);
 void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len, rtsp_conn_info* conn);
 
 int64_t monotonic_timestamp(uint32_t timestamp); // add an epoch to the timestamp. The monotonic

@@ -643,7 +643,7 @@ static void handle_record(rtsp_conn_info *conn, rtsp_message *req, rtsp_message 
         rtptime = uatoi(p + 1); // unsigned integer -- up to 2^32-1
         rtptime--;
         // debug(1,"RTSP Flush Requested by handle_record: %u.",rtptime);
-        player_flush(rtptime);
+        player_flush(rtptime,conn);
       }
     }
   }
@@ -684,7 +684,7 @@ static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
     }
   }
   // debug(1,"RTSP Flush Requested: %u.",rtptime);
-  player_flush(rtptime);
+  player_flush(rtptime,conn);
   resp->respcode = 200;
 }
 
@@ -848,7 +848,7 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn, rtsp_message *r
       float volume = atof(cp + 8);
       if (config.ignore_volume_control == 0) {
         debug(2, "volume: %f\n", volume);
-        player_volume(volume);
+        player_volume(volume,conn);
       }
 #ifdef CONFIG_METADATA
       else {                    // if ignore volume is on...

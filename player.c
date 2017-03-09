@@ -79,16 +79,7 @@
 static uint32_t timestamp_epoch, last_timestamp,
     maximum_timestamp_interval; // timestamp_epoch of zero means not initialised, could start at 2
                                 // or 1.
-
-// #define FRAME_BYTES(max_frames_per_packet) (4 * max_frames_per_packet)
-// maximal resampling shift - conservative
-//#define OUTFRAME_BYTES(max_frames_per_packet) (4 * (max_frames_per_packet + 3))
-
-// static pthread_t player_thread = NULL;
-
-// debug variables
-static int32_t last_seqno_read;
-
+                                
 // interthread variables
 static int fix_volume = 0x10000;
 static pthread_mutex_t vol_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -111,13 +102,6 @@ static int64_t first_packet_timestamp = 0;
 static int flush_requested = 0;
 static int64_t flush_rtp_timestamp;
 static uint64_t time_of_last_audio_packet;
-
-// mutexes and condition variables
-static pthread_mutex_t ab_mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t flush_mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t flowcontrol;
-
-static int64_t first_packet_time_to_play, time_since_play_started; // nanoseconds
 
 // make timestamps and seqnos definitely monotonic
 
@@ -181,7 +165,7 @@ static void ab_resync(rtsp_conn_info* conn) {
     conn->audio_buffer[i].sequence_number = 0;
   }
   ab_synced = 0;
-  last_seqno_read = -1;
+  conn->last_seqno_read = -1;
   ab_buffering = 1;
 }
 
@@ -486,13 +470,13 @@ void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len, r
 
   // ignore a request to flush that has been made before the first packet...
   if (conn->packet_count == 0) {
-    pthread_mutex_lock(&flush_mutex);
+    pthread_mutex_lock(&conn->flush_mutex);
     flush_requested = 0;
     flush_rtp_timestamp = 0;
-    pthread_mutex_unlock(&flush_mutex);
+    pthread_mutex_unlock(&conn->flush_mutex);
   }
 
-  pthread_mutex_lock(&ab_mutex);
+  pthread_mutex_lock(&conn->ab_mutex);
   conn->packet_count++;
   time_of_last_audio_packet = get_absolute_time_in_fp();
   if (conn->connection_state_to_output) { // if we are supposed to be processing these packets
@@ -565,11 +549,11 @@ void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len, r
 
       // pthread_mutex_lock(&ab_mutex);
     }
-    int rc = pthread_cond_signal(&flowcontrol);
+    int rc = pthread_cond_signal(&conn->flowcontrol);
     if (rc)
       debug(1, "Error signalling flowcontrol.");
   }
-  pthread_mutex_unlock(&ab_mutex);
+  pthread_mutex_unlock(&conn->ab_mutex);
 }
 
 int32_t rand_in_range(int32_t exclusive_range_limit) {
@@ -712,7 +696,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
   abuf_t *curframe;
   int notified_buffer_empty = 0; // diagnostic only
 
-  pthread_mutex_lock(&ab_mutex);
+  pthread_mutex_lock(&conn->ab_mutex);
   int wait;
   long dac_delay = 0; // long because alsa returns a long
   do {
@@ -740,23 +724,23 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
       conn->connection_state_to_output = rco;
       // change happening
       if (conn->connection_state_to_output == 0) { // going off
-        pthread_mutex_lock(&flush_mutex);
+        pthread_mutex_lock(&conn->flush_mutex);
         flush_requested = 1;
-        pthread_mutex_unlock(&flush_mutex);
+        pthread_mutex_unlock(&conn->flush_mutex);
       }
     }
 
-    pthread_mutex_lock(&flush_mutex);
+    pthread_mutex_lock(&conn->flush_mutex);
     if (flush_requested == 1) {
       if (config.output->flush)
         config.output->flush();
       ab_resync(conn);
       first_packet_timestamp = 0;
-      first_packet_time_to_play = 0;
-      time_since_play_started = 0;
+      conn->first_packet_time_to_play = 0;
+      conn->time_since_play_started = 0;
       flush_requested = 0;
     }
-    pthread_mutex_unlock(&flush_mutex);
+    pthread_mutex_unlock(&conn->flush_mutex);
 
     uint32_t flush_limit = 0;
     if (ab_synced) {
@@ -849,25 +833,25 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
               if (delta >= 0) {
                 int64_t delta_fp_sec =
                     (delta << 32) / config.output_rate; // int64_t which is positive
-                first_packet_time_to_play = reference_timestamp_time + delta_fp_sec;
+                conn->first_packet_time_to_play = reference_timestamp_time + delta_fp_sec;
               } else {
                 int64_t abs_delta = -delta;
                 int64_t delta_fp_sec =
                     (abs_delta << 32) / config.output_rate; // int64_t which is positive
-                first_packet_time_to_play = reference_timestamp_time - delta_fp_sec;
+                conn->first_packet_time_to_play = reference_timestamp_time - delta_fp_sec;
               }
 
-              if (local_time_now >= first_packet_time_to_play) {
+              if (local_time_now >= conn->first_packet_time_to_play) {
                 debug(
                     1,
                     "First packet is late! It should have played before now. Flushing 0.1 seconds");
-                player_flush(first_packet_timestamp + 4410 * conn->output_sample_ratio);
+                player_flush(first_packet_timestamp + 4410 * conn->output_sample_ratio,conn);
               }
             }
           }
 
-          if (first_packet_time_to_play != 0) {
-            // recalculate first_packet_time_to_play -- the latency might change
+          if (conn->first_packet_time_to_play != 0) {
+            // recalculate conn->first_packet_time_to_play -- the latency might change
             int64_t delta = (first_packet_timestamp - reference_timestamp) +
                             config.latency * conn->output_sample_ratio +
                             config.audio_backend_latency_offset * config.output_rate;
@@ -875,32 +859,32 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
             if (delta >= 0) {
               int64_t delta_fp_sec =
                   (delta << 32) / config.output_rate; // int64_t which is positive
-              first_packet_time_to_play = reference_timestamp_time + delta_fp_sec;
+              conn->first_packet_time_to_play = reference_timestamp_time + delta_fp_sec;
             } else {
               int64_t abs_delta = -delta;
               int64_t delta_fp_sec =
                   (abs_delta << 32) / config.output_rate; // int64_t which is positive
-              first_packet_time_to_play = reference_timestamp_time - delta_fp_sec;
+              conn->first_packet_time_to_play = reference_timestamp_time - delta_fp_sec;
             }
 
             int64_t max_dac_delay = config.output_rate / 10;
             int64_t filler_size = max_dac_delay; // 0.1 second -- the maximum we'll add to the DAC
 
-            if (local_time_now >= first_packet_time_to_play) {
+            if (local_time_now >= conn->first_packet_time_to_play) {
               // we've gone past the time...
               // debug(1,"Run past the exact start time by %llu frames, with time now of %llx, fpttp
               // of %llx and dac_delay of %d and %d packets;
-              // flush.",(((tn-first_packet_time_to_play)*config.output_rate)>>32)+dac_delay,tn,first_packet_time_to_play,dac_delay,seq_diff(ab_read,
+              // flush.",(((tn-conn->first_packet_time_to_play)*config.output_rate)>>32)+dac_delay,tn,conn->first_packet_time_to_play,dac_delay,seq_diff(ab_read,
               // ab_write));
 
               if (config.output->flush)
                 config.output->flush();
               ab_resync(conn);
               first_packet_timestamp = 0;
-              first_packet_time_to_play = 0;
-              time_since_play_started = 0;
+              conn->first_packet_time_to_play = 0;
+              conn->time_since_play_started = 0;
             } else {
-              // first_packet_time_to_play is definitely later than local_time_now
+              // conn->first_packet_time_to_play is definitely later than local_time_now
               if ((config.output->delay) && (have_sent_prefiller_silence != 0)) {
                 int resp = config.output->delay(&dac_delay);
                 if (resp != 0) {
@@ -910,19 +894,19 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
               } else
                 dac_delay = 0;
               int64_t gross_frame_gap =
-                  ((first_packet_time_to_play - local_time_now) * config.output_rate) >> 32;
+                  ((conn->first_packet_time_to_play - local_time_now) * config.output_rate) >> 32;
               int64_t exact_frame_gap = gross_frame_gap - dac_delay;
               if (exact_frame_gap < 0) {
                 // we've gone past the time...
                 // debug(1,"Run a bit past the exact start time by %lld frames, with time now of
                 // %llx, fpttp of %llx and dac_delay of %d and %d packets;
-                // flush.",-exact_frame_gap,tn,first_packet_time_to_play,dac_delay,seq_diff(ab_read,
+                // flush.",-exact_frame_gap,tn,conn->first_packet_time_to_play,dac_delay,seq_diff(ab_read,
                 // ab_write));
                 if (config.output->flush)
                   config.output->flush();
                 ab_resync(conn);
                 first_packet_timestamp = 0;
-                first_packet_time_to_play = 0;
+                conn->first_packet_time_to_play = 0;
               } else {
                 int64_t fs = filler_size;
                 if (fs > (max_dac_delay - dac_delay))
@@ -1052,7 +1036,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
       time_of_wakeup.tv_sec = sec;
       time_of_wakeup.tv_nsec = nsec;
 
-      pthread_cond_timedwait(&flowcontrol, &ab_mutex, &time_of_wakeup);
+      pthread_cond_timedwait(&conn->flowcontrol, &conn->ab_mutex, &time_of_wakeup);
 // int rc = pthread_cond_timedwait(&flowcontrol,&ab_mutex,&time_of_wakeup);
 // if (rc!=0)
 //  debug(1,"pthread_cond_timedwait returned error code %d.",rc);
@@ -1063,13 +1047,13 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
       struct timespec time_to_wait;
       time_to_wait.tv_sec = sec;
       time_to_wait.tv_nsec = nsec;
-      pthread_cond_timedwait_relative_np(&flowcontrol, &ab_mutex, &time_to_wait);
+      pthread_cond_timedwait_relative_np(&conn->flowcontrol, &conn->ab_mutex, &time_to_wait);
 #endif
     }
   } while (wait);
 
   if (conn->player_thread_please_stop) {
-    pthread_mutex_unlock(&ab_mutex);
+    pthread_mutex_unlock(&conn->ab_mutex);
     return 0;
   }
 
@@ -1097,7 +1081,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
   }
   curframe->ready = 0;
   ab_read = SUCCESSOR(ab_read);
-  pthread_mutex_unlock(&ab_mutex);
+  pthread_mutex_unlock(&conn->ab_mutex);
   return curframe;
 }
 
@@ -1500,8 +1484,8 @@ static void *player_thread_func(void *arg) {
         play_number++;
         if (inframe->timestamp == 0) {
           // debug(1,"Player has a supplied silent frame.");
-          last_seqno_read =
-              (SUCCESSOR(last_seqno_read) & 0xffff); // manage the packet out of sequence minder
+          conn->last_seqno_read =
+              (SUCCESSOR(conn->last_seqno_read) & 0xffff); // manage the packet out of sequence minder
           config.output->play(silence, conn->max_frames_per_packet * conn->output_sample_ratio);
         } else {
 
@@ -1641,18 +1625,18 @@ static void *player_thread_func(void *arg) {
           int amount_to_stuff = 0;
 
           // check sequencing
-          if (last_seqno_read == -1)
-            last_seqno_read =
+          if (conn->last_seqno_read == -1)
+            conn->last_seqno_read =
                 inframe->sequence_number; // int32_t from seq_t, i.e. uint16_t, so okay.
           else {
-            last_seqno_read =
-                SUCCESSOR(last_seqno_read); // int32_t from seq_t, i.e. uint16_t, so okay.
+            conn->last_seqno_read =
+                SUCCESSOR(conn->last_seqno_read); // int32_t from seq_t, i.e. uint16_t, so okay.
             if (inframe->sequence_number !=
-                last_seqno_read) { // seq_t, ei.e. uint16_t and int32_t, so okay
+                conn->last_seqno_read) { // seq_t, ei.e. uint16_t and int32_t, so okay
               debug(1, "Player: packets out of sequence: expected: %u, got: %u, with ab_read: %u "
                        "and ab_write: %u.",
-                    last_seqno_read, inframe->sequence_number, ab_read, ab_write);
-              last_seqno_read = inframe->sequence_number; // reset warning...
+                    conn->last_seqno_read, inframe->sequence_number, ab_read, ab_write);
+              conn->last_seqno_read = inframe->sequence_number; // reset warning...
             }
           }
 
@@ -1725,10 +1709,10 @@ static void *player_thread_func(void *arg) {
             // calculate the time elapsed since the play session started.
 
             if (amount_to_stuff) {
-              if ((local_time_now) && (first_packet_time_to_play) &&
-                  (local_time_now >= first_packet_time_to_play)) {
+              if ((local_time_now) && (conn->first_packet_time_to_play) &&
+                  (local_time_now >= conn->first_packet_time_to_play)) {
 
-                int64_t tp = (local_time_now - first_packet_time_to_play) >>
+                int64_t tp = (local_time_now - conn->first_packet_time_to_play) >>
                              32; // seconds int64_t from uint64_t which is always positive, so ok
 
                 if (tp < 5)
@@ -1810,7 +1794,7 @@ static void *player_thread_func(void *arg) {
                          "resyncing. Error: %lld.",
                       sync_error_out_of_bounds, sync_error);
                 sync_error_out_of_bounds = 0;
-                player_flush(nt);
+                player_flush(nt,conn);
               }
             } else {
               sync_error_out_of_bounds = 0;
@@ -2011,7 +1995,7 @@ static void *player_thread_func(void *arg) {
 }
 
 // takes the volume as specified by the airplay protocol
-void player_volume(double airplay_volume) {
+void player_volume(double airplay_volume, rtsp_conn_info* conn) {
 
   // The volume ranges -144.0 (mute) or -30 -- 0. See
   // http://git.zx2c4.com/Airtunes2/about/#setting-volume
@@ -2203,13 +2187,13 @@ void player_volume(double airplay_volume) {
 #endif
 }
 
-void player_flush(int64_t timestamp) {
+void player_flush(int64_t timestamp, rtsp_conn_info* conn) {
   debug(3, "Flush requested up to %u. It seems as if 0 is special.", timestamp);
-  pthread_mutex_lock(&flush_mutex);
+  pthread_mutex_lock(&conn->flush_mutex);
   flush_requested = 1;
   // if (timestamp!=0)
   flush_rtp_timestamp = timestamp; // flush all packets up to (and including?) this
-  pthread_mutex_unlock(&flush_mutex);
+  pthread_mutex_unlock(&conn->flush_mutex);
   play_segment_reference_frame = 0;
 #ifdef CONFIG_METADATA
   send_ssnc_metadata('pfls', NULL, 0, 1);
@@ -2229,18 +2213,25 @@ int player_play(pthread_t *player_thread, rtsp_conn_info *conn) {
   send_ssnc_metadata('pbeg', NULL, 0, 1);
 #endif
 
+
+	int rc = pthread_mutex_init(&conn->ab_mutex, NULL);
+  if (rc)
+    debug(1, "Error initialising ab_mutex.");
+	rc = pthread_mutex_init(&conn->flush_mutex, NULL);
+  if (rc)
+    debug(1, "Error initialising flush_mutex.");
 // set the flowcontrol condition variable to wait on a monotonic clock
 #ifdef COMPILE_FOR_LINUX_AND_FREEBSD_AND_CYGWIN
   pthread_condattr_t attr;
   pthread_condattr_init(&attr);
   pthread_condattr_setclock(&attr, CLOCK_MONOTONIC); // can't do this in OS X, and don't need it.
-  int rc = pthread_cond_init(&flowcontrol, &attr);
+  rc = pthread_cond_init(&conn->flowcontrol, &attr);
 #endif
 #ifdef COMPILE_FOR_OSX
-  int rc = pthread_cond_init(&flowcontrol, NULL);
+  rc = pthread_cond_init(&conn->flowcontrol, NULL);
 #endif
   if (rc)
-    debug(1, "Error initialising condition variable.");
+    debug(1, "Error initialising flowcontrol condition variable.");
   config.output->start(config.output_rate, config.output_format);
   size_t size = (PTHREAD_STACK_MIN + 256 * 1024);
   pthread_attr_t tattr;
@@ -2258,14 +2249,20 @@ void player_stop(pthread_t *player_thread, rtsp_conn_info *conn) {
   //	debug(1,"Trying to stop a non-existent player thread");
   // else {
   conn->player_thread_please_stop = 1;
-  pthread_cond_signal(&flowcontrol); // tell it to give up
+  pthread_cond_signal(&conn->flowcontrol); // tell it to give up
   pthread_join(*player_thread, NULL);
 #ifdef CONFIG_METADATA
   send_ssnc_metadata('pend', NULL, 0, 1);
 #endif
   command_stop();
-  int rc = pthread_cond_destroy(&flowcontrol);
+  int rc = pthread_cond_destroy(&conn->flowcontrol);
   if (rc)
-    debug(1, "Error destroying condition variable.");
+    debug(1, "Error destroying flowcontrol condition variable.");
+  rc = pthread_mutex_destroy(&conn->flush_mutex);
+  if (rc)
+    debug(1, "Error destroying flush_mutex variable.");
+  rc = pthread_mutex_destroy(&conn->ab_mutex);
+  if (rc)
+    debug(1, "Error destroying ab_mutex variable.");
   //	}
 }
