@@ -84,7 +84,6 @@ static int input_bytes_per_frame = 4;
 static int output_bytes_per_frame;
 static int output_sample_ratio;
 static int output_rate;
-static int64_t previous_random_number = 0;
 
 // The maximum frame size change there can be is +/- 1;
 static int max_frame_size_change;
@@ -612,7 +611,7 @@ int32_t rand_in_range(int32_t exclusive_range_limit) {
 }
 
 static inline void process_sample(int32_t sample, char **outp, enum sps_format_t format, int volume,
-                                  int dither) {
+                                  int dither,rtsp_conn_info *conn) {
   int64_t hyper_sample = sample;
   int result;
   int64_t hyper_volume = (int64_t)volume << 16;
@@ -659,8 +658,8 @@ static inline void process_sample(int32_t sample, char **outp, enum sps_format_t
                                // calculating them on the fly. Should be easier on low-powered
                                // processors
 
-    int64_t tpdf = (r & dither_mask) - (previous_random_number & dither_mask);
-    previous_random_number = r;
+    int64_t tpdf = (r & dither_mask) - (conn->previous_random_number & dither_mask);
+    conn->previous_random_number = r;
     // add dither, allowing for clipping
     if (tpdf >= 0) {
       if (INT64_MAX - tpdf >= hyper_sample)
@@ -1194,7 +1193,7 @@ static inline int32_t mean_32(int32_t a, int32_t b) {
 
 // stuff: 1 means add 1; 0 means do nothing; -1 means remove 1
 static int stuff_buffer_basic_32(int32_t *inptr, int length, enum sps_format_t l_output_format,
-                                 char *outptr, int stuff, int dither) {
+                                 char *outptr, int stuff, int dither,rtsp_conn_info *conn) {
   int tstuff = stuff;
   char *l_outptr = outptr;
   if ((stuff > 1) || (stuff < -1) || (length < 100)) {
@@ -1211,15 +1210,15 @@ static int stuff_buffer_basic_32(int32_t *inptr, int length, enum sps_format_t l
 
   pthread_mutex_lock(&vol_mutex);
   for (i = 0; i < stuffsamp; i++) { // the whole frame, if no stuffing
-    process_sample(*inptr++, &l_outptr, l_output_format, fix_volume, dither);
-    process_sample(*inptr++, &l_outptr, l_output_format, fix_volume, dither);
+    process_sample(*inptr++, &l_outptr, l_output_format, fix_volume, dither,conn);
+    process_sample(*inptr++, &l_outptr, l_output_format, fix_volume, dither,conn);
   };
   if (tstuff) {
     if (tstuff == 1) {
       // debug(3, "+++++++++");
       // interpolate one sample
-      process_sample(mean_32(inptr[-2], inptr[0]), &l_outptr, l_output_format, fix_volume, dither);
-      process_sample(mean_32(inptr[-1], inptr[1]), &l_outptr, l_output_format, fix_volume, dither);
+      process_sample(mean_32(inptr[-2], inptr[0]), &l_outptr, l_output_format, fix_volume, dither,conn);
+      process_sample(mean_32(inptr[-1], inptr[1]), &l_outptr, l_output_format, fix_volume, dither,conn);
     } else if (stuff == -1) {
       // debug(3, "---------");
       inptr++;
@@ -1233,8 +1232,8 @@ static int stuff_buffer_basic_32(int32_t *inptr, int length, enum sps_format_t l
       remainder = remainder + tstuff; // don't run over the correct end of the output buffer
 
     for (i = stuffsamp; i < remainder; i++) {
-      process_sample(*inptr++, &l_outptr, l_output_format, fix_volume, dither);
-      process_sample(*inptr++, &l_outptr, l_output_format, fix_volume, dither);
+      process_sample(*inptr++, &l_outptr, l_output_format, fix_volume, dither,conn);
+      process_sample(*inptr++, &l_outptr, l_output_format, fix_volume, dither,conn);
     }
   }
   pthread_mutex_unlock(&vol_mutex);
@@ -1242,53 +1241,6 @@ static int stuff_buffer_basic_32(int32_t *inptr, int length, enum sps_format_t l
   return length + tstuff;
 }
 
-static int stuff_buffer_basic(short *inptr, int length, short *outptr, int stuff) {
-  int tstuff = stuff;
-  if ((stuff > 1) || (stuff < -1) || (length < 100)) {
-    // debug(1, "Stuff argument to stuff_buffer must be from -1 to +1 and length >100.");
-    tstuff = 0; // if any of these conditions hold, don't stuff anything/
-  }
-  int i;
-  int stuffsamp = length;
-  if (tstuff)
-    //      stuffsamp = rand() % (length - 1);
-    stuffsamp =
-        (rand() % (length - 2)) + 1; // ensure there's always a sample before and after the item
-
-  pthread_mutex_lock(&vol_mutex);
-  for (i = 0; i < stuffsamp; i++) { // the whole frame, if no stuffing
-    *outptr++ = dithered_vol(*inptr++);
-    *outptr++ = dithered_vol(*inptr++);
-  };
-  if (tstuff) {
-    if (tstuff == 1) {
-      // debug(3, "+++++++++");
-      // interpolate one sample
-      //*outptr++ = dithered_vol(((long)inptr[-2] + (long)inptr[0]) >> 1);
-      //*outptr++ = dithered_vol(((long)inptr[-1] + (long)inptr[1]) >> 1);
-      *outptr++ = dithered_vol(shortmean(inptr[-2], inptr[0]));
-      *outptr++ = dithered_vol(shortmean(inptr[-1], inptr[1]));
-    } else if (stuff == -1) {
-      // debug(3, "---------");
-      inptr++;
-      inptr++;
-    }
-
-    // if you're removing, i.e. stuff < 0, copy that much less over. If you're adding, do all the
-    // rest.
-    int remainder = length;
-    if (tstuff < 0)
-      remainder = remainder + tstuff; // don't run over the correct end of the output buffer
-
-    for (i = stuffsamp; i < remainder; i++) {
-      *outptr++ = dithered_vol(*inptr++);
-      *outptr++ = dithered_vol(*inptr++);
-    }
-  }
-  pthread_mutex_unlock(&vol_mutex);
-
-  return length + tstuff;
-}
 
 #ifdef HAVE_LIBSOXR
 // this takes an array of signed 32-bit integers and
@@ -1302,7 +1254,7 @@ static int stuff_buffer_basic(short *inptr, int length, short *outptr, int stuff
 
 static int stuff_buffer_soxr_32(int32_t *inptr, int32_t *scratchBuffer, int length,
                                 enum sps_format_t l_output_format, char *outptr, int stuff,
-                                int dither) {
+                                int dither,rtsp_conn_info *conn) {
   if (scratchBuffer == NULL) {
     die("soxr scratchBuffer not initialised.");
   }
@@ -1359,8 +1311,8 @@ static int stuff_buffer_soxr_32(int32_t *inptr, int32_t *scratchBuffer, int leng
     ip = scratchBuffer;
     char *l_outptr = outptr;
     for (i = 0; i < length + tstuff; i++) {
-      process_sample(*ip++, &l_outptr, l_output_format, fix_volume, dither);
-      process_sample(*ip++, &l_outptr, l_output_format, fix_volume, dither);
+      process_sample(*ip++, &l_outptr, l_output_format, fix_volume, dither,conn);
+      process_sample(*ip++, &l_outptr, l_output_format, fix_volume, dither,conn);
       //*op = dithered_vol(*op);
       // op++;
       //*op = dithered_vol(*op);
@@ -1375,86 +1327,11 @@ static int stuff_buffer_soxr_32(int32_t *inptr, int32_t *scratchBuffer, int leng
     int i;
 
     for (i = 0; i < length; i++) {
-      process_sample(*ip++, &l_outptr, l_output_format, fix_volume, dither);
-      process_sample(*ip++, &l_outptr, l_output_format, fix_volume, dither);
+      process_sample(*ip++, &l_outptr, l_output_format, fix_volume, dither,conn);
+      process_sample(*ip++, &l_outptr, l_output_format, fix_volume, dither,conn);
       //*op++ = dithered_vol(*ip++);
       //*op++ = dithered_vol(*ip++);
     };
-  }
-  return length + tstuff;
-}
-// stuff: 1 means add 1; 0 means do nothing; -1 means remove 1
-static int stuff_buffer_soxr(short *inptr, int length, short *outptr, int stuff) {
-  int tstuff = stuff;
-  if ((stuff > 1) || (stuff < -1) || (length < 100)) {
-    // debug(1, "Stuff argument to stuff_buffer must be from -1 to +1 and length >100.");
-    tstuff = 0; // if any of these conditions hold, don't stuff anything/
-  }
-  int i;
-  short *ip, *op;
-  ip = inptr;
-  op = outptr;
-
-  if (tstuff) {
-    // debug(1,"Stuff %d.",stuff);
-    soxr_io_spec_t io_spec;
-    io_spec.itype = SOXR_INT16_I;
-    io_spec.otype = SOXR_INT16_I;
-    io_spec.scale = 1.0; // this seems to crash if not = 1.0
-    io_spec.e = NULL;
-    io_spec.flags = 0;
-
-    size_t odone;
-
-    soxr_error_t error = soxr_oneshot(length, length + tstuff, 2,      /* Rates and # of chans. */
-                                      inptr, length, NULL,             /* Input. */
-                                      outptr, length + tstuff, &odone, /* Output. */
-                                      &io_spec,    /* Input, output and transfer spec. */
-                                      NULL, NULL); /* Default configuration.*/
-
-    if (error)
-      die("soxr error: %s\n", "error: %s\n", soxr_strerror(error));
-
-    if (odone > length + 1)
-      die("odone = %d!\n", odone);
-
-    const int gpm = 5;
-
-    // keep the first (dpm) samples, to mitigate the Gibbs phenomenon
-    for (i = 0; i < gpm; i++) {
-      *op++ = *ip++;
-      *op++ = *ip++;
-    }
-
-    // keep the last (dpm) samples, to mitigate the Gibbs phenomenon
-    op = outptr + (length + tstuff - gpm) * sizeof(short);
-    ip = inptr + (length - gpm) * sizeof(short);
-    for (i = 0; i < gpm; i++) {
-      *op++ = *ip++;
-      *op++ = *ip++;
-    }
-
-    // finally, adjust the volume, if necessary
-    if (fix_volume != 65536.0) {
-      // pthread_mutex_lock(&vol_mutex);
-      op = outptr;
-      for (i = 0; i < length + tstuff; i++) {
-        *op = dithered_vol(*op);
-        op++;
-        *op = dithered_vol(*op);
-        op++;
-      };
-      // pthread_mutex_unlock(&vol_mutex);
-    }
-
-  } else { // the whole frame, if no stuffing
-
-    // pthread_mutex_lock(&vol_mutex);
-    for (i = 0; i < length; i++) {
-      *op++ = dithered_vol(*ip++);
-      *op++ = dithered_vol(*ip++);
-    };
-    // pthread_mutex_unlock(&vol_mutex);
   }
   return length + tstuff;
 }
@@ -1470,6 +1347,8 @@ static void *player_thread_func(void *arg) {
   
   conn->please_stop = 0;
   conn->packet_count = 0;
+  conn->previous_random_number = 0;
+
   
   init_decoder((int32_t *)&conn->stream.fmtp,conn); // this sets up incoming rate, bit depth, channels
   // must be after decoder init
@@ -1605,28 +1484,22 @@ static void *player_thread_func(void *arg) {
     debug(1, "Dithering will be enabled the output volume is being altered in software");
   }
 
-  // if we are changing any of the parameters of the input, like sample rate or sample depth, then
-  // we
-  // need an intermediate "transition" buffer
-
-  if (1) {
-    // if ((input_rate!=config.output_rate) || (input_bit_depth!=output_bit_depth)) {
-    // debug(1,"Define tbuf of length
-    // %d.",output_bytes_per_frame*(max_frames_per_packet*output_sample_ratio+max_frame_size_change));
-    tbuf = malloc(sizeof(int32_t) * 2 *
-                  (conn->max_frames_per_packet * output_sample_ratio + max_frame_size_change));
-    if (tbuf == NULL)
-      debug(1, "Failed to allocate memory for the transition buffer.");
-    sbuf = 0;
-    if (config.packet_stuffing == ST_soxr) { // needed for stuffing
-      sbuf = malloc(sizeof(int32_t) * 2 *
-                    (conn->max_frames_per_packet * output_sample_ratio + max_frame_size_change));
-      if (sbuf == NULL)
-        debug(1, "Failed to allocate memory for the transition buffer.");
-    }
-  } else {
-    tbuf = 0;
-  }
+  // we need an intermediate "transition" buffer
+  
+	// if ((input_rate!=config.output_rate) || (input_bit_depth!=output_bit_depth)) {
+	// debug(1,"Define tbuf of length
+	// %d.",output_bytes_per_frame*(max_frames_per_packet*output_sample_ratio+max_frame_size_change));
+	tbuf = malloc(sizeof(int32_t) * 2 *
+								(conn->max_frames_per_packet * output_sample_ratio + max_frame_size_change));
+	if (tbuf == NULL)
+		debug(1, "Failed to allocate memory for the transition buffer.");
+	sbuf = 0;
+	if (config.packet_stuffing == ST_soxr) { // needed for stuffing
+		sbuf = malloc(sizeof(int32_t) * 2 *
+									(conn->max_frames_per_packet * output_sample_ratio + max_frame_size_change));
+		if (sbuf == NULL)
+			debug(1, "Failed to allocate memory for the transition buffer.");
+	}
 
   // We might need an output buffer and a buffer of silence.
   // The size of these dependents on the number of frames, the size of each frame and the maximum
@@ -1942,34 +1815,22 @@ static void *player_thread_func(void *arg) {
             switch (config.packet_stuffing) {
             case ST_basic:
               //                if (amount_to_stuff) debug(1,"Basic stuff...");
-              if (tbuf) {
                 play_samples =
                     stuff_buffer_basic_32((int32_t *)tbuf, inbuflength, config.output_format,
-                                          outbuf, amount_to_stuff, enable_dither);
-              } else
-                play_samples =
-                    stuff_buffer_basic(inbuf, inbuflength, (short *)outbuf, amount_to_stuff);
+                                          outbuf, amount_to_stuff, enable_dither, conn);
               break;
             case ST_soxr:
               //                if (amount_to_stuff) debug(1,"Soxr stuff...");
-              if (tbuf)
                 play_samples = stuff_buffer_soxr_32((int32_t *)tbuf, (int32_t *)sbuf, inbuflength,
                                                     config.output_format, outbuf, amount_to_stuff,
-                                                    enable_dither);
-              else
-                play_samples =
-                    stuff_buffer_soxr(inbuf, inbuflength, (short *)outbuf, amount_to_stuff);
+                                                    enable_dither,conn);
               break;
             }
 #else
             //          if (amount_to_stuff) debug(1,"Standard stuff...");
-            if (tbuf)
               play_samples =
                   stuff_buffer_basic_32((int32_t *)tbuf, inbuflength, config.output_format, outbuf,
-                                        amount_to_stuff, enable_dither);
-            else
-              play_samples =
-                  stuff_buffer_basic(inbuf, inbuflength, (short *)outbuf, amount_to_stuff);
+                                        amount_to_stuff, enable_dither,conn);
 #endif
 
             /*
@@ -2036,12 +1897,9 @@ static void *player_thread_func(void *arg) {
                   config.output->play(inbuf, inbuflength);
               }
             else {
-              if (tbuf)
+
                 play_samples = stuff_buffer_basic_32(
-                    (int32_t *)tbuf, inbuflength, config.output_format, outbuf, 0, enable_dither);
-              else
-                play_samples = stuff_buffer_basic(inbuf, inbuflength, (short *)outbuf,
-                                                  0); // no stuffing, but volume adjustment
+                    (int32_t *)tbuf, inbuflength, config.output_format, outbuf, 0, enable_dither,conn);
 
               if (outbuf == NULL)
                 debug(1, "NULL outbuf to play -- skipping it.");
