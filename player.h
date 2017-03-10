@@ -79,6 +79,7 @@ typedef struct {
 	int flush_requested;
 	int64_t flush_rtp_timestamp;
 	uint64_t time_of_last_audio_packet;
+	seq_t ab_read, ab_write;
 
 #ifdef HAVE_LIBMBEDTLS
   mbedtls_aes_context dctx;

@@ -87,9 +87,6 @@
 //static abuf_t audio_buffer[BUFFER_FRAMES];
 #define BUFIDX(seqno) ((seq_t)(seqno) % BUFFER_FRAMES)
 
-// mutex-protected variables
-static seq_t ab_read, ab_write;
-
 // make timestamps and seqnos definitely monotonic
 
 // add an epoch to the timestamp. The monotonic timestamp guaranteed to start between 2^32 and 2^33
@@ -482,23 +479,23 @@ void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len, r
 
       if (!conn->ab_synced) {
         debug(2, "syncing to seqno %u.", seqno);
-        ab_write = seqno;
-        ab_read = seqno;
+        conn->ab_write = seqno;
+        conn->ab_read = seqno;
         conn->ab_synced = 1;
       }
-      if (ab_write == seqno) { // expected packet
+      if (conn->ab_write == seqno) { // expected packet
         abuf = conn->audio_buffer + BUFIDX(seqno);
-        ab_write = SUCCESSOR(seqno);
-      } else if (seq_order(ab_write, seqno, ab_read)) { // newer than expected
+        conn->ab_write = SUCCESSOR(seqno);
+      } else if (seq_order(conn->ab_write, seqno, conn->ab_read)) { // newer than expected
         // if (ORDINATE(seqno)>(BUFFER_FRAMES*7)/8)
         // debug(1,"An interval of %u frames has opened, with ab_read: %u, ab_write: %u and seqno:
         // %u.",seq_diff(ab_read,seqno),ab_read,ab_write,seqno);
-        int32_t gap = seq_diff(ab_write, seqno, ab_read);
+        int32_t gap = seq_diff(conn->ab_write, seqno, conn->ab_read);
         if (gap <= 0)
           debug(1, "Unexpected gap size: %d.", gap);
         int i;
         for (i = 0; i < gap; i++) {
-          abuf = conn->audio_buffer + BUFIDX(seq_sum(ab_write, i));
+          abuf = conn->audio_buffer + BUFIDX(seq_sum(conn->ab_write, i));
           abuf->ready = 0; // to be sure, to be sure
           abuf->timestamp = 0;
           abuf->sequence_number = 0;
@@ -507,8 +504,8 @@ void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len, r
         abuf = conn->audio_buffer + BUFIDX(seqno);
         //        rtp_request_resend(ab_write, gap);
         //        resend_requests++;
-        ab_write = SUCCESSOR(seqno);
-      } else if (seq_order(ab_read, seqno, ab_read)) { // late but not yet played
+        conn->ab_write = SUCCESSOR(seqno);
+      } else if (seq_order(conn->ab_read, seqno, conn->ab_read)) { // late but not yet played
         conn->late_packets++;
         abuf = conn->audio_buffer + BUFIDX(seqno);
       } else { // too late.
@@ -729,17 +726,17 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
     uint32_t flush_limit = 0;
     if (conn->ab_synced) {
       do {
-        curframe = conn->audio_buffer + BUFIDX(ab_read);
-        if ((ab_read != ab_write) && (curframe->ready)) { // it could be synced and empty, under
+        curframe = conn->audio_buffer + BUFIDX(conn->ab_read);
+        if ((conn->ab_read != conn->ab_write) && (curframe->ready)) { // it could be synced and empty, under
                                                           // exceptional circumstances, with the
                                                           // frame unused, thus apparently ready
 
-          if (curframe->sequence_number != ab_read) {
+          if (curframe->sequence_number != conn->ab_read) {
             // some kind of sync problem has occurred.
-            if (BUFIDX(curframe->sequence_number) == BUFIDX(ab_read)) {
+            if (BUFIDX(curframe->sequence_number) == BUFIDX(conn->ab_read)) {
               // it looks like some kind of aliasing has happened
-              if (seq_order(ab_read, curframe->sequence_number,ab_read)) {
-                ab_read = curframe->sequence_number;
+              if (seq_order(conn->ab_read, curframe->sequence_number,conn->ab_read)) {
+                conn->ab_read = curframe->sequence_number;
                 debug(1, "Aliasing of buffer index -- reset.");
               }
             } else {
@@ -752,7 +749,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
                   curframe->timestamp);
             curframe->ready = 0;
             flush_limit++;
-            ab_read = SUCCESSOR(ab_read);
+            conn->ab_read = SUCCESSOR(conn->ab_read);
           }
           if (curframe->timestamp > conn->flush_rtp_timestamp)
             conn->flush_rtp_timestamp = 0;
@@ -764,7 +761,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
         flush_limit = 0;
       }
 
-      curframe = conn->audio_buffer + BUFIDX(ab_read);
+      curframe = conn->audio_buffer + BUFIDX(conn->ab_read);
 
       if (curframe->ready) {
         notified_buffer_empty = 0; // at least one buffer now -- diagnostic only.
@@ -996,7 +993,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
       }
     }
     if (do_wait == 0)
-      if ((conn->ab_synced != 0) && (ab_read == ab_write)) { // the buffer is empty!
+      if ((conn->ab_synced != 0) && (conn->ab_read == conn->ab_write)) { // the buffer is empty!
         if (notified_buffer_empty == 0) {
           debug(1, "Buffers exhausted.");
           notified_buffer_empty = 1;
@@ -1041,14 +1038,14 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
     return 0;
   }
 
-  seq_t read = ab_read;
+  seq_t read = conn->ab_read;
 
   // check if t+8, t+16, t+32, t+64, t+128, ... (buffer_start_fill / 2)
   // packets have arrived... last-chance resend
 
   if (!conn->ab_buffering) {
-    for (i = 8; i < (seq_diff(ab_read, ab_write, ab_read) / 2); i = (i * 2)) {
-      seq_t next = seq_sum(ab_read, i);
+    for (i = 8; i < (seq_diff(conn->ab_read, conn->ab_write, conn->ab_read) / 2); i = (i * 2)) {
+      seq_t next = seq_sum(conn->ab_read, i);
       abuf = conn->audio_buffer + BUFIDX(next);
       if (!abuf->ready) {
         rtp_request_resend(next, 1);
@@ -1064,7 +1061,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
     curframe->timestamp = 0; // indicate a silent frame should be substituted
   }
   curframe->ready = 0;
-  ab_read = SUCCESSOR(ab_read);
+  conn->ab_read = SUCCESSOR(conn->ab_read);
   pthread_mutex_unlock(&conn->ab_mutex);
   return curframe;
 }
@@ -1648,12 +1645,12 @@ static void *player_thread_func(void *arg) {
                 conn->last_seqno_read) { // seq_t, ei.e. uint16_t and int32_t, so okay
               debug(1, "Player: packets out of sequence: expected: %u, got: %u, with ab_read: %u "
                        "and ab_write: %u.",
-                    conn->last_seqno_read, inframe->sequence_number, ab_read, ab_write);
+                    conn->last_seqno_read, inframe->sequence_number, conn->ab_read, conn->ab_write);
               conn->last_seqno_read = inframe->sequence_number; // reset warning...
             }
           }
 
-          buffer_occupancy = seq_diff(ab_read, ab_write, ab_read); // int32_t from int32
+          buffer_occupancy = seq_diff(conn->ab_read, conn->ab_write, conn->ab_read); // int32_t from int32
 
           if (buffer_occupancy < minimum_buffer_occupancy)
             minimum_buffer_occupancy = buffer_occupancy;
