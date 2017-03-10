@@ -1181,7 +1181,6 @@ static abuf_t *buffer_get_frame(void) {
   if (!curframe->ready) {
     // debug(1, "Supplying a silent frame for frame %u", read);
     missing_packets++;
-    memset(curframe->data, 0, input_bytes_per_frame * max_frames_per_packet);
     curframe->timestamp = 0;
   }
   curframe->ready = 0;
@@ -1698,14 +1697,7 @@ static void *player_thread_func(void *arg) {
           // debug(1,"Player has a supplied silent frame.");
           last_seqno_read =
               (SUCCESSOR(last_seqno_read) & 0xffff); // manage the packet out of sequence minder
-          if (inbuf == NULL)
-            debug(1, "NULL inbuf to play -- skipping it.");
-          else {
-            if (inbuflength == 0)
-              debug(1, "empty frame to play -- skipping it (1).");
-            else
-              config.output->play(inbuf, inbuflength);
-          }
+          config.output->play(silence, max_frames_per_packet * output_sample_ratio);
         } else {
 
           int enable_dither = 0;
