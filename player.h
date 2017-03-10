@@ -93,9 +93,6 @@ typedef struct {
 #endif
 } rtsp_conn_info;
 
-// wrapped number between two seq_t.
-int32_t seq_diff(seq_t a, seq_t b);
-
 int player_play(pthread_t *thread, rtsp_conn_info* conn);
 void player_stop(pthread_t *thread, rtsp_conn_info* conn);
 

@@ -173,9 +173,9 @@ static inline seq_t PREDECESSOR(seq_t x) {
 }
 
 // anything with ORDINATE in it must be proctected by the ab_mutex
-static inline int32_t ORDINATE(seq_t x) {
+static inline int32_t ORDINATE(seq_t x, seq_t base) {
   int32_t p = x;       // int32_t from seq_t, i.e. uint16_t, so okay
-  int32_t q = ab_read; // int32_t from seq_t, i.e. uint16_t, so okay
+  int32_t q = base; // int32_t from seq_t, i.e. uint16_t, so okay
   int32_t t = (p + 0x10000 - q) & 0xffff;
   // we definitely will get a positive number in t at this point, but it might be a
   // positive alias of a negative number, i.e. x might actually be "before" ab_read
@@ -189,15 +189,15 @@ static inline int32_t ORDINATE(seq_t x) {
 }
 
 // wrapped number between two seq_t.
-int32_t seq_diff(seq_t a, seq_t b) {
-  int32_t diff = ORDINATE(b) - ORDINATE(a);
+int32_t seq_diff(seq_t a, seq_t b,seq_t base) {
+  int32_t diff = ORDINATE(b,base) - ORDINATE(a,base);
   return diff;
 }
 
 // the sequence numbers will wrap pretty often.
 // this returns true if the second arg is after the first
-static inline int seq_order(seq_t a, seq_t b) {
-  int32_t d = ORDINATE(b) - ORDINATE(a);
+static inline int seq_order(seq_t a, seq_t b, seq_t base) {
+  int32_t d = ORDINATE(b,base) - ORDINATE(a,base);
   return d > 0;
 }
 
@@ -489,11 +489,11 @@ void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len, r
       if (ab_write == seqno) { // expected packet
         abuf = conn->audio_buffer + BUFIDX(seqno);
         ab_write = SUCCESSOR(seqno);
-      } else if (seq_order(ab_write, seqno)) { // newer than expected
+      } else if (seq_order(ab_write, seqno, ab_read)) { // newer than expected
         // if (ORDINATE(seqno)>(BUFFER_FRAMES*7)/8)
         // debug(1,"An interval of %u frames has opened, with ab_read: %u, ab_write: %u and seqno:
         // %u.",seq_diff(ab_read,seqno),ab_read,ab_write,seqno);
-        int32_t gap = seq_diff(ab_write, seqno);
+        int32_t gap = seq_diff(ab_write, seqno, ab_read);
         if (gap <= 0)
           debug(1, "Unexpected gap size: %d.", gap);
         int i;
@@ -508,7 +508,7 @@ void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len, r
         //        rtp_request_resend(ab_write, gap);
         //        resend_requests++;
         ab_write = SUCCESSOR(seqno);
-      } else if (seq_order(ab_read, seqno)) { // late but not yet played
+      } else if (seq_order(ab_read, seqno, ab_read)) { // late but not yet played
         conn->late_packets++;
         abuf = conn->audio_buffer + BUFIDX(seqno);
       } else { // too late.
@@ -738,7 +738,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
             // some kind of sync problem has occurred.
             if (BUFIDX(curframe->sequence_number) == BUFIDX(ab_read)) {
               // it looks like some kind of aliasing has happened
-              if (seq_order(ab_read, curframe->sequence_number)) {
+              if (seq_order(ab_read, curframe->sequence_number,ab_read)) {
                 ab_read = curframe->sequence_number;
                 debug(1, "Aliasing of buffer index -- reset.");
               }
@@ -1047,7 +1047,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
   // packets have arrived... last-chance resend
 
   if (!conn->ab_buffering) {
-    for (i = 8; i < (seq_diff(ab_read, ab_write) / 2); i = (i * 2)) {
+    for (i = 8; i < (seq_diff(ab_read, ab_write, ab_read) / 2); i = (i * 2)) {
       seq_t next = seq_sum(ab_read, i);
       abuf = conn->audio_buffer + BUFIDX(next);
       if (!abuf->ready) {
@@ -1653,7 +1653,7 @@ static void *player_thread_func(void *arg) {
             }
           }
 
-          buffer_occupancy = seq_diff(ab_read, ab_write); // int32_t from int32
+          buffer_occupancy = seq_diff(ab_read, ab_write, ab_read); // int32_t from int32
 
           if (buffer_occupancy < minimum_buffer_occupancy)
             minimum_buffer_occupancy = buffer_occupancy;
