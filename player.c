@@ -76,10 +76,7 @@
 #include "apple_alac.h"
 #endif
 
-static uint32_t timestamp_epoch, last_timestamp,
-    maximum_timestamp_interval; // timestamp_epoch of zero means not initialised, could start at 2
-                                // or 1.
-                                
+                               
 // interthread variables
 static int fix_volume = 0x10000;
 static pthread_mutex_t vol_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -97,11 +94,6 @@ static pthread_mutex_t vol_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // mutex-protected variables
 static seq_t ab_read, ab_write;
-static int ab_buffering = 1, ab_synced = 0;
-static int64_t first_packet_timestamp = 0;
-static int flush_requested = 0;
-static int64_t flush_rtp_timestamp;
-static uint64_t time_of_last_audio_packet;
 
 // make timestamps and seqnos definitely monotonic
 
@@ -112,42 +104,42 @@ static uint64_t time_of_last_audio_packet;
 // over 50,000 years.
 // also, it won't reach zero until then, if ever, so we can safely say that a null monotonic
 // timestamp can mean something special
-int64_t monotonic_timestamp(uint32_t timestamp) {
+int64_t monotonic_timestamp(uint32_t timestamp,rtsp_conn_info* conn) {
   int64_t previous_value;
   int64_t return_value;
-  if (timestamp_epoch == 0) {
-    if (timestamp > maximum_timestamp_interval)
-      timestamp_epoch = 1;
+  if (conn->timestamp_epoch == 0) {
+    if (timestamp > conn->maximum_timestamp_interval)
+      conn->timestamp_epoch = 1;
     else
-      timestamp_epoch = 2;
-    previous_value = timestamp_epoch;
+      conn->timestamp_epoch = 2;
+    previous_value = conn->timestamp_epoch;
     previous_value <<= 32;
     previous_value += timestamp;
   } else {
-    previous_value = timestamp_epoch;
+    previous_value = conn->timestamp_epoch;
     previous_value <<= 32;
-    previous_value += last_timestamp;
-    if (timestamp < last_timestamp) {
+    previous_value += conn->last_timestamp;
+    if (timestamp < conn->last_timestamp) {
       // the incoming timestamp is less than the last one.
       // if the difference is more than a minute, assume it's really from the next epoch
-      if ((last_timestamp - timestamp) > maximum_timestamp_interval)
-        timestamp_epoch++;
+      if ((conn->last_timestamp - timestamp) > conn->maximum_timestamp_interval)
+        conn->timestamp_epoch++;
     } else {
       // the incoming timestamp is greater than the last one.
       // if the difference is more than a minute, assume it's really from the previous epoch
-      if ((timestamp - last_timestamp) > maximum_timestamp_interval)
-        timestamp_epoch--;
+      if ((timestamp - conn->last_timestamp) > conn->maximum_timestamp_interval)
+        conn->timestamp_epoch--;
     }
   }
-  last_timestamp = timestamp;
-  return_value = timestamp_epoch;
+  conn->last_timestamp = timestamp;
+  return_value = conn->timestamp_epoch;
   return_value <<= 32;
   return_value += timestamp;
   if (previous_value > return_value) {
-    if ((previous_value - return_value) > maximum_timestamp_interval)
+    if ((previous_value - return_value) > conn->maximum_timestamp_interval)
       debug(1, "interval between successive rtptimes greater than allowed!");
   } else {
-    if ((return_value - previous_value) > maximum_timestamp_interval)
+    if ((return_value - previous_value) > conn->maximum_timestamp_interval)
       debug(1, "interval between successive rtptimes greater than allowed!");
   }
   if (return_value < 0)
@@ -161,9 +153,9 @@ static void ab_resync(rtsp_conn_info* conn) {
     conn->audio_buffer[i].ready = 0;
     conn->audio_buffer[i].sequence_number = 0;
   }
-  ab_synced = 0;
+  conn->ab_synced = 0;
   conn->last_seqno_read = -1;
-  ab_buffering = 1;
+  conn->ab_buffering = 1;
 }
 
 // the sequence number is a 16-bit unsigned number which wraps pretty often
@@ -468,36 +460,36 @@ void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len, r
   // ignore a request to flush that has been made before the first packet...
   if (conn->packet_count == 0) {
     pthread_mutex_lock(&conn->flush_mutex);
-    flush_requested = 0;
-    flush_rtp_timestamp = 0;
+    conn->flush_requested = 0;
+    conn->flush_rtp_timestamp = 0;
     pthread_mutex_unlock(&conn->flush_mutex);
   }
 
   pthread_mutex_lock(&conn->ab_mutex);
   conn->packet_count++;
-  time_of_last_audio_packet = get_absolute_time_in_fp();
+  conn->time_of_last_audio_packet = get_absolute_time_in_fp();
   if (conn->connection_state_to_output) { // if we are supposed to be processing these packets
 
     //    if (flush_rtp_timestamp != 0)
     //    	debug(1,"Flush_rtp_timestamp is %u",flush_rtp_timestamp);
 
-    if ((flush_rtp_timestamp != 0) && (ltimestamp <= flush_rtp_timestamp)) {
+    if ((conn->flush_rtp_timestamp != 0) && (ltimestamp <= conn->flush_rtp_timestamp)) {
       debug(3,
             "Dropping flushed packet in player_put_packet, seqno %u, timestamp %lld, flushing to "
             "timestamp: %lld.",
-            seqno, ltimestamp, flush_rtp_timestamp);
+            seqno, ltimestamp, conn->flush_rtp_timestamp);
     } else {
-      if ((flush_rtp_timestamp != 0x0) &&
-          (ltimestamp > flush_rtp_timestamp)) // if we have gone past the flush boundary time
-        flush_rtp_timestamp = 0x0;
+      if ((conn->flush_rtp_timestamp != 0x0) &&
+          (ltimestamp > conn->flush_rtp_timestamp)) // if we have gone past the flush boundary time
+        conn->flush_rtp_timestamp = 0x0;
 
       abuf_t *abuf = 0;
 
-      if (!ab_synced) {
+      if (!conn->ab_synced) {
         debug(2, "syncing to seqno %u.", seqno);
         ab_write = seqno;
         ab_read = seqno;
-        ab_synced = 1;
+        conn->ab_synced = 1;
       }
       if (ab_write == seqno) { // expected packet
         abuf = conn->audio_buffer + BUFIDX(seqno);
@@ -705,11 +697,11 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
     // config.timeout of zero means don't check..., but iTunes may be confused by a long gap
     // followed by a resumption...
 
-    if ((time_of_last_audio_packet != 0) && (conn->shutdown_requested == 0) &&
+    if ((conn->time_of_last_audio_packet != 0) && (conn->shutdown_requested == 0) &&
         (config.dont_check_timeout == 0)) {
       uint64_t ct = config.timeout; // go from int to 64-bit int
-      if ((local_time_now > time_of_last_audio_packet) &&
-          (local_time_now - time_of_last_audio_packet >= ct << 32)) {
+      if ((local_time_now > conn->time_of_last_audio_packet) &&
+          (local_time_now - conn->time_of_last_audio_packet >= ct << 32)) {
         debug(1, "As Yeats almost said, \"Too long a silence / can make a stone of the heart\"");
         rtsp_request_shutdown_stream();
         conn->shutdown_requested = 1;
@@ -722,25 +714,25 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
       // change happening
       if (conn->connection_state_to_output == 0) { // going off
         pthread_mutex_lock(&conn->flush_mutex);
-        flush_requested = 1;
+        conn->flush_requested = 1;
         pthread_mutex_unlock(&conn->flush_mutex);
       }
     }
 
     pthread_mutex_lock(&conn->flush_mutex);
-    if (flush_requested == 1) {
+    if (conn->flush_requested == 1) {
       if (config.output->flush)
         config.output->flush();
       ab_resync(conn);
-      first_packet_timestamp = 0;
+      conn->first_packet_timestamp = 0;
       conn->first_packet_time_to_play = 0;
       conn->time_since_play_started = 0;
-      flush_requested = 0;
+      conn->flush_requested = 0;
     }
     pthread_mutex_unlock(&conn->flush_mutex);
 
     uint32_t flush_limit = 0;
-    if (ab_synced) {
+    if (conn->ab_synced) {
       do {
         curframe = conn->audio_buffer + BUFIDX(ab_read);
         if ((ab_read != ab_write) && (curframe->ready)) { // it could be synced and empty, under
@@ -760,17 +752,17 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
             }
           }
 
-          if ((flush_rtp_timestamp != 0) && (curframe->timestamp <= flush_rtp_timestamp)) {
+          if ((conn->flush_rtp_timestamp != 0) && (curframe->timestamp <= conn->flush_rtp_timestamp)) {
             debug(1, "Dropping flushed packet seqno %u, timestamp %lld", curframe->sequence_number,
                   curframe->timestamp);
             curframe->ready = 0;
             flush_limit++;
             ab_read = SUCCESSOR(ab_read);
           }
-          if (curframe->timestamp > flush_rtp_timestamp)
-            flush_rtp_timestamp = 0;
+          if (curframe->timestamp > conn->flush_rtp_timestamp)
+            conn->flush_rtp_timestamp = 0;
         }
-      } while ((flush_rtp_timestamp != 0) && (flush_limit <= 8820) && (curframe->ready == 0));
+      } while ((conn->flush_rtp_timestamp != 0) && (flush_limit <= 8820) && (curframe->ready == 0));
 
       if (flush_limit == 8820) {
         debug(1, "Flush hit the 8820 frame limit!");
@@ -781,7 +773,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
 
       if (curframe->ready) {
         notified_buffer_empty = 0; // at least one buffer now -- diagnostic only.
-        if (ab_buffering) { // if we are getting packets but not yet forwarding them to the player
+        if (conn->ab_buffering) { // if we are getting packets but not yet forwarding them to the player
           int have_sent_prefiller_silence; // set true when we have sent some silent frames to the
                                            // DAC
           int64_t reference_timestamp;
@@ -789,12 +781,12 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
           get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time,
                                         &remote_reference_timestamp_time);
           reference_timestamp *= conn->output_sample_ratio;
-          if (first_packet_timestamp == 0) { // if this is the very first packet
+          if (conn->first_packet_timestamp == 0) { // if this is the very first packet
             // debug(1,"First frame seen, time %u, with %d
             // frames...",curframe->timestamp,seq_diff(ab_read, ab_write));
             if (reference_timestamp) { // if we have a reference time
               // debug(1,"First frame seen with timestamp...");
-              first_packet_timestamp = curframe->timestamp; // we will keep buffering until we are
+              conn->first_packet_timestamp = curframe->timestamp; // we will keep buffering until we are
                                                             // supposed to start playing this
               have_sent_prefiller_silence = 0;
 
@@ -823,7 +815,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
 
               debug(1, "Output sample ratio is %d", conn->output_sample_ratio);
 
-              int64_t delta = (first_packet_timestamp - reference_timestamp) +
+              int64_t delta = (conn->first_packet_timestamp - reference_timestamp) +
                               config.latency * conn->output_sample_ratio +
                               config.audio_backend_latency_offset * config.output_rate;
 
@@ -842,14 +834,14 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
                 debug(
                     1,
                     "First packet is late! It should have played before now. Flushing 0.1 seconds");
-                player_flush(first_packet_timestamp + 4410 * conn->output_sample_ratio,conn);
+                player_flush(conn->first_packet_timestamp + 4410 * conn->output_sample_ratio,conn);
               }
             }
           }
 
           if (conn->first_packet_time_to_play != 0) {
             // recalculate conn->first_packet_time_to_play -- the latency might change
-            int64_t delta = (first_packet_timestamp - reference_timestamp) +
+            int64_t delta = (conn->first_packet_timestamp - reference_timestamp) +
                             config.latency * conn->output_sample_ratio +
                             config.audio_backend_latency_offset * config.output_rate;
 
@@ -877,7 +869,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
               if (config.output->flush)
                 config.output->flush();
               ab_resync(conn);
-              first_packet_timestamp = 0;
+              conn->first_packet_timestamp = 0;
               conn->first_packet_time_to_play = 0;
               conn->time_since_play_started = 0;
             } else {
@@ -902,7 +894,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
                 if (config.output->flush)
                   config.output->flush();
                 ab_resync(conn);
-                first_packet_timestamp = 0;
+                conn->first_packet_timestamp = 0;
                 conn->first_packet_time_to_play = 0;
               } else {
                 int64_t fs = filler_size;
@@ -919,7 +911,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
                   // with %d packets, ab_read is %04x, ab_write is
                   // %04x.",exact_frame_gap,fs,dac_delay,seq_diff(ab_read,
                   // ab_write),ab_read,ab_write);
-                  ab_buffering = 0;
+                  conn->ab_buffering = 0;
                 }
                 signed short *silence;
                 // if (fs==0)
@@ -944,7 +936,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
               }
             }
           }
-          if (ab_buffering == 0) {
+          if (conn->ab_buffering == 0) {
             // not the time of the playing of the first frame
             uint64_t reference_timestamp_time; // don't need this...
             get_reference_timestamp_stuff(&play_segment_reference_frame, &reference_timestamp_time,
@@ -972,7 +964,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
     // Note: the last three items are expressed in frames and must be converted to time.
 
     int do_wait = 0; // don't wait unless we can really prove we must
-    if ((ab_synced) && (curframe) && (curframe->ready) && (curframe->timestamp)) {
+    if ((conn->ab_synced) && (curframe) && (curframe->ready) && (curframe->timestamp)) {
       do_wait =
           1; // if the current frame exists and is ready, then wait unless it's time to let it go...
       int64_t reference_timestamp;
@@ -1009,14 +1001,14 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
       }
     }
     if (do_wait == 0)
-      if ((ab_synced != 0) && (ab_read == ab_write)) { // the buffer is empty!
+      if ((conn->ab_synced != 0) && (ab_read == ab_write)) { // the buffer is empty!
         if (notified_buffer_empty == 0) {
           debug(1, "Buffers exhausted.");
           notified_buffer_empty = 1;
         }
         do_wait = 1;
       }
-    wait = (ab_buffering || (do_wait != 0) || (!ab_synced)) && (!conn->player_thread_please_stop);
+    wait = (conn->ab_buffering || (do_wait != 0) || (!conn->ab_synced)) && (!conn->player_thread_please_stop);
 
     if (wait) {
       uint64_t time_to_wait_for_wakeup_fp =
@@ -1059,7 +1051,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
   // check if t+8, t+16, t+32, t+64, t+128, ... (buffer_start_fill / 2)
   // packets have arrived... last-chance resend
 
-  if (!ab_buffering) {
+  if (!conn->ab_buffering) {
     for (i = 8; i < (seq_diff(ab_read, ab_write) / 2); i = (i * 2)) {
       seq_t next = seq_sum(ab_read, i);
       abuf = conn->audio_buffer + BUFIDX(next);
@@ -1264,6 +1256,11 @@ static void *player_thread_func(void *arg) {
   conn->input_bytes_per_frame = 4;
   conn->player_thread_please_stop = 0;
   conn->decoder_in_use = 0;
+  conn->ab_buffering = 1;
+  conn->ab_synced = 0;
+  conn->first_packet_timestamp = 0;
+  conn->flush_requested = 0;
+  
   
   int rc = pthread_mutex_init(&conn->ab_mutex, NULL);
   if (rc)
@@ -1307,8 +1304,8 @@ static void *player_thread_func(void *arg) {
 #endif
   }  
   
-  timestamp_epoch = 0; // indicate that the next timestamp will be the first one.
-  maximum_timestamp_interval = conn->input_rate * 60; // actually there shouldn't be more than about 13v
+  conn->timestamp_epoch = 0; // indicate that the next timestamp will be the first one.
+  conn->maximum_timestamp_interval = conn->input_rate * 60; // actually there shouldn't be more than about 13v
                                                 // seconds of a gap between successive rtptimes, at
                                                 // worst
 
@@ -1369,7 +1366,7 @@ static void *player_thread_func(void *arg) {
   int play_samples;
   int64_t current_delay;
   int play_number = 0;
-  time_of_last_audio_packet = 0;
+  conn->time_of_last_audio_packet = 0;
   conn->shutdown_requested = 0;
   number_of_statistics = oldest_statistic = newest_statistic = 0;
   tsum_of_sync_errors = tsum_of_corrections = tsum_of_insertions_and_deletions = tsum_of_drifts = 0;
@@ -1447,9 +1444,9 @@ static void *player_thread_func(void *arg) {
   if (silence == NULL)
     debug(1, "Failed to allocate memory for a silence buffer.");
   memset(silence, 0, conn->output_bytes_per_frame * conn->max_frames_per_packet * conn->output_sample_ratio);
-  first_packet_timestamp = 0;
+  conn->first_packet_timestamp = 0;
   conn->missing_packets = conn->late_packets = conn->too_late_packets = conn->resend_requests = 0;
-  flush_rtp_timestamp = 0; // it seems this number has a special significance -- it seems to be used
+  conn->flush_rtp_timestamp = 0; // it seems this number has a special significance -- it seems to be used
                            // as a null operand, so we'll use it like that too
   int sync_error_out_of_bounds =
       0; // number of times in a row that there's been a serious sync error
@@ -2217,9 +2214,9 @@ void player_volume(double airplay_volume, rtsp_conn_info* conn) {
 void player_flush(int64_t timestamp, rtsp_conn_info* conn) {
   debug(3, "Flush requested up to %u. It seems as if 0 is special.", timestamp);
   pthread_mutex_lock(&conn->flush_mutex);
-  flush_requested = 1;
+  conn->flush_requested = 1;
   // if (timestamp!=0)
-  flush_rtp_timestamp = timestamp; // flush all packets up to (and including?) this
+  conn->flush_rtp_timestamp = timestamp; // flush all packets up to (and including?) this
   pthread_mutex_unlock(&conn->flush_mutex);
   play_segment_reference_frame = 0;
 #ifdef CONFIG_METADATA

@@ -164,7 +164,7 @@ void *rtp_audio_receiver(void *arg) {
         //  debug(3, "RTP: Packets out of sequence: expected: %d, got %d.", last_seqno, seqno);
         last_seqno = seqno; // reset warning...
       }
-      int64_t timestamp = monotonic_timestamp(ntohl(*(unsigned long *)(pktp + 4)));
+      int64_t timestamp = monotonic_timestamp(ntohl(*(unsigned long *)(pktp + 4)),conn);
 
       // if (packet[1]&0x10)
       //	debug(1,"Audio packet Extension bit set.");
@@ -234,8 +234,8 @@ void *rtp_control_receiver(void *arg) {
 
         // debug(1,"Remote Sync Time: %0llx.",remote_time_of_sync);
 
-        rtp_timestamp_less_latency = monotonic_timestamp(ntohl(*((uint32_t *)&packet[4])));
-        sync_rtp_timestamp = monotonic_timestamp(ntohl(*((uint32_t *)&packet[16])));
+        rtp_timestamp_less_latency = monotonic_timestamp(ntohl(*((uint32_t *)&packet[4])),conn);
+        sync_rtp_timestamp = monotonic_timestamp(ntohl(*((uint32_t *)&packet[16])),conn);
 
         if (config.use_negotiated_latencies) {
           int64_t la = sync_rtp_timestamp - rtp_timestamp_less_latency + 11025;
@@ -274,7 +274,7 @@ void *rtp_control_receiver(void *arg) {
       plen -= 4;
       seq_t seqno = ntohs(*(unsigned short *)(pktp + 2));
 
-      int64_t timestamp = monotonic_timestamp(ntohl(*(unsigned long *)(pktp + 4)));
+      int64_t timestamp = monotonic_timestamp(ntohl(*(unsigned long *)(pktp + 4)),conn);
 
       pktp += 12;
       plen -= 12;

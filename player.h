@@ -70,6 +70,13 @@ typedef struct {
 // mutexes and condition variables
 	pthread_cond_t flowcontrol;
 	pthread_mutex_t ab_mutex,flush_mutex;
+	uint32_t timestamp_epoch, last_timestamp, maximum_timestamp_interval; // timestamp_epoch of zero means not initialised, could start at 2
+                                // or 1.
+  int ab_buffering,ab_synced;
+	int64_t first_packet_timestamp;
+	int flush_requested;
+	int64_t flush_rtp_timestamp;
+	uint64_t time_of_last_audio_packet;
 
 #ifdef HAVE_LIBMBEDTLS
   mbedtls_aes_context dctx;
@@ -94,7 +101,7 @@ void player_volume(double f, rtsp_conn_info* conn);
 void player_flush(int64_t timestamp, rtsp_conn_info* conn);
 void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len, rtsp_conn_info* conn);
 
-int64_t monotonic_timestamp(uint32_t timestamp); // add an epoch to the timestamp. The monotonic
+int64_t monotonic_timestamp(uint32_t timestamp,rtsp_conn_info* conn); // add an epoch to the timestamp. The monotonic
                                                  // timestamp guaranteed to start between 2^32 2^33
                                                  // frames and continue up to 2^64 frames
 // which is about 2*10^8 * 1,000 seconds at 384,000 frames per second -- about 2 trillion seconds.
