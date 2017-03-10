@@ -70,6 +70,8 @@ typedef struct {
 // mutexes and condition variables
 	pthread_cond_t flowcontrol;
 	pthread_mutex_t ab_mutex,flush_mutex;
+	pthread_mutex_t vol_mutex;
+	int fix_volume;
 	uint32_t timestamp_epoch, last_timestamp, maximum_timestamp_interval; // timestamp_epoch of zero means not initialised, could start at 2
                                 // or 1.
   int ab_buffering,ab_synced;

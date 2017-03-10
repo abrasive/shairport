@@ -76,11 +76,6 @@
 #include "apple_alac.h"
 #endif
 
-                               
-// interthread variables
-static int fix_volume = 0x10000;
-static pthread_mutex_t vol_mutex = PTHREAD_MUTEX_INITIALIZER;
-
 // default buffer size
 // needs to be a power of 2 because of the way BUFIDX(seqno) works
 //#define BUFFER_FRAMES 512
@@ -1118,17 +1113,17 @@ static int stuff_buffer_basic_32(int32_t *inptr, int length, enum sps_format_t l
     stuffsamp =
         (rand() % (length - 2)) + 1; // ensure there's always a sample before and after the item
 
-  pthread_mutex_lock(&vol_mutex);
+  pthread_mutex_lock(&conn->vol_mutex);
   for (i = 0; i < stuffsamp; i++) { // the whole frame, if no stuffing
-    process_sample(*inptr++, &l_outptr, l_output_format, fix_volume, dither,conn);
-    process_sample(*inptr++, &l_outptr, l_output_format, fix_volume, dither,conn);
+    process_sample(*inptr++, &l_outptr, l_output_format, conn->fix_volume, dither,conn);
+    process_sample(*inptr++, &l_outptr, l_output_format, conn->fix_volume, dither,conn);
   };
   if (tstuff) {
     if (tstuff == 1) {
       // debug(3, "+++++++++");
       // interpolate one sample
-      process_sample(mean_32(inptr[-2], inptr[0]), &l_outptr, l_output_format, fix_volume, dither,conn);
-      process_sample(mean_32(inptr[-1], inptr[1]), &l_outptr, l_output_format, fix_volume, dither,conn);
+      process_sample(mean_32(inptr[-2], inptr[0]), &l_outptr, l_output_format, conn->fix_volume, dither,conn);
+      process_sample(mean_32(inptr[-1], inptr[1]), &l_outptr, l_output_format, conn->fix_volume, dither,conn);
     } else if (stuff == -1) {
       // debug(3, "---------");
       inptr++;
@@ -1142,11 +1137,11 @@ static int stuff_buffer_basic_32(int32_t *inptr, int length, enum sps_format_t l
       remainder = remainder + tstuff; // don't run over the correct end of the output buffer
 
     for (i = stuffsamp; i < remainder; i++) {
-      process_sample(*inptr++, &l_outptr, l_output_format, fix_volume, dither,conn);
-      process_sample(*inptr++, &l_outptr, l_output_format, fix_volume, dither,conn);
+      process_sample(*inptr++, &l_outptr, l_output_format, conn->fix_volume, dither,conn);
+      process_sample(*inptr++, &l_outptr, l_output_format, conn->fix_volume, dither,conn);
     }
   }
-  pthread_mutex_unlock(&vol_mutex);
+  pthread_mutex_unlock(&conn->vol_mutex);
 
   return length + tstuff;
 }
@@ -1221,8 +1216,8 @@ static int stuff_buffer_soxr_32(int32_t *inptr, int32_t *scratchBuffer, int leng
     ip = scratchBuffer;
     char *l_outptr = outptr;
     for (i = 0; i < length + tstuff; i++) {
-      process_sample(*ip++, &l_outptr, l_output_format, fix_volume, dither,conn);
-      process_sample(*ip++, &l_outptr, l_output_format, fix_volume, dither,conn);
+      process_sample(*ip++, &l_outptr, l_output_format, conn->fix_volume, dither,conn);
+      process_sample(*ip++, &l_outptr, l_output_format, conn->fix_volume, dither,conn);
     };
 
   } else { // the whole frame, if no stuffing
@@ -1233,8 +1228,8 @@ static int stuff_buffer_soxr_32(int32_t *inptr, int32_t *scratchBuffer, int leng
     int i;
 
     for (i = 0; i < length; i++) {
-      process_sample(*ip++, &l_outptr, l_output_format, fix_volume, dither,conn);
-      process_sample(*ip++, &l_outptr, l_output_format, fix_volume, dither,conn);
+      process_sample(*ip++, &l_outptr, l_output_format, conn->fix_volume, dither,conn);
+      process_sample(*ip++, &l_outptr, l_output_format, conn->fix_volume, dither,conn);
     };
   }
   return length + tstuff;
@@ -1260,6 +1255,7 @@ static void *player_thread_func(void *arg) {
   conn->ab_synced = 0;
   conn->first_packet_timestamp = 0;
   conn->flush_requested = 0;
+  conn->fix_volume = 0x10000;
   
   
   int rc = pthread_mutex_init(&conn->ab_mutex, NULL);
@@ -1268,6 +1264,9 @@ static void *player_thread_func(void *arg) {
 	rc = pthread_mutex_init(&conn->flush_mutex, NULL);
   if (rc)
     debug(1, "Error initialising flush_mutex.");
+	rc = pthread_mutex_init(&conn->vol_mutex, NULL);
+  if (rc)
+    debug(1, "Error initialising vol_mutex.");
 // set the flowcontrol condition variable to wait on a monotonic clock
 #ifdef COMPILE_FOR_LINUX_AND_FREEBSD_AND_CYGWIN
   pthread_condattr_t attr;
@@ -1412,7 +1411,7 @@ static void *player_thread_func(void *arg) {
     debug(1, "Dithering will be enabled because the input bit depth is greater than the output bit "
              "depth");
   }
-  if (fix_volume != 0x10000) {
+  if (conn->fix_volume != 0x10000) {
     debug(1, "Dithering will be enabled the output volume is being altered in software");
   }
 
@@ -1504,7 +1503,7 @@ static void *player_thread_func(void *arg) {
         } else {
 
           int enable_dither = 0;
-          if ((fix_volume != 0x10000) || (conn->input_bit_depth > output_bit_depth))
+          if ((conn->fix_volume != 0x10000) || (conn->input_bit_depth > output_bit_depth))
             enable_dither = 1;
 
           // here, let's transform the frame of data, if necessary
@@ -1817,7 +1816,7 @@ static void *player_thread_func(void *arg) {
             // if there is no delay procedure, or it's not working or not allowed, there can be no
             // synchronising
 
-            if (fix_volume == 0x10000)
+            if (conn->fix_volume == 0x10000)
 
               if (inbuf == NULL)
                 debug(1, "NULL inbuf to play -- skipping it.");
@@ -2014,6 +2013,9 @@ static void *player_thread_func(void *arg) {
   rc = pthread_mutex_destroy(&conn->ab_mutex);
   if (rc)
     debug(1, "Error destroying ab_mutex variable.");
+  rc = pthread_mutex_destroy(&conn->vol_mutex);
+  if (rc)
+    debug(1, "Error destroying vol_mutex variable.");
   debug(1, "Player thread exit");
   return 0;
 }
@@ -2196,9 +2198,9 @@ void player_volume(double airplay_volume, rtsp_conn_info* conn) {
   // debug(1,"Software attenuation set to %f, i.e %f out of 65,536, for airplay volume of
   // %f",software_attenuation,temp_fix_volume,airplay_volume);
 
-  pthread_mutex_lock(&vol_mutex);
-  fix_volume = temp_fix_volume;
-  pthread_mutex_unlock(&vol_mutex);
+  pthread_mutex_lock(&conn->vol_mutex);
+  conn->fix_volume = temp_fix_volume;
+  pthread_mutex_unlock(&conn->vol_mutex);
 
 #ifdef CONFIG_METADATA
   char *dv = malloc(128); // will be freed in the metadata thread
