@@ -1,3 +1,14 @@
+Version 3.1d1
+====
+This is a stability update. Some users have reported occasional crashes particularly when a play session ends and another begins immediately. The thread that plays a session was not reentrant, and this _may_ have been causing those stability problems. The player thread is now fully re-entrant, so those stability problems should be gone. The changes made were quite extensive, so more bugs may have been reintroduced. Your stability reports would be welcome.
+
+Please note that there are still problems with SoundCloud. Soundcloud seems to have problems with AirPlay in general -- the problems are not specific to Shairport Sync.
+
+**Bug Fixes**
+* Fixed a bug that was causing Shairport Sync to possibly make a very loud and alarming noise whenever an audio frame was missing.
+* In 2.8.6, a change was made to the way Shairport Sync identified itself, so that it could be recognised by TuneBlade as an open source application and treated preferentially. That change was inadventently lost in the transition from 2.8.6 to 3.0. Now it's restored.
+
+
 Version 3.1d0
 ====
 **New Features**
