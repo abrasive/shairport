@@ -98,7 +98,7 @@ void *rtp_audio_receiver(void *arg) {
   debug(2, "Audio receiver -- Server RTP thread starting.");
 
   // we inherit the signal mask (SIGUSR1)
-  struct inter_threads_record *itr = arg;
+  rtsp_conn_info *conn = arg;
 
   int32_t last_seqno = -1;
   uint8_t packet[2048], *pktp;
@@ -114,7 +114,7 @@ void *rtp_audio_receiver(void *arg) {
   float stat_M2 = 0.0;
 
   ssize_t nread;
-  while (itr->please_stop == 0) {
+  while (conn->please_stop == 0) {
     nread = recv(audio_socket, packet, sizeof(packet), 0);
 
     uint64_t local_time_now_fp = get_absolute_time_in_fp();
@@ -129,7 +129,7 @@ void *rtp_audio_receiver(void *arg) {
       stat_mean += stat_delta / stat_n;
       stat_M2 += stat_delta * (time_interval_us - stat_mean);
       if (stat_n % 2500 == 0) {
-        debug(2, "Packet reception interval stats: mean, standard deviation and max for the last "
+        debug(3, "Packet reception interval stats: mean, standard deviation and max for the last "
                  "2,500 packets in microseconds: %10.1f, %10.1f, %10.1f.",
               stat_mean, sqrtf(stat_M2 / (stat_n - 1)), longest_packet_time_interval_us);
         stat_n = 0;
@@ -164,7 +164,7 @@ void *rtp_audio_receiver(void *arg) {
         //  debug(3, "RTP: Packets out of sequence: expected: %d, got %d.", last_seqno, seqno);
         last_seqno = seqno; // reset warning...
       }
-      int64_t timestamp = monotonic_timestamp(ntohl(*(unsigned long *)(pktp + 4)));
+      int64_t timestamp = monotonic_timestamp(ntohl(*(unsigned long *)(pktp + 4)),conn);
 
       // if (packet[1]&0x10)
       //	debug(1,"Audio packet Extension bit set.");
@@ -174,7 +174,7 @@ void *rtp_audio_receiver(void *arg) {
 
       // check if packet contains enough content to be reasonable
       if (plen >= 16) {
-        player_put_packet(seqno, timestamp, pktp, plen);
+        player_put_packet(seqno, timestamp, pktp, plen,conn);
         continue;
       }
       if (type == 0x56 && seqno == 0) {
@@ -197,7 +197,7 @@ void *rtp_control_receiver(void *arg) {
   // we inherit the signal mask (SIGUSR1)
 
   debug(2, "Control receiver -- Server RTP thread starting.");
-  struct inter_threads_record *itr = arg;
+  rtsp_conn_info *conn = arg;
 
   reference_timestamp = 0; // nothing valid received yet
   uint8_t packet[2048], *pktp;
@@ -205,7 +205,7 @@ void *rtp_control_receiver(void *arg) {
   uint64_t remote_time_of_sync, local_time_now, remote_time_now;
   int64_t sync_rtp_timestamp, rtp_timestamp_less_latency;
   ssize_t nread;
-  while (itr->please_stop == 0) {
+  while (conn->please_stop == 0) {
     nread = recv(control_socket, packet, sizeof(packet), 0);
     local_time_now = get_absolute_time_in_fp();
     //        clock_gettime(CLOCK_MONOTONIC,&tn);
@@ -234,8 +234,8 @@ void *rtp_control_receiver(void *arg) {
 
         // debug(1,"Remote Sync Time: %0llx.",remote_time_of_sync);
 
-        rtp_timestamp_less_latency = monotonic_timestamp(ntohl(*((uint32_t *)&packet[4])));
-        sync_rtp_timestamp = monotonic_timestamp(ntohl(*((uint32_t *)&packet[16])));
+        rtp_timestamp_less_latency = monotonic_timestamp(ntohl(*((uint32_t *)&packet[4])),conn);
+        sync_rtp_timestamp = monotonic_timestamp(ntohl(*((uint32_t *)&packet[16])),conn);
 
         if (config.use_negotiated_latencies) {
           int64_t la = sync_rtp_timestamp - rtp_timestamp_less_latency + 11025;
@@ -274,14 +274,14 @@ void *rtp_control_receiver(void *arg) {
       plen -= 4;
       seq_t seqno = ntohs(*(unsigned short *)(pktp + 2));
 
-      int64_t timestamp = monotonic_timestamp(ntohl(*(unsigned long *)(pktp + 4)));
+      int64_t timestamp = monotonic_timestamp(ntohl(*(unsigned long *)(pktp + 4)),conn);
 
       pktp += 12;
       plen -= 12;
 
       // check if packet contains enough content to be reasonable
       if (plen >= 16) {
-        player_put_packet(seqno, timestamp, pktp, plen);
+        player_put_packet(seqno, timestamp, pktp, plen, conn);
         continue;
       } else {
         debug(1, "Too-short retransmitted audio packet received in control port, ignored.");
@@ -356,7 +356,7 @@ void *rtp_timing_receiver(void *arg) {
   debug(2, "Timing receiver -- Server RTP thread starting.");
   // we inherit the signal mask (SIGUSR1)
 
-  struct inter_threads_record *itr = arg;
+  rtsp_conn_info *conn = arg;
 
   uint8_t packet[2048], *pktp;
   ssize_t nread;
@@ -374,7 +374,7 @@ void *rtp_timing_receiver(void *arg) {
   uint64_t first_local_to_remote_time_difference = 0;
   uint64_t first_local_to_remote_time_difference_time;
   uint64_t l2rtd = 0;
-  while (itr->please_stop == 0) {
+  while (conn->please_stop == 0) {
     nread = recv(timing_socket, packet, sizeof(packet), 0);
     arrival_time = get_absolute_time_in_fp();
     //      clock_gettime(CLOCK_MONOTONIC,&att);
