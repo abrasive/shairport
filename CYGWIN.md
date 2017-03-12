@@ -41,7 +41,7 @@ $ make install
 $ git clone https://github.com/mikebrady/shairport-sync.git
 $ cd shairport-sync
 $ autoreconf -fi
-$ PKG_CONFIG_PATH=/usr/local/lib/pkgconfig ./configure --with-ao --with-ssl=openssl
+$ PKG_CONFIG_PATH=/usr/local/lib/pkgconfig ./configure --with-ao --with-ssl=openssl --with-tinysvcmdns
 $ make
 ```
 * That's it. There should be a `shairport-sync.exe` file in your directory.
