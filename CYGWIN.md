@@ -43,5 +43,6 @@ $ cd shairport-sync
 $ autoreconf -fi
 $ PKG_CONFIG_PATH=/usr/local/lib/pkgconfig ./configure --with-ao --with-ssl=openssl --with-tinysvcmdns
 $ make
+$ make install
 ```
 * That's it. There should be a `shairport-sync.exe` file in your directory.
