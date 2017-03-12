@@ -1,3 +1,8 @@
+Version 3.0.2
+====
+**Bug Fixes**
+* Fixed bugs in the `ao`, `pulseaudio` and `sndio` back ends. Basically they were expecting default sample rate and depth information, and were terminating whne they saw explicit rate and depth data.
+
 Version 3.0.1
 ====
 This update fixes one alarming and potentially very noisy bug and restores the identification of Shairport Sync as "ShairportSync" so that TuneBlade recognises it as an open source application.
