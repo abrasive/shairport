@@ -170,10 +170,6 @@ static void deinit(void) {
 }
 
 static void start(int sample_rate, int sample_format) {
-  if (sample_rate != 0)
-    die("unexpected sample rate!");
-  if (sample_format != 0)
-    die("unexpected sample format!");
 }
 
 static void play(short buf[], int samples) { ao_play(dev, (char *)buf, samples * 4); }
