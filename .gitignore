@@ -17,6 +17,7 @@ depcomp
 install-sh
 missing
 stamp-h1
+.dirstamp
 .deps
 man/Makefile
 man/Makefile.in
