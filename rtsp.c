@@ -285,9 +285,10 @@ static void cleanup_threads(void) {
   // debug(2, "culling threads.");
   for (i = 0; i < nconns;) {
     if (conns[i]->running == 0) {
+      debug(1, "found a non-running thread");
       pthread_join(conns[i]->thread, &retval);
       free(conns[i]);
-      debug(3, "one thread joined...");
+      debug(1, "one thread joined...");
       nconns--;
       if (nconns)
         conns[i] = conns[nconns];
@@ -1914,6 +1915,8 @@ void rtsp_listen_loop(void) {
       continue;
 
     rtsp_conn_info *conn = malloc(sizeof(rtsp_conn_info));
+    if (conn==0)
+      die("Couldn't allocate memory for an rtsp_conn_info record.");
     memset(conn, 0, sizeof(rtsp_conn_info));
     socklen_t slen = sizeof(conn->remote);
 
@@ -1974,14 +1977,15 @@ void rtsp_listen_loop(void) {
 
       usleep(500000);
       pthread_t rtsp_conversation_thread;
+      conn->stop = 0;
+      conn->authorized = 0;
+      conn->running = 1;
       ret = pthread_create(&rtsp_conversation_thread, NULL, rtsp_conversation_thread_func, conn);
       if (ret)
         die("Failed to create RTSP receiver thread!");
 
       conn->thread = rtsp_conversation_thread;
-      conn->stop = 0;
-      conn->authorized = 0;
-      conn->running = 1;
+      memory_barrier();
       track_thread(conn);
     }
   }
