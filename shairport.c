@@ -435,7 +435,7 @@ int parse_options(int argc, char **argv) {
         else if (strcasecmp(str, "soxr") == 0)
           config.packet_stuffing = ST_soxr;
         else
-          die("Invalid interpolation option choice \"%s\". It should be \"basic\" or \"soxr\"");
+          die("Invalid interpolation option choice. It should be \"basic\" or \"soxr\"");
       }
 
       /* Get the statistics setting. */
