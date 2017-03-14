@@ -1974,18 +1974,15 @@ void rtsp_listen_loop(void) {
       } else {
         debug(1, "Error figuring out Shairport Sync's own IP number.");
       }
-
-      usleep(500000);
-      pthread_t rtsp_conversation_thread;
-      conn->stop = 0;
-      conn->authorized = 0;
+        usleep(500000);
+//      pthread_t rtsp_conversation_thread;
+//      conn->thread = rtsp_conversation_thread;
+//      conn->stop = 0; // record's memory has been zeroed 
+//      conn->authorized = 0; // record's memory has been zeroed 
       conn->running = 1;
-      ret = pthread_create(&rtsp_conversation_thread, NULL, rtsp_conversation_thread_func, conn);
+      ret = pthread_create(&conn->thread, NULL, rtsp_conversation_thread_func, conn); // also acts as a memory barrier
       if (ret)
         die("Failed to create RTSP receiver thread!");
-
-      conn->thread = rtsp_conversation_thread;
-      memory_barrier();
       track_thread(conn);
     }
   }
