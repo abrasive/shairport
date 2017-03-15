@@ -1,7 +1,7 @@
 Version 3.1s1 and 3.1s2
 ====
 **Bug fix**
-3.1s2 fixes issues with audio backend latency offset calculations.
+* 3.1s2 fixes issues with audio backend latency offset calculations.
 
 Other minor fixes will be detailed later.
 
