@@ -685,6 +685,12 @@ static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
     }
   }
   // debug(1,"RTSP Flush Requested: %u.",rtptime);
+  #ifdef CONFIG_METADATA
+  if (p)
+    send_metadata('ssnc', 'flsr', p, strlen(p), req, 1);
+  else
+    send_metadata('ssnc', 'flsr', NULL, 0, NULL,0);
+  #endif
   player_flush(rtptime,conn);
   resp->respcode = 200;
 }
@@ -1442,6 +1448,9 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
     int i;
     for (i = 0; i < sizeof(conn->stream.fmtp) / sizeof(conn->stream.fmtp[0]); i++)
       conn->stream.fmtp[i] = atoi(strsep(&pfmtp, " \t"));
+    // here we should check the sanity ot the fmtp values
+    for (i = 0; i < sizeof(conn->stream.fmtp) / sizeof(conn->stream.fmtp[0]); i++)
+      debug(1,"  fmtp[%2d] is: %10d",i,conn->stream.fmtp[i]);
 
     char *hdr = msg_get_header(req, "X-Apple-Client-Name");
     if (hdr) {
@@ -1974,7 +1983,7 @@ void rtsp_listen_loop(void) {
       } else {
         debug(1, "Error figuring out Shairport Sync's own IP number.");
       }
-        usleep(500000);
+//      usleep(500000);
 //      pthread_t rtsp_conversation_thread;
 //      conn->thread = rtsp_conversation_thread;
 //      conn->stop = 0; // record's memory has been zeroed 
