@@ -1,3 +1,7 @@
+Version 3.1s3
+====
+More extensive changes have been made to improve the stability by making some operations reentrant. The instabilities occur sometimes when interrupting a play session by another.
+
 Version 3.1s1 and 3.1s2
 ====
 **Bug fix**
