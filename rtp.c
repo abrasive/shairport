@@ -43,7 +43,7 @@
 #include "rtp.h"
 
 // only one RTP session can be active at a time.
-static int rtp_running = 0;
+//static int rtp_running = 0;
 
 static char client_ip_string[INET6_ADDRSTRLEN]; // the ip string pointing to the client
 static char self_ip_string[INET6_ADDRSTRLEN];   // the ip string being used by this program -- it
@@ -80,7 +80,7 @@ uint64_t static local_to_remote_time_difference; // used to switch between local
 
 void rtp_initialise(rtsp_conn_info* conn) {
 
-  rtp_running = 0;
+  conn->rtp_running = 0;
 // initialise the timer mutex
   int rc = pthread_mutex_init(&conn->reference_time_mutex, NULL);
   if (rc)
@@ -302,7 +302,7 @@ void *rtp_control_receiver(void* arg) {
 
 void *rtp_timing_sender(void *arg) {
   debug(2, "Timing sender thread starting.");
-  int *stop = arg; // the parameter points to this request to stop thing
+  rtsp_conn_info *conn = (rtsp_conn_info*)arg;
   struct timing_request {
     char leader;
     char type;
@@ -323,10 +323,10 @@ void *rtp_timing_sender(void *arg) {
   time_ping_count = 0;
 
   // we inherit the signal mask (SIGUSR1)
-  while (*stop == 0) {
+  while (conn->timing_sender_stop == 0) {
     // debug(1,"Send a timing request");
 
-    if (!rtp_running)
+    if (!conn->rtp_running)
       die("rtp_timing_sender called without active stream!");
 
     // debug(1, "Requesting ntp timestamp exchange.");
@@ -363,9 +363,9 @@ void *rtp_timing_receiver(void *arg) {
 
   uint8_t packet[2048], *pktp;
   ssize_t nread;
-  int request_stop = 0;
+  conn->timing_sender_stop = 0;
   pthread_t timer_requester;
-  pthread_create(&timer_requester, NULL, &rtp_timing_sender, (void *)&request_stop);
+  pthread_create(&timer_requester, NULL, &rtp_timing_sender, arg);
   //    struct timespec att;
   uint64_t distant_receive_time, distant_transmit_time, arrival_time, return_time, transit_time,
       processing_time;
@@ -555,9 +555,10 @@ void *rtp_timing_receiver(void *arg) {
   }
 
   debug(1, "Timing thread interrupted. terminating.");
-  request_stop = 1;
+  conn->timing_sender_stop = 1;
   void *retval;
   pthread_kill(timer_requester, SIGUSR1);
+  debug(1, "Wait for timer requester to exit.");
   pthread_join(timer_requester, &retval);
   debug(1, "Closed and terminated timer requester thread.");
   debug(1, "Timing RTP thread terminated.");
@@ -631,7 +632,7 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
   // we use the local stuff to specify the address we are coming from and
   // we use the remote stuff to specify where we're goint to
 
-  if (rtp_running)
+  if (conn->rtp_running)
     die("rtp_setup called with active stream!");
 
   debug(2, "rtp_setup: cport=%d tport=%d.", cport, tport);
@@ -729,7 +730,7 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
   // pthread_create(&rtp_control_thread, NULL, &rtp_control_receiver, NULL);
   // pthread_create(&rtp_timing_thread, NULL, &rtp_timing_receiver, NULL);
 
-  rtp_running = 1;
+  conn->rtp_running = 1;
   request_sent = 0;
 }
 
@@ -751,7 +752,7 @@ void clear_reference_timestamp(rtsp_conn_info *conn) {
 }
 
 void rtp_shutdown(rtsp_conn_info *conn) {
-  if (!rtp_running)
+  if (!conn->rtp_running)
     debug(1, "rtp_shutdown called without active stream!");
 
   debug(2, "shutting down RTP thread");
@@ -764,11 +765,11 @@ void rtp_shutdown(rtsp_conn_info *conn) {
   //  pthread_join(rtp_audio_thread, &retval);
   //  pthread_join(rtp_control_thread, &retval);
   //  pthread_join(rtp_timing_thread, &retval);
-  rtp_running = 0;
+  conn->rtp_running = 0;
 }
 
 void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
-  if (rtp_running) {
+  if (conn->rtp_running) {
     // if (!request_sent) {
     debug(3, "requesting resend of %d packets starting at %u.", count, first);
     //  request_sent = 1;
@@ -799,7 +800,7 @@ void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
 }
 
 void rtp_request_client_pause(rtsp_conn_info *conn) {
-  if (rtp_running) {
+  if (conn->rtp_running) {
     if (client_active_remote == 0) {
       debug(1, "Can't request a client pause: no valid active remote.");
     } else {

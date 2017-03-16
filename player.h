@@ -139,6 +139,8 @@ pthread_mutex_t reference_time_mutex;
 
 uint64_t local_to_remote_time_difference; // used to switch between local and remote clocks
 
+int timing_sender_stop; // for asking the timing-sending thread to stop
+
 } rtsp_conn_info;
 
 int player_play(pthread_t *thread, rtsp_conn_info* conn);
