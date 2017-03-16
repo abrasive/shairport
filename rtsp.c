@@ -797,7 +797,7 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
   tport = atoi(p);
 
   //  rtsp_take_player();
-  rtp_setup(&conn->local, &conn->remote, cport, tport, active_remote, &lsport, &lcport, &ltport);
+  rtp_setup(&conn->local, &conn->remote, cport, tport, active_remote, &lsport, &lcport, &ltport, conn);
   if (!lsport)
     goto error;
   char *q;
@@ -1772,7 +1772,7 @@ static void *rtsp_conversation_thread_func(void *pconn) {
   debug(1, "Closing down RTSP conversation thread...");
   if (rtsp_playing()) {
     player_stop(&conn->player_thread,conn); // might be less noisy doing this first
-    rtp_shutdown();
+    rtp_shutdown(conn);
     // usleep(400000); // let an angel pass...
     pthread_mutex_unlock(&play_lock);
   }

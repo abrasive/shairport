@@ -94,11 +94,11 @@ static pthread_mutex_t reference_time_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 uint64_t static local_to_remote_time_difference; // used to switch between local and remote clocks
 
-void *rtp_audio_receiver(void *arg) {
+void *rtp_audio_receiver(void* arg) {
   debug(2, "Audio receiver -- Server RTP thread starting.");
 
   // we inherit the signal mask (SIGUSR1)
-  rtsp_conn_info *conn = arg;
+  rtsp_conn_info *conn = (rtsp_conn_info*)arg;
 
   int32_t last_seqno = -1;
   uint8_t packet[2048], *pktp;
@@ -193,11 +193,12 @@ void *rtp_audio_receiver(void *arg) {
   return NULL;
 }
 
-void *rtp_control_receiver(void *arg) {
+void *rtp_control_receiver(void* arg) {
   // we inherit the signal mask (SIGUSR1)
 
   debug(2, "Control receiver -- Server RTP thread starting.");
-  rtsp_conn_info *conn = arg;
+  
+  rtsp_conn_info *conn = (rtsp_conn_info*)arg;
 
   reference_timestamp = 0; // nothing valid received yet
   uint8_t packet[2048], *pktp;
@@ -355,8 +356,7 @@ void *rtp_timing_sender(void *arg) {
 void *rtp_timing_receiver(void *arg) {
   debug(2, "Timing receiver -- Server RTP thread starting.");
   // we inherit the signal mask (SIGUSR1)
-
-  rtsp_conn_info *conn = arg;
+  rtsp_conn_info *conn = (rtsp_conn_info*)arg;
 
   uint8_t packet[2048], *pktp;
   ssize_t nread;
@@ -500,7 +500,7 @@ void *rtp_timing_receiver(void *arg) {
         int64_t reference_timestamp;
         uint64_t reference_timestamp_time, remote_reference_timestamp_time;
         get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time,
-                                      &remote_reference_timestamp_time);
+                                      &remote_reference_timestamp_time, conn);
         uint64_t frame_difference = 0;
         if (reference_timestamp >= play_segment_reference_frame)
           frame_difference = (uint64_t)reference_timestamp - (uint64_t)play_segment_reference_frame;
@@ -622,7 +622,7 @@ static int bind_port(int ip_family, const char *self_ip_address, uint32_t scope_
 }
 
 void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t active_remote,
-               int *lsport, int *lcport, int *ltport) {
+               int *lsport, int *lcport, int *ltport, rtsp_conn_info *conn) {
 
   // this gets the local and remote ip numbers (and ports used for the TCD stuff)
   // we use the local stuff to specify the address we are coming from and
@@ -731,7 +731,7 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
 }
 
 void get_reference_timestamp_stuff(int64_t *timestamp, uint64_t *timestamp_time,
-                                   uint64_t *remote_timestamp_time) {
+                                   uint64_t *remote_timestamp_time, rtsp_conn_info *conn) {
   // types okay
   pthread_mutex_lock(&reference_time_mutex);
   *timestamp = reference_timestamp;
@@ -740,19 +740,19 @@ void get_reference_timestamp_stuff(int64_t *timestamp, uint64_t *timestamp_time,
   pthread_mutex_unlock(&reference_time_mutex);
 }
 
-void clear_reference_timestamp(void) {
+void clear_reference_timestamp(rtsp_conn_info *conn) {
   pthread_mutex_lock(&reference_time_mutex);
   reference_timestamp = 0;
   reference_timestamp_time = 0;
   pthread_mutex_unlock(&reference_time_mutex);
 }
 
-void rtp_shutdown(void) {
+void rtp_shutdown(rtsp_conn_info *conn) {
   if (!running)
     debug(1, "rtp_shutdown called without active stream!");
 
   debug(2, "shutting down RTP thread");
-  clear_reference_timestamp();
+  clear_reference_timestamp(conn);
   //  debug(1,"Shut down audio, control and timing threads");
   //  usleep(3000000); // hack
   //  pthread_kill(rtp_audio_thread, SIGUSR1);
@@ -764,7 +764,7 @@ void rtp_shutdown(void) {
   running = 0;
 }
 
-void rtp_request_resend(seq_t first, uint32_t count) {
+void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
   if (running) {
     // if (!request_sent) {
     debug(3, "requesting resend of %d packets starting at %u.", count, first);
@@ -795,7 +795,7 @@ void rtp_request_resend(seq_t first, uint32_t count) {
   }
 }
 
-void rtp_request_client_pause() {
+void rtp_request_client_pause(rtsp_conn_info *conn) {
   if (running) {
     if (client_active_remote == 0) {
       debug(1, "Can't request a client pause: no valid active remote.");

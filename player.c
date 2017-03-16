@@ -782,7 +782,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
           int64_t reference_timestamp;
           uint64_t reference_timestamp_time, remote_reference_timestamp_time;
           get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time,
-                                        &remote_reference_timestamp_time);
+                                        &remote_reference_timestamp_time, conn);
           reference_timestamp *= conn->output_sample_ratio;
           if (conn->first_packet_timestamp == 0) { // if this is the very first packet
             // debug(1,"First frame seen, time %u, with %d
@@ -943,7 +943,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
             // not the time of the playing of the first frame
             uint64_t reference_timestamp_time; // don't need this...
             get_reference_timestamp_stuff(&play_segment_reference_frame, &reference_timestamp_time,
-                                          &play_segment_reference_frame_remote_time);
+                                          &play_segment_reference_frame_remote_time, conn);
             play_segment_reference_frame *= conn->output_sample_ratio;
 #ifdef CONFIG_METADATA
             send_ssnc_metadata('prsm', NULL, 0,
@@ -973,7 +973,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
       int64_t reference_timestamp;
       uint64_t reference_timestamp_time, remote_reference_timestamp_time;
       get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time,
-                                    &remote_reference_timestamp_time); // all types okay
+                                    &remote_reference_timestamp_time, conn); // all types okay
       reference_timestamp *= conn->output_sample_ratio;
       if (reference_timestamp) {                        // if we have a reference time
         int64_t packet_timestamp = curframe->timestamp; // types okay
@@ -1059,7 +1059,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
       seq_t next = seq_sum(conn->ab_read, i);
       abuf = conn->audio_buffer + BUFIDX(next);
       if (!abuf->ready) {
-        rtp_request_resend(next, 1);
+        rtp_request_resend(next, 1, conn);
         // debug(1,"Resend %u.",next);
         conn->resend_requests++;
       }
@@ -1338,9 +1338,9 @@ static void *player_thread_func(void *arg) {
   
   // create and start the timing, control and audio receiver threads
   pthread_t rtp_audio_thread, rtp_control_thread, rtp_timing_thread;
-  pthread_create(&rtp_audio_thread, NULL, &rtp_audio_receiver, (void *)conn);
-  pthread_create(&rtp_control_thread, NULL, &rtp_control_receiver, (void *)conn);
-  pthread_create(&rtp_timing_thread, NULL, &rtp_timing_receiver, (void *)conn);
+  pthread_create(&rtp_audio_thread, NULL, &rtp_audio_receiver, (void*) conn);
+  pthread_create(&rtp_control_thread, NULL, &rtp_control_receiver, (void*) conn);
+  pthread_create(&rtp_timing_thread, NULL, &rtp_timing_receiver, (void*) conn);
 
   session_corrections = 0;
   play_segment_reference_frame = 0; // zero signals that we are not in a play segment
@@ -1604,7 +1604,7 @@ static void *player_thread_func(void *arg) {
           int64_t reference_timestamp;
           uint64_t reference_timestamp_time, remote_reference_timestamp_time;
           get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time,
-                                        &remote_reference_timestamp_time); // types okay
+                                        &remote_reference_timestamp_time, conn); // types okay
           reference_timestamp *= conn->output_sample_ratio;
           int64_t rt, nt;
           rt = reference_timestamp; // uint32_t to int64_t
