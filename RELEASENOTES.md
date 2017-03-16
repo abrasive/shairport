@@ -1,3 +1,10 @@
+Version 3.1s1 and 3.1s2
+====
+**Bug fix**
+* 3.1s2 fixes issues with audio backend latency offset calculations.
+
+Other minor fixes will be detailed later.
+
 Version 3.1d1
 ====
 This is a stability update. Some users have reported occasional crashes particularly when a play session ends and another begins immediately. The thread that plays a session was not reentrant, and this _may_ have been causing those stability problems. The player thread is now fully re-entrant, so those stability problems should be gone. The changes made were quite extensive, so more bugs may have been reintroduced. Your stability reports would be welcome.
