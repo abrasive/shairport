@@ -48,7 +48,7 @@
 //static char client_ip_string[INET6_ADDRSTRLEN]; // the ip string pointing to the client
 //static char self_ip_string[INET6_ADDRSTRLEN];   // the ip string being used by this program -- it
                                                 // could be one of many, so we need to know it
-static uint32_t self_scope_id;        // if it's an ipv6 connection, this will be its scope
+//static uint32_t self_scope_id;        // if it's an ipv6 connection, this will be its scope
 static short connection_ip_family;    // AF_INET / AF_INET6
 static uint32_t client_active_remote; // used when you want to control the client...
 
@@ -655,7 +655,7 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
     sa6 = (struct sockaddr_in6 *)local;
     self_addr = &(sa6->sin6_addr);
     self_port = ntohs(sa6->sin6_port);
-    self_scope_id = sa6->sin6_scope_id;
+    conn->self_scope_id = sa6->sin6_scope_id;
   }
 #endif
   if (connection_ip_family == AF_INET) {
@@ -690,7 +690,7 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
     memcpy(&rtp_client_control_socket, servinfo->ai_addr, sizeof(struct sockaddr_in6));
     // ensure the scope id matches that of remote. this is needed for link-local addresses.
     struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)&rtp_client_control_socket;
-    sa6->sin6_scope_id = self_scope_id;
+    sa6->sin6_scope_id = conn->self_scope_id;
   } else
 #endif
     memcpy(&rtp_client_control_socket, servinfo->ai_addr, sizeof(struct sockaddr_in));
@@ -709,7 +709,7 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
     memcpy(&rtp_client_timing_socket, servinfo->ai_addr, sizeof(struct sockaddr_in6));
     // ensure the scope id matches that of remote. this is needed for link-local addresses.
     struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)&rtp_client_timing_socket;
-    sa6->sin6_scope_id = self_scope_id;
+    sa6->sin6_scope_id = conn->self_scope_id;
   } else
 #endif
     memcpy(&rtp_client_timing_socket, servinfo->ai_addr, sizeof(struct sockaddr_in));
@@ -718,9 +718,9 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
   // now, we open three sockets -- one for the audio stream, one for the timing and one for the
   // control
 
-  *lsport = bind_port(connection_ip_family, conn->self_ip_string, self_scope_id, &audio_socket);
-  *lcport = bind_port(connection_ip_family, conn->self_ip_string, self_scope_id, &control_socket);
-  *ltport = bind_port(connection_ip_family, conn->self_ip_string, self_scope_id, &timing_socket);
+  *lsport = bind_port(connection_ip_family, conn->self_ip_string, conn->self_scope_id, &audio_socket);
+  *lcport = bind_port(connection_ip_family, conn->self_ip_string, conn->self_scope_id, &control_socket);
+  *ltport = bind_port(connection_ip_family, conn->self_ip_string, conn->self_scope_id, &timing_socket);
 
   debug(2, "listening for audio, control and timing on ports %d, %d, %d.", *lsport, *lcport,
         *ltport);
