@@ -45,8 +45,8 @@
 // only one RTP session can be active at a time.
 //static int rtp_running = 0;
 
-static char client_ip_string[INET6_ADDRSTRLEN]; // the ip string pointing to the client
-static char self_ip_string[INET6_ADDRSTRLEN];   // the ip string being used by this program -- it
+//static char client_ip_string[INET6_ADDRSTRLEN]; // the ip string pointing to the client
+//static char self_ip_string[INET6_ADDRSTRLEN];   // the ip string being used by this program -- it
                                                 // could be one of many, so we need to know it
 static uint32_t self_scope_id;        // if it's an ipv6 connection, this will be its scope
 static short connection_ip_family;    // AF_INET / AF_INET6
@@ -667,10 +667,10 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
     self_port = ntohs(sa4->sin_port);
   }
 
-  inet_ntop(connection_ip_family, client_addr, client_ip_string, sizeof(client_ip_string));
-  inet_ntop(connection_ip_family, self_addr, self_ip_string, sizeof(self_ip_string));
+  inet_ntop(connection_ip_family, client_addr, conn->client_ip_string, sizeof(conn->client_ip_string));
+  inet_ntop(connection_ip_family, self_addr, conn->self_ip_string, sizeof(conn->self_ip_string));
 
-  debug(1, "Set up play connection from %s to self at %s.", client_ip_string, self_ip_string);
+  debug(1, "Set up play connection from %s to self at %s.", conn->client_ip_string, conn->self_ip_string);
 
   // set up a the record of the remote's control socket
   struct addrinfo hints;
@@ -682,7 +682,7 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
   hints.ai_socktype = SOCK_DGRAM;
   char portstr[20];
   snprintf(portstr, 20, "%d", cport);
-  if (getaddrinfo(client_ip_string, portstr, &hints, &servinfo) != 0)
+  if (getaddrinfo(conn->client_ip_string, portstr, &hints, &servinfo) != 0)
     die("Can't get address of client's control port");
 
 #ifdef AF_INET6
@@ -702,7 +702,7 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
   hints.ai_family = connection_ip_family;
   hints.ai_socktype = SOCK_DGRAM;
   snprintf(portstr, 20, "%d", tport);
-  if (getaddrinfo(client_ip_string, portstr, &hints, &servinfo) != 0)
+  if (getaddrinfo(conn->client_ip_string, portstr, &hints, &servinfo) != 0)
     die("Can't get address of client's timing port");
 #ifdef AF_INET6
   if (servinfo->ai_family == AF_INET6) {
@@ -718,9 +718,9 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
   // now, we open three sockets -- one for the audio stream, one for the timing and one for the
   // control
 
-  *lsport = bind_port(connection_ip_family, self_ip_string, self_scope_id, &audio_socket);
-  *lcport = bind_port(connection_ip_family, self_ip_string, self_scope_id, &control_socket);
-  *ltport = bind_port(connection_ip_family, self_ip_string, self_scope_id, &timing_socket);
+  *lsport = bind_port(connection_ip_family, conn->self_ip_string, self_scope_id, &audio_socket);
+  *lcport = bind_port(connection_ip_family, conn->self_ip_string, self_scope_id, &control_socket);
+  *ltport = bind_port(connection_ip_family, conn->self_ip_string, self_scope_id, &timing_socket);
 
   debug(2, "listening for audio, control and timing on ports %d, %d, %d.", *lsport, *lcport,
         *ltport);
@@ -818,7 +818,7 @@ void rtp_request_client_pause(rtsp_conn_info *conn) {
       hints.ai_family = AF_UNSPEC;
       hints.ai_socktype = SOCK_STREAM;
 
-      getaddrinfo(client_ip_string, "3689", &hints, &res);
+      getaddrinfo(conn->client_ip_string, "3689", &hints, &res);
 
       // make a socket:
 
@@ -838,7 +838,7 @@ void rtp_request_client_pause(rtsp_conn_info *conn) {
 
       sprintf(message,
               "GET /ctrl-int/1/pause HTTP/1.1\r\nHost: %s:3689\r\nActive-Remote: %u\r\n\r\n",
-              client_ip_string, client_active_remote);
+              conn->client_ip_string, client_active_remote);
       // debug(1,"Sending this message: \"%s\".",message);
 
       // Send some data
