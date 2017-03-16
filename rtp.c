@@ -42,21 +42,8 @@
 #include "player.h"
 #include "rtp.h"
 
-/*
-// this does not compile properly with OpenWrt Barrier Breaker...
-#if defined(__linux__)
-#include <linux/in6.h>
-#endif
-*/
-typedef struct time_ping_record {
-  uint64_t local_to_remote_difference;
-  uint64_t dispersion;
-  uint64_t local_time;
-  uint64_t remote_time;
-} time_ping_record;
-
 // only one RTP session can be active at a time.
-static int running = 0;
+static int rtp_running = 0;
 
 static char client_ip_string[INET6_ADDRSTRLEN]; // the ip string pointing to the client
 static char self_ip_string[INET6_ADDRSTRLEN];   // the ip string being used by this program -- it
@@ -79,9 +66,6 @@ static uint64_t remote_reference_timestamp_time;
 // debug variables
 static int request_sent;
 
-#define time_ping_history 8
-#define time_ping_fudge_factor 100000
-
 static uint8_t time_ping_count;
 struct time_ping_record time_pings[time_ping_history];
 
@@ -93,6 +77,25 @@ static uint64_t departure_time; // dangerous -- this assumes that there will nev
 static pthread_mutex_t reference_time_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 uint64_t static local_to_remote_time_difference; // used to switch between local and remote clocks
+
+void rtp_initialise(rtsp_conn_info* conn) {
+
+  rtp_running = 0;
+// initialise the timer mutex
+  int rc = pthread_mutex_init(&conn->reference_time_mutex, NULL);
+  if (rc)
+    debug(1, "Error initialising reference_time_mutex.");
+
+}
+
+void rtp_terminate(rtsp_conn_info* conn) {
+
+// destroy the timer mutex
+  int rc = pthread_mutex_destroy(&conn->reference_time_mutex);
+  if (rc)
+    debug(1, "Error destroying reference_time_mutex variable.");
+}
+
 
 void *rtp_audio_receiver(void* arg) {
   debug(2, "Audio receiver -- Server RTP thread starting.");
@@ -323,7 +326,7 @@ void *rtp_timing_sender(void *arg) {
   while (*stop == 0) {
     // debug(1,"Send a timing request");
 
-    if (!running)
+    if (!rtp_running)
       die("rtp_timing_sender called without active stream!");
 
     // debug(1, "Requesting ntp timestamp exchange.");
@@ -628,7 +631,7 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
   // we use the local stuff to specify the address we are coming from and
   // we use the remote stuff to specify where we're goint to
 
-  if (running)
+  if (rtp_running)
     die("rtp_setup called with active stream!");
 
   debug(2, "rtp_setup: cport=%d tport=%d.", cport, tport);
@@ -726,7 +729,7 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
   // pthread_create(&rtp_control_thread, NULL, &rtp_control_receiver, NULL);
   // pthread_create(&rtp_timing_thread, NULL, &rtp_timing_receiver, NULL);
 
-  running = 1;
+  rtp_running = 1;
   request_sent = 0;
 }
 
@@ -748,7 +751,7 @@ void clear_reference_timestamp(rtsp_conn_info *conn) {
 }
 
 void rtp_shutdown(rtsp_conn_info *conn) {
-  if (!running)
+  if (!rtp_running)
     debug(1, "rtp_shutdown called without active stream!");
 
   debug(2, "shutting down RTP thread");
@@ -761,11 +764,11 @@ void rtp_shutdown(rtsp_conn_info *conn) {
   //  pthread_join(rtp_audio_thread, &retval);
   //  pthread_join(rtp_control_thread, &retval);
   //  pthread_join(rtp_timing_thread, &retval);
-  running = 0;
+  rtp_running = 0;
 }
 
 void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
-  if (running) {
+  if (rtp_running) {
     // if (!request_sent) {
     debug(3, "requesting resend of %d packets starting at %u.", count, first);
     //  request_sent = 1;
@@ -796,7 +799,7 @@ void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
 }
 
 void rtp_request_client_pause(rtsp_conn_info *conn) {
-  if (running) {
+  if (rtp_running) {
     if (client_active_remote == 0) {
       debug(1, "Can't request a client pause: no valid active remote.");
     } else {

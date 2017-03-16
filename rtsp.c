@@ -1723,6 +1723,8 @@ static void *rtsp_conversation_thread_func(void *pconn) {
   pthread_sigmask(SIG_UNBLOCK, &set, NULL);
 
   rtsp_conn_info *conn = pconn;
+  
+  rtp_initialise(conn);
 
   rtsp_message *req, *resp;
   char *hdr, *auth_nonce = NULL;
@@ -1787,6 +1789,7 @@ static void *rtsp_conversation_thread_func(void *pconn) {
   // debug(1, "This RTSP conversation thread doesn't think it's playing for a "
   //         "close RTSP connection.");
   // }
+  rtp_terminate(conn);
   debug(2, "RTSP conversation thread terminated.");
   //  please_shutdown = 0;
   return NULL;

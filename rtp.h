@@ -5,6 +5,9 @@
 
 #include "player.h"
 
+void rtp_initialise(rtsp_conn_info* conn);
+void rtp_terminate(rtsp_conn_info* conn);
+
 void *rtp_audio_receiver(void *arg);
 void *rtp_control_receiver(void *arg);
 void *rtp_timing_receiver(void *arg);

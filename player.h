@@ -1,6 +1,8 @@
 #ifndef _PLAYER_H
 #define _PLAYER_H
 
+#include <arpa/inet.h>
+
 #include "config.h"
 
 #ifdef HAVE_LIBMBEDTLS
@@ -19,6 +21,16 @@
 
 #include "audio.h"
 #include "alac.h"
+
+#define time_ping_history 8
+#define time_ping_fudge_factor 100000
+
+typedef struct time_ping_record {
+  uint64_t local_to_remote_difference;
+  uint64_t dispersion;
+  uint64_t local_time;
+  uint64_t remote_time;
+} time_ping_record;
 
 typedef uint16_t seq_t;
 
@@ -92,6 +104,41 @@ typedef struct {
 #ifdef HAVE_LIBSSL
   AES_KEY aes;
 #endif
+
+// RTP stuff
+// only one RTP session can be active at a time.
+int rtp_running;
+
+char client_ip_string[INET6_ADDRSTRLEN]; // the ip string pointing to the client
+char self_ip_string[INET6_ADDRSTRLEN];   // the ip string being used by this program -- it
+                                         // could be one of many, so we need to know it
+uint32_t self_scope_id;        // if it's an ipv6 connection, this will be its scope
+short connection_ip_family;    // AF_INET / AF_INET6
+uint32_t client_active_remote; // used when you want to control the client...
+
+SOCKADDR rtp_client_control_socket; // a socket pointing to the control port of the client
+SOCKADDR rtp_client_timing_socket;  // a socket pointing to the timing port of the client
+int audio_socket;                   // our local [server] audio socket
+int control_socket;                 // our local [server] control socket
+int timing_socket;                  // local timing socket
+
+int64_t reference_timestamp;
+uint64_t reference_timestamp_time;
+uint64_t remote_reference_timestamp_time;
+
+// debug variables
+int request_sent;
+
+uint8_t time_ping_count;
+struct time_ping_record time_pings[time_ping_history];
+
+uint64_t departure_time; // dangerous -- this assumes that there will never be two timing
+                         // request in flight at the same time
+
+pthread_mutex_t reference_time_mutex;
+
+uint64_t local_to_remote_time_difference; // used to switch between local and remote clocks
+
 } rtsp_conn_info;
 
 int player_play(pthread_t *thread, rtsp_conn_info* conn);
