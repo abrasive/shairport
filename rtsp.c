@@ -303,7 +303,7 @@ static void cleanup_threads(void) {
 
 void ask_other_rtsp_conversation_threads_to_stop(pthread_t except_this_thread) {
   int i;
-  debug(2, "asking playing threads to stop");
+  debug(1, "asking playing threads to stop");
   for (i = 0; i < nconns; i++) {
     if (((except_this_thread == 0) || (pthread_equal(conns[i]->thread, except_this_thread) == 0)) &&
         (conns[i]->running != 0)) {
@@ -663,6 +663,7 @@ static void handle_teardown(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
              "it's sending a response to teardown anyway");
   resp->respcode = 200;
   msg_add_header(resp, "Connection", "close");
+  debug(2,"TEARDOWN asking connection to stop");
   conn->stop = 1;
 }
 
@@ -1360,17 +1361,24 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
     if (config.allow_session_interruption == 1) {
       // some other thread has the player ... ask it to relinquish the thread
       if (playing_conn) {
-        playing_conn->stop = 1;
-        memory_barrier();
-        pthread_kill(playing_conn->thread, SIGUSR1);
+        debug(1,"Playing connection asked to stop");
+        if (playing_conn==conn) {
+          debug(1,"ANNOuNCE asking to stop itself.");
+        } else {
+          playing_conn->stop = 1;
+          memory_barrier();
+          pthread_kill(playing_conn->thread, SIGUSR1);
+          usleep(1000000); // here, it is possible for other connections to come in and nab the player.
+        }
       } else {
         die("Non existent the_playing_conn with play_lock enabled.");
       }
-      usleep(1000000); // here, it is possible for other connections to come in and nab the player.
       debug(1, "Try to get the player now");
       // pthread_mutex_lock(&play_lock);
       if (pthread_mutex_trylock(&play_lock) == 0)
         have_the_player = 1;
+      else
+        debug(1,"ANNOUNCE failed to get the player");
     }
   }
 
