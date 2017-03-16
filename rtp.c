@@ -49,19 +49,19 @@
 //static char self_ip_string[INET6_ADDRSTRLEN];   // the ip string being used by this program -- it
                                                 // could be one of many, so we need to know it
 //static uint32_t self_scope_id;        // if it's an ipv6 connection, this will be its scope
-static short connection_ip_family;    // AF_INET / AF_INET6
-static uint32_t client_active_remote; // used when you want to control the client...
+//static short connection_ip_family;    // AF_INET / AF_INET6
+//static uint32_t client_active_remote; // used when you want to control the client...
 
-static SOCKADDR rtp_client_control_socket; // a socket pointing to the control port of the client
-static SOCKADDR rtp_client_timing_socket;  // a socket pointing to the timing port of the client
-static int audio_socket;                   // our local [server] audio socket
-static int control_socket;                 // our local [server] control socket
-static int timing_socket;                  // local timing socket
+//static SOCKADDR rtp_client_control_socket; // a socket pointing to the control port of the client
+//static SOCKADDR rtp_client_timing_socket;  // a socket pointing to the timing port of the client
+//static int audio_socket;                   // our local [server] audio socket
+//static int control_socket;                 // our local [server] control socket
+//static int timing_socket;                  // local timing socket
 // static pthread_t rtp_audio_thread, rtp_control_thread, rtp_timing_thread;
 
-static int64_t reference_timestamp;
-static uint64_t reference_timestamp_time;
-static uint64_t remote_reference_timestamp_time;
+//static int64_t reference_timestamp;
+//static uint64_t reference_timestamp_time;
+//static uint64_t remote_reference_timestamp_time;
 
 // debug variables
 static int request_sent;
@@ -118,7 +118,7 @@ void *rtp_audio_receiver(void* arg) {
 
   ssize_t nread;
   while (conn->please_stop == 0) {
-    nread = recv(audio_socket, packet, sizeof(packet), 0);
+    nread = recv(conn->audio_socket, packet, sizeof(packet), 0);
 
     uint64_t local_time_now_fp = get_absolute_time_in_fp();
     if (time_of_previous_packet_fp) {
@@ -191,7 +191,7 @@ void *rtp_audio_receiver(void* arg) {
   }
 
   debug(1, "Audio receiver -- Server RTP thread interrupted. terminating.");
-  close(audio_socket);
+  close(conn->audio_socket);
 
   return NULL;
 }
@@ -203,14 +203,14 @@ void *rtp_control_receiver(void* arg) {
   
   rtsp_conn_info *conn = (rtsp_conn_info*)arg;
 
-  reference_timestamp = 0; // nothing valid received yet
+  conn->reference_timestamp = 0; // nothing valid received yet
   uint8_t packet[2048], *pktp;
   struct timespec tn;
   uint64_t remote_time_of_sync, local_time_now, remote_time_now;
   int64_t sync_rtp_timestamp, rtp_timestamp_less_latency;
   ssize_t nread;
   while (conn->please_stop == 0) {
-    nread = recv(control_socket, packet, sizeof(packet), 0);
+    nread = recv(conn->control_socket, packet, sizeof(packet), 0);
     local_time_now = get_absolute_time_in_fp();
     //        clock_gettime(CLOCK_MONOTONIC,&tn);
     //        local_time_now=((uint64_t)tn.tv_sec<<32)+((uint64_t)tn.tv_nsec<<32)/1000000000;
@@ -257,9 +257,9 @@ void *rtp_control_receiver(void* arg) {
           // after the one whose RTP is given. Weird.
         }
         pthread_mutex_lock(&reference_time_mutex);
-        remote_reference_timestamp_time = remote_time_of_sync;
-        reference_timestamp_time = remote_time_of_sync - local_to_remote_time_difference;
-        reference_timestamp = sync_rtp_timestamp;
+        conn->remote_reference_timestamp_time = remote_time_of_sync;
+        conn->reference_timestamp_time = remote_time_of_sync - local_to_remote_time_difference;
+        conn->reference_timestamp = sync_rtp_timestamp;
         pthread_mutex_unlock(&reference_time_mutex);
         // debug(1,"New Reference timestamp and timestamp time...");
         // get estimated remote time now
@@ -295,7 +295,7 @@ void *rtp_control_receiver(void* arg) {
   }
 
   debug(1, "Control RTP thread interrupted. terminating.");
-  close(control_socket);
+  close(conn->control_socket);
 
   return NULL;
 }
@@ -338,11 +338,11 @@ void *rtp_timing_sender(void *arg) {
     departure_time = get_absolute_time_in_fp();
     socklen_t msgsize = sizeof(struct sockaddr_in);
 #ifdef AF_INET6
-    if (rtp_client_timing_socket.SAFAMILY == AF_INET6) {
+    if (conn->rtp_client_timing_socket.SAFAMILY == AF_INET6) {
       msgsize = sizeof(struct sockaddr_in6);
     }
 #endif
-    if (sendto(timing_socket, &req, sizeof(req), 0, (struct sockaddr *)&rtp_client_timing_socket,
+    if (sendto(conn->timing_socket, &req, sizeof(req), 0, (struct sockaddr *)&conn->rtp_client_timing_socket,
                msgsize) == -1) {
       perror("Error sendto-ing to timing socket");
     }
@@ -378,7 +378,7 @@ void *rtp_timing_receiver(void *arg) {
   uint64_t first_local_to_remote_time_difference_time;
   uint64_t l2rtd = 0;
   while (conn->please_stop == 0) {
-    nread = recv(timing_socket, packet, sizeof(packet), 0);
+    nread = recv(conn->timing_socket, packet, sizeof(packet), 0);
     arrival_time = get_absolute_time_in_fp();
     //      clock_gettime(CLOCK_MONOTONIC,&att);
 
@@ -562,7 +562,7 @@ void *rtp_timing_receiver(void *arg) {
   pthread_join(timer_requester, &retval);
   debug(1, "Closed and terminated timer requester thread.");
   debug(1, "Timing RTP thread terminated.");
-  close(timing_socket);
+  close(conn->timing_socket);
 
   return NULL;
 }
@@ -637,7 +637,7 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
 
   debug(2, "rtp_setup: cport=%d tport=%d.", cport, tport);
 
-  client_active_remote = active_remote;
+  conn->client_active_remote = active_remote;
 
   // print out what we know about the client
   void *client_addr, *self_addr;
@@ -645,10 +645,10 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
   char client_port_str[64];
   char self_addr_str[64];
 
-  connection_ip_family = remote->SAFAMILY; // keep information about the kind of ip of the client
+  conn->connection_ip_family = remote->SAFAMILY; // keep information about the kind of ip of the client
 
 #ifdef AF_INET6
-  if (connection_ip_family == AF_INET6) {
+  if (conn->connection_ip_family == AF_INET6) {
     struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)remote;
     client_addr = &(sa6->sin6_addr);
     client_port = ntohs(sa6->sin6_port);
@@ -658,7 +658,7 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
     conn->self_scope_id = sa6->sin6_scope_id;
   }
 #endif
-  if (connection_ip_family == AF_INET) {
+  if (conn->connection_ip_family == AF_INET) {
     struct sockaddr_in *sa4 = (struct sockaddr_in *)remote;
     client_addr = &(sa4->sin_addr);
     client_port = ntohs(sa4->sin_port);
@@ -667,8 +667,8 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
     self_port = ntohs(sa4->sin_port);
   }
 
-  inet_ntop(connection_ip_family, client_addr, conn->client_ip_string, sizeof(conn->client_ip_string));
-  inet_ntop(connection_ip_family, self_addr, conn->self_ip_string, sizeof(conn->self_ip_string));
+  inet_ntop(conn->connection_ip_family, client_addr, conn->client_ip_string, sizeof(conn->client_ip_string));
+  inet_ntop(conn->connection_ip_family, self_addr, conn->self_ip_string, sizeof(conn->self_ip_string));
 
   debug(1, "Set up play connection from %s to self at %s.", conn->client_ip_string, conn->self_ip_string);
 
@@ -676,9 +676,9 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
   struct addrinfo hints;
   struct addrinfo *servinfo;
 
-  memset(&rtp_client_control_socket, 0, sizeof(rtp_client_control_socket));
+  memset(&conn->rtp_client_control_socket, 0, sizeof(conn->rtp_client_control_socket));
   memset(&hints, 0, sizeof hints);
-  hints.ai_family = connection_ip_family;
+  hints.ai_family = conn->connection_ip_family;
   hints.ai_socktype = SOCK_DGRAM;
   char portstr[20];
   snprintf(portstr, 20, "%d", cport);
@@ -687,45 +687,45 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
 
 #ifdef AF_INET6
   if (servinfo->ai_family == AF_INET6) {
-    memcpy(&rtp_client_control_socket, servinfo->ai_addr, sizeof(struct sockaddr_in6));
+    memcpy(&conn->rtp_client_control_socket, servinfo->ai_addr, sizeof(struct sockaddr_in6));
     // ensure the scope id matches that of remote. this is needed for link-local addresses.
-    struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)&rtp_client_control_socket;
+    struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)&conn->rtp_client_control_socket;
     sa6->sin6_scope_id = conn->self_scope_id;
   } else
 #endif
-    memcpy(&rtp_client_control_socket, servinfo->ai_addr, sizeof(struct sockaddr_in));
+    memcpy(&conn->rtp_client_control_socket, servinfo->ai_addr, sizeof(struct sockaddr_in));
   freeaddrinfo(servinfo);
 
   // set up a the record of the remote's timing socket
-  memset(&rtp_client_timing_socket, 0, sizeof(rtp_client_timing_socket));
+  memset(&conn->rtp_client_timing_socket, 0, sizeof(conn->rtp_client_timing_socket));
   memset(&hints, 0, sizeof hints);
-  hints.ai_family = connection_ip_family;
+  hints.ai_family = conn->connection_ip_family;
   hints.ai_socktype = SOCK_DGRAM;
   snprintf(portstr, 20, "%d", tport);
   if (getaddrinfo(conn->client_ip_string, portstr, &hints, &servinfo) != 0)
     die("Can't get address of client's timing port");
 #ifdef AF_INET6
   if (servinfo->ai_family == AF_INET6) {
-    memcpy(&rtp_client_timing_socket, servinfo->ai_addr, sizeof(struct sockaddr_in6));
+    memcpy(&conn->rtp_client_timing_socket, servinfo->ai_addr, sizeof(struct sockaddr_in6));
     // ensure the scope id matches that of remote. this is needed for link-local addresses.
-    struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)&rtp_client_timing_socket;
+    struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)&conn->rtp_client_timing_socket;
     sa6->sin6_scope_id = conn->self_scope_id;
   } else
 #endif
-    memcpy(&rtp_client_timing_socket, servinfo->ai_addr, sizeof(struct sockaddr_in));
+    memcpy(&conn->rtp_client_timing_socket, servinfo->ai_addr, sizeof(struct sockaddr_in));
   freeaddrinfo(servinfo);
 
   // now, we open three sockets -- one for the audio stream, one for the timing and one for the
   // control
 
-  *lsport = bind_port(connection_ip_family, conn->self_ip_string, conn->self_scope_id, &audio_socket);
-  *lcport = bind_port(connection_ip_family, conn->self_ip_string, conn->self_scope_id, &control_socket);
-  *ltport = bind_port(connection_ip_family, conn->self_ip_string, conn->self_scope_id, &timing_socket);
+  *lsport = bind_port(conn->connection_ip_family, conn->self_ip_string, conn->self_scope_id, &conn->audio_socket);
+  *lcport = bind_port(conn->connection_ip_family, conn->self_ip_string, conn->self_scope_id, &conn->control_socket);
+  *ltport = bind_port(conn->connection_ip_family, conn->self_ip_string, conn->self_scope_id, &conn->timing_socket);
 
   debug(2, "listening for audio, control and timing on ports %d, %d, %d.", *lsport, *lcport,
         *ltport);
 
-  reference_timestamp = 0;
+  conn->reference_timestamp = 0;
   // pthread_create(&rtp_audio_thread, NULL, &rtp_audio_receiver, NULL);
   // pthread_create(&rtp_control_thread, NULL, &rtp_control_receiver, NULL);
   // pthread_create(&rtp_timing_thread, NULL, &rtp_timing_receiver, NULL);
@@ -738,16 +738,16 @@ void get_reference_timestamp_stuff(int64_t *timestamp, uint64_t *timestamp_time,
                                    uint64_t *remote_timestamp_time, rtsp_conn_info *conn) {
   // types okay
   pthread_mutex_lock(&reference_time_mutex);
-  *timestamp = reference_timestamp;
-  *timestamp_time = reference_timestamp_time;
-  *remote_timestamp_time = remote_reference_timestamp_time;
+  *timestamp = conn->reference_timestamp;
+  *timestamp_time = conn->reference_timestamp_time;
+  *remote_timestamp_time = conn->remote_reference_timestamp_time;
   pthread_mutex_unlock(&reference_time_mutex);
 }
 
 void clear_reference_timestamp(rtsp_conn_info *conn) {
   pthread_mutex_lock(&reference_time_mutex);
-  reference_timestamp = 0;
-  reference_timestamp_time = 0;
+  conn->reference_timestamp = 0;
+  conn->reference_timestamp_time = 0;
   pthread_mutex_unlock(&reference_time_mutex);
 }
 
@@ -783,11 +783,11 @@ void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
     *(unsigned short *)(req + 6) = htons(count); // count
     socklen_t msgsize = sizeof(struct sockaddr_in);
 #ifdef AF_INET6
-    if (rtp_client_control_socket.SAFAMILY == AF_INET6) {
+    if (conn->rtp_client_control_socket.SAFAMILY == AF_INET6) {
       msgsize = sizeof(struct sockaddr_in6);
     }
 #endif
-    if (sendto(audio_socket, req, sizeof(req), 0, (struct sockaddr *)&rtp_client_control_socket,
+    if (sendto(conn->audio_socket, req, sizeof(req), 0, (struct sockaddr *)&conn->rtp_client_control_socket,
                msgsize) == -1) {
       perror("Error sendto-ing to audio socket");
     }
@@ -801,7 +801,7 @@ void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
 
 void rtp_request_client_pause(rtsp_conn_info *conn) {
   if (conn->rtp_running) {
-    if (client_active_remote == 0) {
+    if (conn->client_active_remote == 0) {
       debug(1, "Can't request a client pause: no valid active remote.");
     } else {
       // debug(1,"Send a client pause request to %s:3689 with active remote
@@ -838,7 +838,7 @@ void rtp_request_client_pause(rtsp_conn_info *conn) {
 
       sprintf(message,
               "GET /ctrl-int/1/pause HTTP/1.1\r\nHost: %s:3689\r\nActive-Remote: %u\r\n\r\n",
-              conn->client_ip_string, client_active_remote);
+              conn->client_ip_string, conn->client_active_remote);
       // debug(1,"Sending this message: \"%s\".",message);
 
       // Send some data
