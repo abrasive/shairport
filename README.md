@@ -44,7 +44,7 @@ Shairport Sync runs well on the Raspberry Pi on USB and I2S cards. It can drive 
 
 At the time of writing, OpenWrt trunk does not support USB audio well on the Raspberry Pi.
 
-Shairport Sync runs on Ubuntu, OpenWrt, Debian, Arch Linux and Fedora inside VMWare Fusion on a Mac, but synchronisation in inaccurate — possibly because the soundcard is being emulated.
+Shairport Sync runs on Ubuntu, OpenWrt, Debian, Arch Linux and Fedora inside VMWare Fusion on a Mac, but synchronisation in inaccurate — possibly because the sound card is being emulated.
 
 Shairport Sync will output to `alsa` cards, to standard output and to pipes using appropriate backends. You can try compiling additional backends in as you wish, but it definitely will not work properly with them. Maybe someday...
 
@@ -160,7 +160,7 @@ Enter:
 to build the application.
 
 **Install into to a `systemd` system**
-To complete the installation, you need to define a `shairport-sync` group and user. This is a security measure – the user and group are relatively unprivileged, and the user does not have login priviliges. The user must be a member of the `audio` group to be able to access the audio hardware. The following commands define the group and user correctly if they do not already exist (note the use of `sudo` – omit this if you already have superuser privileges:
+To complete the installation, you need to define a `shairport-sync` group and user. This is a security measure – the user and group are relatively unprivileged, and the user does not have login privileges. The user must be a member of the `audio` group to be able to access the audio hardware. The following commands define the group and user correctly if they do not already exist (note the use of `sudo` – omit this if you already have superuser privileges:
 
 ```
 $getent group shairport-sync &>/dev/null || sudo groupadd -r shairport-sync >/dev/null
@@ -242,7 +242,7 @@ Shairport Sync can run programs just before it starts to play an audio stream an
 
 Please note that the full path to the programs must be specified, and script files will not be executed unless they are marked as executable and have the standard `#!/bin/...` first line. (This behaviour may be different from other Shairports.)
 
-Note: Shairport Sync can take configuration settings from command line options. This is mainly for backward compatability, but sometimes still useful. For normal use, it is strongly recommended that you use the configuration file method.
+Note: Shairport Sync can take configuration settings from command line options. This is mainly for backward compatibility, but sometimes still useful. For normal use, it is strongly recommended that you use the configuration file method.
 
 **Raspberry Pi**
 The Raspberry Pi has a built-in audio DAC that is connected to the device's headphone jack. This provides a low-quality output that is nevertheless useful for testing purposes and may be adequate for [very] casual listening. It is not HiFi – it is quite noisy and can't play anything above about 15kHz. A further problem is that it declares itself to have a very large mixer volume control range – all the way from -102.38dB up to +4dB, a range of 106.38 dB. In reality, only the top 30dB of it is in any way usable. To help get the most from the DAC, consider using the `volume_range_db` setting in the `general` group to instruct Shairport Sync to use the top of the DAC mixer's declared range. For example, if you set the `volume_range_db` figure to 30, the top 30 dB of the range will the used. With this setting on the Raspberry Pi, maximum volume will be +4dB and minimum volume will be -26dB, below which muting will occur.
@@ -333,7 +333,7 @@ alsa = {
 };
 ```
 
-For an NSLU2, which has no internal soundcard, there appears to be a bug in ALSA — you can not specify a device other than "default". Thus:
+For an NSLU2, which has no internal sound card, there appears to be a bug in ALSA — you can not specify a device other than "default". Thus:
 
 On an NSLU2, to drive a first generation Griffin iMic:
 ```
