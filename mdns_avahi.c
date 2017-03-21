@@ -179,7 +179,7 @@ static void egroup_callback(AvahiEntryGroup *g, AvahiEntryGroupState state,
     break;
 
   case AVAHI_ENTRY_GROUP_UNCOMMITED:
-    debug(2, "avahi: service '%s' group is not yet commited.", name);
+    debug(2, "avahi: service '%s' group is not yet committed.", name);
     break;
 
   case AVAHI_ENTRY_GROUP_REGISTERING:

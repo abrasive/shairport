@@ -41,7 +41,7 @@ Allow network discovery. This setting creates a private type network and enables
 
 **Problem**
 
-You have installed Shairport Sync successfully, the deamon is running, you can see it from your remote terminal but you are unable to play a song.
+You have installed Shairport Sync successfully, the daemon is running, you can see it from your remote terminal but you are unable to play a song.
 
 **Before you change anything to your configuration**
 
@@ -67,7 +67,7 @@ sudo ufw allow from 192.168.1.1/16 to any port 6000:6005 proto udp
 sudo ufw allow from 192.168.1.1/16 to any port 35000:65535 proto udp
 ```
 
-You may have to change the IP adresses range depending on your own local network settings.
+You may have to change the IP addresses range depending on your own local network settings.
 
 You can check UFW config by typing `sudo ufw status` in shell. Please make sure that UFW is active, especially if you have deactivated it previously for testing purpose.
 
@@ -147,6 +147,6 @@ This sets the default alsa audio device to be the USB DAC via a dmixer plugin (w
 
 This will then be used by default by Shairport-Sync and any other applications using alsa. 
 
-Note that some distributions (such as Volumio 2) don't use an asound.conf file by default, they instead specificy the hardware details directly in '/etc/mpd.conf' files so some more in-depth modification is needed to override this.
+Note that some distributions (such as Volumio 2) don't use an asound.conf file by default, they instead specify the hardware details directly in '/etc/mpd.conf' files so some more in-depth modification is needed to override this.
 
 (Note: not tested by Mike B.)

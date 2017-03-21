@@ -97,7 +97,7 @@ typedef struct {
   int allow_session_interruption;
   int timeout; // while in play mode, exit if no packets of audio come in for more than this number
                // of seconds . Zero means never exit.
-  int dont_check_timeout; // this is used to maintain backward compatability with the old -t option
+  int dont_check_timeout; // this is used to maintain backward compatibility with the old -t option
                           // behaviour; only set by -t 0, cleared by everything else
   char *output_name;
   audio_output *output;

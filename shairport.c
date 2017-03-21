@@ -200,7 +200,7 @@ void usage(char *progname) {
          "/etc/shairport-sync.conf.\n");
 
   printf("\n");
-  printf("The following general options are for backward compatability. These and all new options "
+  printf("The following general options are for backward compatibility. These and all new options "
          "have settings in the configuration file, by default /etc/shairport-sync.conf:\n");
   printf("    -v, --verbose           -v print debug information; -vv more; -vvv lots.\n");
   printf("    -p, --port=PORT         set RTSP listening port.\n");
