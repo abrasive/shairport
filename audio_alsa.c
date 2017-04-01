@@ -913,7 +913,7 @@ static void volume(double vol) {
         debug(1, "Can't set playback volume accurately to %f dB.", vol);
         if (snd_mixer_selem_set_playback_dB_all(alsa_mix_elem, vol, -1) != 0)
           if (snd_mixer_selem_set_playback_dB_all(alsa_mix_elem, vol, 1) != 0)
-            die("Failed to set playback dB volume");
+            debug(1,"Could not set playback dB volume on the mixer.");
       }
     }
   }
