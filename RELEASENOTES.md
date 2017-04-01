@@ -1,3 +1,8 @@
+Version 3.1s4
+====
+**Bug fix**
+* If Shairport Sync tried to change a mixer level and failed, it would terminate. Now is just logs a debug report.
+
 Version 3.1s3
 ====
 More extensive changes have been made to improve stability by making some operations reentrant. The instabilities occur sometimes when interrupting a play session by another.
