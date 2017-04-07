@@ -671,7 +671,7 @@ static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
   if (!rtsp_playing())
     debug(1, "This RTSP conversation thread doesn't think it's playing, but "
              "it's sending a response to flush anyway");
-  char *p;
+  char *p = NULL;
   uint32_t rtptime = 0;
   char *hdr = msg_get_header(req, "RTP-Info");
 
@@ -854,20 +854,8 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn, rtsp_message *r
 
     if (!strncmp(cp, "volume: ", 8)) {
       float volume = atof(cp + 8);
-      if (config.ignore_volume_control == 0) {
-        debug(2, "volume: %f\n", volume);
-        player_volume(volume,conn);
-      }
-#ifdef CONFIG_METADATA
-      else {                    // if ignore volume is on...
-        char *dv = malloc(128); // will be freed in the metadata thread
-        if (dv) {
-          memset(dv, 0, 128);
-          snprintf(dv, 127, "%.2f,%.2f,%.2f,%.2f", volume, 0.0, 0.0, 0.0);
-          send_ssnc_metadata('pvol', dv, strlen(dv), 1);
-        }
-      }
-#endif
+      debug(3, "volume: %f\n", volume);
+      player_volume(volume,conn);
     } else
 #ifdef CONFIG_METADATA
         if (!strncmp(cp, "progress: ", 10)) {
@@ -1293,7 +1281,7 @@ static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_m
     // not all items have RTP-time stuff in them, which is okay
 
     if (!strncmp(ct, "application/x-dmap-tagged", 25)) {
-      debug(2, "received metadata tags in SET_PARAMETER request.");
+      debug(3, "received metadata tags in SET_PARAMETER request.");
       if (p == NULL)
         debug(1, "Missing RTP-Time info for metadata");
       if (p)
