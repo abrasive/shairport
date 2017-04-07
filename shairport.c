@@ -250,7 +250,8 @@ void usage(char *progname) {
          "88) before trying to correct it.\n");
   printf("    --password=PASSWORD     require PASSWORD to connect. Default is not to require a "
          "password.\n");
-#ifdef CONFIG_METADATA
+  printf("    --logOutputLevel        log the output level setting -- useful for setting maximum volume.\n");
+ #ifdef CONFIG_METADATA
   printf("    --metadata-pipename=PIPE send metadata to PIPE, e.g. "
          "--metadata-pipename=/tmp/shairport-sync-metadata.\n");
   printf("                            The default is /tmp/shairport-sync-metadata.\n");
@@ -280,6 +281,7 @@ int parse_options(int argc, char **argv) {
       {"daemon", 'd', POPT_ARG_NONE, &config.daemonise, 0, NULL},
       {"configfile", 'c', POPT_ARG_STRING, &config.configfile, 0, NULL},
       {"statistics", 0, POPT_ARG_NONE, &config.statistics_requested, 0, NULL},
+      {"logOutputLevel", 0, POPT_ARG_NONE, &config.logOutputLevel, 0, NULL},
       {"version", 'V', POPT_ARG_NONE, NULL, 0, NULL},
       {"port", 'p', POPT_ARG_INT, &config.port, 0, NULL},
       {"name", 'a', POPT_ARG_STRING, &raw_service_name, 0, NULL},
@@ -492,7 +494,7 @@ int parse_options(int argc, char **argv) {
 
       /* Get the optional volume_max_db setting. */
       if (config_lookup_float(config.cfg, "general.volume_max_db", &dvalue)) {
-        debug(1, "Max volume setting of %f dB", dvalue);
+        // debug(1, "Max volume setting of %f dB", dvalue);
         config.volume_max_db = dvalue;
         config.volume_max_db_set = 1;
       }
