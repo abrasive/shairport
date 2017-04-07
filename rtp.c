@@ -391,10 +391,10 @@ void *rtp_timing_receiver(void *arg) {
 
       uint64_t local_time_by_remote_clock = distant_transmit_time + return_time / 2;
 
-      unsigned int cc;
+      unsigned int cc,chosen;
       for (cc = time_ping_history - 1; cc > 0; cc--) {
         conn->time_pings[cc] = conn->time_pings[cc - 1];
-        conn->time_pings[cc].dispersion = (conn->time_pings[cc].dispersion * 133) /
+        conn->time_pings[cc].dispersion = (conn->time_pings[cc].dispersion * 110) /
                                     100; // make the dispersions 'age' by this rational factor
       }
       // these are for diagnostics only -- not used
@@ -412,9 +412,11 @@ void *rtp_timing_receiver(void *arg) {
       // now pick the timestamp with the lowest dispersion
       uint64_t l2rtd = conn->time_pings[0].local_to_remote_difference;
       uint64_t tld = conn->time_pings[0].dispersion;
+      chosen = 0;
       for (cc = 1; cc < conn->time_ping_count; cc++)
         if (conn->time_pings[cc].dispersion < tld) {
           l2rtd = conn->time_pings[cc].local_to_remote_difference;
+          chosen = cc;
           tld = conn->time_pings[cc].dispersion;
           local_time_chosen = conn->time_pings[cc].local_time;
           remote_time_chosen = conn->time_pings[cc].remote_time;
@@ -444,6 +446,7 @@ void *rtp_timing_receiver(void *arg) {
       }
 
       int64_t clock_drift, clock_drift_in_usec;
+      double clock_drift_ppm = 0.0;
       if (first_local_time == 0) {
         first_local_time = local_time_chosen;
         first_remote_time = remote_time_chosen;
@@ -456,28 +459,30 @@ void *rtp_timing_receiver(void *arg) {
           clock_drift = remote_time_change - local_time_change;
         else
           clock_drift = -(local_time_change - remote_time_change);
-      }
-      if (clock_drift >= 0)
-        clock_drift_in_usec = (clock_drift * 1000000) >> 32;
-      else
-        clock_drift_in_usec = -(((-clock_drift) * 1000000) >> 32);
+        if (clock_drift >= 0)
+          clock_drift_in_usec = (clock_drift * 1000000) >> 32;
+        else
+          clock_drift_in_usec = -(((-clock_drift) * 1000000) >> 32);
+        clock_drift_ppm = (1.0*clock_drift_in_usec)/(local_time_change>>32);
+     }
+      
 
       int64_t source_drift_usec;
-      if (play_segment_reference_frame != 0) {
+      if (conn->play_segment_reference_frame != 0) {
         int64_t reference_timestamp;
         uint64_t reference_timestamp_time, remote_reference_timestamp_time;
         get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time,
                                       &remote_reference_timestamp_time, conn);
         uint64_t frame_difference = 0;
-        if (reference_timestamp >= play_segment_reference_frame)
-          frame_difference = (uint64_t)reference_timestamp - (uint64_t)play_segment_reference_frame;
+        if (reference_timestamp >= conn->play_segment_reference_frame)
+          frame_difference = (uint64_t)reference_timestamp - (uint64_t)conn->play_segment_reference_frame;
         else // rollover
           frame_difference =
-              (uint64_t)reference_timestamp + 0x100000000 - (uint64_t)play_segment_reference_frame;
+              (uint64_t)reference_timestamp + 0x100000000 - (uint64_t)conn->play_segment_reference_frame;
         uint64_t frame_time_difference_calculated = (((uint64_t)frame_difference << 32) / 44100);
         uint64_t frame_time_difference_actual =
             remote_reference_timestamp_time -
-            play_segment_reference_frame_remote_time; // this is all done by reference to the
+            conn->play_segment_reference_frame_remote_time; // this is all done by reference to the
                                                       // sources' system clock
         // debug(1,"%llu frames since play started, %llu usec calculated, %llu usec
         // actual",frame_difference, (frame_time_difference_calculated*1000000)>>32,
@@ -500,18 +505,14 @@ void *rtp_timing_receiver(void *arg) {
       //       config.output->delay(&current_delay);
       //}
       //  Useful for troubleshooting:
-      //    clock_drift between source and local clock -- +ve means source is faster
-      //    session_corrections -- the amount of correction done, in microseconds. +ve means frames
-      //    added
-      //    current_delay = delay in DAC buffer in frames
-      //    source_drift_usec = how much faster (+ve) or slower the source DAC is running relative
-      //    to the source clock
-      //    buffer_occupancy = the number of buffers occupied. Crude, but should show no long term
-      //    trend if source and device are in sync.
-      //    return_time = the time from soliciting a timing packet to getting it back. It should be
-      //    short ( < 5 ms) and pretty consistent.
-      // debug(1, "%lld\t%lld\t%ld\t%lld\t%u\t%llu",
-      // clock_drift_in_usec,(session_corrections*1000000)/44100,current_delay,source_drift_usec,buffer_occupancy,(return_time*1000000)>>32);
+      //debug(1, "clock_drift_ppm %f\tchosen %5d\tsource_drift_usec %10.1lld\treturn_time_in_usec %10.1llu",
+      //clock_drift_ppm,
+      //chosen,
+      //(session_corrections*1000000)/44100,
+      //current_delay,
+      //source_drift_usec,
+      //buffer_occupancy,
+      //(return_time*1000000)>>32);
 
     } else {
       debug(1, "Timing port -- Unknown RTP packet of type 0x%02X length %d.", packet[1], nread);
