@@ -5,7 +5,7 @@ Generally, more extensive changes have been to make all relevant operations reen
 Your stability reports would be welcome.
 
 **New Feature**
-* A new command line option **--logOutputLevel** that logs the output level whenever the volume is changed. It's meant to be ueful if you have to to determine the right level to set in volume_max_db. 
+* A new command line option **--logOutputLevel** that logs the output level whenever the volume is changed. It's meant to be useful if you have to to determine the right level to set in volume_max_db. 
 
 **Bug fix**
 * Sometimes when you stop a play and quickly start another, a short piece of audio from the end of the old session will play before the new session starts. Fixed by improving the flush command and by ignoring the first few frames after a play starts.
