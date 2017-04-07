@@ -10,7 +10,7 @@ Your stability reports would be welcome.
 **Bug fix**
 * Sometimes when you stop a play and quickly start another, a short piece of audio from the end of the old session will play before the new session starts. Fixed by improving the flush command and by ignoring the first few frames after a play starts.
 
-**Enchancements**
+**Enhancements**
 * Better reporting when a pipe can't be written to or can't be opened.
 
 Version 3.1s4
