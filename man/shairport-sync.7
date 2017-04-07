@@ -2,7 +2,7 @@
 .SH NAME
 shairport-sync \- Synchronised Audio Player for iTunes / AirPlay
 .SH SYNOPSIS
-\fBshairport-sync [-dvw]\fB [-a \fB\fIname\fB]\fB [-A \fB\fIlatency\fB]\fB [-B \fB\fIcommand\fB]\fB [-c \fB\fIconfigurationfile\fB]\fB [-E \fB\fIcommand\fB]\fB [--get-cover-art]\fB [-L \fB\fIlatency\fB]\fB [-m \fB\fIbackend\fB]\fB [--meta-dir=\fB\fIdirectory\fB]\fB [-o \fB\fIbackend\fB]\fB [--password=\fB\fIsecret\fB]\fB [-r \fB\fIthreshold\fB]\fB [--statistics]\fB [-S \fB\fImode\fB]\fB [-t \fB\fItimeout\fB]\fB [--tolerance=\fB\fIframes\fB]\fB [-- \fB\fIaudio_backend_options\fB]\fB
+\fBshairport-sync [-dvw]\fB [-a \fB\fIname\fB]\fB [-A \fB\fIlatency\fB]\fB [-B \fB\fIcommand\fB]\fB [-c \fB\fIconfigurationfile\fB]\fB [-E \fB\fIcommand\fB]\fB [--get-cover-art]\fB [--logOutputLevel=]\fB [-L \fB\fIlatency\fB]\fB [-m \fB\fIbackend\fB]\fB [--meta-dir=\fB\fIdirectory\fB]\fB [-o \fB\fIbackend\fB]\fB [--password=\fB\fIsecret\fB]\fB [-r \fB\fIthreshold\fB]\fB [--statistics]\fB [-S \fB\fImode\fB]\fB [-t \fB\fItimeout\fB]\fB [--tolerance=\fB\fIframes\fB]\fB [-- \fB\fIaudio_backend_options\fB]\fB
 
 shairport-sync -D\fB
 
@@ -300,6 +300,9 @@ Print brief help message and exit.
 .TP
 \fB-k | --kill\f1
 Kill the shairport-sync daemon and exit. (Requires that the daemon has written its PID to an agreed file -- see the \fB-d\f1 option). 
+.TP
+\fB--logOutputLevel\f1
+Use this to log the volume level when the volume is changed. It may be useful if you are trying to determine a suitable value for the maximum volume level. Not available as a configuration file setting. 
 .TP
 \fB-L | --latency=\f1\fIlatency\f1
 Use this to set the \fIdefault latency\f1, in frames, for audio coming from an unidentified source or from an iTunes Version 9 or earlier source. The standard value for the \fIdefault latency\f1 is 88,200 frames, where there are 44,100 frames to the second. 

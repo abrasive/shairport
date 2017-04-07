@@ -42,6 +42,7 @@
       <opt>[-c </opt><arg>configurationfile</arg><opt>]</opt>
       <opt>[-E </opt><arg>command</arg><opt>]</opt>
       <opt>[--get-cover-art]</opt>
+      <opt>[--logOutputLevel=]</opt>
       <opt>[-L </opt><arg>latency</arg><opt>]</opt>
       <opt>[-m </opt><arg>backend</arg><opt>]</opt>
       <opt>[--meta-dir=</opt><arg>directory</arg><opt>]</opt>
@@ -204,7 +205,7 @@
     
     <option>
     <p><opt>volume_max_db=</opt><arg>dBvalue</arg><opt>;</opt></p>
-    <optdesc><p>Specify the maximum output level to be used with the hardware mixer, if used. If no hardware mixed is used, this setting specifies the maximum setting permissible in the software mixer, which has an attenuation of from 0.0 dB down to -96.3 dB.</p>
+    <optdesc><p>Specify the maximum output level to be used with the hardware mixer, if used. If no hardware mixed is used, this setting speciies the maximum setting permissible in the software mixer, which has an attenuation of from 0.0 dB down to -96.3 dB.</p>
     </optdesc>
     </option>
     
@@ -238,7 +239,7 @@
     
     <option>
     <p><opt>interface=</opt><arg>"name"</arg><opt>;</opt></p>
-    <optdesc>Use this advanced setting if you want to confine Shairport Sync to the named interface. Leave it commented out to get the default behaviour.</optdesc>
+    <optdesc>Use this advanced setting if you want to confine Shairport Sync to the named interface. Leave it commented out to get the default bahaviour.</optdesc>
     </option>
     
     <option>
@@ -294,7 +295,7 @@
 
     <option>
     <p><opt>output_format=</opt><arg>"format"</arg><opt>;</opt></p>
-    <optdesc>Use this setting to specify the format that should be used to send data to the ALSA device. Allowable values are "U8", "S8", "S16", "S24", "S24_3LE", "S24_3BE" or "S32". The device must have the capability to accept the format you specify. "S" means signed; "U" means unsigned; BE means big-endian and LE means little-endian. Except where stated (using *LE or *BE), endianness matches that of the processor. The default is "S16". If you are using a hardware mixer, the best setting is S16, as audio will pass through Shairport Sync unmodified except for interpolation. If you are using the software mixer, use 32- or 24-bit, if your device is capable of it, to get the lowest possible levels of dither.
+    <optdesc>Use this setting to specify the format that should be used to send data to the ALSA device. Allowable values are "U8", "S8", "S16", "S24", "S24_3LE", "S24_3BE" or "S32". The device must have the capability to accept the format you specify. "S" means signed; "U" means unsigned; BE means big-endian and LE means little-endian. Except where stated (using *LE or *BE), endianness matches that of the processor. The default is "S16". If you are using a hardware mixer, the best setting is S16, as audio will pass through Shairport Sync unmodifed except for interpolation. If you are using the software mixer, use 32- or 24-bit, if your device is capable of it, to get the lowest possible levels of dither.
     </optdesc>
     </option>
 
@@ -595,6 +596,15 @@
 		Kill the shairport-sync daemon and exit. (Requires that the daemon has
 		written its PID to an agreed file -- see the <opt>-d</opt> option).
 		</p></optdesc>
+	  </option>
+
+	  <option>
+		<p><opt>--logOutputLevel</opt></p>
+		<optdesc><p>
+		Use this to log the volume level when the volume is changed. It may be useful if you are trying to
+		determine a suitable value for the maximum volume level. Not available as a configuration file setting.
+    </p>
+    </optdesc>
 	  </option>
 
 	  <option>
