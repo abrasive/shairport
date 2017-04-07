@@ -520,7 +520,7 @@ int open_alsa_device(void) {
   }
   ret = snd_pcm_hw_params_set_format(alsa_handle, alsa_params, sf);
   if (ret < 0) {
-    die("audio_alsa: Sample format %d not available for device \"%s\": %s", sf, alsa_out_dev,
+    die("audio_alsa: Sample format %d not available for device \"%s\": %s", sample_format, alsa_out_dev,
         snd_strerror(ret));
   }
 
@@ -805,8 +805,17 @@ static void play(short buf[], int samples) {
     if (hardware_mixer)
       open_mixer();
     pthread_mutex_unlock(&alsa_mutex);
+    // the mutex must be unlocked for the following call to proceed
     if ((hardware_mixer) && (ret == 0) && (audio_alsa.volume))
       audio_alsa.volume(set_volume);
+      
+    pthread_mutex_lock(&alsa_mutex);
+    int derr;
+    if (hardware_mixer && alsa_mix_handle) {
+      // debug(1,"unmute");
+      snd_mixer_selem_set_playback_switch_all(alsa_mix_elem, 1);
+    }
+    pthread_mutex_unlock(&alsa_mutex);
   }
   if (ret == 0) {
     pthread_mutex_lock(&alsa_mutex);
@@ -843,27 +852,48 @@ static void flush(void) {
   pthread_mutex_lock(&alsa_mutex);
   int derr;
   if (hardware_mixer && alsa_mix_handle) {
+      // debug(1,"Mute");
+    snd_mixer_selem_set_playback_switch_all(alsa_mix_elem, 0);
     snd_mixer_close(alsa_mix_handle);
     alsa_mix_handle = NULL;
   }
   if (alsa_handle) {
     // debug(1,"Dropping frames for flush...");
+    /*
     if ((derr = snd_pcm_drop(alsa_handle)))
       debug(1, "Error dropping frames: \"%s\".", snd_strerror(derr));
     // debug(1,"Dropped frames ok. State is %d.",snd_pcm_state(alsa_handle));
     if ((derr = snd_pcm_prepare(alsa_handle)))
       debug(1, "Error preparing after flush: \"%s\".", snd_strerror(derr));
     // debug(1,"Frames successfully dropped.");
+    */
+    
     /*
     if (snd_pcm_state(alsa_handle)==SND_PCM_STATE_PREPARED)
       debug(1,"Flush returns to SND_PCM_STATE_PREPARED state.");
     if (snd_pcm_state(alsa_handle)==SND_PCM_STATE_RUNNING)
       debug(1,"Flush returns to SND_PCM_STATE_RUNNING state.");
     */
+    /*
     if (!((snd_pcm_state(alsa_handle) == SND_PCM_STATE_PREPARED) ||
           (snd_pcm_state(alsa_handle) == SND_PCM_STATE_RUNNING)))
       debug(1, "Flush returning unexpected state -- %d.", snd_pcm_state(alsa_handle));
+    */
+    
+    
+    
+    // this is derived from http://www.alsa-project.org/alsa-doc/alsa-lib/_2test_2latency_8c-example.html#a45
+    
+    if ((derr=snd_pcm_nonblock(alsa_handle, 0)))
+      debug(1, "Error %d (\"%s\") unblocking output device.", derr, snd_strerror(derr));
+    if ((derr=snd_pcm_drain(alsa_handle)))
+      debug(1, "Error %d (\"%s\") draining output device.", derr, snd_strerror(derr));
+    if ((derr=snd_pcm_nonblock(alsa_handle, 1)))
+      debug(1, "Error %d (\"%s\") reblocking output device.", derr, snd_strerror(derr));
 
+    if ((derr=snd_pcm_hw_free(alsa_handle)))
+      debug(1, "Error %d (\"%s\") freeing output device hardware.", derr, snd_strerror(derr));
+    
     // flush also closes the device
     snd_pcm_close(alsa_handle);
     alsa_handle = NULL;
@@ -888,7 +918,7 @@ static void parameters(audio_parameters *info) {
 
 static void volume(double vol) {
   pthread_mutex_lock(&alsa_mutex);
-  debug(2, "Setting volume db to %f.", vol);
+  debug(3, "Setting volume db to %f.", vol);
   set_volume = vol;
   if (hardware_mixer && alsa_mix_handle) {
     if (has_softvol) {
