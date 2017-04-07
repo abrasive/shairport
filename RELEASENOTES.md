@@ -1,7 +1,22 @@
+Version 3.1s5
+====
+Generally, more extensive changes have been to make all relevant operations reentrant. 
+
+Your stability reports would be welcome.
+
+**New Feature**
+* A new command line option **--logOutputLevel** that logs the output level whenever the volume is changed. It's meant to be ueful if you have to to determine the right level to set in volume_max_db. 
+
+**Bug fix**
+* Sometimes when you stop a play and quickly start another, a short piece of audio from the end of the old session will play before the new session starts. Fixed by improving the flush command and by ignoring the first few frames after a play starts.
+
+**Enchancements**
+* Better reporting when a pipe can't be written to or can't be opened.
+
 Version 3.1s4
 ====
 **Bug fix**
-* If Shairport Sync tried to change a mixer level and failed, it would terminate. Now is just logs a debug report.
+* If Shairport Sync tried to change a mixer level and failed, it would terminate. Now it just logs a debug report.
 
 Version 3.1s3
 ====
@@ -16,7 +31,7 @@ Other minor fixes will be detailed later.
 
 Version 3.1d1
 ====
-This is a stability update. Some users have reported occasional crashes particularly when a play session ends and another begins immediately. The thread that plays a session was not reentrant, and this _may_ have been causing those stability problems. The player thread is now fully re-entrant, so those stability problems should be gone. The changes made were quite extensive, so more bugs may have been reintroduced. Your stability reports would be welcome.
+This is a stability update. Some users have reported occasional crashes particularly when a play session ends and another begins immediately. The thread that plays a session was not reentrant, and this _may_ have been causing those stability problems. The player thread is now fully re-entrant, so those stability problems should be gone. The changes made were quite extensive, so more bugs may have been reintroduced.
 
 Please note that there are still problems with SoundCloud. Soundcloud seems to have problems with AirPlay in general -- the problems are not specific to Shairport Sync.
 
