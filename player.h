@@ -23,7 +23,6 @@
 #include "alac.h"
 
 #define time_ping_history 8
-#define time_ping_fudge_factor 100000
 
 typedef struct time_ping_record {
   uint64_t local_to_remote_difference;
@@ -105,42 +104,58 @@ typedef struct {
   AES_KEY aes;
 #endif
 
-// RTP stuff
-// only one RTP session can be active at a time.
-int rtp_running;
+ int amountStuffed;
 
-char client_ip_string[INET6_ADDRSTRLEN]; // the ip string pointing to the client
-char self_ip_string[INET6_ADDRSTRLEN];   // the ip string being used by this program -- it
-                                         // could be one of many, so we need to know it
-uint32_t self_scope_id;        // if it's an ipv6 connection, this will be its scope
-short connection_ip_family;    // AF_INET / AF_INET6
-uint32_t client_active_remote; // used when you want to control the client...
+  int32_t framesProcessedInThisEpoch;
+  int32_t framesGeneratedInThisEpoch;
+  int32_t correctionsRequestedInThisEpoch;
+  int64_t syncErrorsInThisEpoch;
 
-SOCKADDR rtp_client_control_socket; // a socket pointing to the control port of the client
-SOCKADDR rtp_client_timing_socket;  // a socket pointing to the timing port of the client
-int audio_socket;                   // our local [server] audio socket
-int control_socket;                 // our local [server] control socket
-int timing_socket;                  // local timing socket
+  // RTP stuff
+  // only one RTP session can be active at a time.
+  int rtp_running;
 
-int64_t reference_timestamp;
-uint64_t reference_timestamp_time;
-uint64_t remote_reference_timestamp_time;
+  char client_ip_string[INET6_ADDRSTRLEN]; // the ip string pointing to the client
+  char self_ip_string[INET6_ADDRSTRLEN];   // the ip string being used by this program -- it
+                                           // could be one of many, so we need to know it
+  uint32_t self_scope_id;        // if it's an ipv6 connection, this will be its scope
+  short connection_ip_family;    // AF_INET / AF_INET6
+  uint32_t client_active_remote; // used when you want to control the client...
 
-// debug variables
-int request_sent;
+  SOCKADDR rtp_client_control_socket; // a socket pointing to the control port of the client
+  SOCKADDR rtp_client_timing_socket;  // a socket pointing to the timing port of the client
+  int audio_socket;                   // our local [server] audio socket
+  int control_socket;                 // our local [server] control socket
+  int timing_socket;                  // local timing socket
 
-uint8_t time_ping_count;
-struct time_ping_record time_pings[time_ping_history];
+  int64_t reference_timestamp;
+  uint64_t reference_timestamp_time;
+  uint64_t remote_reference_timestamp_time;
 
-uint64_t departure_time; // dangerous -- this assumes that there will never be two timing
-                         // request in flight at the same time
+  // debug variables
+  int request_sent;
 
-pthread_mutex_t reference_time_mutex;
+  uint8_t time_ping_count;
+  struct time_ping_record time_pings[time_ping_history];
 
-uint64_t local_to_remote_time_difference; // used to switch between local and remote clocks
+  uint64_t departure_time; // dangerous -- this assumes that there will never be two timing
+                           // request in flight at the same time
 
-int timing_sender_stop; // for asking the timing-sending thread to stop
+  pthread_mutex_t reference_time_mutex;
 
+  uint64_t local_to_remote_time_difference; // used to switch between local and remote clocks
+
+  int timing_sender_stop; // for asking the timing-sending thread to stop
+  int last_stuff_request;
+    
+  int64_t play_segment_reference_frame;
+  uint64_t play_segment_reference_frame_remote_time;
+  
+  int32_t buffer_occupancy; // allow it to be negative because seq_diff may be negative
+  int64_t session_corrections;
+  
+  int play_number_after_flush;
+  
 } rtsp_conn_info;
 
 int player_play(pthread_t *thread, rtsp_conn_info* conn);
@@ -156,8 +171,5 @@ int64_t monotonic_timestamp(uint32_t timestamp,rtsp_conn_info* conn); // add an 
 // which is about 2*10^8 * 1,000 seconds at 384,000 frames per second -- about 2 trillion seconds.
 // assumes, without checking, that successive timestamps in a series always span an interval of less
 // than one minute.
-
-uint64_t monotonic_seqno(uint16_t seq_no); // add an epoch to the seq_no. Uses the accompanying
-                                           // timstamp to detemine the correct epoch
 
 #endif //_PLAYER_H
