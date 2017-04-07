@@ -40,7 +40,16 @@ static int fd = -1;
 
 static void start(int sample_rate, int sample_format) { fd = STDOUT_FILENO; }
 
-static void play(short buf[], int samples) { int ignore = write(fd, buf, samples * 4); }
+static void play(short buf[], int samples) {
+  char errorstring[1024];
+  int warned = 0;
+  int rc = write(fd, buf, samples * 4); 
+  if ((rc<0) && (warned==0)) {
+    strerror_r(errno,(char*)errorstring,1024);
+    warn("Error %d writing to stdout: \"%s\".",errno,errorstring);
+    warned = 1;
+  }
+}
 
 static void stop(void) {
   // don't close stdout
