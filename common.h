@@ -39,9 +39,9 @@ enum endian_type {
 } endian_type;
 
 enum stuffing_type {
-  ST_basic = 0,
-  ST_soxr,
-} type;
+  ST_basic = 0, // straight deletion or insertion of a frame in a 352-frame packet
+  ST_soxr, // use libsoxr to make a 352 frame packet one frame longer or shorter
+ } type;
 
 enum playback_mode_type {
   ST_stereo = 0,
@@ -56,7 +56,7 @@ enum decoders_supported_type {
   decoder_apple_alac,
 } decoders_supported_type;
 
-// the following enum must _exactly match the snd_pcm_format_t definition in the alsa pcm.h file.
+// the following enum is for the formats recognised -- currently only S16LE is recognised for input, so these are output only for the present
 
 enum sps_format_t {
   SPS_FORMAT_UNKNOWN = 0,
@@ -97,7 +97,7 @@ typedef struct {
   int allow_session_interruption;
   int timeout; // while in play mode, exit if no packets of audio come in for more than this number
                // of seconds . Zero means never exit.
-  int dont_check_timeout; // this is used to maintain backward compatibility with the old -t option
+  int dont_check_timeout; // this is used to maintain backward compatability with the old -t option
                           // behaviour; only set by -t 0, cleared by everything else
   char *output_name;
   audio_output *output;
@@ -110,6 +110,7 @@ typedef struct {
   int64_t AirPlayLatency;      // supplied with --AirPlayLatency option
   int64_t ForkedDaapdLatency;  // supplied with --ForkedDaapdLatency option
   int daemonise;
+  int logOutputLevel;  // log output level
   int statistics_requested, use_negotiated_latencies;
   enum playback_mode_type playback_mode;
   char *cmd_start, *cmd_stop;
@@ -199,11 +200,6 @@ uint32_t uatoi(const char *nptr);
 
 shairport_cfg config;
 config_t config_file_stuff;
-
-int32_t buffer_occupancy; // allow it to be negative because seq_diff may be negative
-int64_t session_corrections;
-int64_t play_segment_reference_frame;
-uint64_t play_segment_reference_frame_remote_time;
 
 void command_start(void);
 void command_stop(void);
