@@ -42,21 +42,36 @@
 static int fd = -1;
 
 char *pipename = NULL;
+int warned = 0;
 
 static void start(int sample_rate, int sample_format) {
   // this will leave fd as -1 if a reader hasn't been attached
   fd = open(pipename, O_WRONLY | O_NONBLOCK);
+  if ((fd<-1) && (warned==0)) {
+    warn("Error %d opening the pipe named \"%s\".",errno,pipename);
+    warned = 1;
+  }
 }
 
 static void play(short buf[], int samples) {
   // if the file is not open, try to open it.
+  char errorstring[1024];
   if (fd == -1) {
     fd = open(pipename, O_WRONLY | O_NONBLOCK);
   }
   // if it's got a reader, write to it.
-  if (fd != -1) {
-    int ignore = non_blocking_write(fd, buf, samples * 4);
-  }
+  if (fd > 0) {
+    int rc = non_blocking_write(fd, buf, samples * 4);
+    if ((rc<0) && (warned==0)) {
+      strerror_r(errno,(char*)errorstring,1024);
+      warn("Error %d writing to the pipe named \"%s\": \"%s\".",errno,pipename,errorstring);
+      warned = 1;
+    }
+  } else if ((fd == -1) && (warned==0)) {
+    strerror_r(errno,(char*)errorstring,1024);
+    warn("Error %d opening the pipe named \"%s\": \"%s\".",errno,pipename,errorstring);
+    warned = 1;
+   }
 }
 
 static void stop(void) {
