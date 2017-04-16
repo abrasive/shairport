@@ -229,12 +229,14 @@ static void onmove_cb(void *arg, int delta) {
 
 static int delay(long *_delay) {
   pthread_mutex_lock(&sndio_mutex);
-  if (played > (written / framesize)) {
+  // debug(1,"Frames written %u, played %u.",written/framesize,played);
+  
+  //if (played > (written / framesize)) {
     /* _delay is in frames */
     *_delay = (written / framesize) - played;
-  } else {
-    *_delay = 0;
-  }
+ // } else {
+ //   *_delay = 0;
+ // }
   pthread_mutex_unlock(&sndio_mutex);
   return 0;
 }

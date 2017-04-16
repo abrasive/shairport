@@ -1685,7 +1685,7 @@ static void *player_thread_func(void *arg) {
             current_delay = l_delay;
             if (resp == 0) { // no error
               if (current_delay < 0) {
-                debug(1, "Underrun of %d frames reported, but ignored.", current_delay);
+                debug(1, "Underrun of %lld frames reported, but ignored.", current_delay);
                 current_delay =
                     0; // could get a negative value if there was underrun, but ignore it.
               }
@@ -1728,7 +1728,7 @@ static void *player_thread_func(void *arg) {
 
             // only allow stuffing if there is enough time to do it -- check DAC buffer...
             if (current_delay < DAC_BUFFER_QUEUE_MINIMUM_LENGTH) {
-              // debug(1,"DAC buffer too short to allow stuffing.");
+              // debug(2,"DAC buffer too short(at %lld frames) to allow stuffing.",current_delay);
               amount_to_stuff = 0;
             }
 
