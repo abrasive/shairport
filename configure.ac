@@ -206,8 +206,8 @@ AC_ARG_WITH(alsa, [  --with-alsa = choose ALSA API support (GNU/Linux only)],
 AM_CONDITIONAL([USE_ALSA], [test "x$HAS_ALSA" = "x1"])
 
 # Look for SNDIO flag
-AC_ARG_WITH(sndio, [  --with-sndio = choose SNDIO API support (FreeBSD) -- probably broken], [
-  AC_MSG_RESULT(>>Including a SNDIO back end -- N.B. this is probably broken!)
+AC_ARG_WITH(sndio, [  --with-sndio = choose SNDIO API support], [
+  AC_MSG_RESULT(>>Including a SNDIO back end)
   HAS_SNDIO=1
   AC_DEFINE([CONFIG_SNDIO], 1, [Needed by the compiler.])
   AC_CHECK_LIB([sndio], [sio_open], , AC_MSG_ERROR(SNDIO support requires the sndio library!))], )
