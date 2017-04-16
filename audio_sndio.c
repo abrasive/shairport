@@ -85,6 +85,7 @@ static int init(int argc, char **argv) {
   struct sio_par par;
   int i, found, opt, round, rate, bufsz;
   const char *devname, *tmp;
+  
 
   sio_initpar(&par);
   par.rate = 44100;
@@ -93,45 +94,47 @@ static int init(int argc, char **argv) {
   par.bps = SIO_BPS(par.bits);
   par.le = 1;
   par.sig = 1;
-
-  if (!config_lookup_string(config.cfg, "sndio.device", &devname))
-    devname = SIO_DEVANY;
-  if (config_lookup_int(config.cfg, "sndio.rate", &rate)) {
-    if (rate % 44100 == 0 && rate >= 44100 && rate <= 352800) {
-      par.rate = rate;
-    } else {
-      die("sndio: output rate must be a multiple of 44100 and 44100 <= rate <= "
-          "352800");
-    }
-  }
-  if (config_lookup_int(config.cfg, "sndio.bufsz", &bufsz)) {
-    if (bufsz > 0) {
-      par.appbufsz = bufsz;
-    } else {
-      die("sndio: bufsz must be > 0");
-    }
-  }
-  if (config_lookup_int(config.cfg, "sndio.round", &round)) {
-    if (round > 0) {
-      par.round = round;
-    } else {
-      die("sndio: round must be > 0");
-    }
-  }
-  if (config_lookup_string(config.cfg, "sndio.format", &tmp)) {
-    for (i = 0, found = 0; i < sizeof(formats) / sizeof(formats[0]); i++) {
-      if (strcmp(formats[i].name, tmp) == 0) {
-        config.output_format = formats[i].fmt;
-        found = 1;
-        break;
+  devname = SIO_DEVANY;
+  
+  if (config.cfg != NULL) {
+    if (!config_lookup_string(config.cfg, "sndio.device", &devname))
+      devname = SIO_DEVANY;
+    if (config_lookup_int(config.cfg, "sndio.rate", &rate)) {
+      if (rate % 44100 == 0 && rate >= 44100 && rate <= 352800) {
+        par.rate = rate;
+      } else {
+        die("sndio: output rate must be a multiple of 44100 and 44100 <= rate <= "
+            "352800");
       }
     }
-    if (!found)
-      die("Invalid output format \"%s\". Should be one of: s8, u8, s16, s24, "
-          "s24le3, s24be3, s32",
-          tmp);
+    if (config_lookup_int(config.cfg, "sndio.bufsz", &bufsz)) {
+      if (bufsz > 0) {
+        par.appbufsz = bufsz;
+      } else {
+        die("sndio: bufsz must be > 0");
+      }
+    }
+    if (config_lookup_int(config.cfg, "sndio.round", &round)) {
+      if (round > 0) {
+        par.round = round;
+      } else {
+        die("sndio: round must be > 0");
+      }
+    }
+    if (config_lookup_string(config.cfg, "sndio.format", &tmp)) {
+      for (i = 0, found = 0; i < sizeof(formats) / sizeof(formats[0]); i++) {
+        if (strcmp(formats[i].name, tmp) == 0) {
+          config.output_format = formats[i].fmt;
+          found = 1;
+          break;
+        }
+      }
+      if (!found)
+        die("Invalid output format \"%s\". Should be one of: s8, u8, s16, s24, "
+            "s24le3, s24be3, s32",
+            tmp);
+    }
   }
-
   optind = 1; // optind=0 is equivalent to optind=1 plus special behaviour
   argv--;     // so we shift the arguments to satisfy getopt()
   argc++;
@@ -147,7 +150,6 @@ static int init(int argc, char **argv) {
   }
   if (optind < argc)
     die("Invalid audio argument: %s", argv[optind]);
-
   pthread_mutex_lock(&sndio_mutex);
   debug(1, "Output device name is \"%s\".", devname);
   hdl = sio_open(devname, SIO_PLAY, 0);
@@ -187,7 +189,6 @@ static int init(int argc, char **argv) {
   sio_onmove(hdl, onmove_cb, NULL);
 
   pthread_mutex_unlock(&sndio_mutex);
-
   return 0;
 }
 
