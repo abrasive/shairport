@@ -562,13 +562,13 @@ static int bind_port(int ip_family, const char *self_ip_address, uint32_t scope_
 #endif
 
   } while ((ret < 0) && (errno == EADDRINUSE) && (desired_port != 0) &&
-           (desired_port++ < config.udp_port_base + config.udp_port_range));
+           (++desired_port < config.udp_port_base + config.udp_port_range));
 
   // debug(1,"UDP port chosen: %d.",desired_port);
 
   if (ret < 0) {
     close(local_socket);
-    die("error: could not bind a UDP port!");
+    die("error: could not bind a UDP port! Check the udp_port_range is large enough (>= 10) or check for restrictive firewall settings or a bad router!");
   }
 
   int sport;
