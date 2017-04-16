@@ -2,9 +2,12 @@ Version 3.1d6
 ====
 **New Feature**
 
-An extensively enhanced and updated backend for SNDIO thanks to the work of [t6](https://github.com/t6).
+An extensively enhanced and updated backend for `sndio` thanks to the work of [t6](https://github.com/t6).
 
-SNDIO is *"the software layer of the OpenBSD operating system that manages the use of sound cards and MIDI ports."* Additionally, SNDIO *"... pays special attention to synchronization mechanisms and reliability required by music applications"*, hopefully opening up the possibility of synchronisation native to \*BSD.
+`sndio` is *"the software layer of the OpenBSD operating system that manages the use of sound cards and MIDI ports."* Additionally, `sndio` *"... pays special attention to synchronization mechanisms and reliability required by music applications"*, hopefully opening up the possibility of synchronisation native to \*BSD.
+
+**Bug fix**
+* Fixed an off-by-one bug which allowed one more port than specified in the `udp_port_range` setting. Thanks to [kingosticks](https://github.com/kingosticks) for the alert.
 
 **Enhancements**
 * Fixed some warnings detected by `clang` on FreeBSD. One was potentially a significant error.
