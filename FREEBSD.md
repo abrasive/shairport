@@ -72,12 +72,12 @@ To continue, you should create a configuration file at `/usr/local/etc/shairport
 Using the `sndio` backend
 ----
 
-The `sndio` back end does synchronisation, using information from the `sndio` subsystem. The format of the information is not the same as that coming from the ALSA subsystem, so Shairport Sync cannot yet use it properly. As a workaround, please use the following settings:
+The `sndio` back end does synchronisation, thanks to the work of [t6](https://github.com/t6), using information from the `sndio` subsystem. The format of the information is not the same as that coming from the ALSA subsystem, so Shairport Sync cannot yet use it properly. As a workaround, please use the following settings:
 
-In the `general` stanza, make the following settings:
+In the `general` stanza of the configuration file at `/usr/local/etc/shairport-sync.conf`, make the following settings:
 ```
 drift_tolerance_in_seconds = 0.005; // allow some more tolerance before attempting to correct
-resync_threshold_in_seconds = 0.0; // ignore a large error in the initial estimation of synchrnoisation time...
+resync_threshold_in_seconds = 0.0; // ignore a large error in the initial estimation of synchronisation time...
 ```
 Note that there are workarounds -- it is hoped that they won't be necessary for too long.
 
