@@ -56,3 +56,10 @@ After this, you're on your own – the `$ sudo make install` step does not work 
 
 To continue, you should create a configuration file at `/usr/local/etc/shairport-sync.conf`. Please see the sample configuration file for more details.
 
+Note, the `mixer` command is useful for setting the output device's overall volume settings. With the default settings for the `sndio` back end, the `pcm` mixer controls its maximum output:
+
+```
+$ mixer vol 100 # sets overall volume
+$ mixer pcm 100 # sets maximum volume level for the default sndio device used by Shairport Sync
+```
+
