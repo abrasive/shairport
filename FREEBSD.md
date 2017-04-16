@@ -1,4 +1,4 @@
-This is a very quick initial note about installing Shairport Sync on FreeBSD. Some manual installation is required.
+This is a very quick initial note about installing Shairport Sync on FreeBSD. Some manual installation is required. Please see important notes at the end about using the `sndio` back end.
 
 The build instrctions here install back ends of `sndio` (native to OpenBSD) and ALSA. ALSA is, or course, the Advanced Linux Sound Architecture, so it is not "native" to FreeBSD. It has, however, been ported, so it should work pretty well.
 
@@ -62,4 +62,14 @@ Note, the `mixer` command is useful for setting the output device's overall volu
 $ mixer vol 100 # sets overall volume
 $ mixer pcm 100 # sets maximum volume level for the default sndio device used by Shairport Sync
 ```
+
+Using the `sndio` back end.
+The `sndio` back end does synchronisation, using informatin supplied by the `sndio` subsystem. The format of the information is not the same as that coming from the ALSA subsystem, so Shairport Sync cannot yet use it properly. As a workaround, use the following settings:
+
+In the `general` stanza, make the following settings:
+```
+drift_tolerance_in_seconds = 0.005; // allow some more tolerance before attempting to correct
+resync_threshold_in_seconds = 0.0; // ignore a large error in the initial estimation of synchrnoisation time...
+```
+Note that there are workarounds -- it is hoped that they won't be necessary for too long.
 
