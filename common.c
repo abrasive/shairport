@@ -755,11 +755,13 @@ void ranarrayinit() {
 
 uint64_t ranarrayval() {
   uint64_t v = ranarray[ranarraynext];
-  ranarraynext = (ranarraynext++) % ranarraylength;
+  ranarraynext++;
+  ranarraynext = ranarraynext % ranarraylength;
+  return v;
 }
 
 void r64arrayinit() { ranarrayinit(); }
 
 uint64_t ranarray64u() { return (ranarrayval()); }
 
-int64_t ranarray64i() { return (ranarrayval(&rx) >> 1); }
+int64_t ranarray64i() { return (ranarrayval() >> 1); }

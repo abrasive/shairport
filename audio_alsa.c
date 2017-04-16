@@ -66,7 +66,7 @@ audio_output audio_alsa = {.name = "alsa",
 static pthread_mutex_t alsa_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static unsigned int desired_sample_rate;
-static snd_pcm_format_t sample_format;
+static enum sps_format_t sample_format;
 
 static snd_pcm_t *alsa_handle = NULL;
 static snd_pcm_hw_params_t *alsa_params = NULL;
@@ -517,6 +517,8 @@ int open_alsa_device(void) {
   case SPS_FORMAT_S32:
     sf = SND_PCM_FORMAT_S32;
     break;
+  default:
+    die("Unsupported output format at audio_alsa.c");
   }
   ret = snd_pcm_hw_params_set_format(alsa_handle, alsa_params, sf);
   if (ret < 0) {

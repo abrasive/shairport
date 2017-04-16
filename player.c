@@ -599,6 +599,8 @@ static inline void process_sample(int32_t sample, char **outp, enum sps_format_t
     case SPS_FORMAT_U8:
       dither_mask = (int64_t)1 << (64 + 1 - 8);
       break;
+    case SPS_FORMAT_UNKNOWN:
+      die("Unexpected SPS_FORMAT_UNKNOWN while calculating dither mask.");
     }
     dither_mask -= 1;
     // int64_t r = r64i();
@@ -673,6 +675,8 @@ static inline void process_sample(int32_t sample, char **outp, enum sps_format_t
     *op = hyper_sample;
     result = 1;
     break;
+  case SPS_FORMAT_UNKNOWN:
+    die("Unexpected SPS_FORMAT_UNKNOWN while outputting samples");
   }
 
   *outp += result;
@@ -1321,7 +1325,6 @@ static void *player_thread_func(void *arg) {
                                                    // rate, multiply it by the frame ratio.
                                                    // but, on some occasions, more than one frame could be added
 
-  conn->output_bytes_per_frame = 4;
   switch (config.output_format) {
   case SPS_FORMAT_S24_3LE:
   case SPS_FORMAT_S24_3BE:
@@ -1333,6 +1336,8 @@ static void *player_thread_func(void *arg) {
   case SPS_FORMAT_S32:
     conn->output_bytes_per_frame = 8;
     break;
+  default:
+    conn->output_bytes_per_frame = 4;
   }
   
   debug(1, "Output frame bytes is %d.", conn->output_bytes_per_frame);
@@ -1415,6 +1420,8 @@ static void *player_thread_func(void *arg) {
   case SPS_FORMAT_S32:
     output_bit_depth = 32;
     break;
+  case SPS_FORMAT_UNKNOWN:
+    die("Unknown format choosing output bit depth");
   }
 
   debug(1, "Output bit depth is %d.", output_bit_depth);
@@ -1570,6 +1577,8 @@ static void *player_thread_func(void *arg) {
                 case ST_right_only:
                   ls = rs;
                   break;
+                case ST_stereo:
+                  break; // nothing extra to do
                 }
 
                 // here, replicate the samples if you're upsampling
@@ -1817,14 +1826,14 @@ static void *player_thread_func(void *arg) {
                     stuff_buffer_basic_32((int32_t *)tbuf, inbuflength, config.output_format,
                                           outbuf, amount_to_stuff, enable_dither, conn);
               break;
-#ifdef HAVE_LIBSOXR
             case ST_soxr:
+#ifdef HAVE_LIBSOXR
               //                if (amount_to_stuff) debug(1,"Soxr stuff...");
                 play_samples = stuff_buffer_soxr_32((int32_t *)tbuf, (int32_t *)sbuf, inbuflength,
                                                     config.output_format, outbuf, amount_to_stuff,
                                                     enable_dither,conn);
-              break;
 #endif
+              break;
             }
 
             /*
