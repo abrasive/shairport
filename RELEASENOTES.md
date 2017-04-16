@@ -7,7 +7,7 @@ An extensively enhanced and updated backend for SNDIO thanks to the work of [t6]
 SNDIO is *"the software layer of the OpenBSD operating system that manages the use of sound cards and MIDI ports."* Additionally, SNDIO *"... pays special attention to synchronization mechanisms and reliability required by music applications"*, hopefully opening up the possibility of synchronisation native to \*BSD.
 
 **Enhancements**
-* Fixed some warnings detected by `clang` on FreeBSD.
+* Fixed some warnings detected by `clang` on FreeBSD. One was potentially a significant error.
 
 Version 3.1s5
 ====
