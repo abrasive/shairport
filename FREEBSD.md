@@ -48,7 +48,7 @@ Next, configure the build and compile it:
 
 ```
 $ autoreconf -i -f
-$ CPPFLAGS="-I/usr/local/include" ./configure  --with-alsa --with-avahi --with-ssl=openssl --with-metadata
+$ CPPFLAGS="-I/usr/local/include" ./configure  --with-alsa --with-avahi --with-sndio --with-ssl=openssl --with-metadata
 $ make
 ```
 
