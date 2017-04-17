@@ -1,3 +1,9 @@
+Version 3.1d7
+====
+**Improvements**
+
+Synchronisation is now working reasonably well in the `sndio` back end. Further work is necessary, but it looks pretty solid and the workarounds are no longer needed.
+
 Version 3.1d6
 ====
 **New Feature**
