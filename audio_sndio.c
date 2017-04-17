@@ -57,6 +57,8 @@ static struct sio_hdl *hdl;
 static int framesize;
 static size_t played;
 static size_t written;
+int64_t time_of_last_onmove_cb;
+int at_least_one_onmove_cb_seen;
 
 struct sndio_formats {
   const char *name;
@@ -157,6 +159,8 @@ static int init(int argc, char **argv) {
     die("sndio: cannot open audio device");
 
   written = played = 0;
+  time_of_last_onmove_cb = 0;
+  at_least_one_onmove_cb_seen = 0;
 
   for (i = 0; i < sizeof(formats) / sizeof(formats[0]); i++) {
     if (formats[i].fmt == config.output_format) {
@@ -203,6 +207,8 @@ static void start(int sample_rate, int sample_format) {
   if (!sio_start(hdl))
     die("sndio: unable to start");
   written = played = 0;
+  time_of_last_onmove_cb = 0;
+  at_least_one_onmove_cb_seen = 0;
   pthread_mutex_unlock(&sndio_mutex);
 }
 
@@ -224,13 +230,25 @@ static void stop() {
 
 static void onmove_cb(void *arg, int delta) {
   pthread_mutex_lock(&sndio_mutex);
+  time_of_last_onmove_cb = get_absolute_time_in_fp();
+  at_least_one_onmove_cb_seen = 1;
   played += delta;
   pthread_mutex_unlock(&sndio_mutex);
 }
 
 static int delay(long *_delay) {
   pthread_mutex_lock(&sndio_mutex);
-  *_delay = (written / framesize) - played;
+  size_t estimated_extra_frames_output = 0;
+  if (at_least_one_onmove_cb_seen) { // when output starts, the onmove_cb callback will be made
+    // calculate the difference in time between now and when the last callback occoured,
+    // and use it to estimate the frames that would have been output
+    uint64_t time_difference = get_absolute_time_in_fp() - time_of_last_onmove_cb;
+    uint64_t frame_difference = time_difference * 44100;
+    uint64_t frame_difference_big_integer = frame_difference>>32;
+    estimated_extra_frames_output = frame_difference_big_integer;
+    // debug(1,"Frames played to last cb: %d, estimated to current time: %d.",played,estimated_extra_frames_output);
+  }
+  *_delay = (written / framesize) - (played+estimated_extra_frames_output);
   pthread_mutex_unlock(&sndio_mutex);
   return 0;
 }
