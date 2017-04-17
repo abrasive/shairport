@@ -2,9 +2,7 @@ Introduction
 ----
 This is a very quick initial note about installing Shairport Sync on FreeBSD. Some manual installation is required.
 
-Please see important notes at the end about using the `sndio` back end -- some workarounds are needed for the present.
-
-The build instructions here install back ends for `sndio` (native to OpenBSD) and ALSA. ALSA is, or course, the Advanced Linux Sound Architecture, so it is not "native" to FreeBSD. It has, however, been ported, so it should work pretty well.
+The build instructions here install back ends for `sndio` (native to OpenBSD) and ALSA. ALSA is, or course, the Advanced Linux Sound Architecture, so it is not "native" to FreeBSD. It has, however, been ported to some architectures (not to the ARM, unfortunately), so it should work pretty well on those.
 
 General
 ----
@@ -72,14 +70,7 @@ To continue, you should create a configuration file at `/usr/local/etc/shairport
 Using the `sndio` backend
 ----
 
-The `sndio` back end does synchronisation, thanks to the work of [t6](https://github.com/t6), using information from the `sndio` subsystem. The format of the information is not the same as that coming from the ALSA subsystem, so Shairport Sync cannot yet use it properly. As a workaround, please use the following settings:
-
-In the `general` stanza of the configuration file at `/usr/local/etc/shairport-sync.conf`, make the following settings:
-```
-drift_tolerance_in_seconds = 0.005; // allow some more tolerance before attempting to correct
-resync_threshold_in_seconds = 0.0; // ignore a large error in the initial estimation of synchronisation time...
-```
-Note that there are workarounds -- it is hoped that they won't be necessary for too long.
+The `sndio` back end does synchronisation and is still under development. Right now, it seems to work very well. It does not have a mixer control facility, however. You should set the volume to maximum before use, using, for example, the `mixer` command described below.
 
 Setting Overall  Volume
 ----
