@@ -22,7 +22,7 @@ Next, install the `pkg` package manager and update its lists:
 
 Subsystems
 ----
-Now, install the Avahi subsystem. FYI, `avahi-app` is chosen because it doesn’t require X11 and `nss_mdns` is included to allow FreeBSD to resolve mDNS-originated addresses -- it's not needed by Shairport Sync. Thanks to [reidransom](https://gist.github.com/reidransom/6033227) for this.
+Install the Avahi subsystem. FYI, `avahi-app` is chosen because it doesn’t require X11. `nss_mdns` is included to allow FreeBSD to resolve mDNS-originated addresses – it's not actually needed by Shairport Sync. Thanks to [reidransom](https://gist.github.com/reidransom/6033227) for this.
 
 ```
 # pkg install avahi-app nss_mdns
