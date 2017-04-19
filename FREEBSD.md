@@ -60,7 +60,7 @@ $ autoreconf -i -f
 $ CPPFLAGS="-I/usr/local/include" ./configure  --with-avahi --with-ssl=openssl --with-alsa --with-sndio
 $ make
 ```
-Omit `--with-alsa` if you don;t want ot include the ALSA back end and omit the `--with-sndio` if you don't want the `sndio` back end.
+Omit `--with-alsa` if you don't want to include the ALSA back end. Omit the `--with-sndio` if you don't want the `sndio` back end.
 
 Manual Installation
 ----
