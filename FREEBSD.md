@@ -43,7 +43,7 @@ Reboot for these changes to take effect.
 Building
 ----
 
-Next, install the packages that are needed for Shairport Sync to be downloaded and build successfully:
+Install the packages that are needed for Shairport Sync to be downloaded and build successfully:
 ```
 # pkg install git autotools pkgconf popt libconfig openssl sndio alsa-utils
 ```
