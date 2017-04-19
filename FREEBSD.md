@@ -75,8 +75,9 @@ The `sndio` back end does synchronisation and is still under development. Right 
 
 Setting Overall  Volume
 ----
-Note, the `mixer` command can be used for setting the output device's volume settings. You may hae to experiment to figure out which settings are appropriate.
+The `mixer` command can be used for setting the output device's volume settings. You may hae to experiment to figure out which settings are appropriate.
 
 ```
 $ mixer vol 100 # sets overall volume
 ```
+If you've installed `alsa-utils`, then `alsamixer` and friends will also be available.
