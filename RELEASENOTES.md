@@ -1,3 +1,18 @@
+Version 3.1d8
+====
+**Pesky Changes You Can't Ignore**
+
+If you are using a System V (aka `systemv`) installation, please note that the default location for PID file has moved -- it is now stored at `/var/run/shairport-sync/shairport-sync.pid`. This change is needed to improve security a little and to improve compatability across platforms. If you're not doing anythoing strange, this should make no difference.
+
+**New Features**
+* A FreeBSD installer and startup script is now available. Use the `./configure` option `--with-os=freebsd` to get the right compilation flags, and used the `./configure` option `--with-freebsd-installer` to have a startup script installed and to have a user, group and runtime directory created.
+* The standard linux System V and `systemd` installers have been enhanced to create the user and
+group `shairport-sync` if necessary.
+* The standard linux System V installer creates a special runtime directory at `/var/run/shairport-sync` owned by the user `shairport-sync` and used to store its PID file.
+
+**Improvements**
+* The FreeBSD installation based on the `sndio` back end works well.
+
 Version 3.1d7
 ====
 **Improvements**
