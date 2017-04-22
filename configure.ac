@@ -8,8 +8,6 @@ AC_CONFIG_SRCDIR([shairport.c])
 AC_CONFIG_HEADERS([config.h])
 
 # Derived from the Avahi configure.ac file
-#
-#
 # Specifying the OS type, defaulting to linux.
 #
 AC_ARG_WITH(os_type, AS_HELP_STRING([--with-os-type=OSType],[Specify the distribution to target: One of linux freebsd or darwin]))
@@ -29,6 +27,8 @@ PKG_PROG_PKG_CONFIG([0.9.0])
 if test "x${with_os_type}" = xlinux -o "x${with_os_type}" = xfreebsd ; then
  AC_CHECK_LIB([rt],[clock_gettime], , AC_MSG_ERROR(librt needed))
 fi
+
+AM_CONDITIONAL([BUILD_FOR_FREEBSD], [test "x${with_os_type}" = xfreebsd ])
 
 ##### Some build systems are not fully using pkg-config, so we can use the flag ${with_pkg_config} on a case-by-case basis
 ##### to control how to deal with them
@@ -73,13 +73,13 @@ AM_CONDITIONAL([USE_PIPE], [test "x$with_pipe" = "xyes" ])
 
 AC_ARG_WITH([systemv],
 [  --with-systemv = install a System V startup script during a make install], , )
-AM_CONDITIONAL([INSTALL_SYSTEMV], [test "x$with_systemv" = "xyes"])
+AM_CONDITIONAL([BUILD_FOR_SYSTEMV], [test "x$with_systemv" = "xyes"])
 
 # Check to see if we should include the systemd stuff to define it as a service
 
 AC_ARG_WITH([systemd],
 [  --with-systemd = install a systemd service description file during a make install], , )
-AM_CONDITIONAL([INSTALL_SYSTEMD], [test "x$with_systemd" = "xyes"])
+AM_CONDITIONAL([BUILD_FOR_SYSTEMD], [test "x$with_systemd" = "xyes"])
 
 # Add the libconfig package
 if  test "x${with_pkg_config}" = xyes ; then

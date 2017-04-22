@@ -4,7 +4,11 @@ bin_PROGRAMS = shairport-sync
 shairport_sync_SOURCES = shairport.c rtsp.c mdns.c mdns_external.c common.c rtp.c player.c alac.c audio.c loudness.c
 
 AM_CFLAGS = -Wno-multichar -DSYSCONFDIR=\"$(sysconfdir)\" -O2
-AM_CPPFLAGS = -Wno-multichar -DSYSCONFDIR=\"$(sysconfdir)\" -O2
+if BUILD_FOR_FREEBSD
+  AM_CPPFLAGS = -I/usr/local/include -Wno-multichar -DSYSCONFDIR=\"$(sysconfdir)\" -O2
+else
+  AM_CPPFLAGS = -Wno-multichar -DSYSCONFDIR=\"$(sysconfdir)\" -O2
+endif
 
 if USE_APPLE_ALAC
   shairport_sync_SOURCES += apple_alac.cpp
@@ -70,11 +74,19 @@ if INSTALL_CONFIG_FILES
 	cp scripts/shairport-sync.conf $(DESTDIR)$(sysconfdir)/shairport-sync.conf.sample
 	[ -f $(DESTDIR)$(sysconfdir)/shairport-sync.conf ] || cp scripts/shairport-sync.conf $(DESTDIR)$(sysconfdir)/shairport-sync.conf
 endif
-if INSTALL_SYSTEMV
+if BUILD_FOR_SYSTEMV
 	[ -e $(DESTDIR)$(sysconfdir)/init.d ] || mkdir -p $(DESTDIR)$(sysconfdir)/init.d
 	[ -f $(DESTDIR)$(sysconfdir)/init.d/shairport-sync ] || cp scripts/shairport-sync $(DESTDIR)$(sysconfdir)/init.d/
 endif
-if INSTALL_SYSTEMD
+if BUILD_FOR_SYSTEMD
 	[ -e $(DESTDIR)$(systemdsystemunitdir) ] || mkdir -p $(DESTDIR)$(systemdsystemunitdir)
 	[ -f $(DESTDIR)$(systemdsystemunitdir)/shairport-sync.service ] || cp scripts/shairport-sync.service $(DESTDIR)$(systemdsystemunitdir)
+endif
+if BUILD_FOR_FREEBSD
+	pw showgroup shairport-sync > /dev/null 2>&1 || pw addgroup  shairport-sync > /dev/null 2>&1
+	pw showuser shairport-sync > /dev/null 2>&1 || pw adduser  shairport-sync > /dev/null 2>&1
+	[ -e /var/run/shairport-sync ] || mkdir -p /var/run/shairport-sync
+	chown shairport-sync:shairport-sync /var/run/shairport-sync
+	[ -f /usr/local/etc/rc.d/shairport-sync ] || cp scripts/shairport-sync.freebsd /usr/local/etc/rc.d/shairport-sync
+	chmod 555 /usr/local/etc/rc.d/shairport-sync 
 endif

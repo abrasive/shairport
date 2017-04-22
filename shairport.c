@@ -873,9 +873,9 @@ void shairport_startup_complete(void) {
   }
 }
 
-#ifdef USE_CUSTOM_PID_DIR
 
 const char *pid_file_proc(void) {
+#ifdef USE_CUSTOM_PID_DIR
 #ifdef HAVE_ASPRINTF
   static char *fn = NULL;
   asprintf(&fn, "%s/%s.pid", PIDDIR, daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
@@ -884,10 +884,18 @@ const char *pid_file_proc(void) {
   snprintf(fn, sizeof(fn), "%s/%s.pid", PIDDIR,
            daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
 #endif
-
+#else
+#ifdef HAVE_ASPRINTF
+  static char *fn = NULL;
+  asprintf(&fn, "/var/run/shairport-sync/%s.pid", daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
+#else
+  static char fn[8192];
+  snprintf(fn, sizeof(fn), "/var/run/shairport-sync/%s.pid",
+           daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
+#endif
+#endif
   return fn;
 }
-#endif
 
 void exit_function() {
   if (config.cfg)
@@ -1005,11 +1013,10 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-#if USE_CUSTOM_PID_DIR
-  debug(1, "Locating custom pid dir at \"%s\"", PIDDIR);
-  /* Point to a function to help locate where the PID file will go */
+  // Point to a function to help locate where the PID file will go
+  // We always use this function because the default location
+  // is unsatisfactory. By default we want to use /var/run/shairport-sync/.
   daemon_pid_file_proc = pid_file_proc;
-#endif
 
   /* Set indentification string for the daemon for both syslog and PID file */
   daemon_pid_file_ident = daemon_log_ident = daemon_ident_from_argv0(argv[0]);

@@ -1,0 +1,26 @@
+#!/bin/sh
+#
+# $FreeBSD: releng/11.0/etc/rc.d/motd 298514 2016-04-23 16:10:54Z lme $
+#
+
+# PROVIDE: shairport-sync
+# REQUIRE: FILESYSTEMS DAEMON hostname 
+
+. /etc/rc.subr
+
+name="shairport-sync"
+start_cmd="${name}_start"
+stop_cmd="${name}_stop"
+
+shairport-sync_start()
+{
+	su -m shairport-sync -c "/usr/local/bin/shairport-sync -d"
+}
+
+shairport-sync_stop()
+{
+	su -m shairport-sync -c "/usr/local/bin/shairport-sync -k"
+}
+
+load_rc_config $name
+run_rc_command "$1"
