@@ -90,7 +90,7 @@ The `sndio` back end does not have a hardware volume control facility. You shoul
 
 Setting Overall  Volume
 ----
-The `mixer` command can be used for setting the output device's volume settings. You may hae to experiment to figure out which settings are appropriate.
+The `mixer` command can be used for setting the output device's volume settings. You may have to experiment to figure out which settings are appropriate.
 
 ```
 $ mixer vol 100 # sets overall volume
