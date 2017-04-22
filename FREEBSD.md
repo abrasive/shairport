@@ -2,7 +2,7 @@ Shairport Sync on FreeBSD
 ----
 Shairport Sync now runs "natively" on FreeBSD using the \*BSD-specific `sndio` back end.
 
-This is a very quick initial note about installing Shairport Sync on FreeBSD. Some manual installation is required.
+This is an initial note about installing Shairport Sync on FreeBSD.
 
 The build instructions here install back ends for `sndio` (originally developed for OpenBSD) and ALSA. ALSA is, or course, the Advanced Linux Sound Architecture, so it is not "native" to FreeBSD, but has been ported to some architectures under FreeBSD.
 
@@ -59,21 +59,34 @@ Next, configure the build and compile it:
 
 ```
 $ autoreconf -i -f
-$ CPPFLAGS="-I/usr/local/include" ./configure  --with-avahi --with-ssl=openssl --with-alsa --with-sndio
+./configure  --with-avahi --with-ssl=openssl --with-alsa --with-sndio --with-os=freebsd --with-freebsd-service
 $ make
 ```
-Omit `--with-alsa` if you don't want to include the ALSA back end. Omit the `--with-sndio` if you don't want the `sndio` back end.
+Omit `--with-alsa` if you don't want to include the ALSA back end. Omit the `--with-sndio` if you don't want the `sndio` back end. Omit the `--with-freebsd-service` if you don't want to install a FreeBSD startup script, runtime folder and user and group -- see below for more details.
 
-Manual Installation
+Installation
 ----
-After this, you're on your own – the `$ sudo make install` step does not work for FreeBSD. Maybe some day...
 
-To continue, you should create a configuration file at `/usr/local/etc/shairport-sync.conf`. Please see the sample configuration file for more details.
+Enter the superuser mode and do a make install.
+
+```
+$ su
+# make install
+```
+
+This will install the `shairport-sync` program along with a sample configuration file at `/usr/local/etc/shairport-sync.conf` and a service startup script to run Shairport Sync as a daemon. In addition, it will define a `shairport-sync` user and group and will create a folder at `/var/run/shairport-sync` to be owned by the user `shairport-sync`. This will be used to hold the daemon's PID file.
+
+Finally, edit `/usr/local/etc/shairport-sync.conf` to customise your installation, e.g. service name, etc. To make the `shairport-sync` daemon load at startup, add the following line to `/etc/rc.conf`:
+
+```
+shairport_sync_enable="YES"
+```
+You can launch the service as superuser, or simply reboot the machine.
 
 Using the `sndio` backend
 ----
 
-The `sndio` back end does synchronisation and is still under development. Right now, it seems to work very well. It does not have a mixer control facility, however. You should set the volume to maximum before use, using, for example, the `mixer` command described below.
+The `sndio` back end does not have a hardware volume control facility. You should set the volume to maximum before use, using, for example, the `mixer` command described below.
 
 Setting Overall  Volume
 ----
