@@ -43,11 +43,11 @@ Reboot for these changes to take effect.
 Building
 ----
 
-Install the packages that are needed for Shairport Sync to be downloaded and build successfully:
+Install the packages that are needed for Shairport Sync to be downloaded and built successfully:
 ```
 # pkg install git autotools pkgconf popt libconfig openssl sndio alsa-utils
 ```
-Omit `alsa-utils` if you're not using ALSA. Likewsie, omit `sndio` if you don't intend to use the `sndio` subsystem.
+Omit `alsa-utils` if you're not using ALSA. Likewise, omit `sndio` if you don't intend to use the `sndio` subsystem.
 
 Now, download Shairport Sync from GitHub and check out the `development` branch.
 ```
@@ -74,7 +74,7 @@ $ su
 # make install
 ```
 
-This will install the `shairport-sync` program along with a sample configuration file at `/usr/local/etc/shairport-sync.conf` and a service startup script to run Shairport Sync as a daemon. In addition, it will define a `shairport-sync` user and group and will create a folder at `/var/run/shairport-sync` to be owned by the user `shairport-sync`. This will be used to hold the daemon's PID file.
+With the `./configure` options shown above, this will install the `shairport-sync` program along with a sample configuration file at `/usr/local/etc/shairport-sync.conf`. A service startup script will also be installed to launch Shairport Sync as a daemon. In addition, a `shairport-sync` user and group will be added and a directory will be created at `/var/run/shairport-sync` owned by the user `shairport-sync`. This will be used to hold the daemon's PID file.
 
 Finally, edit `/usr/local/etc/shairport-sync.conf` to customise your installation, e.g. service name, etc. To make the `shairport-sync` daemon load at startup, add the following line to `/etc/rc.conf`:
 
