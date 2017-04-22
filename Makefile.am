@@ -74,19 +74,19 @@ if INSTALL_CONFIG_FILES
 	cp scripts/shairport-sync.conf $(DESTDIR)$(sysconfdir)/shairport-sync.conf.sample
 	[ -f $(DESTDIR)$(sysconfdir)/shairport-sync.conf ] || cp scripts/shairport-sync.conf $(DESTDIR)$(sysconfdir)/shairport-sync.conf
 endif
-if BUILD_FOR_SYSTEMV
+if INSTALL_SYSTEMV
 	[ -e $(DESTDIR)$(sysconfdir)/init.d ] || mkdir -p $(DESTDIR)$(sysconfdir)/init.d
 	[ -f $(DESTDIR)$(sysconfdir)/init.d/shairport-sync ] || cp scripts/shairport-sync $(DESTDIR)$(sysconfdir)/init.d/
 endif
-if BUILD_FOR_SYSTEMD
+if INSTALL_SYSTEMD
 	[ -e $(DESTDIR)$(systemdsystemunitdir) ] || mkdir -p $(DESTDIR)$(systemdsystemunitdir)
 	[ -f $(DESTDIR)$(systemdsystemunitdir)/shairport-sync.service ] || cp scripts/shairport-sync.service $(DESTDIR)$(systemdsystemunitdir)
 endif
-if BUILD_FOR_FREEBSD
+if INSTALL_FREEBSD_SERVICE
 	pw showgroup shairport-sync > /dev/null 2>&1 || pw addgroup  shairport-sync > /dev/null 2>&1
 	pw showuser shairport-sync > /dev/null 2>&1 || pw adduser  shairport-sync > /dev/null 2>&1
 	[ -e /var/run/shairport-sync ] || mkdir -p /var/run/shairport-sync
 	chown shairport-sync:shairport-sync /var/run/shairport-sync
-	[ -f /usr/local/etc/rc.d/shairport-sync ] || cp scripts/shairport-sync.freebsd /usr/local/etc/rc.d/shairport-sync
-	chmod 555 /usr/local/etc/rc.d/shairport-sync 
+	[ -f /usr/local/etc/rc.d/shairport_sync ] || cp scripts/shairport-sync.freebsd /usr/local/etc/rc.d/shairport_sync
+	chmod 555 /usr/local/etc/rc.d/shairport_sync 
 endif
