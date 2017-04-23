@@ -499,6 +499,10 @@ int parse_options(int argc, char **argv) {
         config.volume_max_db_set = 1;
       }
 
+      if (config_lookup_string(config.cfg, "general.run_this_when_volume_is_set", &str)) {
+        config.cmd_set_volume = (char *)str;
+      }
+
       /* Get the playback_mode setting */
       if (config_lookup_string(config.cfg, "general.playback_mode", &str)) {
         if (strcasecmp(str, "stereo") == 0)

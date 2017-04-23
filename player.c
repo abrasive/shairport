@@ -2109,6 +2109,8 @@ void player_volume(double airplay_volume, rtsp_conn_info* conn) {
   // Thus, we ask our vol2attn function for an appropriate dB between -96.3 and 0 dB and translate
   // it back to a number.
 
+  command_set_volume(airplay_volume);
+  
   int32_t hw_min_db, hw_max_db, hw_range_db, range_to_use, min_db,
       max_db; // hw_range_db is a flag; if 0 means no mixer
 

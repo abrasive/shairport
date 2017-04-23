@@ -32,6 +32,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <time.h>
@@ -453,6 +454,53 @@ uint8_t *rsa_apply(uint8_t *input, int inlen, int *outlen, int mode) {
   return out;
 }
 #endif
+
+void command_set_volume(double volume) {
+  if (config.cmd_set_volume) {
+    /*Spawn a child to run the program.*/
+    pid_t pid = fork();
+    if (pid == 0) { /* child process */
+    	size_t command_buffer_size = strlen(config.cmd_set_volume)+32;
+      char* command_buffer = (char*)malloc(command_buffer_size);
+            if (command_buffer==NULL) {
+      	inform("Couldn't allocate memory for set_volume argument string");
+      } else {
+      	memset(command_buffer,0,command_buffer_size);
+				sprintf(command_buffer, "%s%f", config.cmd_set_volume,volume);
+				// debug(1,"command_buffer is \"%s\".",command_buffer);
+				int argC;
+				char **argV;
+				// debug(1,"set_volume command found.");
+				if (poptParseArgvString(command_buffer, &argC, (const char ***)&argV) !=
+					0) {
+					// note that argV should be free()'d after use, but we expect this fork to exit
+					// eventually.
+					warn("Can't decipher on-set-volume command arguments \"%s\".",command_buffer);
+					free(argV);
+					free(command_buffer);
+				} else {
+					free(command_buffer);
+					// debug(1,"Executing on-set-volume command %s with %d arguments.",argV[0],argC);
+					execv(argV[0], argV);
+					warn("Execution of on-set-volume command \"%s\" failed to start", config.cmd_set_volume);
+					// debug(1, "Error executing on-set-volume command %s", config.cmd_set_volume);
+					exit(127); /* only if execv fails */
+				}
+      }
+    
+    } else {
+      if (config.cmd_blocking) { /* pid!=0 means parent process and if blocking is true, wait for
+                                    process to finish */
+        pid_t rc = waitpid(pid, 0, 0); /* wait for child to exit */
+        if (rc != pid) {
+          warn("Execution of on-set-volume command returned an error.");
+          debug(1, "on-set-volume command %s finished with error %d", config.cmd_set_volume,errno);
+        }
+      }
+      // debug(1,"Continue after on-set-volume command");
+    }
+  }
+}
 
 void command_start(void) {
   if (config.cmd_start) {

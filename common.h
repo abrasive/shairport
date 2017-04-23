@@ -113,7 +113,7 @@ typedef struct {
   int logOutputLevel;  // log output level
   int statistics_requested, use_negotiated_latencies;
   enum playback_mode_type playback_mode;
-  char *cmd_start, *cmd_stop;
+  char *cmd_start, *cmd_stop, *cmd_set_volume;
   int cmd_blocking;
   double tolerance; // allow this much drift before attempting to correct it
   enum stuffing_type packet_stuffing;
@@ -203,6 +203,7 @@ config_t config_file_stuff;
 
 void command_start(void);
 void command_stop(void);
+void command_set_volume(double volume);
 
 void shairport_shutdown();
 // void shairport_startup_complete(void);
