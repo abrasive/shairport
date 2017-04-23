@@ -1,10 +1,10 @@
 Shairport Sync on FreeBSD
 ----
-Shairport Sync now runs "natively" on FreeBSD using the \*BSD-specific `sndio` back end.
+Shairport Sync runs natively on FreeBSD using the [`sndio`](http://www.sndio.org) back end, thanks to the work of Tobias Kortkamp [t6](https://github.com/t6).
 
 This is an initial note about installing Shairport Sync on FreeBSD.
 
-The build instructions here install back ends for `sndio` (originally developed for OpenBSD) and ALSA. ALSA is, or course, the Advanced Linux Sound Architecture, so it is not "native" to FreeBSD, but has been ported to some architectures under FreeBSD.
+The build instructions here install back ends both for `sndio` (originally developed for OpenBSD) and ALSA. ALSA is, or course, the Advanced Linux Sound Architecture, so it is not "native" to FreeBSD, but has been ported to some architectures under FreeBSD. Intriguingly, `sndio` has also been ported to Linux.
 
 General
 ----
@@ -67,7 +67,7 @@ Omit `--with-alsa` if you don't want to include the ALSA back end. Omit the `--w
 Installation
 ----
 
-Enter the superuser mode and do a make install.
+Enter the superuser mode and do a `make install`:
 
 ```
 $ su
@@ -86,7 +86,7 @@ You can launch the service as superuser, or simply reboot the machine.
 Using the `sndio` backend
 ----
 
-The `sndio` back end does not have a hardware volume control facility. You should set the volume to maximum before use, using, for example, the `mixer` command described below.
+The `sndio` back end does not yet have a hardware volume control facility. You should set the volume to maximum before use, using, for example, the `mixer` command described below.
 
 Setting Overall  Volume
 ----
