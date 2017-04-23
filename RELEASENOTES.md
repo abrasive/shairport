@@ -2,9 +2,10 @@ Version 3.1d8
 ====
 **Pesky Changes You Can't Ignore**
 
-If you are using a System V (aka `systemv`) installation, please note that the default location for PID file has moved -- it is now stored at `/var/run/shairport-sync/shairport-sync.pid`. This change is needed to improve security a little and to improve compatability across platforms. If you're not doing anythoing strange, this should make no difference.
+If you are using a System V (aka `systemv`) installation, please note that the default location for PID file has moved -- it is now stored at `/var/run/shairport-sync/shairport-sync.pid`. This change is needed to improve security a little and to improve compatability across platforms. If you're not doing anything strange, this should make no difference.
 
 **New Features**
+* A volume-changed program hook has been added – a program can now be run whenever the volume control is set or changed. Similar to the `run_this_before_play_begins` and `run_this_after_play_ends` program hooks, you can specify a command line in the `general` `run_this_when_volume_is_set` setting. The AirPlay volume is simply appended to the end of the command line – leave a space if you want it treated as an extra argument. AirPlay volume goes from 0 to -30 and -144 means "mute".
 * A FreeBSD installer and startup script is now available. Use the `./configure` option `--with-os=freebsd` to get the right compilation flags, and used the `./configure` option `--with-freebsd-installer` to have a startup script installed and to have a user, group and runtime directory created.
 * The standard linux System V and `systemd` installers have been enhanced to create the user and
 group `shairport-sync` if necessary.
