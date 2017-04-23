@@ -3,7 +3,7 @@ Shairport Sync
 Shairport Sync is an AirPlay audio player – it plays audio streamed from iTunes, iOS devices and other AirPlay sources such as Quicktime Player and ForkedDaapd, among others.
 Audio played by a Shairport Sync-powered device stays synchronised with the source and hence with similar devices playing the same source. In this way, synchronised multi-room audio is possible without difficulty. (Hence the name Shairport Sync, BTW.)
 
-Shairport Sync does not support AirPlay video or photo streaming.
+Shairport Sync runs on Linux and FreeBSD. It does not support AirPlay video or photo streaming.
 
 This is the unstable "development" branch. Changes and updates are incorporated into this branch quickly. To access the stable version, where changes are made after due time, please switch to the "master" branch.
 
@@ -20,7 +20,7 @@ To maintain the exact latency required, if an output device is running slow rela
 
 Shairport Sync is a substantial rewrite of the fantastic work done in Shairport 1.0 by James Laird and others — please see https://github.com/abrasive/shairport/blob/master/README.md#contributors-to-version-1x for a list of the contributors to Shairport 1.x and Shairport 0.x. From a "heritage" point of view, Shairport Sync is a fork of Shairport 1.0.
 
-Shairport Sync is mainly designed for `alsa` and thus for Linux, although since `alsa` has been ported to FreeBSD, Shairport Sync runs in FreeBSD too. It must have direct access to the output device, which must be a real sound card capable of working with 44,100, 88,200 or 176,400 samples per second, interleaved PCM stereo of 8, 16, 24 or 32 bits. The default is 44,100 samples per second / 16 bits (you'll get a message in the logfile if there's a problem).
+Shairport Sync is designed for audio back ends that offer accurate timing and synchronisation information, including `alsa` on Linux and `sndio` on FreeBSD. It must have direct access to the output device, which must be a real sound card capable of working with 44,100, 88,200 or 176,400 samples per second, interleaved PCM stereo of 8, 16, 24 or 32 bits. The default is 44,100 samples per second / 16 bits (you'll get a message in the logfile if there's a problem).
 
 For more about the motivation behind Shairport Sync, please see the wiki at https://github.com/mikebrady/shairport-sync/wiki.
 
@@ -44,11 +44,11 @@ Shairport Sync runs well on the Raspberry Pi on USB and I2S cards. It can drive 
 
 At the time of writing, OpenWrt trunk does not support USB audio well on the Raspberry Pi.
 
-Shairport Sync runs rather well on FreeBSD using either the ALSA or `sndio` sound systems.
+Shairport Sync runs natively on FreeBSD using the `sndio` sound system.
 
 Shairport Sync runs on Ubuntu, OpenWrt, Debian, Arch Linux, Fedora and FreeBSD inside VMWare Fusion on a Mac, but synchronisation in inaccurate — possibly because the sound card is being emulated.
 
-Shairport Sync will output to `alsa` cards, to standard output and to pipes using appropriate backends. You can try compiling additional backends in as you wish, but it definitely will not work properly with them. Maybe someday...
+Shairport Sync will output to `alsa` and `sndio` cards, to standard output and to pipes using appropriate backends. You can try compiling additional backends in as you wish, but it definitely will not work properly with them. Maybe someday...
 
 For information about changes and updates, please refer to the RELEASENOTES.md file in the distribution.
 
@@ -155,7 +155,7 @@ Here is an example, suitable for Linux installations that use `systemd`, such as
 * Omit the `--with-soxr` if the libsoxr library is not available.
 * For installation into a System V system, replace the `--with-systemd` with `--with-systemv`.
 
-**Build the application:**
+**Build and Install the Application:**
 
 Enter:
 
@@ -163,36 +163,22 @@ Enter:
 
 to build the application.
 
-**Install into to a `systemd` system**
-To complete the installation, you need to define a `shairport-sync` group and user. This is a security measure – the user and group are relatively unprivileged, and the user does not have login privileges. The user must be a member of the `audio` group to be able to access the audio hardware. The following commands define the group and user correctly if they do not already exist (note the use of `sudo` – omit this if you already have superuser privileges:
+Assuming you have used the `./configure` settings suggested above, you can now install the application:
 
 ```
-$getent group shairport-sync &>/dev/null || sudo groupadd -r shairport-sync >/dev/null
-$getent passwd shairport-sync &> /dev/null || sudo useradd -r -M -g shairport-sync -s /usr/bin/nologin -G audio shairport-sync >/dev/null
+$ sudo make install
 ```
+The user and group `shairport-sync` will be created if necessary, and a runtime folder will be created at `/var/run/shairport-sync` in SystemV installations. In addition, a `man` page, a default configuration file and automatic power-on startup script will be installed.
 
-Next, enter:
 
-```
-$sudo make install
-```
-
-to install `shairport-sync` along with a `man` page, a default configuration file and a `systemd` configuration file called `shairport-sync.service` to launch it automatically at system startup.
+**Complete installation into to a `systemd` system**
 
 To enable Shairport Sync to start automatically at system startup, enter:
 
 `$sudo systemctl enable shairport-sync`
 
-**Install into a System V system**
+**Complete installation into a System V system**
 If you are installing onto a System V system, enter:
-
-```
-$sudo make install
-```
-
-to install `shairport-sync` along with a `man` page, a default configuration file and a System V startup script to launch it automatically at system startup.
-
-To complete the installation, enter:
 ```
 $sudo update-rc.d shairport-sync defaults 90 10
 ```
@@ -211,7 +197,7 @@ Starting and stopping Shairport Sync automatically is taken care of differently 
 **(2) Settings:**
 To get the best from Shairport Sync, you’ll need to (a) give Shairport Sync a service name by which it will be seen in iTunes etc., (b) specify the output device to use and (c) specify the name of the mixer volume control to use to control the output level. To get values for (b) and (c) you might need to explore the ALSA output devices with a program like `alsamixer` or similar.
 
-Shairport Sync reads settings from a configuration file at `/etc/shairport-sync.conf`. When you run `$sudo make install`, a sample configuration file is installed (or updated) at `/etc/shairport-sync.conf.sample`. This contains all the setting groups and all the settings available, but they all are commented out (comments begin with `//`) so that default values are used. The file contains explanations of the settings, useful hints and suggestions. In addition, if the file doesn't already exist, a default configuration is installed at `/etc/shairport-sync.conf`, which should work in almost any system with a sound card.
+Shairport Sync reads settings from a configuration file at `/etc/shairport-sync.conf` (note that in FreeBSD it will be at `/usr/local/etc/shairport-sync.conf`). When you run `$sudo make install`, a sample configuration file is installed or updated at `/etc/shairport-sync.conf.sample` (`/usr/local/etc/shairport-sync.conf.sample` in FreeBSD). This contains all the setting groups and all the settings available, but they all are commented out (comments begin with `//`) so that default values are used. The file contains explanations of the settings, useful hints and suggestions. In addition, if the file doesn't already exist, a default configuration is installed, which should work in almost any system with a sound card.
 
 Settings in the configuration file are grouped. For instance, there is a `general` group within which you can use the `name` tag to set the service name. Suppose you wanted to set the name of the service to `Front Room`, give the service the password `secret` and used `libsoxr` interpolation, then you should do the following:
 
@@ -261,13 +247,13 @@ As previously mentioned, you can use command line arguments to provide settings 
 
 Apart from the following options, all command line options can be replaced by settings in the configuration file. Here is a brief description of command line options that are not replicated by settings in the settings file.
 
-* The `-c` option allows you to specify the location of the configuration file — default is `/etc/shairport-sync.conf`.
+* The `-c` option allows you to specify the location of the configuration file.
 * The `-V` option gives you version information about  Shairport Sync and then quits.
 * The `-d` option causes Shairport Sync to properly daemonise itself, that is, to run in the background. You may need sudo privileges for this.
 * The `-k` option causes Shairport Sync to kill an existing Shairport Sync daemon. You may need to have sudo privileges for this.
 
 The System V init script at `/etc/init.d/shairport-sync` has a bare minimum :
-`-d`. Basically all it does is put the program in daemon mode. The program will read its settings from the configuration file, normally `/etc/shairport-sync.conf`.
+`-d`. Basically all it does is put the program in daemon mode. The program will read its settings from the configuration file.
 
 Examples
 --------
