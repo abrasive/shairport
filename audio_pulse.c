@@ -60,7 +60,7 @@ static int init(int argc, char **argv) {
 
   pulse_options.service_name = config.service_name;
 
-  config.audio_backend_buffer_desired_length = 44100; // one second.
+  config.audio_backend_buffer_desired_length = 1; // one second.
   config.audio_backend_latency_offset = 0;
 
   optind = 1; // optind=0 is equivalent to optind=1 plus special behaviour
