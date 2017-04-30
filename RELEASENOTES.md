@@ -1,8 +1,16 @@
-Version 3.1d8
+Version 3.1d9
 ====
 **Pesky Changes You Can't Ignore**
 
 If you are using a System V (aka `systemv`) installation, please note that the default location for PID file has moved -- it is now stored at `/var/run/shairport-sync/shairport-sync.pid`. This change is needed to improve security a little and to improve compatability across platforms. If you're not doing anything strange, this should make no difference.
+
+**New Features**
+
+* Shairport Sync has changes the way it deals with pauses and resumes, caused either by using the controls of the source program, e.g. iTunes, or those caused by resynchronisations. Specifically, it does not reset the output volume of the hardware mixer. This is so that any changes made by external controls are not needlessly reset by occasional glitches.
+* A new advanced setting for the `alsa` stanza is added: `alsa_use_playback_switch_for_mute`. The default is `"yes"`, which means that hardware mute will be used where available. Set it to `"no"` to prevent it being used. The motivation for this is to avoid using the call `snd_mixer_selem_set_playback_switch_all` which is incorrectly implemented on certain soundcards.
+
+Version 3.1d8
+====
 
 **New Features**
 * A volume-changed program hook has been added – a program can now be run whenever the volume control is set or changed. Similar to the `run_this_before_play_begins` and `run_this_after_play_ends` program hooks, you can specify a command line in the `general` `run_this_when_volume_is_set` setting. The AirPlay volume is simply appended to the end of the command line – leave a space if you want it treated as an extra argument. AirPlay volume goes from 0 to -30 and -144 means "mute".
