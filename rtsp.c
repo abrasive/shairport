@@ -854,7 +854,7 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn, rtsp_message *r
 
     if (!strncmp(cp, "volume: ", 8)) {
       float volume = atof(cp + 8);
-      debug(3, "volume: %f\n", volume);
+      debug(1, "AirPlay request to set volume to: %f\n", volume);
       player_volume(volume,conn);
     } else
 #ifdef CONFIG_METADATA
@@ -1351,7 +1351,7 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
       if (playing_conn) {
         debug(1,"Playing connection asked to stop");
         if (playing_conn==conn) {
-          debug(1,"ANNOuNCE asking to stop itself.");
+          debug(1,"ANNOUNCE asking to stop itself.");
         } else {
           playing_conn->stop = 1;
           memory_barrier();

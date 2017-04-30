@@ -820,7 +820,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
               // if would be in sync. To do this, we would give it a latency offset of -100 ms, i.e.
               // -4410 frames.
 
-              debug(1, "Output sample ratio is %d", conn->output_sample_ratio);
+              // debug(1, "Output sample ratio is %d", conn->output_sample_ratio);
 
               int64_t delta = (conn->first_packet_timestamp - reference_timestamp) +
                               config.latency * conn->output_sample_ratio +
@@ -1319,7 +1319,7 @@ static void *player_thread_func(void *arg) {
 
   conn->output_sample_ratio = config.output_rate / conn->input_rate;
 
-  debug(1, "Output sample ratio is %d.", conn->output_sample_ratio);
+  //  debug(1, "Output sample ratio is %d.", conn->output_sample_ratio);
 
   conn->max_frame_size_change = 500 * conn->output_sample_ratio; // we add or subtract one frame at the nominal
                                                    // rate, multiply it by the frame ratio.
