@@ -90,7 +90,6 @@ static int has_softvol = 0;
 static int volume_set_request = 0; // set when an external request is made to set the volume.
 int mute_request_pending = 0; //  set when an external request is made to mute or unmute.
 int mute_request_state = 0; // 1 = mute; 0 = unmute requested
-int use_playback_switch_for_mute = 1; // set to 0 for some cards, e.g. VMWare Fusion's emulated sound card
 
 static snd_pcm_sframes_t (*alsa_pcm_write)(snd_pcm_t *, const void *,
                                            snd_pcm_uframes_t) = snd_pcm_writei;
@@ -145,7 +144,7 @@ static int init(int argc, char **argv) {
 
   set_period_size_request = 0;
   set_buffer_size_request = 0;
-  use_playback_switch_for_mute = 1;
+  config.alsa_use_playback_switch_for_mute = 1;
 
   config.audio_backend_latency_offset = 0;
   config.audio_backend_buffer_desired_length = 0.15;
@@ -247,9 +246,9 @@ static int init(int argc, char **argv) {
     /* Get the mute_using_playback_switch setting. */
     if (config_lookup_string(config.cfg, "alsa.mute_using_playback_switch", &str)) {
       if (strcasecmp(str, "no") == 0)
-        use_playback_switch_for_mute = 0;
+        config.alsa_use_playback_switch_for_mute = 0;
       else if (strcasecmp(str, "yes") == 0)
-        use_playback_switch_for_mute = 1;
+        config.alsa_use_playback_switch_for_mute = 1;
       else
         die("Invalid mute_use_playback_switch option choice \"%s\". It should be \"yes\" or \"no\"");
     }
@@ -429,7 +428,7 @@ static int init(int argc, char **argv) {
         */
       }
     }
-    if ((use_playback_switch_for_mute==1) && (snd_mixer_selem_has_playback_switch(alsa_mix_elem))) {
+    if ((config.alsa_use_playback_switch_for_mute==1) && (snd_mixer_selem_has_playback_switch(alsa_mix_elem))) {
       audio_alsa.mute = &mute; // insert the mute function now we know it can do muting stuff
       debug(1, "Has mute ability we will use.");
     }
@@ -1002,7 +1001,7 @@ void do_mute(int mute_state_requested) {
   // If the hardware isn't there, or we are not allowed to use it, nothing will be done
   // The caller must have the alsa mutex
   if (hardware_mixer && alsa_mix_handle) {
-    if (use_playback_switch_for_mute==1) {
+    if (config.alsa_use_playback_switch_for_mute==1) {
       if (mute_request_pending==0)
         mute_request_state = mute_state_requested;
       if (mute_request_state) {

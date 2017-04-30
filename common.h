@@ -146,6 +146,7 @@ typedef struct {
   
   int loudness;
   float loudness_reference_volume_db;
+  int alsa_use_playback_switch_for_mute;
   
 } shairport_cfg;
 
