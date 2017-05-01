@@ -933,7 +933,7 @@ static void parameters(audio_parameters *info) {
 void do_volume(double vol) { // caller is assumed to have the alsa_mutex when using this function
   debug(3, "Setting volume db to %f.", vol);
   set_volume = vol;
-  if (hardware_mixer && alsa_mix_handle) {
+  if (hardware_mixer && alsa_mix_handle && volume_set_request) {
     if (has_softvol) {
       if (ctl && elem_id) {
         snd_ctl_elem_value_t *value;
