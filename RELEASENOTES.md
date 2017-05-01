@@ -6,7 +6,7 @@ If you are using a System V (aka `systemv`) installation, please note that the d
 
 **New Features**
 
-* Shairport Sync has changes the way it deals with pauses and resumes, caused either by using the controls of the source program, e.g. iTunes, or those caused by resynchronisations. Specifically, from now on, it does not reset the output volume of the hardware mixer. This is so that any changes made by external controls are not needlessly reset by occasional glitches.
+* Shairport Sync has changes the way it deals with pauses and resumes, caused either by using the controls of the source program, e.g. iTunes, or those caused by resynchronisations. Specifically, from now on, on resumption after a short pause or glitch, it does not reset the output volume of the hardware mixer. This is so that any changes made by external controls are not needlessly reset by occasional network outages.
 * A new advanced setting for the `alsa` stanza is added: `alsa_use_playback_switch_for_mute`. The default is `"yes"`, which means that hardware mute will be used where available. Set it to `"no"` to prevent it being used. The motivation for this is to avoid using the call `snd_mixer_selem_set_playback_switch_all` which is incorrectly implemented on certain soundcards, including the emulated card in VMWare Fusion 8.5.
 
 Version 3.1d8
