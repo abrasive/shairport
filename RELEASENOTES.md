@@ -13,7 +13,7 @@ Version 3.1d8
 ====
 
 **New Features**
-* A volume-changed program hook has been added – a program can now be run whenever the volume control is set or changed. Similar to the `run_this_before_play_begins` and `run_this_after_play_ends` program hooks, you can specify a command line in the `general` `run_this_when_volume_is_set` setting. The AirPlay volume is simply appended to the end of the command line – leave a space if you want it treated as an extra argument. AirPlay volume goes from 0 to -30 and -144 means "mute".
+* A volume-changed program hook has been added – a program can now be run whenever the volume control is set or changed. Similar to the `run_this_before_play_begins` and `run_this_after_play_ends` program hooks, you can specify a command line in the `general` `run_this_when_volume_is_set` setting. The AirPlay volume is simply appended to the end of the command line – leave a space if you want it treated as an extra argument. AirPlay volume goes from 0.0 to -30.0 and -144.0 means "mute".
 * A FreeBSD installer and startup script is now available. Use the `./configure` option `--with-os=freebsd` to get the right compilation flags, and use the `./configure` option `--with-freebsd-installer` to have a startup script installed and to have a user, group and runtime directory created.
 * The standard linux System V and `systemd` installers have been enhanced to create the user and
 group `shairport-sync` if necessary.
