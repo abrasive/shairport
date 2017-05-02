@@ -109,7 +109,7 @@ static void help(void) {
          "    *) default option\n");
 }
 
-void open_mixer() {
+int open_mixer() {
   if (hardware_mixer) {
     debug(2, "Open Mixer");
     int ret = 0;
@@ -132,7 +132,17 @@ void open_mixer() {
     alsa_mix_elem = snd_mixer_find_selem(alsa_mix_handle, alsa_mix_sid);
     if (!alsa_mix_elem)
       die("Failed to find mixer element");
+    return 1;
+  } else {
+  	return 0;
   }
+}
+
+void close_mixer() {
+	if (alsa_mix_handle) {
+		snd_mixer_close(alsa_mix_handle);
+		alsa_mix_handle=NULL;
+	}
 }
 
 static int init(int argc, char **argv) {
@@ -433,7 +443,7 @@ static int init(int argc, char **argv) {
       debug(1, "Has mute ability we will use.");
     }
 
-    snd_mixer_close(alsa_mix_handle);
+    close_mixer();
   }
 
   alsa_mix_handle = NULL;
@@ -444,9 +454,6 @@ static int init(int argc, char **argv) {
 static void deinit(void) {
   // debug(2,"audio_alsa deinit called.");
   stop();
-  if (hardware_mixer && alsa_mix_handle) {
-    snd_mixer_close(alsa_mix_handle);
-  }
 }
 
 int open_alsa_device(void) {
@@ -821,12 +828,10 @@ static void play(short buf[], int samples) {
   if (alsa_handle == NULL) {
     pthread_mutex_lock(&alsa_mutex);
     ret = open_alsa_device();
-    if (hardware_mixer)
-      open_mixer();
-    if ((hardware_mixer) && (ret == 0) && (audio_alsa.volume))
+    if (ret == 0) {
+    if (audio_alsa.volume)
       do_volume(set_volume);
-    if ((hardware_mixer) && (audio_alsa.mute)) {
-      // debug(1,"Play unmute");
+    if (audio_alsa.mute)
       do_mute(0);
     }
     pthread_mutex_unlock(&alsa_mutex);
@@ -865,12 +870,7 @@ static void flush(void) {
   // debug(2,"audio_alsa flush called.");
   pthread_mutex_lock(&alsa_mutex);
   int derr;
-  if (hardware_mixer && alsa_mix_handle) {
-    // debug(1,"Flush mute");
-    do_mute(1);
-    snd_mixer_close(alsa_mix_handle);
-    alsa_mix_handle = NULL;
-  }
+  do_mute(1);
   if (alsa_handle) {
     // debug(1,"Dropping frames for flush...");
     /*
@@ -933,7 +933,7 @@ static void parameters(audio_parameters *info) {
 void do_volume(double vol) { // caller is assumed to have the alsa_mutex when using this function
   debug(3, "Setting volume db to %f.", vol);
   set_volume = vol;
-  if (hardware_mixer && alsa_mix_handle && volume_set_request) {
+  if (volume_set_request && open_mixer()) {
     if (has_softvol) {
       if (ctl && elem_id) {
         snd_ctl_elem_value_t *value;
@@ -961,6 +961,7 @@ void do_volume(double vol) { // caller is assumed to have the alsa_mutex when us
     }
     volume_set_request = 0; // any external request that has been made is now satisfied
     // debug(1,"Alsa volume actually set.");
+    close_mixer();
   }
 }
 
@@ -971,6 +972,7 @@ void volume(double vol) {
   pthread_mutex_unlock(&alsa_mutex);
 }
 
+/*
 static void linear_volume(double vol) {
   debug(2, "Setting linear volume to %f.", vol);
   set_volume = vol;
@@ -982,9 +984,11 @@ static void linear_volume(double vol) {
     if (alsa_mix_handle) {
       if (snd_mixer_selem_set_playback_volume_all(alsa_mix_elem, int_vol) != 0)
         die("Failed to set playback volume");
+
     }
   }
 }
+*/
 
 static void mute(int mute_state_requested) {
   // debug(1,"External Mute Request");
@@ -997,21 +1001,23 @@ static void mute(int mute_state_requested) {
 
 void do_mute(int mute_state_requested) {
   // The mute state requested will be actioned unless mute_request_pending is set
-  // If it is set, then that will be actioned.
+  // If it is set, then that the pending request will be actioned.
   // If the hardware isn't there, or we are not allowed to use it, nothing will be done
   // The caller must have the alsa mutex
-  if (hardware_mixer && alsa_mix_handle) {
-    if (config.alsa_use_playback_switch_for_mute==1) {
-      if (mute_request_pending==0)
-        mute_request_state = mute_state_requested;
-      if (mute_request_state) {
-        // debug(1,"Playback Switch mute actually done");
-        snd_mixer_selem_set_playback_switch_all(alsa_mix_elem, 0);
-      } else {
-        // debug(1,"Playback Switch unmute actually done");
-        snd_mixer_selem_set_playback_switch_all(alsa_mix_elem, 1);
-      }
-    }
-    mute_request_pending = 0;
-  }
+
+	if (config.alsa_use_playback_switch_for_mute==1) {
+		if (mute_request_pending==0)
+			mute_request_state = mute_state_requested;
+		if (open_mixer()) {
+			if (mute_request_state) {
+				// debug(1,"Playback Switch mute actually done");
+				snd_mixer_selem_set_playback_switch_all(alsa_mix_elem, 0);
+			} else {
+				// debug(1,"Playback Switch unmute actually done");
+				snd_mixer_selem_set_playback_switch_all(alsa_mix_elem, 1);
+			}
+			close_mixer();
+		}
+	}
+	mute_request_pending = 0;
 }
