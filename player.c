@@ -2222,7 +2222,10 @@ void player_volume(double airplay_volume, rtsp_conn_info* conn) {
     // do a mute
     // needed even with hardware mute, as when sound is unmuted it might otherwise be very loud.
     hardware_attenuation = hw_min_db;
-    software_attenuation = sw_min_db;
+//    software_attenuation = sw_min_db;
+    software_attenuation = sw_max_db - (max_db - hw_max_db); // e.g. if the hw_max_db  is +4 and
+                                                             // the max is +40, this will be -36
+                                                             // (all by 100, of course)
     if (config.output->mute)
       config.output->mute(1); // use real mute if it's there
 
