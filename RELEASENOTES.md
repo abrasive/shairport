@@ -1,4 +1,4 @@
-Version 3.1d11
+Version 3.1d12
 ====
 **Pesky Changes You Can't Ignore**
 
