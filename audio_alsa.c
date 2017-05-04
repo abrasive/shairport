@@ -89,7 +89,7 @@ static int hardware_mixer = 0;
 static int has_softvol = 0;
 static int volume_set_request = 0; // set when an external request is made to set the volume.
 int mute_request_pending = 0; //  set when an external request is made to mute or unmute.
-int mute_request_state = 0; // 1 = mute; 0 = unmute requested
+int overriding_mute_state_requested = 0; // 1 = mute; 0 = unmute requested
 
 static snd_pcm_sframes_t (*alsa_pcm_write)(snd_pcm_t *, const void *,
                                            snd_pcm_uframes_t) = snd_pcm_writei;
@@ -994,15 +994,23 @@ static void linear_volume(double vol) {
 */
 
 static void mute(int mute_state_requested) {
-  // debug(1,"External Mute Request");
+  // debug(1,"External Mute Request: %d",mute_state_requested);
   pthread_mutex_lock(&alsa_mutex);
   mute_request_pending = 1;
-  mute_request_state = mute_state_requested;
+  overriding_mute_state_requested = mute_state_requested;
   do_mute(mute_state_requested);
   pthread_mutex_unlock(&alsa_mutex);
 }
 
 void do_mute(int mute_state_requested) {
+
+	// if a mute is requested now, then
+	// 	if an external mute request is in place, leave everything muted
+	//  otherwise, if an external mute request is pending, action it
+	//  otherwise, action the do_mute request
+	
+	int local_mute_state_requested = overriding_mute_state_requested; // go with whatever was asked by the external "mute" call
+	
   // The mute state requested will be actioned unless mute_request_pending is set
   // If it is set, then that the pending request will be actioned.
   // If the hardware isn't there, or we are not allowed to use it, nothing will be done
@@ -1010,12 +1018,12 @@ void do_mute(int mute_state_requested) {
 
 	if (config.alsa_use_playback_switch_for_mute==1) {
 		if (mute_request_pending==0)
-			mute_request_state = mute_state_requested;
+			local_mute_state_requested = mute_state_requested;
 		if (open_mixer()) {
-			if (mute_request_state) {
+			if (local_mute_state_requested) {
 				// debug(1,"Playback Switch mute actually done");
 				snd_mixer_selem_set_playback_switch_all(alsa_mix_elem, 0);
-			} else {
+			} else if (overriding_mute_state_requested==0) {
 				// debug(1,"Playback Switch unmute actually done");
 				snd_mixer_selem_set_playback_switch_all(alsa_mix_elem, 1);
 			}
