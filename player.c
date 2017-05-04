@@ -2222,13 +2222,18 @@ void player_volume(double airplay_volume, rtsp_conn_info* conn) {
     // do a mute
     // needed even with hardware mute, as when sound is unmuted it might otherwise be very loud.
     hardware_attenuation = hw_min_db;
-//    software_attenuation = sw_min_db;
-    software_attenuation = sw_max_db - (max_db - hw_max_db); // e.g. if the hw_max_db  is +4 and
+    if (config.output->mute) {
+    	// allow the audio material to reach the mixer, but mute the mixer
+    	// it the mute is removed externally, the material with be there
+    	software_attenuation = sw_max_db - (max_db - hw_max_db); // e.g. if the hw_max_db  is +4 and
                                                              // the max is +40, this will be -36
                                                              // (all by 100, of course)
-    if (config.output->mute)
+	    // debug(1,"Mute, with hardware mute and software_attenuation set to %d.",software_attenuation);
       config.output->mute(1); // use real mute if it's there
-
+    } else {
+	    software_attenuation = sw_min_db; // set any software output to zero too
+	    // debug(1,"Mute, with no hardware mute and software_attenuation set to %d.",software_attenuation);
+    }
   } else {
     if (config.output->mute)
       config.output->mute(0); // unmute mute if it's there

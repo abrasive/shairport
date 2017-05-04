@@ -62,8 +62,8 @@ audio_output audio_alsa = {.name = "alsa",
                            .flush = &flush,
                            .delay = &delay,
                            .play = &play,
-                           .mute = &mute,
-                           .volume = &volume,
+                           .mute = NULL, // a function will be provided if it can, and is allowed to, do hardware mute
+                           .volume = NULL, // a function will be provided if it can do hardware volume
                            .parameters = &parameters};
 
 static pthread_mutex_t alsa_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -440,10 +440,13 @@ static int init(int argc, char **argv) {
     }
     if ((config.alsa_use_playback_switch_for_mute==1) && (snd_mixer_selem_has_playback_switch(alsa_mix_elem))) {
       audio_alsa.mute = &mute; // insert the mute function now we know it can do muting stuff
-      debug(1, "Has mute ability we will use.");
-    }
-
+      // debug(1, "Has mixer and mute ability we will use.");
+    } else {
+    	// debug(1, "Has mixer but not using hardware mute.");
+		}
     close_mixer();
+  } else {
+    // debug(1, "Has no mixer and thus no hardware mute.");  	
   }
 
   alsa_mix_handle = NULL;
