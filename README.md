@@ -7,6 +7,9 @@ For the ongoing user, there are a great many forks and ports to choose from now,
 
 — James
 
+This project has been forked and still lives as [shairport-sync](https://github.com/mikebrady/shairport-sync) thanks to Mike Brady.
+
+
 ShairPort
 ---------
 
