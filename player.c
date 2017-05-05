@@ -2231,8 +2231,10 @@ void player_volume(double airplay_volume, rtsp_conn_info* conn) {
 	    // debug(1,"Mute, with hardware mute and software_attenuation set to %d.",software_attenuation);
       config.output->mute(1); // use real mute if it's there
     } else {
-	    software_attenuation = sw_min_db; // set any software output to zero too
+    	if (config.output->volume==NULL) { // if there is also no hardware volume control
+	    	software_attenuation = sw_min_db; // set any software output to zero too
 	    // debug(1,"Mute, with no hardware mute and software_attenuation set to %d.",software_attenuation);
+	    }
     }
   } else {
     if (config.output->mute)
