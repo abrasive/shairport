@@ -1,17 +1,20 @@
-Version 3.1d13 -- Version 3.1d9
+Version 3.1d15
 ====
 **Pesky Changes You Can't Ignore**
 
 If you are using a System V (aka `systemv`) installation, please note that the default location for PID file has moved -- it is now stored at `/var/run/shairport-sync/shairport-sync.pid`. This change is needed to improve security a little and to improve compatability across platforms. If you're not doing anything strange, this should make no difference.
 
-**New Features**
+**Bug fix**
+* Fixed the production of mono from stereo. The bug was that mono was being produced by adding left and right (and not dividing by two), clamping the result if necessary, resulting in a signal that was twice as loud as it should have been and needlessly introducing the likelyhood of clipping. The bug has been fixed, preserving all 17 bits of the mono signal when translating to 32 bits for later processing. Dithering is also automatically enabled when mono output is selected. Fixes #522, with thanks to [RobDeBagel](https://github.com/RobDeBagel).
 
+Version 3.1d14 -- Version 3.1d9
+====
+**New Features**
 * Shairport Sync has changes the way it deals with pauses and resumes, caused either by using the controls of the source program, e.g. iTunes, or those caused by resynchronisations. Specifically, from now on, on resumption after a short pause or glitch, it does not reset the output volume of the hardware mixer. This is so that any changes made by external controls are not needlessly reset by occasional network outages.
 * A new advanced setting for the `alsa` stanza is added: `mute_using_playback_switch`. The default is `"yes"`, which means that hardware mute will be used where available. Set it to `"no"` to prevent it being used. The motivation for this is to avoid using the alsa function call: `snd_mixer_selem_set_playback_switch_all`, which is incorrectly implemented on certain soundcards, including the emulated card in VMWare Fusion 8.5.
 
 Version 3.1d8
 ====
-
 **New Features**
 * A volume-changed program hook has been added – a program can now be run whenever the volume control is set or changed. Similar to the `run_this_before_play_begins` and `run_this_after_play_ends` program hooks, you can specify a command line in the `general` `run_this_when_volume_is_set` setting. The AirPlay volume is simply appended to the end of the command line – leave a space if you want it treated as an extra argument. AirPlay volume goes from 0.0 to -30.0 and -144.0 means "mute".
 * A FreeBSD installer and startup script is now available. Use the `./configure` option `--with-os=freebsd` to get the right compilation flags, and use the `./configure` option `--with-freebsd-installer` to have a startup script installed and to have a user, group and runtime directory created.
