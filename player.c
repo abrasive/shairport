@@ -1535,7 +1535,7 @@ static void *player_thread_func(void *arg) {
           config.output->play(silence, conn->max_frames_per_packet * conn->output_sample_ratio);
         } else {
           int enable_dither = 0;
-          if ((conn->fix_volume != 0x10000) || (conn->input_bit_depth > output_bit_depth))
+          if ((conn->fix_volume != 0x10000) || (conn->input_bit_depth > output_bit_depth) || (config.playback_mode == ST_mono))
             enable_dither = 1;
 
           // here, let's transform the frame of data, if necessary
@@ -1544,6 +1544,7 @@ static void *player_thread_func(void *arg) {
             case 16: {
               int i, j;
               int16_t ls, rs;
+              int32_t ll, rl;
               int16_t *inps = inbuf;
               int16_t *outps = tbuf;
               int32_t *outpl = (int32_t *)tbuf;
@@ -1552,43 +1553,47 @@ static void *player_thread_func(void *arg) {
                 rs = *inps++;
 
                 // here, do the mode stuff -- mono / reverse stereo / leftonly / rightonly
+                // also, raise the 16-bit samples to 32 bits.
+
 
                 switch (config.playback_mode) {
                 case ST_mono: {
-                  int both = ls + rs;
-                  // Note -- this is assuming 16 bit signed.
-                  if (both > INT16_MAX) {
-                    both = INT16_MAX;
-                  } else if (both < INT16_MIN) {
-                    both = INT16_MIN;
-                  }
-                  int16_t sboth = (int16_t)both;
-                  ls = sboth;
-                  rs = sboth;
+                  int32_t both = ls + rs;
+                  both = both<<(16-1); // keep all 17 bits of the sum of the 16bit left and right -- the 17th bit will influence dithering later
+                  ll = both;
+                  rl = both;
                 } break;
                 case ST_reverse_stereo: {
-                  int16_t t = ls;
-                  ls = rs;
-                  rs = t;
-                } break;
+                  ll = rs;
+                  rl = ls;
+                  ll = ll<<16;
+                  rl = rl<<16;
+               } break;
                 case ST_left_only:
-                  rs = ls;
-                  break;
+                  rl = ls;
+                  ll = ls;
+                  ll = ll<<16;
+                  rl = rl<<16;
+                 break;
                 case ST_right_only:
-                  ls = rs;
+                  ll = rs;
+                  rl = rs;
+                  ll = ll<<16;
+                  rl = rl<<16;
                   break;
                 case ST_stereo:
-                  break; // nothing extra to do
+                  ll = ls;
+                  rl = rs;
+                  ll = ll<<16;
+                  rl = rl<<16;
+                 break; // nothing extra to do
                 }
 
                 // here, replicate the samples if you're upsampling
 
                 for (j = 0; j < conn->output_sample_ratio; j++) {
-                  // raise the 16-bit sample to 32 bits.
-                  int32_t t = ls << 16;
-                  *outpl++ = t;
-                  int32_t u = rs << 16;
-                  *outpl++ = u;
+                  *outpl++ = ll;
+                  *outpl++ = rl;
                 }
               }
 
