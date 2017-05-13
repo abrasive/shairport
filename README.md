@@ -404,6 +404,10 @@ It's not unusual to have resend requests, late packets and even missing packets 
 
 "Min DAC queue size" is the minimum size the queue of samples in the output device's hardware buffer was measured at. It is meant to stand at 0.15 seconds = 6,615 frames at 44,100 frames per second, and will go low if the processor is very busy. If it goes below about 2,000 then it's an indication that the processor can't really keep up.
 
+WiFi Issues
+---------
+If you are using WiFi, you should ensure that WiFi power manaagement is off. See [TROUBLESHOOTING](https://github.com/mikebrady/shairport-sync/blob/development/TROUBLESHOOTING.md) for more details.
+
 Troubleshooting
 ---------------
 Please refer to [TROUBLESHOOTING](https://github.com/mikebrady/shairport-sync/blob/development/TROUBLESHOOTING.md) for a few hints, contributed by users.
