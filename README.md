@@ -40,7 +40,7 @@ Status
 ------
 Shairport Sync works on a wide variety of Linux devices and FreeBSD. It works on standard Ubuntu laptops, on the Raspberry Pi with Raspbian Wheezy and Jessie, Arch Linux and OpenWrt, and it runs on a Linksys NSLU2 and a TP-Link 710N using OpenWrt. It works with built-in audio and with a variety of USB-connected audio amplifiers and DACs, including a cheapo USB "3D Sound" dongle, a first generation iMic and a Topping TP30 amplifier with a USB DAC input. It will not work properly — if at all — with a PulseAudio (pseudo-)output device.
 
-Shairport Sync runs well on the Raspberry Pi on USB and I2S cards. It can drive the built-in sound card, though the audio out of the card is of poor quality – see the note below on configuring the Raspberry Pi to make best use of it. 
+Shairport Sync runs well on the Raspberry Pi on USB and I2S cards. It can drive the built-in sound card – see the note below on configuring the Raspberry Pi to make best use of it. 
 
 At the time of writing, OpenWrt trunk does not support USB audio well on the Raspberry Pi.
 
