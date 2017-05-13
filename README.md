@@ -280,7 +280,7 @@ Please note that the full path to the programs must be specified, and script fil
 Note: Shairport Sync can take configuration settings from command line options. This is mainly for backward compatability, but sometimes still useful. For normal use, it is strongly recommended that you use the configuration file method.
 
 **Raspberry Pi**
-The Raspberry Pi has a built-in audio DAC that is connected to the device's headphone jack. An updated audio driver has greately improved the quality of the output – see [#525](https://github.com/mikebrady/shairport-sync/issues/525) for details. To activate the updated driver, add the line:
+The Raspberry Pi has a built-in audio DAC that is connected to the device's headphone jack. An updated audio driver has greatly improved the quality of the output – see [#525](https://github.com/mikebrady/shairport-sync/issues/525) for details. To activate the updated driver, add the line:
 ```
 audio_pwm_mode=2
 ```
