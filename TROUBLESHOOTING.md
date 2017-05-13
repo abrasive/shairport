@@ -24,7 +24,7 @@ Here is the command sequence for a Raspberry Pi 3, which has built-in WiFi:
 ```
 sudo iwconfig wlan0 power off
 ```
-Alternatively, add the following line:
+Alternatively, (also for the Raspberry Pi), add the following line:
 ```
 wireless-power off
 ```
