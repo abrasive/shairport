@@ -406,7 +406,7 @@ It's not unusual to have resend requests, late packets and even missing packets 
 
 WiFi Issues
 ---------
-If you are using WiFi, you should ensure that WiFi power manaagement is off. See [TROUBLESHOOTING](https://github.com/mikebrady/shairport-sync/blob/development/TROUBLESHOOTING.md) for more details.
+If you are using WiFi, you should ensure that WiFi power management is off. See [TROUBLESHOOTING](https://github.com/mikebrady/shairport-sync/blob/development/TROUBLESHOOTING.md) for more details.
 
 Troubleshooting
 ---------------
