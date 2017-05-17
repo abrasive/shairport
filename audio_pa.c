@@ -15,7 +15,8 @@
 #define FORMAT PA_SAMPLE_S16NE
 #define RATE 44100
 
-#define buffer_allocation 88200 * 2 * 2
+// Four seconds buffer -- should be plenty
+#define buffer_allocation 44100 * 4 * 2 * 2
 
 static pthread_mutex_t buffer_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -41,6 +42,7 @@ void stream_write_cb(pa_stream *stream, size_t requested_bytes, void *userdata);
 
 static int init(int argc, char **argv) {
 
+  // default values
   config.audio_backend_buffer_desired_length = 0.25;
   config.audio_backend_latency_offset = 0;
   
@@ -67,7 +69,7 @@ static void start(int sample_rate, int sample_format) {
   mainloop = pa_threaded_mainloop_new();
   assert(mainloop);
   mainloop_api = pa_threaded_mainloop_get_api(mainloop);
-  context = pa_context_new(mainloop_api, "pcm-playback");
+  context = pa_context_new(mainloop_api, "Shairport Sync");
   assert(context);
 
   // Set a callback so we can wait for the context to be ready
