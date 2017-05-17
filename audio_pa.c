@@ -156,7 +156,10 @@ static void play(short buf[], int samples) {
   }
   if ((audio_occupancy >= 11025 * 2 * 2) && (pa_stream_is_corked(stream))) {
     debug(1,"Uncorked");
+    pa_threaded_mainloop_lock(mainloop);
     pa_stream_cork(stream, 0, stream_success_cb, mainloop);
+    pa_threaded_mainloop_unlock(mainloop);
+
   }
 }
 
@@ -165,7 +168,9 @@ int pa_delay(long *the_delay) {
   int reply = -ENODEV;
   pa_usec_t latency;
   int negative;
+  pa_threaded_mainloop_lock(mainloop);
   int gl = pa_stream_get_latency(stream, &latency, &negative);
+  pa_threaded_mainloop_unlock(mainloop);
   if (gl == PA_ERR_NODATA) {
     debug(1, "No latency data yet.");
     reply = -ENODEV;
@@ -182,11 +187,13 @@ int pa_delay(long *the_delay) {
 
 void flush(void) {
   // Cork the stream so it will stop playing
+  pa_threaded_mainloop_lock(mainloop);
   if (pa_stream_is_corked(stream)==0) {
     debug(1,"Flush for flush.");
     pa_stream_flush(stream, stream_success_cb, NULL);
 //    pa_stream_cork(stream, 1, stream_success_cb, mainloop);
   }
+  pa_threaded_mainloop_unlock(mainloop);
   audio_toq = audio_eoq = audio_lmb;
   audio_umb = audio_lmb + audio_size;
   audio_occupancy = 0;
@@ -194,11 +201,13 @@ void flush(void) {
 
 static void stop(void) {
   // Cork the stream so it will stop playing
+  pa_threaded_mainloop_lock(mainloop);
   if (pa_stream_is_corked(stream)==0) {
     debug(1,"Flush and cork for stop.");
     pa_stream_flush(stream, stream_success_cb, NULL);
     pa_stream_cork(stream, 1, stream_success_cb, mainloop);
   }
+  pa_threaded_mainloop_unlock(mainloop);
   audio_toq = audio_eoq = audio_lmb;
   audio_umb = audio_lmb + audio_size;
   audio_occupancy = 0;
@@ -279,7 +288,7 @@ void stream_write_cb(pa_stream *stream, size_t requested_bytes, void *userdata) 
     }
 
     // bytes we can transfer will never be greater than the bytes available
-
+    
     pa_stream_begin_write(stream, (void **)&buffer, &bytes_we_can_transfer);
     if (bytes_we_can_transfer <= (audio_umb - audio_toq)) {
       // the bytes are all in a row in the audo buffer
