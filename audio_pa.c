@@ -155,7 +155,7 @@ static void play(short buf[], int samples) {
     audio_eoq = audio_lmb + bytes_to_transfer - space_to_end_of_buffer;
   }
   if ((audio_occupancy >= 11025 * 2 * 2) && (pa_stream_is_corked(stream))) {
-    // debug(1,"Uncorked");
+    debug(1,"Uncorked");
     pa_stream_cork(stream, 0, stream_success_cb, mainloop);
   }
 }
@@ -182,8 +182,11 @@ int pa_delay(long *the_delay) {
 
 void flush(void) {
   // Cork the stream so it will stop playing
-  pa_stream_cork(stream, 1, stream_success_cb, mainloop);
-  pa_stream_flush(stream, stream_success_cb, NULL);
+  if (pa_stream_is_corked(stream)==0) {
+    debug(1,"Flush for flush.");
+    pa_stream_flush(stream, stream_success_cb, NULL);
+//    pa_stream_cork(stream, 1, stream_success_cb, mainloop);
+  }
   audio_toq = audio_eoq = audio_lmb;
   audio_umb = audio_lmb + audio_size;
   audio_occupancy = 0;
@@ -191,8 +194,11 @@ void flush(void) {
 
 static void stop(void) {
   // Cork the stream so it will stop playing
-  pa_stream_cork(stream, 1, stream_success_cb, mainloop);
-  pa_stream_flush(stream, stream_success_cb, NULL);
+  if (pa_stream_is_corked(stream)==0) {
+    debug(1,"Flush and cork for stop.");
+    pa_stream_flush(stream, stream_success_cb, NULL);
+    pa_stream_cork(stream, 1, stream_success_cb, mainloop);
+  }
   audio_toq = audio_eoq = audio_lmb;
   audio_umb = audio_lmb + audio_size;
   audio_occupancy = 0;
@@ -265,8 +271,10 @@ void stream_write_cb(pa_stream *stream, size_t requested_bytes, void *userdata) 
   while ((bytes_to_transfer > 0) && (audio_occupancy > 0)) {
     size_t bytes_we_can_transfer = bytes_to_transfer;
     if (audio_occupancy < bytes_we_can_transfer) {
-      debug(2, "Underflow? We have %d bytes but we are asked for %d bytes", audio_occupancy,
+      debug(1, "Underflow? We have %d bytes but we are asked for %d bytes", audio_occupancy,
             bytes_we_can_transfer);
+      pa_stream_cork(stream,1, stream_success_cb, mainloop);
+      debug(1, "Corked");
       bytes_we_can_transfer = audio_occupancy;
     }
 
