@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.50])
-AC_INIT([shairport-sync], [3.1d15], [mikebrady@eircom.net])
+AC_INIT([shairport-sync], [3.1d16], [mikebrady@eircom.net])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([shairport.c])
 AC_CONFIG_HEADERS([config.h])
@@ -232,6 +232,21 @@ AC_ARG_WITH(soundio, [  --with-soundio = choose soundio API support.], [
   AC_DEFINE([CONFIG_SOUNDIO], 1, [Needed by the compiler.])
   AC_CHECK_LIB([soundio], [soundio_create], , AC_MSG_ERROR(soundio support requires the soundio library!))], )
 AM_CONDITIONAL([USE_SOUNDIO], [test "x$HAS_SOUNDIO" = "x1"])
+
+# Look for new pulseaudio flag
+AC_ARG_WITH(pa, [  --with-pa = choose PulseAudio support.], [
+  AC_MSG_RESULT(>>Including a PulseAudio back end.)
+  HAS_PA=1
+  AC_DEFINE([CONFIG_PA], 1, [Needed by the compiler.])
+  if  test "x${with_pkg_config}" = xyes ; then
+    PKG_CHECK_MODULES(
+      [PULSEAUDIO], [libpulse >= 0.9.2],
+      [LIBS="${PULSEAUDIO_LIBS} ${LIBS}"],[AC_MSG_ERROR(PulseAudio support requires the libpulse-dev library!)])
+  else
+    AC_CHECK_LIB([pulse-simple], [pa_simple_new], , AC_MSG_ERROR(PulseAudio support requires the libpulse library!))
+    AC_CHECK_LIB([pulse], [pa_stream_peek], , AC_MSG_ERROR(PulseAudio support requires the libpulse-dev library.))
+  fi ])
+AM_CONDITIONAL([USE_PA], [test "x$HAS_PA" = "x1"])
 
 # Look for pulseaudio flag
 AC_ARG_WITH(pulseaudio, [  --with-pulseaudio = choose PulseAudio API support. N.B. no synchronisation -- so underflow or overflow is inevitable!], [

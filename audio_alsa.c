@@ -843,6 +843,12 @@ static void play(short buf[], int samples) {
     pthread_mutex_lock(&alsa_mutex);
     snd_pcm_sframes_t current_delay = 0;
     int err, ignore;
+    if (snd_pcm_state(alsa_handle) == SND_PCM_STATE_XRUN) {
+      if ((err = snd_pcm_prepare(alsa_handle))) {
+        ignore = snd_pcm_recover(alsa_handle, err, 1);
+        debug(1, "Error preparing after underrun: \"%s\".", snd_strerror(err));
+      }    
+    }
     if ((snd_pcm_state(alsa_handle) == SND_PCM_STATE_PREPARED) ||
         (snd_pcm_state(alsa_handle) == SND_PCM_STATE_RUNNING)) {
       if (buf == NULL)

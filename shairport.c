@@ -145,6 +145,9 @@ char *get_version_string() {
 #ifdef CONFIG_AO
     strcat(version_string, "-ao");
 #endif
+#ifdef CONFIG_PA
+    strcat(version_string, "-pa");
+#endif
 #ifdef CONFIG_PULSE
     strcat(version_string, "-pulse");
 #endif

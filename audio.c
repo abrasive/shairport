@@ -41,6 +41,9 @@ extern audio_output audio_soundio;
 #ifdef CONFIG_PULSE
 extern audio_output audio_pulse;
 #endif
+#ifdef CONFIG_PA
+extern audio_output audio_pa;
+#endif
 #ifdef CONFIG_ALSA
 extern audio_output audio_alsa;
 #endif
@@ -63,6 +66,9 @@ static audio_output *outputs[] = {
 #endif
 #ifdef CONFIG_PULSE
     &audio_pulse,
+#endif
+#ifdef CONFIG_PA
+    &audio_pa,
 #endif
 #ifdef CONFIG_AO
     &audio_ao,
