@@ -43,7 +43,7 @@ void stream_write_cb(pa_stream *stream, size_t requested_bytes, void *userdata);
 static int init(int argc, char **argv) {
 
   // default values
-  config.audio_backend_buffer_desired_length = 0.25;
+  config.audio_backend_buffer_desired_length = 0.35;
   config.audio_backend_latency_offset = 0;
   
   // allocate space for the audio buffer
@@ -63,7 +63,7 @@ static void start(int sample_rate, int sample_format) {
 
 
   uint32_t buffer_size_in_bytes = (uint32_t)2 * 2 * RATE * 0.1; // hard wired in here
-  debug(1, "pa_buffer size is %u bytes.", buffer_size_in_bytes);
+  // debug(1, "pa_buffer size is %u bytes.", buffer_size_in_bytes);
 
   // Get a mainloop and its context
   mainloop = pa_threaded_mainloop_new();
@@ -155,7 +155,7 @@ static void play(short buf[], int samples) {
     audio_eoq = audio_lmb + bytes_to_transfer - space_to_end_of_buffer;
   }
   if ((audio_occupancy >= 11025 * 2 * 2) && (pa_stream_is_corked(stream))) {
-    debug(1,"Uncorked");
+    // debug(1,"Uncorked");
     pa_threaded_mainloop_lock(mainloop);
     pa_stream_cork(stream, 0, stream_success_cb, mainloop);
     pa_threaded_mainloop_unlock(mainloop);
@@ -172,7 +172,7 @@ int pa_delay(long *the_delay) {
   int gl = pa_stream_get_latency(stream, &latency, &negative);
   pa_threaded_mainloop_unlock(mainloop);
   if (gl == PA_ERR_NODATA) {
-    debug(1, "No latency data yet.");
+    // debug(1, "No latency data yet.");
     reply = -ENODEV;
   } else if (gl != 0) {
     // debug(1,"Error %d getting latency.",gl);
@@ -189,9 +189,9 @@ void flush(void) {
   // Cork the stream so it will stop playing
   pa_threaded_mainloop_lock(mainloop);
   if (pa_stream_is_corked(stream)==0) {
-    debug(1,"Flush for flush.");
+    // debug(1,"Flush and cork for flush.");
     pa_stream_flush(stream, stream_success_cb, NULL);
-//    pa_stream_cork(stream, 1, stream_success_cb, mainloop);
+    pa_stream_cork(stream, 1, stream_success_cb, mainloop);
   }
   pa_threaded_mainloop_unlock(mainloop);
   audio_toq = audio_eoq = audio_lmb;
@@ -203,7 +203,7 @@ static void stop(void) {
   // Cork the stream so it will stop playing
   pa_threaded_mainloop_lock(mainloop);
   if (pa_stream_is_corked(stream)==0) {
-    debug(1,"Flush and cork for stop.");
+    // debug(1,"Flush and cork for stop.");
     pa_stream_flush(stream, stream_success_cb, NULL);
     pa_stream_cork(stream, 1, stream_success_cb, mainloop);
   }
@@ -244,11 +244,11 @@ void stream_state_cb(pa_stream *s, void *mainloop) { pa_threaded_mainloop_signal
 
 void stream_write_cb(pa_stream *stream, size_t requested_bytes, void *userdata) {
 
+/*
   // play with timing information
   const struct pa_timing_info *ti = pa_stream_get_timing_info(stream);
-
   if ((ti == NULL) || (ti->write_index_corrupt)) {
-    debug(1, "Timing info invalid");
+    debug(2, "Timing info invalid");
   } else {
     struct timeval time_now;
 
@@ -268,11 +268,11 @@ void stream_write_cb(pa_stream *stream, size_t requested_bytes, void *userdata) 
       pa_usec_t estimated_latency = pa_latency - estimate_age;
       // debug(1,"Estimated latency is %d microseconds.",estimated_latency);
 
-    } else {
-      debug(1, "Time now is earlier than time of timing information");
+//    } else {
+//      debug(1, "Time now is earlier than time of timing information");
     }
   }
-
+*/
   int bytes_to_transfer = requested_bytes;
   int bytes_transferred = 0;
   uint8_t *buffer = NULL;
@@ -280,10 +280,10 @@ void stream_write_cb(pa_stream *stream, size_t requested_bytes, void *userdata) 
   while ((bytes_to_transfer > 0) && (audio_occupancy > 0)) {
     size_t bytes_we_can_transfer = bytes_to_transfer;
     if (audio_occupancy < bytes_we_can_transfer) {
-      debug(1, "Underflow? We have %d bytes but we are asked for %d bytes", audio_occupancy,
-            bytes_we_can_transfer);
+      // debug(1, "Underflow? We have %d bytes but we are asked for %d bytes", audio_occupancy,
+      //      bytes_we_can_transfer);
       pa_stream_cork(stream,1, stream_success_cb, mainloop);
-      debug(1, "Corked");
+      // debug(1, "Corked");
       bytes_we_can_transfer = audio_occupancy;
     }
 
@@ -326,7 +326,7 @@ void stream_write_cb(pa_stream *stream, size_t requested_bytes, void *userdata) 
 }
 
 void alt_stream_write_cb(pa_stream *stream, size_t requested_bytes, void *userdata) {
-  debug(1, "***Bytes requested bytes %d.", requested_bytes);
+  // debug(1, "***Bytes requested bytes %d.", requested_bytes);
   int bytes_remaining = requested_bytes;
   while (bytes_remaining > 0) {
     uint8_t *buffer = NULL;
