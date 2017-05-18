@@ -863,12 +863,8 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
               conn->first_packet_time_to_play = reference_timestamp_time - delta_fp_sec;
             }
 
-            int64_t initial_filler_size = config.output_rate / 40; // to prevent underrun, start it with this
-            
-            int64_t filler_size = 352;
-            if (have_sent_prefiller_silence==0)
-              filler_size = initial_filler_size;
-              
+            int64_t max_dac_delay = config.output_rate / 10;
+            int64_t filler_size = max_dac_delay; // 0.1 second -- the maximum we'll add to the DAC
 
             if (local_time_now >= conn->first_packet_time_to_play) {
               // we've gone past the time...
@@ -891,14 +887,11 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
                   debug(1, "Error %d getting dac_delay in buffer_get_frame.", resp);
                   dac_delay = 0;
                 }
-              } else {
+              } else
                 dac_delay = 0;
-              }
-              //debug(1,"DAC Delay: %d",dac_delay);
               int64_t gross_frame_gap =
                   ((conn->first_packet_time_to_play - local_time_now) * config.output_rate) >> 32;
               int64_t exact_frame_gap = gross_frame_gap - dac_delay;
-              // debug(1,"Gross gap %lld, exact frame gap %lld, dac delay %lld.",gross_frame_gap, exact_frame_gap,dac_delay);
               if (exact_frame_gap < 0) {
                 // we've gone past the time...
                 // debug(1,"Run a bit past the exact start time by %lld frames, with time now of
@@ -911,49 +904,42 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
                 conn->first_packet_timestamp = 0;
                 conn->first_packet_time_to_play = 0;
               } else {
-                if (filler_size < 0) {
-                  debug(2, "frame size (filler_size) < 0 with dac_delay of %ld", dac_delay);
-                  filler_size = 0;
+                int64_t fs = filler_size;
+                if (fs > (max_dac_delay - dac_delay))
+                  fs = max_dac_delay - dac_delay;
+                if (fs < 0) {
+                  debug(2, "frame size (fs) < 0 with max_dac_delay of %lld and dac_delay of %ld",
+                        max_dac_delay, dac_delay);
+                  fs = 0;
                 }
-                if ((exact_frame_gap <= filler_size) || (exact_frame_gap <= conn->max_frames_per_packet * 2)) {
-                  filler_size = exact_frame_gap;
-                  // debug(1,"Filler size changed to: %d.",fs);
+                if ((exact_frame_gap <= fs) || (exact_frame_gap <= conn->max_frames_per_packet * 2)) {
+                  fs = exact_frame_gap;
                   // debug(1,"Exact frame gap is %llu; play %d frames of silence. Dac_delay is %d,
                   // with %d packets, ab_read is %04x, ab_write is
                   // %04x.",exact_frame_gap,fs,dac_delay,seq_diff(ab_read,
                   // ab_write),ab_read,ab_write);
                   conn->ab_buffering = 0;
                 }
-                // it doesn't really make much sense to send a prefiller if the back end does not have a delay procedure
-                // because you can't monitor its effect, so you end up doing it blindly.
-//                if (config.output->delay) {
-//                  if (0) {
-                  signed short *silence;
-                  // if (fs==0)
-                  //  debug(2,"Zero length silence buffer needed with gross_frame_gap of %lld and
-                  //  dac_delay of %lld.",gross_frame_gap,dac_delay);
-                  // the fs (number of frames of silence to play) can be zero in the DAC doesn't start
-                  // ouotputting frames for a while -- it could get loaded up but not start responding
-                  // for many milliseconds.
-                  if (filler_size != 0) {
-                    silence = malloc(conn->output_bytes_per_frame * filler_size);
-                    if (silence == NULL)
-                      debug(1, "Failed to allocate %d byte silence buffer.", filler_size);
-                    else {
-                      memset(silence, 0, conn->output_bytes_per_frame * filler_size);
-                      // debug(1,"Frames to start: %llu, DAC delay %ld, buffer: %d packets.",exact_frame_gap,dac_delay,seq_diff(conn->ab_read, conn->ab_write, conn->ab_read));
-
-                      if (config.output->delay) {
-//                      if (0) {
-                        //debug(1, "Sending %d frames of silence",filler_size);
-                        config.output->play(silence, filler_size);
-                      }
-                      free(silence);
-                      have_sent_prefiller_silence = 1;
-                    }
+                signed short *silence;
+                // if (fs==0)
+                //  debug(2,"Zero length silence buffer needed with gross_frame_gap of %lld and
+                //  dac_delay of %lld.",gross_frame_gap,dac_delay);
+                // the fs (number of frames of silence to play) can be zero in the DAC doesn't start
+                // ouotputting frames for a while -- it could get loaded up but not start responding
+                // for many milliseconds.
+                if (fs != 0) {
+                  silence = malloc(conn->output_bytes_per_frame * fs);
+                  if (silence == NULL)
+                    debug(1, "Failed to allocate %d byte silence buffer.", fs);
+                  else {
+                    memset(silence, 0, conn->output_bytes_per_frame * fs);
+                    // debug(1,"Frames to start: %llu, DAC delay %ld, buffer: %d packets.",exact_frame_gap,dac_delay,seq_diff(conn->ab_read, conn->ab_write, conn->ab_read));
+                    config.output->play(silence, fs);
+                    free(silence);
+                    have_sent_prefiller_silence = 1;
                   }
                 }
-//              }
+              }
             }
           }
           if (conn->ab_buffering == 0) {
@@ -962,7 +948,6 @@ static abuf_t *buffer_get_frame(rtsp_conn_info* conn) {
             get_reference_timestamp_stuff(&conn->play_segment_reference_frame, &reference_timestamp_time,
                                           &conn->play_segment_reference_frame_remote_time, conn);
             conn->play_segment_reference_frame *= conn->output_sample_ratio;
-            // debug(1,"Finished waiting");
 #ifdef CONFIG_METADATA
             send_ssnc_metadata('prsm', NULL, 0,
                                0); // "resume", but don't wait if the queue is locked
