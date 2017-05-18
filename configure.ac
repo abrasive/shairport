@@ -233,7 +233,7 @@ AC_ARG_WITH(soundio, [  --with-soundio = choose soundio API support.], [
   AC_CHECK_LIB([soundio], [soundio_create], , AC_MSG_ERROR(soundio support requires the soundio library!))], )
 AM_CONDITIONAL([USE_SOUNDIO], [test "x$HAS_SOUNDIO" = "x1"])
 
-# Look for new pulseaudio flag
+# Look for pulseaudio flag
 AC_ARG_WITH(pa, [  --with-pa = choose PulseAudio support.], [
   AC_MSG_RESULT(>>Including a PulseAudio back end.)
   HAS_PA=1
@@ -248,9 +248,9 @@ AC_ARG_WITH(pa, [  --with-pa = choose PulseAudio support.], [
   fi ])
 AM_CONDITIONAL([USE_PA], [test "x$HAS_PA" = "x1"])
 
-# Look for pulseaudio flag
-AC_ARG_WITH(pulseaudio, [  --with-pulseaudio = choose PulseAudio API support. N.B. no synchronisation -- so underflow or overflow is inevitable!], [
-  AC_MSG_RESULT(>>Including a PulseAudio back end. N.B. no synchronisation -- so underflow or overflow is inevitable!)
+# Look for old pulseaudio flag
+AC_ARG_WITH(pulseaudio, [  --with-pulseaudio = choose PulseAudio API support. Note, this backend is deprecated. Use --with-pa for an updated PulseAudio backend!], [
+  AC_MSG_RESULT(>>Including an outdated PulseAudio back end. Note, this backend is deprecated. Use --with-pa for an updated PulseAudio backend!)
   HAS_PULSE=1
   AC_DEFINE([CONFIG_PULSE], 1, [Needed by the compiler.])
   AC_CHECK_LIB([pulse-simple], [pa_simple_new], , AC_MSG_ERROR(PulseAudio support requires the pulse-simple library -- possibly in the libpulse-dev package!))
