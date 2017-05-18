@@ -249,8 +249,8 @@ AC_ARG_WITH(pa, [  --with-pa = choose PulseAudio support.], [
 AM_CONDITIONAL([USE_PA], [test "x$HAS_PA" = "x1"])
 
 # Look for old pulseaudio flag
-AC_ARG_WITH(pulseaudio, [  --with-pulseaudio = choose PulseAudio API support. Note, this backend is deprecated. Use --with-pa for an updated PulseAudio backend!], [
-  AC_MSG_RESULT(>>Including an outdated PulseAudio back end. Note, this backend is deprecated. Use --with-pa for an updated PulseAudio backend!)
+AC_ARG_WITH(pulseaudio, [  --with-pulseaudio = choose PulseAudio API support. Note that this backend is deprecated. Use --with-pa for an updated PulseAudio backend!], [
+  AC_MSG_RESULT(>>Including an outdated PulseAudio back end. Note that this backend is deprecated. Use --with-pa for an updated PulseAudio backend!)
   HAS_PULSE=1
   AC_DEFINE([CONFIG_PULSE], 1, [Needed by the compiler.])
   AC_CHECK_LIB([pulse-simple], [pa_simple_new], , AC_MSG_ERROR(PulseAudio support requires the pulse-simple library -- possibly in the libpulse-dev package!))
