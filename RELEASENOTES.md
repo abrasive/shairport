@@ -1,9 +1,23 @@
-Version 3.1d15
+Version 3.1d16
 ====
+**New Feature**
+* PulseAudio support. A new fully-synchronised PulseAudio back end has been developed. Use the `--with-pa` configuration option instead of  `--with-pulseaudio`. Then, select the new PulseAudio back end with the command line option `-o pa`. At present, it takes no options and has quite a few settings hard wired. The existing PulseAudio back end, which is available using the `--with-pulseaudio` configuration option and which has no synchronisation, is deprecated and will be removed.
+
+PulseAudio is built in to many recent desktop versions of Linux to manage the system's audio, and, up to now, Shairport Sync did not play well with it because the ALSA back end normally used with Shairport Sync requires exclusive access to the soundcard, thus interfering with PulseAudio. By using the new `pa` back end, Shairport Sync can share the existing PulseAudio infrastructure without difficulty. On Ubuntu, it shows up as a new "Application" in the Sound Settings window.
+
+If you are using the PulseAudio back end, note that Shairport Sync can not run as a system daemon that runs automatically from startup. Instead, you need to start it up after you log in. This is a limitation of the way PulseAudio is set up on desktops, and it is reocmmended that you don't change the setup.
+
+If you are trying this out on a virtual machine, you might have to turn off resynchronisation to get it to work.
+
+Your feedback is welcome – this is a work in progress!
+
 **Pesky Changes You Can't Ignore**
 
 If you are using a System V (aka `systemv`) installation, please note that the default location for PID file has moved -- it is now stored at `/var/run/shairport-sync/shairport-sync.pid`. This change is needed to improve security a little and to improve compatability across platforms. If you're not doing anything strange, this should make no difference.
 
+
+Version 3.1d15
+====
 **Bug fix**
 * Fixed the production of mono from stereo. The bug was that mono was being produced by adding left and right (and not dividing by two), clamping the result if necessary, resulting in a signal that was twice as loud as it should have been and needlessly introducing the likelyhood of clipping. The bug has been fixed, preserving all 17 bits of the mono signal when translating to 32 bits for later processing. Dithering is also automatically enabled when mono output is selected. Fixes #522, with thanks to [RobDeBagel](https://github.com/RobDeBagel).
 
