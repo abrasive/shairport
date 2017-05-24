@@ -25,6 +25,6 @@ sudo make install
 ```
 Finally, for Shairport Sync to be able to locate `libsoxr-dev` during compilation, you need to tell `ld` to catalogue it:
 ```
-sudo ldconfig -v
+sudo ldconfig
 ```
 That's it. Now you can select the `--with-soxr` option when you're building Shairport Sync.
