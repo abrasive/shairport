@@ -110,6 +110,7 @@ typedef struct {
   int64_t AirPlayLatency;      // supplied with --AirPlayLatency option
   int64_t ForkedDaapdLatency;  // supplied with --ForkedDaapdLatency option
   int daemonise;
+  int daemonise_store_pid;     // don't try to save a PID file
   char *piddir; 
   int logOutputLevel;  // log output level
   int statistics_requested, use_negotiated_latencies;

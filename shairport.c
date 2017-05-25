@@ -195,6 +195,7 @@ void usage(char *progname) {
   printf("Options:\n");
   printf("    -h, --help              show this help.\n");
   printf("    -d, --daemon            daemonise.\n");
+  printf("    -j, --justDaemoniseNoPIDFile            daemonise without a PID file.\n");
   printf("    -V, --version           show version information.\n");
   printf("    -k, --kill              kill the existing shairport daemon.\n");
   printf("    -D, --disconnectFromOutput  disconnect immediately from the output device.\n");
@@ -276,12 +277,15 @@ int parse_options(int argc, char **argv) {
   int fResyncthreshold = (int)(config.resyncthreshold * 44100);
   int fTolerance = (int)(config.tolerance * 44100);
   poptContext optCon; /* context for parsing command-line options */
+  int daemonisewith = 0;
+  int daemonisewithout = 0;
   struct poptOption optionsTable[] = {
       {"verbose", 'v', POPT_ARG_NONE, NULL, 'v', NULL},
       {"disconnectFromOutput", 'D', POPT_ARG_NONE, NULL, 0, NULL},
       {"reconnectToOutput", 'R', POPT_ARG_NONE, NULL, 0, NULL},
       {"kill", 'k', POPT_ARG_NONE, NULL, 0, NULL},
-      {"daemon", 'd', POPT_ARG_NONE, &config.daemonise, 0, NULL},
+      {"daemon", 'd', POPT_ARG_NONE, &daemonisewith, 0, NULL},
+      {"justDaemoniseNoPIDFile", 'j', POPT_ARG_NONE,&daemonisewithout, 0, NULL},
       {"configfile", 'c', POPT_ARG_STRING, &config.configfile, 0, NULL},
       {"statistics", 0, POPT_ARG_NONE, &config.statistics_requested, 0, NULL},
       {"logOutputLevel", 0, POPT_ARG_NONE, &config.logOutputLevel, 0, NULL},
@@ -358,6 +362,14 @@ int parse_options(int argc, char **argv) {
     die("%s: %s", poptBadOption(optCon, POPT_BADOPTION_NOALIAS), poptStrerror(c));
   }
 
+  if ((daemonisewith) && (daemonisewithout))
+    die("Select either daemonize_with_pid_file or daemonize_without_pid_file -- you have selected both!");
+  if ((daemonisewith) || (daemonisewithout)) {
+    config.daemonise = 1;
+    if (daemonisewith)
+      config.daemonise_store_pid = 1;
+  };    
+
   config.resyncthreshold = 1.0 * fResyncthreshold / 44100;
   config.tolerance = 1.0 * fTolerance / 44100;
 
@@ -366,7 +378,7 @@ int parse_options(int argc, char **argv) {
   int value = 0;
   double dvalue = 0.0;
 
-  debug(1, "Looking for the configuration file \"%s\".", config.configfile);
+  // debug(1, "Looking for the configuration file \"%s\".", config.configfile);
 
   config_init(&config_file_stuff);
 
@@ -383,17 +395,34 @@ int parse_options(int argc, char **argv) {
       if (config_lookup_string(config.cfg, "general.name", &str)) {
         raw_service_name = (char *)str;
       }
-
+      int daemonisewithout = 0;
+      int daemonisewith = 0;
       /* Get the Daemonize setting. */
-      if (config_lookup_string(config.cfg, "sessioncontrol.daemonize", &str)) {
+      if (config_lookup_string(config.cfg, "sessioncontrol.daemonize_with_pid_file", &str)) {
         if (strcasecmp(str, "no") == 0)
-          config.daemonise = 0;
+          daemonisewith = 0;
         else if (strcasecmp(str, "yes") == 0)
-          config.daemonise = 1;
+          daemonisewith = 1;
         else
-          die("Invalid daemonize option choice \"%s\". It should be \"yes\" or \"no\"");
+          die("Invalid daemonize_with_pid_file option choice \"%s\". It should be \"yes\" or \"no\"");
       }
 
+      /* Get the Just_Daemonize setting. */
+      if (config_lookup_string(config.cfg, "sessioncontrol.daemonize_without_pid_file", &str)) {
+        if (strcasecmp(str, "no") == 0)
+          daemonisewithout = 0;
+        else if (strcasecmp(str, "yes") == 0)
+          daemonisewithout = 1;
+        else
+          die("Invalid daemonize_without_pid_file option choice \"%s\". It should be \"yes\" or \"no\"");
+      }
+      if ((daemonisewith) && (daemonisewithout))
+        die("Select either daemonize_with_pid_file or daemonize_without_pid_file -- you have selected both!");
+      if ((daemonisewith) || (daemonisewithout)) {
+        config.daemonise = 1;
+        if (daemonisewith)
+          config.daemonise_store_pid = 1;
+      }     
       /* Get the directory path for the pid file created when the program is daemonised. */
       if (config_lookup_string(config.cfg, "sessioncontrol.daemon_pid_dir", &str))
         config.piddir = (char *)str;
@@ -891,15 +920,15 @@ char * use_this_pid_dir = PIDDIR;
 #else
 char * use_this_pid_dir = "/var/run/shairport-sync";
 #endif
-debug(1,"config.piddir \"%s\".",config.piddir);
+// debug(1,"config.piddir \"%s\".",config.piddir);
 if (config.piddir)
   use_this_pid_dir = config.piddir;
   char fn[8192];
   snprintf(fn, sizeof(fn), "%s/%s.pid", use_this_pid_dir,
            daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
-  debug(1,"fn \"%s\".",fn);
+  // debug(1,"fn \"%s\".",fn);
   char *realPidFilePath = realpath(fn, NULL);
-  debug(1,"PID file path \"%s\".",realPidFilePath);
+  // debug(1,"PID file path \"%s\".",realPidFilePath);
   return realPidFilePath;
 }
 
@@ -1129,11 +1158,13 @@ int main(int argc, char **argv) {
         goto finish;
       }
 
-      /* Create the PID file */
-      if (daemon_pid_file_create() < 0) {
-        daemon_log(LOG_ERR, "Could not create PID file (%s).", strerror(errno));
-        daemon_retval_send(2);
-        goto finish;
+      /* Create the PID file if required */
+      if (config.daemonise_store_pid) {
+        if (daemon_pid_file_create() < 0) {
+          daemon_log(LOG_ERR, "Could not create PID file (%s).", strerror(errno));
+          daemon_retval_send(2);
+          goto finish;
+        }
       }
 
       /* Send OK to parent process */
