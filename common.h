@@ -110,6 +110,7 @@ typedef struct {
   int64_t AirPlayLatency;      // supplied with --AirPlayLatency option
   int64_t ForkedDaapdLatency;  // supplied with --ForkedDaapdLatency option
   int daemonise;
+  char *piddir; 
   int logOutputLevel;  // log output level
   int statistics_requested, use_negotiated_latencies;
   enum playback_mode_type playback_mode;

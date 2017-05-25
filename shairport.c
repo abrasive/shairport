@@ -385,7 +385,7 @@ int parse_options(int argc, char **argv) {
       }
 
       /* Get the Daemonize setting. */
-      if (config_lookup_string(config.cfg, "general.daemonize", &str)) {
+      if (config_lookup_string(config.cfg, "sessioncontrol.daemonize", &str)) {
         if (strcasecmp(str, "no") == 0)
           config.daemonise = 0;
         else if (strcasecmp(str, "yes") == 0)
@@ -393,6 +393,10 @@ int parse_options(int argc, char **argv) {
         else
           die("Invalid daemonize option choice \"%s\". It should be \"yes\" or \"no\"");
       }
+
+      /* Get the directory path for the pid file created when the program is daemonised. */
+      if (config_lookup_string(config.cfg, "sessioncontrol.daemon_pid_dir", &str))
+        config.piddir = (char *)str;
 
       /* Get the mdns_backend setting. */
       if (config_lookup_string(config.cfg, "general.mdns_backend", &str))
@@ -883,25 +887,20 @@ void shairport_startup_complete(void) {
 
 const char *pid_file_proc(void) {
 #ifdef USE_CUSTOM_PID_DIR
-#ifdef HAVE_ASPRINTF
-  static char *fn = NULL;
-  asprintf(&fn, "%s/%s.pid", PIDDIR, daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
+char * use_this_pid_dir = PIDDIR;
 #else
-  static char fn[8192];
-  snprintf(fn, sizeof(fn), "%s/%s.pid", PIDDIR,
+char * use_this_pid_dir = "/var/run/shairport-sync";
+#endif
+debug(1,"config.piddir \"%s\".",config.piddir);
+if (config.piddir)
+  use_this_pid_dir = config.piddir;
+  char fn[8192];
+  snprintf(fn, sizeof(fn), "%s/%s.pid", use_this_pid_dir,
            daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
-#endif
-#else
-#ifdef HAVE_ASPRINTF
-  static char *fn = NULL;
-  asprintf(&fn, "/var/run/shairport-sync/%s.pid", daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
-#else
-  static char fn[8192];
-  snprintf(fn, sizeof(fn), "/var/run/shairport-sync/%s.pid",
-           daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
-#endif
-#endif
-  return fn;
+  debug(1,"fn \"%s\".",fn);
+  char *realPidFilePath = realpath(fn, NULL);
+  debug(1,"PID file path \"%s\".",realPidFilePath);
+  return realPidFilePath;
 }
 
 void exit_function() {
@@ -945,7 +944,7 @@ int main(int argc, char **argv) {
     die("Can not recognise the endianness of the processor.");
 
   strcpy(configuration_file_path, SYSCONFDIR);
-  strcat(configuration_file_path, "/");
+  strcat(configuration_file_path, "/shairport-sync/");
   strcat(configuration_file_path, appName);
   strcat(configuration_file_path, ".conf");
   config.configfile = configuration_file_path;
@@ -1061,7 +1060,10 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  /* Check if we are called with -k or --kill parameter */
+  // parse arguments into config -- needed to locate pid_dir
+  int audio_arg = parse_options(argc, argv);
+
+ /* Check if we are called with -k or --kill parameter */
   if (argc >= 2 && ((strcmp(argv[1], "-k") == 0) || (strcmp(argv[1], "--kill") == 0))) {
     int ret;
 
@@ -1074,14 +1076,11 @@ int main(int argc, char **argv) {
     return ret < 0 ? 1 : 0;
   }
 
-  /* Check that the daemon is not running twice at the same time */
-  if ((pid = daemon_pid_file_is_running()) >= 0) {
+  /* If we are going to daemonise, check that the daemon is not running already.*/
+  if ((config.daemonise) && ((pid = daemon_pid_file_is_running()) >= 0)) {
     daemon_log(LOG_ERR, "Daemon already running on PID file %u", pid);
     return 1;
   }
-
-  // parse arguments into config
-  int audio_arg = parse_options(argc, argv);
 
   // mDNS supports maximum of 63-character names (we append 13).
   if (strlen(config.service_name) > 50) {
@@ -1240,6 +1239,7 @@ int main(int argc, char **argv) {
 
   debug(1, "statistics_requester status is %d.", config.statistics_requested);
   debug(1, "daemon status is %d.", config.daemonise);
+  debug(1, "deamon pid file is \"%s\".",pid_file_proc());
   debug(1, "rtsp listening port is %d.", config.port);
   debug(1, "udp base port is %d.", config.udp_port_base);
   debug(1, "udp port range is %d.", config.udp_port_range);

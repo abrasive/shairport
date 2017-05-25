@@ -115,6 +115,19 @@ AC_ARG_WITH(apple-alac, [  --with-apple-alac = include support for the Apple ALA
   fi ])
 AM_CONDITIONAL([USE_APPLE_ALAC], [test "x$HAS_APPLE_ALAC" = "x1"])
 
+# Look for firstconfdir flag
+AC_ARG_WITH(firstconfdir, [ --with-firstconfdir=<pathname> Specify a pathname to a directory where a configuration file will be searched for before looking in sysconfdir.], [
+	AC_MSG_CHECKING(--with-firstconfdir argument)
+	if test "x${with_firstconfdir}" = x -o "x${with_firstconfdir}" = xyes ; then
+		AC_MSG_RESULT(not found)
+		AC_MSG_ERROR(when you use the --with-firstconfdir directive you must specify a pathname to a directory where a configuration file will be searched for before looking in sysconfdir.)
+	fi
+	AC_MSG_RESULT(${with_firstconfdir})
+  HAS_FIRSTCONFDIR=1
+  AC_SUBST(FIRST_CONF_DIR,["${with_firstconfdir}"])
+  AC_DEFINE([USE_FIRSTCONFDIR],1,[Look for a configuration file here before looking in the sysconfdir])], )
+AM_CONDITIONAL([USE_FIRSTCONFDIR], [test "x$HAS_FIRSTCONFDIR" = "x1"])
+
 # Look for piddir flag
 AC_ARG_WITH(piddir, [ --with-piddir=<pathname> Specify a pathname to a directory in which to write the PID file.], [
 	AC_MSG_CHECKING(--with-piddir argument)
