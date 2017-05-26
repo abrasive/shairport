@@ -10,17 +10,19 @@ This is the unstable "development" branch. Changes and updates are incorporated 
 
 More Information
 ----------
-Shairport Sync works by using timing information and timestamps present in data coming from the audio source (e.g. an iPhone) to play audio at exactly the right time. It does this by monitoring and controlling the *latency* — the time-gap between when a sound frame is supposed to be played, as specified by its `timestamp`, and the time when it is actually played by the audio output device, usually a Digital to Audio Converter (DAC).
+Shairport Sync works by using timing information and timestamps present in data coming from the audio source (e.g. an iPhone) to play audio at exactly the right time. It uses this to monitor and control the *latency* — the time-gap between when a sound frame is supposed to be played, as specified by its `timestamp`, and the time when it is actually played by the audio output device, usually a Digital to Audio Converter (DAC).
 
 The latency to be used is specified by the source when it negotiates with Shairport Sync. Most sources set a latency of exactly two seconds. Recent versions of iTunes and forkedDaapd use a latency of just over 2.25 seconds.
 
-Timestamps are measured relative to the source computer's clock – the `source clock`, but timing must be done relative to the clock of the computer running Shairport Sync – the `local clock`. This is done by synchronising the two clocks, usually to within a fraction of a millisecond, using a variant of NTP synchronisation protocols. 
+Timestamps are referenced relative to the source computer's clock – the `source clock`, but timing must be done relative to the clock of the computer running Shairport Sync – the `local clock`. So, another thing Shairport Sync has to do is to synchronize the source clock and the local clock, usually to within a fraction of a millisecond, using a variant of NTP synchronisation protocols. 
 
 To maintain the exact latency required, if an output device is running slow relative to the source, Shairport Sync will delete frames of audio to allow the device to keep up. If the output device is running fast, Shairport Sync will insert frames to keep time. The number of frames inserted or deleted is so small as to be almost inaudible on normal audio material. Frames are inserted or deleted as necessary at pseudorandom intervals. Alternatively, with `libsoxr` support, Shairport Sync can resample the audio feed to ensure the output device can keep up. This is less obtrusive than insertion and deletion but requires a good deal of processing power — most embedded devices probably can't support it. The process of insertion/deletion or resampling is rather inelegantly called “stuffing”.
 
 Shairport Sync is a substantial rewrite of the fantastic work done in Shairport 1.0 by James Laird and others — please see https://github.com/abrasive/shairport/blob/master/README.md#contributors-to-version-1x for a list of the contributors to Shairport 1.x and Shairport 0.x. From a "heritage" point of view, Shairport Sync is a fork of Shairport 1.0.
 
 Shairport Sync is designed for audio back ends that offer accurate timing and synchronisation information, including `alsa` on Linux and `sndio` on FreeBSD. It must have direct access to the output device, which must be a real sound card capable of working with 44,100, 88,200 or 176,400 samples per second, interleaved PCM stereo of 8, 16, 24 or 32 bits. The default is 44,100 samples per second / 16 bits (you'll get a message in the logfile if there's a problem).
+
+Shairport Sync works well with PulseAudio, a widely used sound server found on many desktop Linuxes. While the timing and synchronsiation information is not as accurate as with `alsa` or `sndio`, removing or disabling PulseAudio so that Shairport Sync can have direct access to a sound card via `alsa` is often impractical.
 
 For more about the motivation behind Shairport Sync, please see the wiki at https://github.com/mikebrady/shairport-sync/wiki.
 
@@ -47,6 +49,8 @@ At the time of writing, OpenWrt trunk does not support USB audio well on the Ras
 Shairport Sync runs natively on FreeBSD using the `sndio` sound system.
 
 Shairport Sync runs on Ubuntu, OpenWrt, Debian, Arch Linux, Fedora and FreeBSD inside VMWare Fusion on a Mac, but synchronisation in inaccurate — possibly because the sound card is being emulated.
+
+Shairport Sync will route audio to a PulseAudio sound server, which is installed in many desktop Linuxes. It appears as another audio "Application".
 
 Shairport Sync will output to `alsa` and `sndio` cards, to standard output and to pipes using appropriate backends. You can try compiling additional backends in as you wish, but it definitely will not work properly with them. Maybe someday...
 
