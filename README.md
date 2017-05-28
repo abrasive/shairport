@@ -67,7 +67,7 @@ To build Shairport Sync from sources on Debian, Ubuntu, Raspbian, etc. follow th
 The following libraries are required:
 * OpenSSL or  mbed TLS (PolarSSL is supported but deprecated)
 * Avahi
-* ALSA
+* ALSA and/or PulseAudio
 * libdaemon
 * autoconf
 * automake
@@ -85,6 +85,8 @@ Debian, Ubuntu and Raspbian users can get the basics with:
 
 - `apt-get install build-essential git xmltoman` – these may already be installed.
 - `apt-get install autoconf automake libtool libdaemon-dev libasound2-dev libpopt-dev libconfig-dev`
+- `apt-get install libasound2-dev` for the ALSA libraries
+- `apt-get install libpulse-dev` for the PulseAudio libraries
 - `apt-get install avahi-daemon libavahi-client-dev` if you want to use Avahi (recommended).
 - `apt-get install libssl-dev` if you want to use OpenSSL and libcrypto, or use mbed TLS otherwise.
 - `apt-get install libmbedtls-dev` if you want to use mbed TLS, or use OpenSSL/libcrypto otherwise. (You can still use PolarSSL with `apt-get install libpolarssl-dev` if you want to use PolarSSL, but it is deprecated as it's not longer being supported. It is suggested you use mbed TLS instead.)
@@ -106,7 +108,8 @@ $ autoreconf -i -f
 
 **Choose the appropriate `--with-*` options:**
 
-- `--with-alsa` for the ALSA audio back end. This is required.
+- `--with-alsa` include the ALSA backend module to audio to be output through the Advanced Linux Sound Architecture (ALSA) system directly. This is recommended for highest quality. 
+- `--with-pa` include the PulseAudio audio back end. This is recommended if your Linux installation already has PulseAudio installed. Although ALSA would be better, it requires direct and exclusive access to to a real (hardware) soundcard, and this is often impractical if PulseAudio is installed.
 - `--with-stdout` include an optional backend module to enable raw audio to be output through standard output (stdout).
 - `--with-pipe` include an optional backend module to enable raw audio to be output through a unix pipe.
 - `--with-soundio` include an optional backend module to enable raw audio to be output through the soundio system.
@@ -152,7 +155,7 @@ A final consideration is the location of the configuration file `shairport-sync.
 
 Here is an example, suitable for Linux installations that use `systemd`, such as Ubuntu 15.10 and Raspbian Jessie:
 
-`$ ./configure --sysconfdir=/etc --with-alsa --with-avahi --with-ssl=openssl --with-metadata --with-soxr --with-systemd`
+`$ ./configure --sysconfdir=/etc --with-alsa --with-pa --with-avahi --with-ssl=openssl --with-metadata --with-soxr --with-systemd`
 
 * Omit the `--with-soxr` if the libsoxr library is not available.
 * For installation into a System V system, replace the `--with-systemd` with `--with-systemv`.
