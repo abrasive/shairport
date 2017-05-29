@@ -42,7 +42,7 @@ Status
 ------
 Shairport Sync works on a wide variety of Linux devices and FreeBSD. It works on standard Ubuntu laptops, on the Raspberry Pi with Raspbian Wheezy and Jessie, Arch Linux and OpenWrt, and it runs on a Linksys NSLU2 and a TP-Link 710N using OpenWrt. It works with built-in audio and with a variety of USB-connected audio amplifiers and DACs, including a cheapo USB "3D Sound" dongle, a first generation iMic and a Topping TP30 amplifier with a USB DAC input.
 
-Shairport Sync will work with PulseAudio, which is installed in many desktop Linuxes.
+Shairport Sync will work with PulseAudio, which is installed in many desktop Linuxes. PulseAudio normallys run in the *user mode* but can be configured to run in *system mode*, and Shairport Sync can work with it in either mode.
 
 Shairport Sync runs well on the Raspberry Pi on USB and I2S cards. It can drive the built-in sound card – see the note below on configuring the Raspberry Pi to make best use of it. 
 
@@ -123,6 +123,8 @@ $ autoreconf -i -f
 - `--with-configfile` to install a configuration file and a separate sample file at the `make install` stage. Default is to install. An existing `/etc/shairport-sync.conf` will not be overwritten.
 - `--with-pkg-config` to use pkg-config to find libraries. Default is to use pkg-config — this option is for special purpose use.
 - `--with-apple-alac` to include the Apple ALAC Decoder.
+- `--with-systemd` to include a script to create a Shairport Sync service that can (optionally) launch automatically at startup on `systemd`-based Linuxes.
+- `--with-systemv` to include a script to create a Shairport Sync service that can (optionally) launch automatically at startup on System V based Linuxes.
 
 **Determine if it's a `systemd` or a "System V" installation:**
 
@@ -159,6 +161,7 @@ Here is an example, suitable for Linux installations that use `systemd`, such as
 
 * Omit the `--with-soxr` if the libsoxr library is not available.
 * For installation into a System V system, replace the `--with-systemd` with `--with-systemv`.
+* If you intend to use Shairport Sync with PulseAudio in the standard user mode, omit both `--with-systemd` and `--with-systemv`.
 
 **Build and Install the Application:**
 
