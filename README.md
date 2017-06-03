@@ -195,7 +195,7 @@ Here is an example, suitable for Linux installations that use `systemd`, such as
 
 * Omit the `--with-soxr` if the libsoxr library is not available.
 * For installation into a System V system, replace the `--with-systemd` with `--with-systemv`.
-* If you intend to use Shairport Sync with PulseAudio in the standard user mode, omit both `--with-systemd` and `--with-systemv`.
+* If you intend to use Shairport Sync with PulseAudio in the standard user mode, it can not be a system service, so you should omit both `--with-systemd` and `--with-systemv`.
 
 **Build and Install the Application:**
 
@@ -236,8 +236,12 @@ There are two logically distinct parts to getting Shairport Sync to run properly
 **(1) Starting and Stopping:**
 Starting and stopping Shairport Sync automatically is taken care of differently in different versions of Linux – see the previous section for an example of installing into a `systemd` or a System V based system.
 
+If you are using PulseAudio in the standard "user" mode, it must be started when the user logs in. Various GUI tools exist to enable you to build a Startup Application so that Shairport Sync will be launched when you log in to a GUI session. There does not appear to be a similar tool for terminating the program when you log out. Also, it the GUI switches to another user, the user's PulseAudio session is disconnected from the output device.
+
 **(2) Settings:**
-To get the best from Shairport Sync, you’ll need to (a) give Shairport Sync a service name by which it will be seen in iTunes etc., (b) specify the output device to use and (c) specify the name of the mixer volume control to use to control the output level. To get values for (b) and (c) you might need to explore the ALSA output devices with a program like `alsamixer` or similar.
+To get the best from Shairport Sync, you’ll need to (a) give Shairport Sync a service name by which it will be seen in iTunes etc. and (b) specify the backend you wish to use - `alsa` for the ALSA backend, or `pa` for the PulseAudio back end. If only one backend is included at compilation, or if the backend is ALSA, there is no need to explicitly specify the backend.
+
+For the ALSA backend you may need to (c) specify the output device to use and (d) specify the name of the mixer volume control to use to control the output level. To get values for (b) and (c) you might need to explore the ALSA output devices with a program like `alsamixer` or similar.
 
 Shairport Sync reads settings from a configuration file at `/etc/shairport-sync.conf` (note that in FreeBSD it will be at `/usr/local/etc/shairport-sync.conf`). When you run `$sudo make install`, a sample configuration file is installed or updated at `/etc/shairport-sync.conf.sample` (`/usr/local/etc/shairport-sync.conf.sample` in FreeBSD). This contains all the setting groups and all the settings available, but they all are commented out (comments begin with `//`) so that default values are used. The file contains explanations of the settings, useful hints and suggestions. In addition, if the file doesn't already exist, a default configuration is installed, which should work in almost any system with a sound card.
 
@@ -269,6 +273,8 @@ alsa =
   // ... other alsa settings
 };
 ```
+
+The `pa` group is used to specify settings relevant to the PulseAudio backend. At present, there are no settings in this stanza.
 
 Shairport Sync can run programs just before it starts to play an audio stream and just after it finishes. You specify them using the `sessioncontrol` group settings `run_this_before_play_begins` and `run_this_after_play_ends`. This is to facilitate situations where something has to be done before and after playing, e.g. switching on an amplifier beforehand and switching it off afterwards. Set the `wait_for_completion` value to `"yes"` for Shairport Sync to wait until the respective commands have been completed before continuing.
 
