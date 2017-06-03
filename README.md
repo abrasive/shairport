@@ -54,13 +54,47 @@ In addition, Shairport Sync can output to standard output, pipes, `soundio` and 
 
 For information about changes and updates, please refer to the RELEASENOTES.md file in the distribution.
 
-Note: Historically, Shairport Sync has taken its settings from command line arguments. While this is still the case, it does not always work well across distributions. Accordingly, from version 2.4 onwards, Shairport Sync reads settings from the file `/etc/shairport-sync.conf`. Access to new features will only be provided via the settings file.
-
 Building And Installing the Development Version
 ---------------------
-The following procedures will install the `shairport-sync` application into your system. Before continuing, you should check to see if `shairport-sync` is already installed – you can use the command `$ which shairport-sync` to find where it is located, if installed. If it is installed you should delete it – you may need superuser privileges. After deleting, check again in case further copies are installed elsewhere.
+The following procedures will install the `shairport-sync` application into your system.
+
+**Remove Old Versions Of Shairport Sync**
+
+You should check to see if `shairport-sync` is already installed – you can use the command `$ which shairport-sync` to find where it is located, if installed. If it is installed you should delete it – you may need superuser privileges. After deleting, check again in case further copies are installed elsewhere.
+
+**FreeBSD**
 
 To build Shairport Sync from sources on FreeBSD please refer to [FREEBSD.md](https://github.com/mikebrady/shairport-sync/blob/development/FREEBSD.md).
+
+**Determine The Configuration Needed**
+
+Shairport Sync has a number of different "backends" that connnect it to the system's audio handling infrastructure. Most recent Linux distributions that have a GUI – including Ubuntu, Debian and others – use PulseAudio to handle sound. If your system uses PulseAudio, you should build Shairport Sync with the PulseAudio backend. You can check to see if PulseAudio is running by opening a Terminal window and entering the command `$ pactl info`. Here is an example of what you'll get if PulseAudio is installed, though the exact details may vary:
+```
+$ pactl info
+Server String: unix:/run/user/1000/pulse/native
+Library Protocol Version: 30
+Server Protocol Version: 30
+Is Local: yes
+Client Index: 9
+Tile Size: 65472
+User Name: mike
+Host Name: ubuntu
+Server Name: pulseaudio
+Server Version: 8.0
+Default Sample Specification: s16le 2ch 44100Hz
+Default Channel Map: front-left,front-right
+Default Sink: alsa_output.pci-0000_02_02.0.analog-stereo
+Default Source: alsa_input.pci-0000_02_02.0.analog-stereo
+Cookie: 96f9:3e8d
+$
+```
+If PulseAudio in not installed, you'll get something like this:
+```
+$  pactl info
+-bash: pactl: command not found
+$ 
+```
+If your system does not use PulseAudio, then it is likely that it uses the Advanced Linux Sound Architecture (ALSA), so you should build Shairport Sync with the ALSA backend. By the way, many systems with PulseAudio also have ALSA (in fact, PulseAudio is effectively a client of ALSA); in those cases you should choose the PulseAudio backend.
 
 To build Shairport Sync from sources on Debian, Ubuntu, Raspbian, etc. follow these instructions.
 
