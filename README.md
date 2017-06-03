@@ -146,6 +146,8 @@ $ autoreconf -i -f
 
 **Choose the appropriate `--with-*` options:**
 
+(Don't worry -- there's a standard set of configuration options recommended further down.)
+
 - `--with-alsa` include the ALSA backend module to audio to be output through the Advanced Linux Sound Architecture (ALSA) system directly. This is recommended for highest quality. 
 - `--with-pa` include the PulseAudio audio back end. This is recommended if your Linux installation already has PulseAudio installed. Although ALSA would be better, it requires direct and exclusive access to to a real (hardware) soundcard, and this is often impractical if PulseAudio is installed.
 - `--with-stdout` include an optional backend module to enable raw audio to be output through standard output (stdout).
@@ -193,7 +195,7 @@ A final consideration is the location of the configuration file `shairport-sync.
 
 **Sample `./configure` command with parameters for a typical Linux `systemd` installation:**
 
-Here is an example, suitable for Linux installations that use `systemd`, such as Ubuntu 15.10 and Raspbian Jessie:
+Here is a recommended set of configuration options suitable for Linux installations that use `systemd`, such as Ubuntu 15.10 and Raspbian Jessie. It specifies bothe ALSA and PulseAudio backends and includes a sample configuration file and an script for automatic startup on system boot:
 
 `$ ./configure --sysconfdir=/etc --with-alsa --with-pa --with-avahi --with-ssl=openssl --with-metadata --with-soxr --with-systemd`
 
@@ -214,17 +216,18 @@ Assuming you have used the `./configure` settings suggested above, you can now i
 ```
 $ sudo make install
 ```
-The user and group `shairport-sync` will be created if necessary, and a runtime folder will be created at `/var/run/shairport-sync` in SystemV installations. In addition, a `man` page, a default configuration file and automatic power-on startup script will be installed.
+The user and group `shairport-sync` will be created if necessary, and a runtime folder will be created at `/var/run/shairport-sync` if you have chosen `--with-systemv`. In addition, a `man` page, a default configuration file and automatic power-on startup script will be installed.
 
 
 **Complete installation into to a `systemd` system**
 
-To enable Shairport Sync to start automatically at system startup, enter:
+If you have chosen the `--with-systemd` configuration option, then, to enable Shairport Sync to start automatically at system startup, enter:
 
 `$sudo systemctl enable shairport-sync`
 
 **Complete installation into a System V system**
-If you are installing onto a System V system, enter:
+
+If you have chosen the `--with-systemd` configuration option, enter:
 ```
 $sudo update-rc.d shairport-sync defaults 90 10
 ```
@@ -235,12 +238,12 @@ You can view the man page here: http://htmlpreview.github.io/?https://github.com
 
 Configuring Shairport Sync
 --------
-There are two logically distinct parts to getting Shairport Sync to run properly on your machine — (1) starting and stopping it and (2) ensuring it has the right settings.
+There are two logically distinct parts to getting Shairport Sync to run properly on your machine: (1) starting and stopping it and (2) ensuring it has the right settings.
 
 **(1) Starting and Stopping:**
 Starting and stopping Shairport Sync automatically is taken care of differently in different versions of Linux – see the previous section for an example of installing into a `systemd` or a System V based system.
 
-If you are using PulseAudio in the standard "user" mode, it must be started when the user logs in. Various GUI tools exist to enable you to build a Startup Application so that Shairport Sync will be launched when you log in to a GUI session. There does not appear to be a similar tool for terminating the program when you log out. Also, it the GUI switches to another user, the user's PulseAudio session is disconnected from the output device.
+If you are using PulseAudio in the standard "user" mode, you can not start Shairport Sync automatically at boot time – it must be started when the user logs in to a GUI session. Various GUI tools exist to enable you to build a Startup Application. However, there does not appear to be a similar tool for terminating the program when you log out. Also, it the GUI switches to another user, the user's PulseAudio session is disconnected from the output device.
 
 **(2) Settings:**
 To get the best from Shairport Sync, you’ll need to (a) give Shairport Sync a service name by which it will be seen in iTunes etc. and (b) specify the backend you wish to use - `alsa` for the ALSA backend, or `pa` for the PulseAudio back end. If only one backend is included at compilation, or if the backend is ALSA, there is no need to explicitly specify the backend.
