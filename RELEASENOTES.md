@@ -9,7 +9,7 @@ These commits fix both issues by setting larger send buffer of 4MB and chunking 
 Thanks to [Paul Guyot](https://github.com/pguyot) for this work.
 
 * A new command line option `-j` to deamonize Shairport Sync without creating a PID file. (The "j" is from "just daemonize".)
-* Small change in startup behaviour. Shairport Sync now reads the configuration file before executing the `'k` option.
+* Small change in startup behaviour. Shairport Sync now reads the configuration file before executing the `-k` option.
 
 Version 3.1d16
 ====
