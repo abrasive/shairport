@@ -6,7 +6,10 @@ Sending metadata over UDP currently suffers from two main issues:
 The send buffer is left to system default, and consequently packets can be lost as Airplay clients send a lot of metadata;
 some metadata (typically the cover art) cannot be sent within a single IPv4 UDP packet because they are too large.
 These commits fix both issues by setting larger send buffer of 4MB and chunking any metadata with a new sub-protocol ("ssnc", "chnk", packet_ix, packet_counts, packet_tag, packet_type, chunked_data).
-Thanks to [pguyot](https://github.com/pguyot) for this work.
+Thanks to [Paul Guyot](https://github.com/pguyot) for this work.
+
+* A new command line option `-j` to deamonize Shairport Sync without creating a PID file. (The "j" is from "just daemonize".)
+* Small change in startup behaviour. Shairport Sync now reads the configuration file before executing the `'k` option.
 
 Version 3.1d16
 ====
