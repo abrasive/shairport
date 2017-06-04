@@ -69,6 +69,8 @@
 #define INETx_ADDRSTRLEN INET_ADDRSTRLEN
 #endif
 
+#define METADATA_SNDBUF (4 * 1024 * 1024)
+
 enum rtsp_read_request_response {
   rtsp_read_request_response_ok,
   rtsp_read_request_response_shutdown_requested,
@@ -1019,6 +1021,8 @@ void metadata_create(void) {
     if (metadata_sock < 0) {
       debug(1, "Could not open metadata socket");
     } else {
+      int buffer_size = METADATA_SNDBUF;
+      setsockopt(metadata_sock, SOL_SOCKET, SO_SNDBUF, &buffer_size, sizeof(buffer_size));
       bzero((char *)&metadata_sockaddr, sizeof(metadata_sockaddr));
       metadata_sockaddr.sin_family = AF_INET;
       metadata_sockaddr.sin_addr.s_addr = inet_addr(config.metadata_sockaddr);
@@ -1079,6 +1083,44 @@ void metadata_process(uint32_t type, uint32_t code, char *data, uint32_t length)
     memcpy(ptr, data, length);
     sendto(metadata_sock, metadata_sockmsg, length + 8, 0, (struct sockaddr *)&metadata_sockaddr,
            sizeof(metadata_sockaddr));
+  } else if (metadata_sock >= 0) {
+    // send metadata in numbered chunks
+    uint32_t chunk_ix = 0;
+    uint32_t chunk_total = length / (config.metadata_sockmsglength - 24);
+    if (chunk_total * (config.metadata_sockmsglength - 24) < length) {
+        chunk_total++;
+    }
+    uint32_t remaining = length;
+    uint32_t v;
+    char* data_crsr = data;
+    do {
+      char *ptr = metadata_sockmsg;
+      memcpy(ptr, "ssncchnk", 8);
+      ptr += 8;
+      v = htonl(chunk_ix);
+      memcpy(ptr, &v, 4);
+      ptr += 4;
+      v = htonl(chunk_total);
+      memcpy(ptr, &v, 4);
+      ptr += 4;
+      v = htonl(type);
+      memcpy(ptr, &v, 4);
+      ptr += 4;
+      v = htonl(code);
+      memcpy(ptr, &v, 4);
+      ptr += 4;
+      uint32_t datalen = remaining;
+      if (datalen > config.metadata_sockmsglength - 24) {
+          datalen = config.metadata_sockmsglength - 24;
+      }
+      memcpy(ptr, data_crsr, datalen);
+      data_crsr += datalen;
+      sendto(metadata_sock, metadata_sockmsg, datalen + 24, 0, (struct sockaddr *)&metadata_sockaddr,
+             sizeof(metadata_sockaddr));
+      chunk_ix++;
+      remaining -= datalen;
+      if (remaining == 0) break;
+    } while (1);
   }
 
   // readers may go away and come back
