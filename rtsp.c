@@ -69,6 +69,8 @@
 #define INETx_ADDRSTRLEN INET_ADDRSTRLEN
 #endif
 
+#define METADATA_SNDBUF (4 * 1024 * 1024)
+
 enum rtsp_read_request_response {
   rtsp_read_request_response_ok,
   rtsp_read_request_response_shutdown_requested,
@@ -1019,6 +1021,8 @@ void metadata_create(void) {
     if (metadata_sock < 0) {
       debug(1, "Could not open metadata socket");
     } else {
+      int buffer_size = METADATA_SNDBUF;
+      setsockopt(metadata_sock, SOL_SOCKET, SO_SNDBUF, &buffer_size, sizeof(buffer_size));
       bzero((char *)&metadata_sockaddr, sizeof(metadata_sockaddr));
       metadata_sockaddr.sin_family = AF_INET;
       metadata_sockaddr.sin_addr.s_addr = inet_addr(config.metadata_sockaddr);
