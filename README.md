@@ -163,10 +163,12 @@ $ autoreconf -i -f
 - `--with-configfile` to install a configuration file and a separate sample file at the `make install` stage. Default is to install. An existing `/etc/shairport-sync.conf` will not be overwritten.
 - `--with-pkg-config` to use pkg-config to find libraries. Default is to use pkg-config — this option is for special purpose use.
 - `--with-apple-alac` to include the Apple ALAC Decoder.
-- `--with-systemd` to include a script to create a Shairport Sync service that can (optionally) launch automatically at startup on `systemd`-based Linuxes.
-- `--with-systemv` to include a script to create a Shairport Sync service that can (optionally) launch automatically at startup on System V based Linuxes.
+- `--with-systemd` to include a script to create a Shairport Sync service that can optionally launch automatically at startup on `systemd`-based Linuxes.
+- `--with-systemv` to include a script to create a Shairport Sync service that can optionally launch automatically at startup on System V based Linuxes.
 
 **Determine if it's a `systemd` or a "System V" installation:**
+
+If you wish to have Shairport Sync start automatically when your systewm reboots, you need to figure out whether the system is using `systemd` or the older System V startup facilities. If you are using Shairport Sync with PulseAudio as installed in many desktop systems, this doesn't apply.
 
 At the time of writing, there are two widely-used systems for starting programs automatically at startup: `systemd` and "System V" . (There are others, but they are not considered here.) To see if the `systemd` process is running on your system, enter the following command:
 
@@ -263,7 +265,12 @@ general =
 	// ... other general settings
 };
 ```
-(Remember, anything preceded by `//` is a comment and will have no effect on the setting of Shairport Sync.)
+(Remember, anything preceded by `//` is a comment and will have no effect on the setting of Shairport Sync.) No backend is specified here, so it will default to the `alsa` backend if more than one back end. To route the output to PulseAudio, add:
+
+```
+	output_backend = "pa";
+```
+to the `general` stanza.
 
 The `alsa` group is used to specify properties of the output device. The most obvious setting is the name of the output device which you can set using the `output_device` tag.
 
@@ -332,7 +339,7 @@ alsa = {
 
 This gives the service a particular name — "Joe's Stereo" and specifies that audio device hw:0 be used.
 
-For best results — including getting true mute and instant response to volume control and pause commands — you should access the hardware volume controls. Use `amixer` or `alsamixer` or similar to discover the name of the mixer control to be used as the `mixer_control_name`.
+For best results with the `alsa` backend — including getting true mute and instant response to volume control and pause commands — you should access the hardware volume controls. Use `amixer` or `alsamixer` or similar to discover the name of the mixer control to be used as the `mixer_control_name`.
 
 Here is an example for for a Raspberry Pi using its internal soundcard — device hw:0 — that drives the headphone jack:
 ```
@@ -406,6 +413,16 @@ alsa = {
   mixer_control_name = "Speaker";
 };
 ```
+
+Finally, here is an example of using the PulseAudio backend:
+```
+general = {
+  name = "Zoe's Computer";
+  output_backend = "pa";
+};
+
+```
+
 
 Metadata broadcasting over UDP
 ------------------------------
