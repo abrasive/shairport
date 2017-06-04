@@ -877,8 +877,7 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn, rtsp_message *r
 #ifdef CONFIG_METADATA
 // Metadata is not used by shairport-sync.
 // Instead we send all metadata to a fifo pipe, so that other apps can listen to
-// the pipe and use
-// the metadata.
+// the pipe and use the metadata.
 
 // We use two 4-character codes to identify each piece of data and we send the
 // data itself, if any,
@@ -943,6 +942,14 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn, rtsp_message *r
 //    to send commands to the source's remote control (if it has one).
 //		`clip` -- the payload is the IP number of the client, i.e. the sender of audio.
 //		Can be an IPv4 or an IPv6 number.
+
+
+
+//		A special sub-protocol is used for sending large data items over UDP
+//    If the payload exceeded 4 MB, it is chunked using the following format:
+//    "ssnc", "chnk", packet_ix, packet_counts, packet_tag, packet_type, chunked_data.
+//    Notice that the number of items is different to the standard 
+
 
 // including a simple base64 encoder to minimise malloc/free activity
 
@@ -1084,7 +1091,9 @@ void metadata_process(uint32_t type, uint32_t code, char *data, uint32_t length)
     sendto(metadata_sock, metadata_sockmsg, length + 8, 0, (struct sockaddr *)&metadata_sockaddr,
            sizeof(metadata_sockaddr));
   } else if (metadata_sock >= 0) {
-    // send metadata in numbered chunks
+    // send metadata in numbered chunks using the protocol:
+    // ("ssnc", "chnk", packet_ix, packet_counts, packet_tag, packet_type, chunked_data)
+    
     uint32_t chunk_ix = 0;
     uint32_t chunk_total = length / (config.metadata_sockmsglength - 24);
     if (chunk_total * (config.metadata_sockmsglength - 24) < length) {
