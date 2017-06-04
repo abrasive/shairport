@@ -1,3 +1,13 @@
+Version 3.1.d17
+====
+**Enhancement**
+* Improvement in sending metadata over UDP.
+Sending metadata over UDP currently suffers from two main issues:
+The send buffer is left to system default, and consequently packets can be lost as Airplay clients send a lot of metadata;
+some metadata (typically the cover art) cannot be sent within a single IPv4 UDP packet because they are too large.
+These commits fix both issues by setting larger send buffer of 4MB and chunking any metadata with a new sub-protocol ("ssnc", "chnk", packet_ix, packet_counts, packet_tag, packet_type, chunked_data).
+Thanks to [pguyot](https://github.com/pguyot) for this work.
+
 Version 3.1d16
 ====
 **New Feature**
