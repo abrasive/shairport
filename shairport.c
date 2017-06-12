@@ -915,21 +915,19 @@ void shairport_startup_complete(void) {
 
 
 const char *pid_file_proc(void) {
-#ifdef USE_CUSTOM_PID_DIR
-char * use_this_pid_dir = PIDDIR;
-#else
-char * use_this_pid_dir = "/var/run/shairport-sync";
-#endif
-// debug(1,"config.piddir \"%s\".",config.piddir);
-if (config.piddir)
-  use_this_pid_dir = config.piddir;
-  char fn[8192];
-  snprintf(fn, sizeof(fn), "%s/%s.pid", use_this_pid_dir,
-           daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
-  // debug(1,"fn \"%s\".",fn);
-  char *realPidFilePath = realpath(fn, NULL);
-  // debug(1,"PID file path \"%s\".",realPidFilePath);
-  return realPidFilePath;
+	#ifdef USE_CUSTOM_PID_DIR
+	char * use_this_pid_dir = PIDDIR;
+	#else
+	char * use_this_pid_dir = "/var/run/shairport-sync";
+	#endif
+	// debug(1,"config.piddir \"%s\".",config.piddir);
+	if (config.piddir)
+		use_this_pid_dir = config.piddir;
+	char fn[8192];
+	snprintf(fn, sizeof(fn), "%s/%s.pid", use_this_pid_dir,
+						 daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
+	//debug(1,"fn \"%s\".",fn);
+	return strdup(fn);
 }
 
 void exit_function() {
@@ -1267,7 +1265,6 @@ int main(int argc, char **argv) {
   }
 
   /* Print out options */
-
   debug(1, "statistics_requester status is %d.", config.statistics_requested);
   debug(1, "daemon status is %d.", config.daemonise);
   debug(1, "deamon pid file is \"%s\".",pid_file_proc());
