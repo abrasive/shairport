@@ -53,18 +53,7 @@ static int init(int argc, char **argv) {
   audio_toq = audio_eoq = audio_lmb;
   audio_umb = audio_lmb + audio_size;
   audio_occupancy = 0;
-
-  return 0;
-}
-
-static void deinit(void) {}
-
-static void start(int sample_rate, int sample_format) {
-
-
-  uint32_t buffer_size_in_bytes = (uint32_t)2 * 2 * RATE * 0.1; // hard wired in here
-  // debug(1, "pa_buffer size is %u bytes.", buffer_size_in_bytes);
-
+  
   // Get a mainloop and its context
   mainloop = pa_threaded_mainloop_new();
   assert(mainloop);
@@ -91,6 +80,24 @@ static void start(int sample_rate, int sample_format) {
     pa_threaded_mainloop_wait(mainloop);
   }
 
+  pa_threaded_mainloop_unlock(mainloop);
+
+  return 0;
+}
+
+static void deinit(void) {
+  // debug(1, "pa deinit start");
+  pa_threaded_mainloop_stop(mainloop);
+  pa_threaded_mainloop_free(mainloop);
+  // debug(1, "pa deinit done");
+}
+
+static void start(int sample_rate, int sample_format) {
+
+  uint32_t buffer_size_in_bytes = (uint32_t)2 * 2 * RATE * 0.1; // hard wired in here
+  // debug(1, "pa_buffer size is %u bytes.", buffer_size_in_bytes);
+
+  pa_threaded_mainloop_lock(mainloop);
   // Create a playback stream
   pa_sample_spec sample_specifications;
   sample_specifications.format = FORMAT;
@@ -212,11 +219,8 @@ static void stop(void) {
   audio_umb = audio_lmb + audio_size;
   audio_occupancy = 0;
 
-  // debug(1, "pa deinit start");
+  // debug(1, "finish with stream");
   pa_stream_disconnect(stream);
-  pa_threaded_mainloop_stop(mainloop);
-  pa_threaded_mainloop_free(mainloop);
-  // debug(1, "pa deinit done");
 }
 
 static void help(void) {
