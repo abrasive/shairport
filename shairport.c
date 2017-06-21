@@ -1322,7 +1322,7 @@ int main(int argc, char **argv) {
     debug(1, "configuration file name \"%s\" can not be resolved.", config.configfile);
   }
 #ifdef CONFIG_METADATA
-  debug(1, "metdata enabled is %d.", config.metadata_enabled);
+  debug(1, "metadata enabled is %d.", config.metadata_enabled);
   debug(1, "metadata pipename is \"%s\".", config.metadata_pipename);
   debug(1, "metadata socket address is \"%s\" port %d.", config.metadata_sockaddr,
         config.metadata_sockport);
