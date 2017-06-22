@@ -1,3 +1,10 @@
+Version 3.1.d20
+====
+**Bug Fix**
+* Fixed bug whereby Shairport Sync was searching the wrong directory for the configuration file.
+Thanks to [hui13](https://github.com/hui13) for reporting this.
+* Also fixed typo in version -- (3.1d19 was mistyped 3.1d189!).
+
 Version 3.1.d19
 ====
 **Enhancement**
