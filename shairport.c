@@ -971,7 +971,8 @@ int main(int argc, char **argv) {
     die("Can not recognise the endianness of the processor.");
 
   strcpy(configuration_file_path, SYSCONFDIR);
-  strcat(configuration_file_path, "/shairport-sync/");
+  // strcat(configuration_file_path, "/shairport-sync"); // thinking about adding a special shairport-sync directory
+  strcat(configuration_file_path, "/");
   strcat(configuration_file_path, appName);
   strcat(configuration_file_path, ".conf");
   config.configfile = configuration_file_path;
