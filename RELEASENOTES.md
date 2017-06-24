@@ -1,3 +1,8 @@
+Version 3.1.d21
+====
+**Bug Fixes**
+* If a fault was detected during initialisation of the ALSA subsystem and Shairport Sync attempted to terminate, sometimes it  hung up waiting indefinitely for a mutex to be unlocked. Unlocking is now done before attempting to terminate. Fixes the issue in #539. Thanks to [f3flight](https://github.com/f3flight) for the report.
+
 Version 3.1.d20
 ====
 **Bug Fix**
