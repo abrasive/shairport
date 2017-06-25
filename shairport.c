@@ -694,6 +694,16 @@ int parse_options(int argc, char **argv) {
               "\"yes\" or \"no\"");
       }
 
+      if (config_lookup_string(config.cfg, "sessioncontrol.before_play_begins_returns_output", &str)) {
+        if (strcasecmp(str, "no") == 0)
+          config.cmd_start_returns_output = 0;
+        else if (strcasecmp(str, "yes") == 0)
+          config.cmd_start_returns_output = 1;
+        else
+          die("Invalid session control before_play_begins_returns_output option choice \"%s\". It should be "
+              "\"yes\" or \"no\"");
+      }
+
       if (config_lookup_string(config.cfg, "sessioncontrol.allow_session_interruption", &str)) {
         config.dont_check_timeout = 0; // this is for legacy -- only set by -t 0
         if (strcasecmp(str, "no") == 0)
@@ -1277,6 +1287,7 @@ int main(int argc, char **argv) {
   debug(1, "on-start action is \"%s\".", config.cmd_start);
   debug(1, "on-stop action is \"%s\".", config.cmd_stop);
   debug(1, "wait-cmd status is %d.", config.cmd_blocking);
+  debug(1, "on-start returns output is %d.", config.cmd_start_returns_output);
   debug(1, "mdns backend \"%s\".", config.mdns_name);
   debug(2, "userSuppliedLatency is %d.", config.userSuppliedLatency);
   debug(2, "AirPlayLatency is %d.", config.AirPlayLatency);

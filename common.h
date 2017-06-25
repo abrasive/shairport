@@ -116,7 +116,7 @@ typedef struct {
   int statistics_requested, use_negotiated_latencies;
   enum playback_mode_type playback_mode;
   char *cmd_start, *cmd_stop, *cmd_set_volume;
-  int cmd_blocking;
+  int cmd_blocking, cmd_start_returns_output;
   double tolerance; // allow this much drift before attempting to correct it
   enum stuffing_type packet_stuffing;
   int decoders_supported;

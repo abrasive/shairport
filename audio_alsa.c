@@ -109,6 +109,10 @@ static void help(void) {
          "    *) default option\n");
 }
 
+void set_alsa_out_dev(char *dev) {
+  alsa_out_dev = dev;
+}
+
 int open_mixer() {
   if (hardware_mixer) {
     debug(2, "Open Mixer");
