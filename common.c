@@ -80,6 +80,10 @@
 
 #include <libdaemon/dlog.h>
 
+#ifdef CONFIG_ALSA
+void set_alsa_out_dev(char *);
+#endif
+
 // true if Shairport Sync is supposed to be sending output to the output device, false otherwise
 
 static volatile int requested_connection_state_to_output = 1;
@@ -504,11 +508,30 @@ void command_set_volume(double volume) {
 
 void command_start(void) {
   if (config.cmd_start) {
+    pid_t pid;
+    int pipes[2];
+
+    if (config.cmd_start_returns_output && pipe(pipes) != 0) {
+      warn("Unable to allocate pipe for popen of start command.");
+      debug(1, "pipe finished with error %d", errno);
+      return;
+    }
     /*Spawn a child to run the program.*/
-    pid_t pid = fork();
+    pid = fork();
     if (pid == 0) { /* child process */
       int argC;
       char **argV;
+
+      if (config.cmd_start_returns_output) {
+        close(pipes[0]);
+        if (dup2(pipes[1], 1) < 0) {
+          warn("Unable to reopen pipe as stdout for popen of start command");
+          debug(1, "dup2 finished with error %d", errno);
+          close(pipes[1]);
+          return;
+        }
+      }
+
       // debug(1,"on-start command found.");
       if (poptParseArgvString(config.cmd_start, &argC, (const char ***)&argV) !=
           0) // note that argV should be free()'d after use, but we expect this fork to exit
@@ -522,12 +545,26 @@ void command_start(void) {
         exit(127); /* only if execv fails */
       }
     } else {
-      if (config.cmd_blocking) { /* pid!=0 means parent process and if blocking is true, wait for
+      if (config.cmd_blocking || config.cmd_start_returns_output) { /* pid!=0 means parent process and if blocking is true, wait for
                                     process to finish */
         pid_t rc = waitpid(pid, 0, 0); /* wait for child to exit */
         if (rc != pid) {
           warn("Execution of on-start command returned an error.");
           debug(1, "on-start command %s finished with error %d", config.cmd_start, errno);
+        }
+        if (config.cmd_start_returns_output) {
+          static char buffer[256];
+          int len;
+          close(pipes[1]);
+          len = read(pipes[0], buffer, 255);
+          close(pipes[0]);
+          buffer[len] = '\0';
+          if (buffer[len - 1] == '\n')
+            buffer[len - 1] = '\0'; // strip trailing newlines
+          debug(1, "received '%s' as the device to use from the on-start command", buffer);
+#ifdef CONFIG_ALSA
+          set_alsa_out_dev(buffer);
+#endif
         }
       }
       // debug(1,"Continue after on-start command");
