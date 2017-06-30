@@ -874,7 +874,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
             int64_t filler_size = max_dac_delay; // 0.1 second -- the maximum we'll add to the DAC
 
             if (local_time_now >= conn->first_packet_time_to_play) {
-              debug(1,"Gone past starting time");
+              // debug(1,"Gone past starting time");
               have_sent_prefiller_silence = 1;
               conn->ab_buffering = 0;
 
@@ -956,7 +956,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
                         debug(1, "Failed to allocate %d byte silence buffer.", fs);
                       else {
                         memset(silence, 0, conn->output_bytes_per_frame * fs);
-                        debug(1,"Frames to start: %llu, DAC delay %ld, buffer: %d packets.",exact_frame_gap,dac_delay,seq_diff(conn->ab_read, conn->ab_write, conn->ab_read));
+                        // debug(1,"Frames to start: %llu, DAC delay %ld, buffer: %d packets.",exact_frame_gap,dac_delay,seq_diff(conn->ab_read, conn->ab_write, conn->ab_read));
                         config.output->play(silence, fs);
                         free(silence);
                         have_sent_prefiller_silence = 1;
@@ -965,13 +965,13 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
                   }
                 } else {
                   //no delay function on back end -- just send the prefiller silence
-                  debug(1,"Back end has no delay function.");
+                  // debug(1,"Back end has no delay function.");
                   // send the appropriate prefiller here...
                   
                   signed short *silence;
                   if (lead_time != 0) {
                     int64_t frame_gap = (lead_time * config.output_rate) >> 32;
-                    debug(1,"%d frames needed.",frame_gap);
+                    // debug(1,"%d frames needed.",frame_gap);
                     while (frame_gap>0) {
                       size_t fs = config.output_rate/10;
                       if (fs>frame_gap)
@@ -981,7 +981,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
                       if (silence == NULL)
                         debug(1, "Failed to allocate %d frame silence buffer.", fs);
                       else {
-                        debug(1, "Outputting %d frames of silence.", fs);
+                        // debug(1, "Outputting %d frames of silence.", fs);
                         memset(silence, 0, conn->output_bytes_per_frame * fs);
                         config.output->play(silence, fs);
                         free(silence);
