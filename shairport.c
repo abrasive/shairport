@@ -372,6 +372,8 @@ int parse_options(int argc, char **argv) {
 
   config.resyncthreshold = 1.0 * fResyncthreshold / 44100;
   config.tolerance = 1.0 * fTolerance / 44100;
+  config.audio_backend_silent_lead_in_time = -1.0; // flag to indicate it has not been set
+ config.audio_backend_silent_lead_in_time = 0.0; // flag to indicate it has not been set
 
   config_setting_t *setting;
   const char *str = 0;

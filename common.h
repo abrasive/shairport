@@ -74,6 +74,10 @@ typedef struct {
   char *password;
   char *service_name; // the name for the shairport service, e.g. "Shairport Sync Version %v running
                       // on host %h"
+#ifdef CONFIG_PA
+  char *pa_application_name; // the name under which Shairport Sync shows up as an "Application" in the Sound Preferences in most desktop Linuxes.
+                             // Defaults to "Shairport Sync". Shairport Sync must be playing to see it.
+#endif
 #ifdef CONFIG_METADATA
   int metadata_enabled;
   char *metadata_pipename;
@@ -134,6 +138,7 @@ typedef struct {
                                               // audio backend buffer -- the DAC buffer for ALSA
   double audio_backend_latency_offset; // this will be the offset in seconds to compensate for any
                                        // fixed latency there might be in the audio path
+  double audio_backend_silent_lead_in_time; // the length of the silence that should precede a play.
   uint32_t volume_range_db; // the range, in dB, from max dB to min dB. Zero means use the mixer's
                             // native range.
   enum sps_format_t output_format;

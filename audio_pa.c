@@ -1,4 +1,4 @@
-// Based on
+// Based (distantly, with thanks) on
 // http://stackoverflow.com/questions/29977651/how-can-the-pulseaudio-asynchronous-library-be-used-to-play-raw-pcm-data
 
 #include "audio.h"
@@ -45,6 +45,46 @@ static int init(int argc, char **argv) {
   // default values
   config.audio_backend_buffer_desired_length = 0.35;
   config.audio_backend_latency_offset = 0;
+    
+  // get settings from settings file first, allow them to be overridden by
+  // command line options
+
+  if (config.cfg != NULL) {
+    const char *str;
+    double dvalue;
+
+    /* Get the desired buffer size setting. */
+    if (config_lookup_float(config.cfg, "pa.audio_backend_buffer_desired_length_in_seconds",
+                            &dvalue)) {
+      if ((dvalue < 0) || (dvalue > 1.5)) {
+        die("Invalid pa audio_backend_buffer_desired_length_in_seconds \"%f\". It "
+            "should be between 0 and "
+            "1.5, default is 0.35 seconds",
+            dvalue);
+      } else {
+        config.audio_backend_buffer_desired_length = dvalue;
+      }
+    }
+
+    /* Get the latency offset. */
+    if (config_lookup_float(config.cfg, "pa.audio_backend_latency_offset_in_seconds", &dvalue)) {
+      if ((dvalue < -1.0) || (dvalue > 1.5)) {
+        die("Invalid pa audio_backend_latency_offset_in_seconds \"%f\". It "
+            "should be between -1.0 and +1.5, default is 0 seconds",
+            dvalue);
+      } else {
+        config.audio_backend_latency_offset = dvalue;
+      }
+    }
+
+    /* Get the Application Name. */
+    if (config_lookup_string(config.cfg, "pa.application_name", &str)) {
+      config.pa_application_name = (char *)str;
+    }
+  }
+  
+  
+  // finish collecting settings
   
   // allocate space for the audio buffer
   audio_lmb = malloc(audio_size);
@@ -58,7 +98,10 @@ static int init(int argc, char **argv) {
   mainloop = pa_threaded_mainloop_new();
   assert(mainloop);
   mainloop_api = pa_threaded_mainloop_get_api(mainloop);
-  context = pa_context_new(mainloop_api, "Shairport Sync");
+  if (config.pa_application_name)
+    context = pa_context_new(mainloop_api, config.pa_application_name);
+  else
+    context = pa_context_new(mainloop_api, "Shairport Sync");   
   assert(context);
 
   // Set a callback so we can wait for the context to be ready
