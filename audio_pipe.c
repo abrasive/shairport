@@ -95,6 +95,18 @@ static int init(int argc, char **argv) {
     if (config_lookup_string(config.cfg, "pipe.name", &str)) {
       pipename = (char *)str;
     }
+    
+    /* Get the desired length of the period of silence before the audio starts. */
+    if (config_lookup_float(config.cfg, "pipe.audio_backend_silent_lead_in_time",
+                            &dvalue)) {
+      if ((dvalue < 0.05) || (dvalue > 4)) {
+        die("Invalid pipe audio_backend_silent_lead_in_time \"%f\". It "
+            "must be between 0.050 and 4.0 seconds. Omit setting to use the default value, which is approximately the latency specified by the source (typically 2 seconds). A value greater than the latency is ignored.",
+            dvalue);
+      } else {
+        config.audio_backend_silent_lead_in_time = dvalue;
+      }
+    }
 
     if ((pipename) && (strcasecmp(pipename, "STDOUT") == 0))
       die("Can't use \"pipe\" backend for STDOUT. Use the \"stdout\" backend instead.");

@@ -52,6 +52,17 @@ static int init(int argc, char **argv) {
   if (config.cfg != NULL) {
     const char *str;
     double dvalue;
+    /* Get the desired length of the period of silence before the audio starts. */
+    if (config_lookup_float(config.cfg, "pa.audio_backend_silent_lead_in_time",
+                            &dvalue)) {
+      if ((dvalue < 0.05) || (dvalue > 4)) {
+        die("Invalid pa audio_backend_silent_lead_in_time \"%f\". It "
+            "must be between 0.050 and 4.0 seconds. Omit setting to use the default value, which is approximately the latency specified by the source (typically 2 seconds). A value greater than the latency is ignored.",
+            dvalue);
+      } else {
+        config.audio_backend_silent_lead_in_time = dvalue;
+      }
+    }
 
     /* Get the desired buffer size setting. */
     if (config_lookup_float(config.cfg, "pa.audio_backend_buffer_desired_length_in_seconds",
