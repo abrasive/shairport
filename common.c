@@ -101,7 +101,7 @@ void die(const char *format, ...) {
   s[0] = 0;
   va_list args;
   va_start(args, format);
-  vsprintf(s, format, args);
+  vsnprintf(s, sizeof(s), format, args);
   va_end(args);
   daemon_log(LOG_EMERG, "fatal error: %s", s);
   shairport_shutdown();
@@ -113,7 +113,7 @@ void warn(const char *format, ...) {
   s[0] = 0;
   va_list args;
   va_start(args, format);
-  vsprintf(s, format, args);
+  vsnprintf(s, sizeof(s), format, args);
   va_end(args);
   daemon_log(LOG_WARNING, "%s", s);
 }
@@ -125,7 +125,7 @@ void debug(int level, const char *format, ...) {
   s[0] = 0;
   va_list args;
   va_start(args, format);
-  vsprintf(s, format, args);
+  vsnprintf(s, sizeof(s), format, args);
   va_end(args);
   daemon_log(LOG_DEBUG, "%s", s);
 }
@@ -135,7 +135,7 @@ void inform(const char *format, ...) {
   s[0] = 0;
   va_list args;
   va_start(args, format);
-  vsprintf(s, format, args);
+  vsnprintf(s, sizeof(s), format, args);
   va_end(args);
   daemon_log(LOG_INFO, "%s", s);
 }
