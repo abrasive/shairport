@@ -1,7 +1,7 @@
 Version 3.1.d22
 ====
 **Bug Fix**
-* When playing to a non-synchromnised backend, such as the stdout or pipe backends, Shirport Sync introduces a long delay. This is an attempt to fix that problem. The silent lead-in time should now be roughlt equal to the latency set betwby the client -- usually two seconds. 
+* When playing to a non-synchronised backend, such as the stdout or pipe backends, Shirport Sync introduces a long delay. This is an attempt to fix that problem. The silent lead-in time should now be roughly equal to the latency set by the client -- usually two seconds. 
 
 **Enhancement**
 * Some parameters in the new PulseAudio back end are now settable -- the Application Name, the buffer length and a delay offset. More details later.
