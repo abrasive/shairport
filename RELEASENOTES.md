@@ -9,7 +9,7 @@ Version 3.1.d22
 Version 3.1.d21
 ====
 **Bug Fixes**
-* If a fault was detected during initialisation of the ALSA subsystem and Shairport Sync attempted to terminate, sometimes it  hung up waiting indefinitely for a mutex to be unlocked. Unlocking is now done before attempting to terminate. Fixes the issue in #539. Thanks to [f3flight](https://github.com/f3flight) for the report.
+* If a fault was detected during initialisation of the ALSA subsystem and Shairport Sync attempted to terminate, sometimes it  would hang up waiting indefinitely for a mutex to be unlocked. Unlocking is now done before attempting to terminate. This fixes the issue in #539. Thanks to [f3flight](https://github.com/f3flight) for the report.
 
 Version 3.1.d20
 ====
@@ -24,7 +24,7 @@ Version 3.1.d19
 * Improvement in sending metadata over UDP.
 Sending metadata over UDP currently suffers from two main issues:
 The send buffer is left to system default, and consequently packets can be lost as Airplay clients send a lot of metadata;
-some metadata (typically the cover art) cannot be sent within a single IPv4 UDP packet because they are too large.
+some metadata (typically the cover art) cannot be sent within a single IPv4 UDP packet because it is too large.
 These commits fix both issues by setting larger send buffer of 4MB and chunking any metadata with a new sub-protocol ("ssnc", "chnk", packet_ix, packet_counts, packet_tag, packet_type, chunked_data).
 Thanks to [Paul Guyot](https://github.com/pguyot) for this work.
 
