@@ -1,7 +1,7 @@
 Version 3.1.d22
 ====
 **Bug Fix**
-* When playing to a non-synchronised backend, such as the stdout or pipe backends, Shirport Sync introduces a long delay. This is an attempt to fix that problem. The silent lead-in time should now be roughly equal to the latency set by the client -- usually two seconds. 
+* Before starting a play session, Shairport Sync sends a period of silence – a "silent lead-in" – to the backend to prepare it. The lead-in starts when the command to start a play session is received and ends when the first frame of audio is played. Normally, the lead-in time corresponds approximately to the latency set by the client – typically two seconds. Due to a bug, when playing to a non-synchronised backend, such as the `stdout` or `pipe` backends, Shairport Sync can introduce a silent lead-in that is much too long. This bug is fixed in 3.1.d22 and the silent lead-in time should now be roughly equal to the latency set by the client.
 
 **Enhancement**
 * Some parameters in the new PulseAudio back end are now settable -- the Application Name, the buffer length and a delay offset. More details later.
