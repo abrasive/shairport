@@ -36,9 +36,9 @@ Version 3.1d16
 **New Feature**
 * PulseAudio support. A new fully-synchronised PulseAudio back end has been developed. Use the `--with-pa` configuration option instead of  `--with-pulseaudio`. Then, select the new PulseAudio back end with the command line option `-o pa`. At present, it takes no options and has quite a few settings hard wired. The existing PulseAudio back end, which is available using the `--with-pulseaudio` configuration option and which has no synchronisation, is deprecated and will be removed.
 
-PulseAudio is built in to many recent desktop versions of Linux to manage the system's audio, and, up to now, Shairport Sync did not play well with it because the ALSA back end normally used with Shairport Sync requires exclusive access to the soundcard, thus interfering with PulseAudio. By using the new `pa` back end, Shairport Sync can share the existing PulseAudio infrastructure without difficulty. On Ubuntu, it shows up as a new "Application" in the Sound Settings window.
+PulseAudio is built in to many recent desktop versions of Linux to manage the system's audio and, up to now, Shairport Sync would not play well with it because the ALSA back end normally used with Shairport Sync requires exclusive access to the soundcard, thus interfering with PulseAudio. By using the new `pa` back end, Shairport Sync can share the existing PulseAudio infrastructure without difficulty. On Ubuntu, it shows up as a new "Application" in the Sound Settings window.
 
-If you are using the PulseAudio back end, note that Shairport Sync can not run as a system daemon that runs automatically from startup. Instead, you need to start it up after you log in. This is a limitation of the way PulseAudio is set up on desktops, and it is reocmmended that you don't change the setup.
+If you are using the PulseAudio back end, note that Shairport Sync can not run as a system daemon that runs automatically from startup. Instead, you need to start it up after you log in. This is a limitation of the way PulseAudio is set up on desktops, and it is recommended that you don't change the setup.
 
 If you are trying this out on a virtual machine, you might have to turn off resynchronisation to get it to work.
 
@@ -57,8 +57,8 @@ Version 3.1d15
 Version 3.1d14 -- Version 3.1d9
 ====
 **New Features**
-* Shairport Sync has changes the way it deals with pauses and resumes, caused either by using the controls of the source program, e.g. iTunes, or those caused by resynchronisations. Specifically, from now on, on resumption after a short pause or glitch, it does not reset the output volume of the hardware mixer. This is so that any changes made by external controls are not needlessly reset by occasional network outages.
-* A new advanced setting for the `alsa` stanza is added: `mute_using_playback_switch`. The default is `"yes"`, which means that hardware mute will be used where available. Set it to `"no"` to prevent it being used. The motivation for this is to avoid using the alsa function call: `snd_mixer_selem_set_playback_switch_all`, which is incorrectly implemented on certain soundcards, including the emulated card in VMWare Fusion 8.5.
+* Shairport Sync has changed the way it deals with pauses and resumes, caused either by using the controls of the source program, e.g. iTunes, or caused by resynchronisations. Specifically, from now on, on resumption after a short pause or glitch, it does not reset the output volume of the hardware mixer. This is so that any changes made by external controls are not needlessly reset by occasional network outages.
+* A new advanced setting for the `alsa` stanza is added: `mute_using_playback_switch`. The default is `"yes"`, which means that hardware mute using a feature called a playback switch will be used where available. Set it to `"no"` to prevent the playback switch being used. The motivation for this is to avoid using the alsa function call: `snd_mixer_selem_set_playback_switch_all`, which is incorrectly implemented on certain soundcards, including the emulated card in VMWare Fusion 8.5.
 
 Version 3.1d8
 ====
