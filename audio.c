@@ -24,6 +24,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include "common.h"
 #include "audio.h"
 #include "config.h"
 #include <stdio.h>
@@ -58,14 +59,11 @@ extern audio_output audio_stdout;
 #endif
 
 static audio_output *outputs[] = {
-#ifdef CONFIG_SNDIO
-    &audio_sndio,
-#endif
 #ifdef CONFIG_ALSA
     &audio_alsa,
 #endif
-#ifdef CONFIG_PULSE
-    &audio_pulse,
+#ifdef CONFIG_SNDIO
+    &audio_sndio,
 #endif
 #ifdef CONFIG_PA
     &audio_pa,
@@ -76,14 +74,17 @@ static audio_output *outputs[] = {
 #ifdef CONFIG_SOUNDIO
     &audio_soundio,
 #endif
-#ifdef CONFIG_DUMMY
-    &audio_dummy,
-#endif
 #ifdef CONFIG_PIPE
     &audio_pipe,
 #endif
 #ifdef CONFIG_STDOUT
     &audio_stdout,
+#endif
+#ifdef CONFIG_DUMMY
+    &audio_dummy,
+#endif
+#ifdef CONFIG_PULSE
+    &audio_pulse,
 #endif
     NULL};
 
@@ -112,5 +113,80 @@ void audio_ls_outputs(void) {
     printf("\n");
     printf("Options for output %s:\n", (*out)->name);
     (*out)->help();
+  }
+}
+
+void parse_general_audio_options(void) {
+  /* this must be called after the output device has been initialised, so that the default values are set before any options are chosen */
+  int value;
+  double dvalue;
+  if (config.cfg != NULL) {
+
+    /* Get the desired buffer size setting (deprecated). */
+    if (config_lookup_int(config.cfg, "general.audio_backend_buffer_desired_length", &value)) {
+      if ((value < 0) || (value > 66150)) {
+        inform("The setting general.audio_backend_buffer_desired_length is deprecated. "
+               "Use alsa.audio_backend_buffer_desired_length_in_seconds instead.");
+        die("Invalid audio_backend_buffer_desired_length value: \"%d\". It "
+            "should be between 0 and "
+            "66150, default is %d",
+            value,(int)(config.audio_backend_buffer_desired_length*44100));
+      } else {
+        inform("The setting general.audio_backend_buffer_desired_length is deprecated. "
+               "Use general.audio_backend_buffer_desired_length_in_seconds instead.");
+        config.audio_backend_buffer_desired_length = 1.0 * value / 44100;
+      }
+    }
+
+    /* Get the desired buffer size setting in seconds. */
+    if (config_lookup_float(config.cfg, "general.audio_backend_buffer_desired_length_in_seconds",
+                            &dvalue)) {
+      if ((dvalue < 0) || (dvalue > 1.5)) {
+        die("Invalid audio_backend_buffer_desired_length_in_seconds value: \"%f\". It "
+            "should be between 0 and "
+            "1.5, default is %.3f seconds",
+            dvalue,config.audio_backend_buffer_desired_length);
+      } else {
+        config.audio_backend_buffer_desired_length = dvalue;
+      }
+    }
+
+    /* Get the latency offset (deprecated). */
+    if (config_lookup_int(config.cfg, "general.audio_backend_latency_offset", &value)) {
+      if ((value < -66150) || (value > 66150)) {
+        inform("The setting general.audio_backend_latency_offset is deprecated. "
+               "Use general.audio_backend_latency_offset_in_seconds instead.");
+        die("Invalid  audio_backend_latency_offset value: \"%d\". It "
+            "should be between -66150 and +66150, default is 0",
+            value);
+      } else {
+        inform("The setting general.audio_backend_latency_offset is deprecated. "
+               "Use general.audio_backend_latency_offset_in_seconds instead.");
+        config.audio_backend_latency_offset = 1.0 * value / 44100;
+      }
+    }
+
+    /* Get the latency offset in seconds. */
+    if (config_lookup_float(config.cfg, "general.audio_backend_latency_offset_in_seconds", &dvalue)) {
+      if ((dvalue < -1.0) || (dvalue > 1.5)) {
+        die("Invalid audio_backend_latency_offset_in_seconds \"%f\". It "
+            "should be between -1.0 and +1.5, default is 0 seconds",
+            dvalue);
+      } else {
+        config.audio_backend_latency_offset = dvalue;
+      }
+    }
+
+    /* Get the desired length of the silent lead-in. */
+    if (config_lookup_float(config.cfg, "general.audio_backend_silent_lead_in_time",
+                            &dvalue)) {
+      if ((dvalue < 0.05) || (dvalue > 4)) {
+        die("Invalid audio_backend_silent_lead_in_time \"%f\". It "
+            "must be between 0.050 and 4.0 seconds. Omit setting to use the default value, which is approximately the latency specified by the source (typically 2 seconds). A value greater than the latency is ignored.",
+            dvalue);
+      } else {
+        config.audio_backend_silent_lead_in_time = dvalue;
+      }
+    }
   }
 }

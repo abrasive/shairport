@@ -59,6 +59,7 @@ static size_t played;
 static size_t written;
 int64_t time_of_last_onmove_cb;
 int at_least_one_onmove_cb_seen;
+struct sio_par par;
 
 struct sndio_formats {
   const char *name;
@@ -84,10 +85,10 @@ static void help() {
 }
 
 static int init(int argc, char **argv) {
-  struct sio_par par;
   int i, found, opt, round, rate, bufsz;
   const char *devname, *tmp;
   
+  // set up default values first
 
   sio_initpar(&par);
   par.rate = 44100;
@@ -97,6 +98,16 @@ static int init(int argc, char **argv) {
   par.le = 1;
   par.sig = 1;
   devname = SIO_DEVANY;
+  
+  config.audio_backend_buffer_desired_length = 1.0;
+  config.audio_backend_latency_offset = 0;
+
+  // get settings from settings file 
+  
+  // do the "general" audio  options. Note, these options are in the "general" stanza!
+  parse_general_audio_options();
+
+  // get the specific settings
   
   if (config.cfg != NULL) {
     if (!config_lookup_string(config.cfg, "sndio.device", &devname))
@@ -243,7 +254,7 @@ static int delay(long *_delay) {
     // calculate the difference in time between now and when the last callback occoured,
     // and use it to estimate the frames that would have been output
     uint64_t time_difference = get_absolute_time_in_fp() - time_of_last_onmove_cb;
-    uint64_t frame_difference = time_difference * 44100;
+    uint64_t frame_difference = time_difference * par.rate;
     uint64_t frame_difference_big_integer = frame_difference>>32;
     estimated_extra_frames_output = frame_difference_big_integer;
     // debug(1,"Frames played to last cb: %d, estimated to current time: %d.",played,estimated_extra_frames_output);

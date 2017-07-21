@@ -84,8 +84,17 @@ static void underflow_callback(struct SoundIoOutStream *outstream) {
 
 static int init(int argc, char **argv) {
   int err;
+  
   config.audio_backend_buffer_desired_length = 2.0;
+  config.audio_backend_latency_offset = 0;
 
+  // get settings from settings file 
+  
+  // do the "general" audio  options. Note, these options are in the "general" stanza!
+  parse_general_audio_options();
+
+  // get the specific settings
+    
   soundio = soundio_create();
   if (!soundio) {
     debug(0, "out of memory\n");

@@ -42,51 +42,18 @@ void stream_write_cb(pa_stream *stream, size_t requested_bytes, void *userdata);
 
 static int init(int argc, char **argv) {
 
-  // default values
+  // set up default values first
   config.audio_backend_buffer_desired_length = 0.35;
   config.audio_backend_latency_offset = 0;
-    
-  // get settings from settings file first, allow them to be overridden by
-  // command line options
+  
+  // get settings from settings file
+  
+  // do the "general" audio  options. Note, these options are in the "general" stanza!
+  parse_general_audio_options();
 
+  // now the specific options
   if (config.cfg != NULL) {
     const char *str;
-    double dvalue;
-    /* Get the desired length of the period of silence before the audio starts. */
-    if (config_lookup_float(config.cfg, "pa.audio_backend_silent_lead_in_time",
-                            &dvalue)) {
-      if ((dvalue < 0.05) || (dvalue > 4)) {
-        die("Invalid pa audio_backend_silent_lead_in_time \"%f\". It "
-            "must be between 0.050 and 4.0 seconds. Omit setting to use the default value, which is approximately the latency specified by the source (typically 2 seconds). A value greater than the latency is ignored.",
-            dvalue);
-      } else {
-        config.audio_backend_silent_lead_in_time = dvalue;
-      }
-    }
-
-    /* Get the desired buffer size setting. */
-    if (config_lookup_float(config.cfg, "pa.audio_backend_buffer_desired_length_in_seconds",
-                            &dvalue)) {
-      if ((dvalue < 0) || (dvalue > 1.5)) {
-        die("Invalid pa audio_backend_buffer_desired_length_in_seconds \"%f\". It "
-            "should be between 0 and "
-            "1.5, default is 0.35 seconds",
-            dvalue);
-      } else {
-        config.audio_backend_buffer_desired_length = dvalue;
-      }
-    }
-
-    /* Get the latency offset. */
-    if (config_lookup_float(config.cfg, "pa.audio_backend_latency_offset_in_seconds", &dvalue)) {
-      if ((dvalue < -1.0) || (dvalue > 1.5)) {
-        die("Invalid pa audio_backend_latency_offset_in_seconds \"%f\". It "
-            "should be between -1.0 and +1.5, default is 0 seconds",
-            dvalue);
-      } else {
-        config.audio_backend_latency_offset = dvalue;
-      }
-    }
 
     /* Get the Application Name. */
     if (config_lookup_string(config.cfg, "pa.application_name", &str)) {

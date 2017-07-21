@@ -1491,7 +1491,7 @@ static void *player_thread_func(void *arg) {
              "depth");
   }
   if (conn->fix_volume != 0x10000) {
-    debug(1, "Dithering will be enabled the output volume is being altered in software");
+    debug(1, "Dithering will be enabled becasuse the output volume is being altered in software");
   }
 
   // we need an intermediate "transition" buffer
@@ -1807,14 +1807,14 @@ static void *player_thread_func(void *arg) {
               size_t filler_length =
                   config.resyncthreshold * config.output_rate; // number of samples
               if ((sync_error > 0) && (sync_error > filler_length)) {
-                // debug(1, "Large positive sync error: %lld. Dropping the frame.", sync_error);
+                debug(1, "Large positive sync error: %lld. Dropping the frame.", sync_error);
               } else if ((sync_error < 0) && ((-sync_error) > filler_length)) {
-                // debug(1, "Large negative sync error: %lld. Inserting silence.", sync_error);
+                debug(1, "Large negative sync error: %lld. Inserting silence.", sync_error);
                 char *long_silence = malloc(conn->output_bytes_per_frame * (-sync_error));
                 if (long_silence == NULL)
                   die("Failed to allocate memory for a long_silence buffer.");
-                memset(long_silence, 0, conn->output_bytes_per_frame * filler_length);
-                config.output->play((short *)long_silence, filler_length);
+                memset(long_silence, 0, conn->output_bytes_per_frame * (-sync_error));
+                config.output->play((short *)long_silence, (-sync_error));
                 free(long_silence);
               }
             } else {

@@ -158,89 +158,21 @@ static int init(int argc, char **argv) {
   int value;
   double dvalue;
 
+  // set up default values first
   set_period_size_request = 0;
   set_buffer_size_request = 0;
   config.alsa_use_playback_switch_for_mute = 1;
 
   config.audio_backend_latency_offset = 0;
-  config.audio_backend_buffer_desired_length = 0.15;
+  config.audio_backend_buffer_desired_length = 0.15;  
 
   // get settings from settings file first, allow them to be overridden by
   // command line options
+  
+  // do the "general" audio  options. Note, these options are in the "general" stanza!
+  parse_general_audio_options();
 
   if (config.cfg != NULL) {
-
-    /* Get the desired buffer size setting. */
-    if (config_lookup_int(config.cfg, "alsa.audio_backend_buffer_desired_length", &value)) {
-      if ((value < 0) || (value > 66150)) {
-        inform("The setting alsa.audio_backend_buffer_desired_length is deprecated. "
-               "Use alsa.audio_backend_buffer_desired_length_in_seconds instead.");
-        pthread_mutex_unlock(&alsa_mutex);
-        die("Invalid alsa audio backend buffer desired length \"%d\". It "
-            "should be between 0 and "
-            "66150, default is 6615",
-            value);
-      } else {
-        inform("The setting alsa.audio_backend_buffer_desired_length is deprecated. "
-               "Use alsa.audio_backend_buffer_desired_length_in_seconds instead.");
-        config.audio_backend_buffer_desired_length = 1.0 * value / 44100;
-      }
-    }
-
-    /* Get the desired length of the period of silence before the audio starts. */
-    if (config_lookup_float(config.cfg, "alsa.audio_backend_silent_lead_in_time",
-                            &dvalue)) {
-      if ((dvalue < 0.05) || (dvalue > 4)) {
-        pthread_mutex_unlock(&alsa_mutex);
-        die("Invalid alsa audio_backend_silent_lead_in_time \"%f\". It "
-            "must be between 0.050 and 4.0 seconds. Omit setting to use the default value, which is approximately the latency specified by the source (typically 2 seconds). A value greater than the latency is ignored.",
-            dvalue);
-      } else {
-        config.audio_backend_silent_lead_in_time = dvalue;
-      }
-    }
-
-    /* Get the desired buffer size setting. */
-    if (config_lookup_float(config.cfg, "alsa.audio_backend_buffer_desired_length_in_seconds",
-                            &dvalue)) {
-      if ((dvalue < 0) || (dvalue > 1.5)) {
-        pthread_mutex_unlock(&alsa_mutex);
-        die("Invalid alsa audio backend buffer desired time \"%f\". It "
-            "should be between 0 and "
-            "1.5, default is 0.15 seconds",
-            dvalue);
-      } else {
-        config.audio_backend_buffer_desired_length = dvalue;
-      }
-    }
-
-    /* Get the latency offset. */
-    if (config_lookup_int(config.cfg, "alsa.audio_backend_latency_offset", &value)) {
-      if ((value < -66150) || (value > 66150)) {
-        inform("The setting alsa.audio_backend_latency_offset is deprecated. "
-               "Use alsa.audio_backend_latency_offset_in_seconds instead.");
-        pthread_mutex_unlock(&alsa_mutex);
-        die("Invalid alsa audio backend buffer latency offset \"%d\". It "
-            "should be between -66150 and +66150, default is 0",
-            value);
-      } else {
-        inform("The setting alsa.audio_backend_latency_offset is deprecated. "
-               "Use alsa.audio_backend_latency_offset_in_seconds instead.");
-        config.audio_backend_latency_offset = 1.0 * value / 44100;
-      }
-    }
-
-    /* Get the latency offset. */
-    if (config_lookup_float(config.cfg, "alsa.audio_backend_latency_offset_in_seconds", &dvalue)) {
-      if ((dvalue < -1.0) || (dvalue > 1.5)) {
-        pthread_mutex_unlock(&alsa_mutex);
-        die("Invalid alsa audio backend buffer latency offset time \"%f\". It "
-            "should be between -1.0 and +1.5, default is 0 seconds",
-            dvalue);
-      } else {
-        config.audio_backend_latency_offset = dvalue;
-      }
-    }
 
     /* Get the Output Device Name. */
     if (config_lookup_string(config.cfg, "alsa.output_device", &str)) {
