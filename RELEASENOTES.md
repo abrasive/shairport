@@ -1,3 +1,12 @@
+Version 3.1.d24
+====
+**Enhancements**
+* The `audio_backend_buffer_desired_length_in_seconds` and `audio_backend_latency_offset_in_seconds` settings have been moved from individual backend stanzas to the `general` stanza. They are now available for all backends.
+* A new general setting, for advanced use only, called `audio_backend_silent_lead_in_time` had been introduced to set the length of the silent lead-in time from 0.050 seconds up to approximately the latency.
+* It is now possible to read `stdout` from the on-start command to choose ALSA output device. This is a highly specialised facility (i.e. a kind of hack) and will hopefully be replaced by a more general solution. Thanks to [Cody Cutrer](https://github.com/ccutrer) for it.
+**Bug Fixes**
+* Fixed a typo in shairport.c, thanks to [Troy Liu](https://github.com/troyliu0105).
+
 Version 3.1.d22
 ====
 **Bug Fix**
@@ -28,7 +37,7 @@ some metadata (typically the cover art) cannot be sent within a single IPv4 UDP 
 These commits fix both issues by setting larger send buffer of 4MB and chunking any metadata with a new sub-protocol ("ssnc", "chnk", packet_ix, packet_counts, packet_tag, packet_type, chunked_data).
 Thanks to [Paul Guyot](https://github.com/pguyot) for this work.
 
-* A new command line option `-j` to deamonize Shairport Sync without creating a PID file. (The "j" is from "just daemonize".)
+* A new command line option `-j` to deamonize Shairport Sync without creating a PID file. (The "j" is from the "j" in "just daemonize".)
 * Small change in startup behaviour. Shairport Sync now reads the configuration file before executing the `-k` option.
 
 Version 3.1d16
