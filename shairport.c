@@ -1316,7 +1316,7 @@ int main(int argc, char **argv) {
   debug(1, "audio backend desired buffer length is %f seconds.",
         config.audio_backend_buffer_desired_length);
   debug(1, "audio backend latency offset is %f seconds.", config.audio_backend_latency_offset);
-  debug(1, "audio backend silence lead-in time is %f seconds. The value -1.0 means use the default.", config.audio_backend_silent_lead_in_time);
+  debug(1, "audio backend silence lead-in time is %f seconds. A value -1.0 means use the default.", config.audio_backend_silent_lead_in_time);
   debug(1, "volume range in dB (zero means use the range specified by the mixer): %u.",
         config.volume_range_db);
   debug(1, "zeroconf regtype is \"%s\".", config.regtype);
