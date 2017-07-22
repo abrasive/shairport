@@ -1,8 +1,9 @@
 Version 3.1.d24
 ====
 **Enhancements**
+* Resynchronisation, which happens when the synchronisation is incorrect by more than 50 ms by default, should be a lot less intrusive when it occurs – it should now either insert silence or skip frames, as appropriate.
 * The `audio_backend_buffer_desired_length_in_seconds` and `audio_backend_latency_offset_in_seconds` settings have been moved from individual backend stanzas to the `general` stanza. They are now available for all backends.
-* A new general setting, for advanced use only, called `audio_backend_silent_lead_in_time` had been introduced to set the length of the silent lead-in time from 0.050 seconds up to approximately the latency.
+* A new general setting, for advanced use only, called `audio_backend_silent_lead_in_time` had been introduced to set the length of the silent lead-in time from 0.0 to a maximum of 4.0 seconds or approximately the latency.
 * It is now possible to read `stdout` from the on-start command to choose ALSA output device. This is a highly specialised facility (i.e. a kind of hack) and will hopefully be replaced by a more general solution. Thanks to [Cody Cutrer](https://github.com/ccutrer) for it.
 **Bug Fixes**
 * Fixed a typo in shairport.c, thanks to [Troy Liu](https://github.com/troyliu0105).
