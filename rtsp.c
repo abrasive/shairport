@@ -1496,8 +1496,8 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
     for (i = 0; i < sizeof(conn->stream.fmtp) / sizeof(conn->stream.fmtp[0]); i++)
       conn->stream.fmtp[i] = atoi(strsep(&pfmtp, " \t"));
     // here we should check the sanity ot the fmtp values
-    for (i = 0; i < sizeof(conn->stream.fmtp) / sizeof(conn->stream.fmtp[0]); i++)
-      debug(1,"  fmtp[%2d] is: %10d",i,conn->stream.fmtp[i]);
+    //for (i = 0; i < sizeof(conn->stream.fmtp) / sizeof(conn->stream.fmtp[0]); i++)
+    //  debug(1,"  fmtp[%2d] is: %10d",i,conn->stream.fmtp[i]);
 
     char *hdr = msg_get_header(req, "X-Apple-Client-Name");
     if (hdr) {

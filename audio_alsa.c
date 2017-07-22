@@ -342,7 +342,7 @@ static int init(int argc, char **argv) {
     die("Invalid audio argument: %s", argv[optind]);
   }
 
-  debug(1, "Output device name is \"%s\".", alsa_out_dev);
+  debug(1, "alsa output device name is \"%s\".", alsa_out_dev);
 
   if (hardware_mixer) {
 

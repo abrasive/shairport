@@ -1283,8 +1283,8 @@ int main(int argc, char **argv) {
   debug(1, "rtsp listening port is %d.", config.port);
   debug(1, "udp base port is %d.", config.udp_port_base);
   debug(1, "udp port range is %d.", config.udp_port_range);
-  debug(1, "Shairport Sync player name is \"%s\".", config.service_name);
-  debug(1, "Audio Output name is \"%s\".", config.output_name);
+  debug(1, "player name is \"%s\".", config.service_name);
+  debug(1, "backend is \"%s\".", config.output_name);
   debug(1, "on-start action is \"%s\".", config.cmd_start);
   debug(1, "on-stop action is \"%s\".", config.cmd_stop);
   debug(1, "wait-cmd status is %d.", config.cmd_blocking);
