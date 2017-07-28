@@ -5,6 +5,7 @@ Version 3.1.d24
 * The `audio_backend_buffer_desired_length_in_seconds` and `audio_backend_latency_offset_in_seconds` settings have been moved from individual backend stanzas to the `general` stanza. They now have an effect on every type of backend.
 * A new general setting, for advanced use only, called `audio_backend_silent_lead_in_time` had been introduced to set the length of the silent lead-in time from 0.0 up to a maximum of either 4.0 seconds or approximately the latency, whichever is the lower.
 * It is now possible to read `stdout` from the on-start command to choose ALSA output device. This is a highly specialised facility (i.e. a kind of hack) and will hopefully be replaced by a more general solution. Thanks to [Cody Cutrer](https://github.com/ccutrer) for it.
+
 **Bug Fixes**
 * Fixed a typo in shairport.c, thanks to [Troy Liu](https://github.com/troyliu0105).
 
