@@ -136,15 +136,15 @@ static int init(int argc, char **argv) {
     }
     if (config_lookup_string(config.cfg, "sndio.format", &tmp)) {
       for (i = 0, found = 0; i < sizeof(formats) / sizeof(formats[0]); i++) {
-        if (strcmp(formats[i].name, tmp) == 0) {
+        if (strcasecmp(formats[i].name, tmp) == 0) {
           config.output_format = formats[i].fmt;
           found = 1;
           break;
         }
       }
       if (!found)
-        die("Invalid output format \"%s\". Should be one of: s8, u8, s16, s24, "
-            "s24le3, s24be3, s32",
+        die("Invalid output format \"%s\". Should be one of: S8, U8, S16, S24, "
+            "S24_3LE, S24_3BE, S32",
             tmp);
     }
   }
