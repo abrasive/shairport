@@ -72,13 +72,13 @@ struct sndio_formats {
 };
 
 static struct sndio_formats formats[] = {
-    {"s8", SPS_FORMAT_S8, 8, 1, 1, SIO_LE_NATIVE},
-    {"u8", SPS_FORMAT_U8, 8, 1, 0, SIO_LE_NATIVE},
-    {"s16", SPS_FORMAT_S16, 16, 2, 1, SIO_LE_NATIVE},
-    {"s24", SPS_FORMAT_S24, 24, 4, 1, SIO_LE_NATIVE},
-    {"s24le3", SPS_FORMAT_S24_3LE, 24, 3, 1, 1},
-    {"s24be3", SPS_FORMAT_S24_3BE, 24, 3, 1, 0},
-    {"s32", SPS_FORMAT_S32, 24, 4, 1, SIO_LE_NATIVE}};
+    {"S8", SPS_FORMAT_S8, 8, 1, 1, SIO_LE_NATIVE},
+    {"U8", SPS_FORMAT_U8, 8, 1, 0, SIO_LE_NATIVE},
+    {"S16", SPS_FORMAT_S16, 16, 2, 1, SIO_LE_NATIVE},
+    {"S24", SPS_FORMAT_S24, 24, 4, 1, SIO_LE_NATIVE},
+    {"S24_3LE", SPS_FORMAT_S24_3LE, 24, 3, 1, 1},
+    {"S24_3BE", SPS_FORMAT_S24_3BE, 24, 3, 1, 0},
+    {"S32", SPS_FORMAT_S32, 24, 4, 1, SIO_LE_NATIVE}};
 
 static void help() {
   printf("    -d output-device    set the output device [default*|...]\n");
