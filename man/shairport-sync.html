@@ -13,7 +13,7 @@
       <b>[-c </b><em>configurationfile</em><b>]</b>
       <b>[-E </b><em>command</em><b>]</b>
       <b>[--get-cover-art]</b>
-      <b>[--logOutputLevel=]</b>
+      <b>[--logOutputLevel]</b>
       <b>[-L </b><em>latency</em><b>]</b>
       <b>[-m </b><em>backend</em><b>]</b>
       <b>[--meta-dir=</b><em>directory</em><b>]</b>
@@ -69,7 +69,7 @@
 	  i.e. the System Configuration Directory.)</p>
 	  
 	  
-	  <p>Settings are organised into groups, for example, there is a &quot;general&quot; group of
+	  <p>Within the configuraton file, settings are organised into groups, for example, there is a &quot;general&quot; group of
 	  standard settings, and there is an &quot;alsa&quot; group with settings that pertain to the ALSA
 	  back end. Here is an example of a typical configuration file:</p>
 	  
@@ -77,6 +77,7 @@
     <p><p><b>name = &quot;Mike's Boombox&quot;;</b></p></p>
     <p><p><b>interpolation = &quot;soxr&quot;;</b></p></p>
     <p><p><b>password = &quot;secret&quot;;</b></p></p>
+    <p><p><b>output_backend = &quot;alsa&quot;;</b></p></p>
     <p><b>};</b></p>
     <p><b></b></p>
     <p><b>alsa = {</b></p>
@@ -263,15 +264,10 @@
     <p>Use the output device called <em>output_device</em>. The default is the device called <em>&quot;default&quot;</em>.</p>
     
     
-    
     <p><b>mixer_control_name=</b><em>&quot;name&quot;</em><b>;</b></p>
     <p>Specify the <em>name</em> of the mixer control to be used by shairport-sync to control the volume.
     The mixer control must be on the mixer device, which by default is the output device.
     If you do not specify a mixer control name, shairport-sync will adjust the volume in software.</p>
-    
-    <p><b>mixer_type=</b><em>&quot;mixer_type&quot;</em><b>;</b></p>
-    <p>This setting is deprecated and is ignored. For your information, its functionality has been automatically incorporated in the <b>mixer_control_name</b> setting
-  -- if you specify a mixer name with the <b>mixer_control_name</b> setting, it is assumed that the mixer is implemented in hardware.</p>
     
     
     <p><b>mixer_device=</b><em>&quot;mixer_device&quot;</em><b>;</b></p>
@@ -307,7 +303,7 @@
     
     
     <p><b>use_mmap_if_available=</b><em>&quot;yes&quot;</em><b>;</b></p>
-    <p> Use this optional advanced setting to control whether MMAP-based output is used to communicate  with the DAC. Default is <em>&quot;yes&quot;</em>.</p>
+    <p> Use this optional advanced setting to control whether MMAP-based output is used to communicate with the DAC. Default is <em>&quot;yes&quot;</em>.</p>
     
 
 
@@ -316,12 +312,12 @@
      <p>These settings are for the SNDIO back end, used to communicate with audio output devices in the SNDIO system.</p>
     
     <p><b>device=</b><em>&quot;snd/0&quot;</em><b>;</b></p>
-    <p>Use this optional setting to specify the name of the output device, e.g. <em>&quot;snd/0&quot;</em>.</p>
+    <p>Use this optional setting to specify the name of the output device, e.g. <em>&quot;snd/0&quot;</em>. The default is to use the SNDIO system's default.</p>
     
     
     <p><b>rate=</b><em>44100</em><b>;</b></p>
     <p>Use this optional setting to specify the output rate in frames per second. Valid rates are 44100, 88200, 176400 or 352800.
-    The output device must have the capability to accept data at the specified rate. Default is 44100.</p>
+    The output device must have the capability to accept data at the specified rate. The default is 44100.</p>
     
     
     <p><b>format=</b><em>&quot;S16&quot;</em><b>;</b></p>
@@ -347,7 +343,7 @@
     <p>These settings are for the new PulseAudio backend.</p>
     
     <p><b>application_name=</b><em>&quot;Shairport Sync&quot;</em><b>;</b></p>
-    <p>Use this to set the name to appear in the Sounds &quot;Applications&quot; tab when Shairport Sync is active Default is &quot;Shairport Sync&quot;.</p>
+    <p>Use this to set the name to appear in the Sounds &quot;Applications&quot; tab when Shairport Sync is active. The default is the name &quot;Shairport Sync&quot;.</p>
     
 
     <p><b>&quot;PIPE&quot; SETTINGS</b></p>
@@ -468,7 +464,7 @@
 	  
 		<p><b>-a </b><em>service name</em><b> | --name=</b><em>service name</em></p>
 		<p>
-		Use this <em>service name</em> to identify this player in iTunes, etc.
+		Use this <em>service name</em> to identify this player in iTunes, etc.</p>
 		
 		<p>The following substitutions are allowed:
 		<b>%h</b> for the computer's hostname,
@@ -476,7 +472,7 @@
 		<b>%v</b> for the shairport-sync version number, e.g. &quot;3.0.1&quot; and
 		<b>%V</b> for the shairport-sync version string, e.g. &quot;3.0.1-OpenSSL-Avahi-ALSA-soxr-metadata-sysconfdir:/etc&quot;.</p> 
     <p>The default is &quot;%H&quot;, which is replaced by the hostname with the first letter capitalised.</p>
-    </p>
+    
 	  
 
 	  
@@ -611,8 +607,7 @@
 		<p><b>-o </b><em>outputbackend</em><b> | --output=</b><em>outputbackend</em></p>
 		<p>
 		Force the use of the specified output backend to play the audio.
-    The default is to try the first one. (This is not used at
-    present.)
+    The default is to try the first one.
 		</p>
 	  
 

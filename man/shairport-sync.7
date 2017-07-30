@@ -2,7 +2,7 @@
 .SH NAME
 shairport-sync \- Synchronised Audio Player for iTunes / AirPlay
 .SH SYNOPSIS
-\fBshairport-sync [-djvw]\fB [-a \fB\fIname\fB]\fB [-A \fB\fIlatency\fB]\fB [-B \fB\fIcommand\fB]\fB [-c \fB\fIconfigurationfile\fB]\fB [-E \fB\fIcommand\fB]\fB [--get-cover-art]\fB [--logOutputLevel=]\fB [-L \fB\fIlatency\fB]\fB [-m \fB\fIbackend\fB]\fB [--meta-dir=\fB\fIdirectory\fB]\fB [-o \fB\fIbackend\fB]\fB [--password=\fB\fIsecret\fB]\fB [-r \fB\fIthreshold\fB]\fB [--statistics]\fB [-S \fB\fImode\fB]\fB [-t \fB\fItimeout\fB]\fB [--tolerance=\fB\fIframes\fB]\fB [-- \fB\fIaudio_backend_options\fB]\fB
+\fBshairport-sync [-djvw]\fB [-a \fB\fIname\fB]\fB [-A \fB\fIlatency\fB]\fB [-B \fB\fIcommand\fB]\fB [-c \fB\fIconfigurationfile\fB]\fB [-E \fB\fIcommand\fB]\fB [--get-cover-art]\fB [--logOutputLevel]\fB [-L \fB\fIlatency\fB]\fB [-m \fB\fIbackend\fB]\fB [--meta-dir=\fB\fIdirectory\fB]\fB [-o \fB\fIbackend\fB]\fB [--password=\fB\fIsecret\fB]\fB [-r \fB\fIthreshold\fB]\fB [--statistics]\fB [-S \fB\fImode\fB]\fB [-t \fB\fItimeout\fB]\fB [--tolerance=\fB\fIframes\fB]\fB [-- \fB\fIaudio_backend_options\fB]\fB
 
 shairport-sync -D\fB
 
@@ -27,7 +27,7 @@ You should use the configuration file for setting up shairport-sync. This file i
 
 (Note: Shairport Sync may have been compiled to use a different configuration directory. You can determine which by performing the command \fI$ shairport-sync -V\f1. One of the items in the output string is the value of the \fBsysconfdir\f1, i.e. the System Configuration Directory.)
 
-Settings are organised into groups, for example, there is a "general" group of standard settings, and there is an "alsa" group with settings that pertain to the ALSA back end. Here is an example of a typical configuration file:
+Within the configuraton file, settings are organised into groups, for example, there is a "general" group of standard settings, and there is an "alsa" group with settings that pertain to the ALSA back end. Here is an example of a typical configuration file:
 
 \fBgeneral = {\f1
 
@@ -36,6 +36,8 @@ Settings are organised into groups, for example, there is a "general" group of s
 \fBinterpolation = "soxr";\f1
 
 \fBpassword = "secret";\f1
+
+\fBoutput_backend = "alsa";\f1
 
 \fB};\f1
 
@@ -152,11 +154,8 @@ These settings are for the ALSA back end, used to communicate with audio output 
 \fBoutput_device=\f1\fI"output_device"\f1\fB;\f1
 Use the output device called \fIoutput_device\f1. The default is the device called \fI"default"\f1.
 .TP
-.TP
 \fBmixer_control_name=\f1\fI"name"\f1\fB;\f1
 Specify the \fIname\f1 of the mixer control to be used by shairport-sync to control the volume. The mixer control must be on the mixer device, which by default is the output device. If you do not specify a mixer control name, shairport-sync will adjust the volume in software.
-\fBmixer_type=\f1\fI"mixer_type"\f1\fB;\f1
-This setting is deprecated and is ignored. For your information, its functionality has been automatically incorporated in the \fBmixer_control_name\f1 setting -- if you specify a mixer name with the \fBmixer_control_name\f1 setting, it is assumed that the mixer is implemented in hardware.
 .TP
 \fBmixer_device=\f1\fI"mixer_device"\f1\fB;\f1
 By default, the mixer is assumed to be output_device. Use this setting to specify a device other than the output device.
@@ -187,10 +186,10 @@ Use this optional advanced setting to control whether MMAP-based output is used 
 These settings are for the SNDIO back end, used to communicate with audio output devices in the SNDIO system.
 .TP
 \fBdevice=\f1\fI"snd/0"\f1\fB;\f1
-Use this optional setting to specify the name of the output device, e.g. \fI"snd/0"\f1.
+Use this optional setting to specify the name of the output device, e.g. \fI"snd/0"\f1. The default is to use the SNDIO system's default.
 .TP
 \fBrate=\f1\fI44100\f1\fB;\f1
-Use this optional setting to specify the output rate in frames per second. Valid rates are 44100, 88200, 176400 or 352800. The output device must have the capability to accept data at the specified rate. Default is 44100.
+Use this optional setting to specify the output rate in frames per second. Valid rates are 44100, 88200, 176400 or 352800. The output device must have the capability to accept data at the specified rate. The default is 44100.
 .TP
 \fBformat=\f1\fI"S16"\f1\fB;\f1
 Use this optional setting to specify the output format. Allowable values are "U8", "S8", "S16", "S24", "S24_3LE", "S24_3BE" or "S32". The device must have the capability to accept the format you specify.
@@ -211,7 +210,7 @@ Use this optional advanced setting to specify the buffer size of the SNDIO chann
 These settings are for the new PulseAudio backend.
 .TP
 \fBapplication_name=\f1\fI"Shairport Sync"\f1\fB;\f1
-Use this to set the name to appear in the Sounds "Applications" tab when Shairport Sync is active Default is "Shairport Sync".
+Use this to set the name to appear in the Sounds "Applications" tab when Shairport Sync is active. The default is the name "Shairport Sync".
 .TP
 \fB"PIPE" SETTINGS\f1
 These settings are for the PIPE backend, used to route audio to a named unix pipe. The audio is in raw CD audio format: PCM 16 bit little endian, 44,100 samples per second, interleaved stereo.
@@ -279,7 +278,9 @@ There are two kinds of command-line options for shairport-sync: regular \fBprogr
 These command-line options are used by shairport-sync itself.
 .TP
 \fB-a \f1\fIservice name\f1\fB | --name=\f1\fIservice name\f1
-Use this \fIservice name\f1 to identify this player in iTunes, etc. The following substitutions are allowed: \fB%h\f1 for the computer's hostname, \fB%H\f1 for the computer's hostname with the first letter capitalised (ASCII only), \fB%v\f1 for the shairport-sync version number, e.g. "3.0.1" and \fB%V\f1 for the shairport-sync version string, e.g. "3.0.1-OpenSSL-Avahi-ALSA-soxr-metadata-sysconfdir:/etc".
+Use this \fIservice name\f1 to identify this player in iTunes, etc.
+
+The following substitutions are allowed: \fB%h\f1 for the computer's hostname, \fB%H\f1 for the computer's hostname with the first letter capitalised (ASCII only), \fB%v\f1 for the shairport-sync version number, e.g. "3.0.1" and \fB%V\f1 for the shairport-sync version string, e.g. "3.0.1-OpenSSL-Avahi-ALSA-soxr-metadata-sysconfdir:/etc".
 
 The default is "%H", which is replaced by the hostname with the first letter capitalised.
 .TP
@@ -333,7 +334,7 @@ Listen for metadata coming from the source and send it, along with metadata from
 Force the use of the specified mDNS backend to advertise the player on the network. The default is to try all mDNS backends until one works. 
 .TP
 \fB-o \f1\fIoutputbackend\f1\fB | --output=\f1\fIoutputbackend\f1
-Force the use of the specified output backend to play the audio. The default is to try the first one. (This is not used at present.) 
+Force the use of the specified output backend to play the audio. The default is to try the first one. 
 .TP
 \fB-p \f1\fIport\f1\fB | --port=\f1\fIport\f1
 Listen for play requests on \fIport\f1. The default is to use port 5000. 
