@@ -43,10 +43,10 @@ static void start(int sample_rate, int sample_format) { fd = STDOUT_FILENO; }
 static void play(short buf[], int samples) {
   char errorstring[1024];
   int warned = 0;
-  int rc = write(fd, buf, samples * 4); 
-  if ((rc<0) && (warned==0)) {
-    strerror_r(errno,(char*)errorstring,1024);
-    warn("Error %d writing to stdout: \"%s\".",errno,errorstring);
+  int rc = write(fd, buf, samples * 4);
+  if ((rc < 0) && (warned == 0)) {
+    strerror_r(errno, (char *)errorstring, 1024);
+    warn("Error %d writing to stdout: \"%s\".", errno, errorstring);
     warned = 1;
   }
 }
@@ -59,8 +59,8 @@ static int init(int argc, char **argv) {
   // set up default values first
   config.audio_backend_buffer_desired_length = 1.0;
   config.audio_backend_latency_offset = 0;
-  
-  // get settings from settings file  
+
+  // get settings from settings file
   // do the "general" audio  options. Note, these options are in the "general" stanza!
   parse_general_audio_options();
   return 0;

@@ -869,13 +869,16 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
                   (abs_delta << 32) / config.output_rate; // int64_t which is positive
               conn->first_packet_time_to_play = reference_timestamp_time - delta_fp_sec;
             }
-            
+
             // now, the size of the initial silence must be affected by the lead-in time.
-            // it must be somewhat less than the lead-in time so that dynamic adjustments can be made
+            // it must be somewhat less than the lead-in time so that dynamic adjustments can be
+            // made
             // to compensate for delays due to paging, etc.
             // The suggestion is that it should be at least 100 ms less than the lead-in time.
-            
-            int64_t max_dac_delay = config.output_rate / 10; // so the lead-in time must be greater than this, say 0.2 sec, to allow for dynamic adjustment
+
+            int64_t max_dac_delay = config.output_rate / 10; // so the lead-in time must be greater
+                                                             // than this, say 0.2 sec, to allow for
+                                                             // dynamic adjustment
             int64_t filler_size = max_dac_delay; // 0.1 second -- the maximum we'll add to the DAC
 
             if (local_time_now >= conn->first_packet_time_to_play) {
@@ -889,27 +892,29 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
               // flush.",(((tn-conn->first_packet_time_to_play)*config.output_rate)>>32)+dac_delay,tn,conn->first_packet_time_to_play,dac_delay,seq_diff(ab_read,
               // ab_write));
 
-/*
-              if (config.output->flush)
-                config.output->flush();
-              ab_resync(conn);
-              conn->first_packet_timestamp = 0;
-              conn->first_packet_time_to_play = 0;
-              conn->time_since_play_started = 0;
-*/
+              /*
+                            if (config.output->flush)
+                              config.output->flush();
+                            ab_resync(conn);
+                            conn->first_packet_timestamp = 0;
+                            conn->first_packet_time_to_play = 0;
+                            conn->time_since_play_started = 0;
+              */
             } else {
               // do some calculations
-              int64_t lead_time = conn->first_packet_time_to_play-local_time_now;
-              int64_t lead_in_time = (int64_t)(config.audio_backend_silent_lead_in_time*(int64_t)0x100000000);
-              // debug(1,"Lead time is %llx at fpttp %llx.",lead_time,conn->first_packet_time_to_play);
+              int64_t lead_time = conn->first_packet_time_to_play - local_time_now;
+              int64_t lead_in_time =
+                  (int64_t)(config.audio_backend_silent_lead_in_time * (int64_t)0x100000000);
+              // debug(1,"Lead time is %llx at fpttp
+              // %llx.",lead_time,conn->first_packet_time_to_play);
               // an audio_backend_silent_lead_in_time of less than zero means start filling ASAP
-              if ((lead_in_time<0) || (lead_time<=lead_in_time)) {
+              if ((lead_in_time < 0) || (lead_time <= lead_in_time)) {
                 // debug(1,"Checking");
                 if (config.output->delay) {
                   // conn->first_packet_time_to_play is definitely later than local_time_now
                   if (have_sent_prefiller_silence != 0) {
                     int resp = config.output->delay(&dac_delay);
-                    
+
                     if (resp != 0) {
                       debug(1, "Error %d getting dac_delay in buffer_get_frame.", resp);
                       dac_delay = 0;
@@ -918,7 +923,8 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
                     dac_delay = 0;
                   }
                   int64_t gross_frame_gap =
-                      ((conn->first_packet_time_to_play - local_time_now) * config.output_rate) >> 32;
+                      ((conn->first_packet_time_to_play - local_time_now) * config.output_rate) >>
+                      32;
                   int64_t exact_frame_gap = gross_frame_gap - dac_delay;
                   if (exact_frame_gap < 0) {
                     // we've gone past the time...
@@ -937,14 +943,16 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
                     if (fs > (max_dac_delay - dac_delay))
                       fs = max_dac_delay - dac_delay;
                     if (fs < 0) {
-                      debug(2, "frame size (fs) < 0 with max_dac_delay of %lld and dac_delay of %ld",
+                      debug(2,
+                            "frame size (fs) < 0 with max_dac_delay of %lld and dac_delay of %ld",
                             max_dac_delay, dac_delay);
                       fs = 0;
                     }
                     if ((exact_frame_gap <= fs) ||
                         (exact_frame_gap <= conn->max_frames_per_packet * 2)) {
                       fs = exact_frame_gap;
-                      // debug(1,"Exact frame gap is %llu; play %d frames of silence. Dac_delay is %d,
+                      // debug(1,"Exact frame gap is %llu; play %d frames of silence. Dac_delay is
+                      // %d,
                       // with %d packets, ab_read is %04x, ab_write is
                       // %04x.",exact_frame_gap,fs,dac_delay,seq_diff(ab_read,
                       // ab_write),ab_read,ab_write);
@@ -954,8 +962,10 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
                     // if (fs==0)
                     //  debug(2,"Zero length silence buffer needed with gross_frame_gap of %lld and
                     //  dac_delay of %lld.",gross_frame_gap,dac_delay);
-                    // the fs (number of frames of silence to play) can be zero in the DAC doesn't start
-                    // ouotputting frames for a while -- it could get loaded up but not start responding
+                    // the fs (number of frames of silence to play) can be zero in the DAC doesn't
+                    // start
+                    // ouotputting frames for a while -- it could get loaded up but not start
+                    // responding
                     // for many milliseconds.
                     if (fs > 0) {
                       silence = malloc(conn->output_bytes_per_frame * fs);
@@ -963,27 +973,30 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
                         debug(1, "Failed to allocate %d byte silence buffer.", fs);
                       else {
                         memset(silence, 0, conn->output_bytes_per_frame * fs);
-                        // debug(1,"Frames to start: %llu, DAC delay %d, buffer: %d packets.",exact_frame_gap,dac_delay,seq_diff(conn->ab_read, conn->ab_write, conn->ab_read));
+                        // debug(1,"Frames to start: %llu, DAC delay %d, buffer: %d
+                        // packets.",exact_frame_gap,dac_delay,seq_diff(conn->ab_read,
+                        // conn->ab_write, conn->ab_read));
                         config.output->play(silence, fs);
                         free(silence);
                       }
                     }
-                    have_sent_prefiller_silence = 1; // even if we haven't sent silence because it's zero frames long...
+                    have_sent_prefiller_silence =
+                        1; // even if we haven't sent silence because it's zero frames long...
                   }
                 } else {
-                  //no delay function on back end -- just send the prefiller silence
+                  // no delay function on back end -- just send the prefiller silence
                   // debug(1,"Back end has no delay function.");
                   // send the appropriate prefiller here...
-                  
+
                   signed short *silence;
                   if (lead_time != 0) {
                     int64_t frame_gap = (lead_time * config.output_rate) >> 32;
                     // debug(1,"%d frames needed.",frame_gap);
-                    while (frame_gap>0) {
-                      size_t fs = config.output_rate/10;
-                      if (fs>frame_gap)
+                    while (frame_gap > 0) {
+                      size_t fs = config.output_rate / 10;
+                      if (fs > frame_gap)
                         fs = frame_gap;
-                      
+
                       silence = malloc(conn->output_bytes_per_frame * fs);
                       if (silence == NULL)
                         debug(1, "Failed to allocate %d frame silence buffer.", fs);
@@ -992,7 +1005,6 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
                         memset(silence, 0, conn->output_bytes_per_frame * fs);
                         config.output->play(silence, fs);
                         free(silence);
-                        
                       }
                       frame_gap -= fs;
                     }
@@ -1084,7 +1096,6 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
           ((uint64_t)1 << 32) / conn->input_rate; // this is time period of one frame
       time_to_wait_for_wakeup_fp *= 4 * 352;      // four full 352-frame packets
       time_to_wait_for_wakeup_fp /= 3;            // four thirds of a packet time
-
 
 #ifdef COMPILE_FOR_LINUX_AND_FREEBSD_AND_CYGWIN
       uint64_t time_of_wakeup_fp = local_time_now + time_to_wait_for_wakeup_fp;

@@ -40,8 +40,8 @@ enum endian_type {
 
 enum stuffing_type {
   ST_basic = 0, // straight deletion or insertion of a frame in a 352-frame packet
-  ST_soxr, // use libsoxr to make a 352 frame packet one frame longer or shorter
- } type;
+  ST_soxr,      // use libsoxr to make a 352 frame packet one frame longer or shorter
+} type;
 
 enum playback_mode_type {
   ST_stereo = 0,
@@ -56,7 +56,8 @@ enum decoders_supported_type {
   decoder_apple_alac,
 } decoders_supported_type;
 
-// the following enum is for the formats recognised -- currently only S16LE is recognised for input, so these are output only for the present
+// the following enum is for the formats recognised -- currently only S16LE is recognised for input,
+// so these are output only for the present
 
 enum sps_format_t {
   SPS_FORMAT_UNKNOWN = 0,
@@ -75,8 +76,9 @@ typedef struct {
   char *service_name; // the name for the shairport service, e.g. "Shairport Sync Version %v running
                       // on host %h"
 #ifdef CONFIG_PA
-  char *pa_application_name; // the name under which Shairport Sync shows up as an "Application" in the Sound Preferences in most desktop Linuxes.
-                             // Defaults to "Shairport Sync". Shairport Sync must be playing to see it.
+  char *pa_application_name; // the name under which Shairport Sync shows up as an "Application" in
+                             // the Sound Preferences in most desktop Linuxes.
+// Defaults to "Shairport Sync". Shairport Sync must be playing to see it.
 #endif
 #ifdef CONFIG_METADATA
   int metadata_enabled;
@@ -114,9 +116,9 @@ typedef struct {
   int64_t AirPlayLatency;      // supplied with --AirPlayLatency option
   int64_t ForkedDaapdLatency;  // supplied with --ForkedDaapdLatency option
   int daemonise;
-  int daemonise_store_pid;     // don't try to save a PID file
-  char *piddir; 
-  int logOutputLevel;  // log output level
+  int daemonise_store_pid; // don't try to save a PID file
+  char *piddir;
+  int logOutputLevel; // log output level
   int statistics_requested, use_negotiated_latencies;
   enum playback_mode_type playback_mode;
   char *cmd_start, *cmd_stop, *cmd_set_volume;
@@ -143,18 +145,18 @@ typedef struct {
                             // native range.
   enum sps_format_t output_format;
   int output_rate;
-  
+
 #ifdef CONFIG_CONVOLUTION
   int convolution;
-  const char* convolution_ir_file;
+  const char *convolution_ir_file;
   float convolution_gain;
   int convolution_max_length;
 #endif
-  
+
   int loudness;
   float loudness_reference_volume_db;
   int alsa_use_playback_switch_for_mute;
-  
+
 } shairport_cfg;
 
 // true if Shairport Sync is supposed to be sending output to the output device, false otherwise

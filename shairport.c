@@ -254,8 +254,9 @@ void usage(char *progname) {
          "88) before trying to correct it.\n");
   printf("    --password=PASSWORD     require PASSWORD to connect. Default is not to require a "
          "password.\n");
-  printf("    --logOutputLevel        log the output level setting -- useful for setting maximum volume.\n");
- #ifdef CONFIG_METADATA
+  printf("    --logOutputLevel        log the output level setting -- useful for setting maximum "
+         "volume.\n");
+#ifdef CONFIG_METADATA
   printf("    --metadata-pipename=PIPE send metadata to PIPE, e.g. "
          "--metadata-pipename=/tmp/shairport-sync-metadata.\n");
   printf("                            The default is /tmp/shairport-sync-metadata.\n");
@@ -285,7 +286,7 @@ int parse_options(int argc, char **argv) {
       {"reconnectToOutput", 'R', POPT_ARG_NONE, NULL, 0, NULL},
       {"kill", 'k', POPT_ARG_NONE, NULL, 0, NULL},
       {"daemon", 'd', POPT_ARG_NONE, &daemonisewith, 0, NULL},
-      {"justDaemoniseNoPIDFile", 'j', POPT_ARG_NONE,&daemonisewithout, 0, NULL},
+      {"justDaemoniseNoPIDFile", 'j', POPT_ARG_NONE, &daemonisewithout, 0, NULL},
       {"configfile", 'c', POPT_ARG_STRING, &config.configfile, 0, NULL},
       {"statistics", 0, POPT_ARG_NONE, &config.statistics_requested, 0, NULL},
       {"logOutputLevel", 0, POPT_ARG_NONE, &config.logOutputLevel, 0, NULL},
@@ -363,17 +364,18 @@ int parse_options(int argc, char **argv) {
   }
 
   if ((daemonisewith) && (daemonisewithout))
-    die("Select either daemonize_with_pid_file or daemonize_without_pid_file -- you have selected both!");
+    die("Select either daemonize_with_pid_file or daemonize_without_pid_file -- you have selected "
+        "both!");
   if ((daemonisewith) || (daemonisewithout)) {
     config.daemonise = 1;
     if (daemonisewith)
       config.daemonise_store_pid = 1;
-  };    
+  };
 
   config.resyncthreshold = 1.0 * fResyncthreshold / 44100;
   config.tolerance = 1.0 * fTolerance / 44100;
   config.audio_backend_silent_lead_in_time = -1.0; // flag to indicate it has not been set
- 
+
   config_setting_t *setting;
   const char *str = 0;
   int value = 0;
@@ -405,7 +407,8 @@ int parse_options(int argc, char **argv) {
         else if (strcasecmp(str, "yes") == 0)
           daemonisewith = 1;
         else
-          die("Invalid daemonize_with_pid_file option choice \"%s\". It should be \"yes\" or \"no\"");
+          die("Invalid daemonize_with_pid_file option choice \"%s\". It should be \"yes\" or "
+              "\"no\"");
       }
 
       /* Get the Just_Daemonize setting. */
@@ -415,15 +418,17 @@ int parse_options(int argc, char **argv) {
         else if (strcasecmp(str, "yes") == 0)
           daemonisewithout = 1;
         else
-          die("Invalid daemonize_without_pid_file option choice \"%s\". It should be \"yes\" or \"no\"");
+          die("Invalid daemonize_without_pid_file option choice \"%s\". It should be \"yes\" or "
+              "\"no\"");
       }
       if ((daemonisewith) && (daemonisewithout))
-        die("Select either daemonize_with_pid_file or daemonize_without_pid_file -- you have selected both!");
+        die("Select either daemonize_with_pid_file or daemonize_without_pid_file -- you have "
+            "selected both!");
       if ((daemonisewith) || (daemonisewithout)) {
         config.daemonise = 1;
         if (daemonisewith)
           config.daemonise_store_pid = 1;
-      }     
+      }
       /* Get the directory path for the pid file created when the program is daemonised. */
       if (config_lookup_string(config.cfg, "sessioncontrol.daemon_pid_dir", &str))
         config.piddir = (char *)str;
@@ -695,13 +700,15 @@ int parse_options(int argc, char **argv) {
               "\"yes\" or \"no\"");
       }
 
-      if (config_lookup_string(config.cfg, "sessioncontrol.before_play_begins_returns_output", &str)) {
+      if (config_lookup_string(config.cfg, "sessioncontrol.before_play_begins_returns_output",
+                               &str)) {
         if (strcasecmp(str, "no") == 0)
           config.cmd_start_returns_output = 0;
         else if (strcasecmp(str, "yes") == 0)
           config.cmd_start_returns_output = 1;
         else
-          die("Invalid session control before_play_begins_returns_output option choice \"%s\". It should be "
+          die("Invalid session control before_play_begins_returns_output option choice \"%s\". It "
+              "should be "
               "\"yes\" or \"no\"");
       }
 
@@ -721,9 +728,9 @@ int parse_options(int argc, char **argv) {
         config.timeout = value;
         config.dont_check_timeout = 0; // this is for legacy -- only set by -t 0
       }
-      
+
 #ifdef CONFIG_CONVOLUTION
-      
+
       if (config_lookup_string(config.cfg, "dsp.convolution", &str)) {
         if (strcasecmp(str, "no") == 0)
           config.convolution = 0;
@@ -731,33 +738,33 @@ int parse_options(int argc, char **argv) {
           config.convolution = 1;
         else
           die("Invalid dsp.convolution. It should be \"yes\" or \"no\"");
-        
       }
-      
+
       if (config_lookup_float(config.cfg, "dsp.convolution_gain", &dvalue)) {
         config.convolution_gain = dvalue;
         if (dvalue > 10 || dvalue < -50)
-          die("Invalid value \"%f\" for dsp.convolution_gain. It should be between -50 and +10 dB", dvalue);
+          die("Invalid value \"%f\" for dsp.convolution_gain. It should be between -50 and +10 dB",
+              dvalue);
       }
-      
+
       config.convolution_max_length = 8192;
       if (config_lookup_int(config.cfg, "dsp.convolution_max_length", &value)) {
         config.convolution_max_length = value;
-        
+
         if (value < 1 || value > 200000)
           die("dsp.convolution_max_length must be within 1 and 200000");
       }
-      
+
       if (config_lookup_string(config.cfg, "dsp.convolution_ir_file", &str)) {
         config.convolution_ir_file = str;
         convolver_init(config.convolution_ir_file, config.convolution_max_length);
       }
-      
+
       if (config.convolution && config.convolution_ir_file == NULL) {
         die("Convolution enabled but no convolution_ir_file provided");
       }
 #endif
-      
+
       if (config_lookup_string(config.cfg, "dsp.loudness", &str)) {
         if (strcasecmp(str, "no") == 0)
           config.loudness = 0;
@@ -766,17 +773,20 @@ int parse_options(int argc, char **argv) {
         else
           die("Invalid dsp.convolution. It should be \"yes\" or \"no\"");
       }
-      
+
       config.loudness_reference_volume_db = -20;
       if (config_lookup_float(config.cfg, "dsp.loudness_reference_volume_db", &dvalue)) {
         config.loudness_reference_volume_db = dvalue;
         if (dvalue > 0 || dvalue < -100)
-          die("Invalid value \"%f\" for dsp.loudness_reference_volume_db. It should be between -100 and 0", dvalue);
+          die("Invalid value \"%f\" for dsp.loudness_reference_volume_db. It should be between "
+              "-100 and 0",
+              dvalue);
       }
-      
+
       if (config.loudness == 1 && config_lookup_string(config.cfg, "alsa.mixer_control_name", &str))
-        die("Loudness activated but hardware volume is active. You must remove \"alsa.mixer_control_name\" to use the loudness filter.");
-      
+        die("Loudness activated but hardware volume is active. You must remove "
+            "\"alsa.mixer_control_name\" to use the loudness filter.");
+
     } else {
       if (config_error_type(&config_file_stuff) == CONFIG_ERR_FILE_IO)
         debug(1, "Error reading configuration file \"%s\": \"%s\".",
@@ -924,21 +934,20 @@ void shairport_startup_complete(void) {
   }
 }
 
-
 const char *pid_file_proc(void) {
-	#ifdef USE_CUSTOM_PID_DIR
-	char * use_this_pid_dir = PIDDIR;
-	#else
-	char * use_this_pid_dir = "/var/run/shairport-sync";
-	#endif
-	// debug(1,"config.piddir \"%s\".",config.piddir);
-	if (config.piddir)
-		use_this_pid_dir = config.piddir;
-	char fn[8192];
-	snprintf(fn, sizeof(fn), "%s/%s.pid", use_this_pid_dir,
-						 daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
-	//debug(1,"fn \"%s\".",fn);
-	return strdup(fn);
+#ifdef USE_CUSTOM_PID_DIR
+  char *use_this_pid_dir = PIDDIR;
+#else
+  char *use_this_pid_dir = "/var/run/shairport-sync";
+#endif
+  // debug(1,"config.piddir \"%s\".",config.piddir);
+  if (config.piddir)
+    use_this_pid_dir = config.piddir;
+  char fn[8192];
+  snprintf(fn, sizeof(fn), "%s/%s.pid", use_this_pid_dir,
+           daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
+  // debug(1,"fn \"%s\".",fn);
+  return strdup(fn);
 }
 
 void exit_function() {
@@ -982,7 +991,8 @@ int main(int argc, char **argv) {
     die("Can not recognise the endianness of the processor.");
 
   strcpy(configuration_file_path, SYSCONFDIR);
-  // strcat(configuration_file_path, "/shairport-sync"); // thinking about adding a special shairport-sync directory
+  // strcat(configuration_file_path, "/shairport-sync"); // thinking about adding a special
+  // shairport-sync directory
   strcat(configuration_file_path, "/");
   strcat(configuration_file_path, appName);
   strcat(configuration_file_path, ".conf");
@@ -1102,7 +1112,7 @@ int main(int argc, char **argv) {
   // parse arguments into config -- needed to locate pid_dir
   int audio_arg = parse_options(argc, argv);
 
- /* Check if we are called with -k or --kill parameter */
+  /* Check if we are called with -k or --kill parameter */
   if (argc >= 2 && ((strcmp(argv[1], "-k") == 0) || (strcmp(argv[1], "--kill") == 0))) {
     int ret;
 
@@ -1279,7 +1289,7 @@ int main(int argc, char **argv) {
   /* Print out options */
   debug(1, "statistics_requester status is %d.", config.statistics_requested);
   debug(1, "daemon status is %d.", config.daemonise);
-  debug(1, "deamon pid file is \"%s\".",pid_file_proc());
+  debug(1, "deamon pid file is \"%s\".", pid_file_proc());
   debug(1, "rtsp listening port is %d.", config.port);
   debug(1, "udp base port is %d.", config.udp_port_base);
   debug(1, "udp port range is %d.", config.udp_port_range);
@@ -1316,7 +1326,8 @@ int main(int argc, char **argv) {
   debug(1, "audio backend desired buffer length is %f seconds.",
         config.audio_backend_buffer_desired_length);
   debug(1, "audio backend latency offset is %f seconds.", config.audio_backend_latency_offset);
-  debug(1, "audio backend silence lead-in time is %f seconds. A value -1.0 means use the default.", config.audio_backend_silent_lead_in_time);
+  debug(1, "audio backend silence lead-in time is %f seconds. A value -1.0 means use the default.",
+        config.audio_backend_silent_lead_in_time);
   debug(1, "volume range in dB (zero means use the range specified by the mixer): %u.",
         config.volume_range_db);
   debug(1, "zeroconf regtype is \"%s\".", config.regtype);
@@ -1352,7 +1363,7 @@ int main(int argc, char **argv) {
 #endif
   debug(1, "loudness is %d.", config.loudness);
   debug(1, "loudness reference level is %f", config.loudness_reference_volume_db);
-  
+
   uint8_t ap_md5[16];
 
 #ifdef HAVE_LIBSSL

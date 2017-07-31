@@ -47,7 +47,7 @@ static int init(int argc, char **argv) {
   ao_initialize();
   int driver = ao_default_driver_id();
   ao_option *ao_opts = NULL;
-  
+
   // set up default values first
 
   config.audio_backend_buffer_desired_length = 1.0;
@@ -55,7 +55,7 @@ static int init(int argc, char **argv) {
 
   // get settings from settings file first, allow them to be overridden by
   // command line options
-  
+
   // do the "general" audio  options. Note, these options are in the "general" stanza!
   parse_general_audio_options();
 
@@ -118,8 +118,7 @@ static void deinit(void) {
   ao_shutdown();
 }
 
-static void start(int sample_rate, int sample_format) {
-}
+static void start(int sample_rate, int sample_format) {}
 
 static void play(short buf[], int samples) { ao_play(dev, (char *)buf, samples * 4); }
 

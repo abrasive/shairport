@@ -110,8 +110,7 @@ static void deinit(void) {
   pa_dev = NULL;
 }
 
-static void start(int sample_rate, int sample_format) {
-}
+static void start(int sample_rate, int sample_format) {}
 
 static void play(short buf[], int samples) {
   if (pa_simple_write(pa_dev, (char *)buf, (size_t)samples * 4, &pa_error) < 0) {

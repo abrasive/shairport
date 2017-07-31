@@ -19,8 +19,8 @@
 #include <openssl/aes.h>
 #endif
 
-#include "audio.h"
 #include "alac.h"
+#include "audio.h"
 
 #define time_ping_history 8
 
@@ -62,8 +62,8 @@ typedef struct {
   pthread_t player_thread;
 
   abuf_t audio_buffer[BUFFER_FRAMES];
-  int max_frames_per_packet,input_num_channels,input_bit_depth,input_rate;
-  int input_bytes_per_frame,output_bytes_per_frame,output_sample_ratio;
+  int max_frames_per_packet, input_num_channels, input_bit_depth, input_rate;
+  int input_bytes_per_frame, output_bytes_per_frame, output_sample_ratio;
   int max_frame_size_change;
   int64_t previous_random_number;
   alac_file *decoder_info;
@@ -73,24 +73,25 @@ typedef struct {
   int connection_state_to_output;
   int player_thread_please_stop;
   int64_t first_packet_time_to_play, time_since_play_started; // nanoseconds
-  // stats
-	uint64_t missing_packets, late_packets, too_late_packets, resend_requests;
-	int decoder_in_use;
-	// debug variables
-	int32_t last_seqno_read;
-// mutexes and condition variables
-	pthread_cond_t flowcontrol;
-	pthread_mutex_t ab_mutex,flush_mutex;
-	pthread_mutex_t vol_mutex;
-	int fix_volume;
-	uint32_t timestamp_epoch, last_timestamp, maximum_timestamp_interval; // timestamp_epoch of zero means not initialised, could start at 2
-                                // or 1.
-  int ab_buffering,ab_synced;
-	int64_t first_packet_timestamp;
-	int flush_requested;
-	int64_t flush_rtp_timestamp;
-	uint64_t time_of_last_audio_packet;
-	seq_t ab_read, ab_write;
+                                                              // stats
+  uint64_t missing_packets, late_packets, too_late_packets, resend_requests;
+  int decoder_in_use;
+  // debug variables
+  int32_t last_seqno_read;
+  // mutexes and condition variables
+  pthread_cond_t flowcontrol;
+  pthread_mutex_t ab_mutex, flush_mutex;
+  pthread_mutex_t vol_mutex;
+  int fix_volume;
+  uint32_t timestamp_epoch, last_timestamp,
+      maximum_timestamp_interval; // timestamp_epoch of zero means not initialised, could start at 2
+                                  // or 1.
+  int ab_buffering, ab_synced;
+  int64_t first_packet_timestamp;
+  int flush_requested;
+  int64_t flush_rtp_timestamp;
+  uint64_t time_of_last_audio_packet;
+  seq_t ab_read, ab_write;
 
 #ifdef HAVE_LIBMBEDTLS
   mbedtls_aes_context dctx;
@@ -104,7 +105,7 @@ typedef struct {
   AES_KEY aes;
 #endif
 
- int amountStuffed;
+  int amountStuffed;
 
   int32_t framesProcessedInThisEpoch;
   int32_t framesGeneratedInThisEpoch;
@@ -118,9 +119,9 @@ typedef struct {
   char client_ip_string[INET6_ADDRSTRLEN]; // the ip string pointing to the client
   char self_ip_string[INET6_ADDRSTRLEN];   // the ip string being used by this program -- it
                                            // could be one of many, so we need to know it
-  uint32_t self_scope_id;        // if it's an ipv6 connection, this will be its scope
-  short connection_ip_family;    // AF_INET / AF_INET6
-  uint32_t client_active_remote; // used when you want to control the client...
+  uint32_t self_scope_id;                  // if it's an ipv6 connection, this will be its scope
+  short connection_ip_family;              // AF_INET / AF_INET6
+  uint32_t client_active_remote;           // used when you want to control the client...
 
   SOCKADDR rtp_client_control_socket; // a socket pointing to the control port of the client
   SOCKADDR rtp_client_timing_socket;  // a socket pointing to the timing port of the client
@@ -147,27 +148,29 @@ typedef struct {
 
   int timing_sender_stop; // for asking the timing-sending thread to stop
   int last_stuff_request;
-    
+
   int64_t play_segment_reference_frame;
   uint64_t play_segment_reference_frame_remote_time;
-  
+
   int32_t buffer_occupancy; // allow it to be negative because seq_diff may be negative
   int64_t session_corrections;
-  
+
   int play_number_after_flush;
-  
+
 } rtsp_conn_info;
 
-int player_play(pthread_t *thread, rtsp_conn_info* conn);
-void player_stop(pthread_t *thread, rtsp_conn_info* conn);
+int player_play(pthread_t *thread, rtsp_conn_info *conn);
+void player_stop(pthread_t *thread, rtsp_conn_info *conn);
 
-void player_volume(double f, rtsp_conn_info* conn);
-void player_flush(int64_t timestamp, rtsp_conn_info* conn);
-void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len, rtsp_conn_info* conn);
+void player_volume(double f, rtsp_conn_info *conn);
+void player_flush(int64_t timestamp, rtsp_conn_info *conn);
+void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len,
+                       rtsp_conn_info *conn);
 
-int64_t monotonic_timestamp(uint32_t timestamp,rtsp_conn_info* conn); // add an epoch to the timestamp. The monotonic
-                                                 // timestamp guaranteed to start between 2^32 2^33
-                                                 // frames and continue up to 2^64 frames
+int64_t monotonic_timestamp(uint32_t timestamp,
+                            rtsp_conn_info *conn); // add an epoch to the timestamp. The monotonic
+// timestamp guaranteed to start between 2^32 2^33
+// frames and continue up to 2^64 frames
 // which is about 2*10^8 * 1,000 seconds at 384,000 frames per second -- about 2 trillion seconds.
 // assumes, without checking, that successive timestamps in a series always span an interval of less
 // than one minute.

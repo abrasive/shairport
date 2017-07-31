@@ -39,15 +39,14 @@ void stream_state_cb(pa_stream *s, void *mainloop);
 void stream_success_cb(pa_stream *stream, int success, void *userdata);
 void stream_write_cb(pa_stream *stream, size_t requested_bytes, void *userdata);
 
-
 static int init(int argc, char **argv) {
 
   // set up default values first
   config.audio_backend_buffer_desired_length = 0.35;
   config.audio_backend_latency_offset = 0;
-  
+
   // get settings from settings file
-  
+
   // do the "general" audio  options. Note, these options are in the "general" stanza!
   parse_general_audio_options();
 
@@ -60,10 +59,9 @@ static int init(int argc, char **argv) {
       config.pa_application_name = (char *)str;
     }
   }
-  
-  
+
   // finish collecting settings
-  
+
   // allocate space for the audio buffer
   audio_lmb = malloc(audio_size);
   if (audio_lmb == NULL)
@@ -71,7 +69,7 @@ static int init(int argc, char **argv) {
   audio_toq = audio_eoq = audio_lmb;
   audio_umb = audio_lmb + audio_size;
   audio_occupancy = 0;
-  
+
   // Get a mainloop and its context
   mainloop = pa_threaded_mainloop_new();
   assert(mainloop);
@@ -79,7 +77,7 @@ static int init(int argc, char **argv) {
   if (config.pa_application_name)
     context = pa_context_new(mainloop_api, config.pa_application_name);
   else
-    context = pa_context_new(mainloop_api, "Shairport Sync");   
+    context = pa_context_new(mainloop_api, "Shairport Sync");
   assert(context);
 
   // Set a callback so we can wait for the context to be ready
@@ -135,9 +133,9 @@ static void start(int sample_rate, int sample_format) {
 
   // recommended settings, i.e. server uses sensible values
   pa_buffer_attr buffer_attr;
-  buffer_attr.maxlength = (uint32_t) -1;
+  buffer_attr.maxlength = (uint32_t)-1;
   buffer_attr.tlength = buffer_size_in_bytes;
-  buffer_attr.prebuf = (uint32_t) 0;
+  buffer_attr.prebuf = (uint32_t)0;
   buffer_attr.minreq = (uint32_t)-1;
 
   // Settings copied as per the chromium browser source
@@ -145,7 +143,7 @@ static void start(int sample_rate, int sample_format) {
   stream_flags = PA_STREAM_START_CORKED | PA_STREAM_INTERPOLATE_TIMING | PA_STREAM_NOT_MONOTONIC |
                  //        PA_STREAM_AUTO_TIMING_UPDATE;
                  PA_STREAM_AUTO_TIMING_UPDATE | PA_STREAM_ADJUST_LATENCY;
- 
+
   // Connect stream to the default audio output sink
   assert(pa_stream_connect_playback(stream, NULL, &buffer_attr, stream_flags, NULL, NULL) == 0);
 
@@ -187,7 +185,6 @@ static void play(short buf[], int samples) {
     pa_threaded_mainloop_lock(mainloop);
     pa_stream_cork(stream, 0, stream_success_cb, mainloop);
     pa_threaded_mainloop_unlock(mainloop);
-
   }
 }
 
@@ -216,7 +213,7 @@ int pa_delay(long *the_delay) {
 void flush(void) {
   // Cork the stream so it will stop playing
   pa_threaded_mainloop_lock(mainloop);
-  if (pa_stream_is_corked(stream)==0) {
+  if (pa_stream_is_corked(stream) == 0) {
     // debug(1,"Flush and cork for flush.");
     pa_stream_flush(stream, stream_success_cb, NULL);
     pa_stream_cork(stream, 1, stream_success_cb, mainloop);
@@ -230,7 +227,7 @@ void flush(void) {
 static void stop(void) {
   // Cork the stream so it will stop playing
   pa_threaded_mainloop_lock(mainloop);
-  if (pa_stream_is_corked(stream)==0) {
+  if (pa_stream_is_corked(stream) == 0) {
     // debug(1,"Flush and cork for stop.");
     pa_stream_flush(stream, stream_success_cb, NULL);
     pa_stream_cork(stream, 1, stream_success_cb, mainloop);
@@ -244,9 +241,7 @@ static void stop(void) {
   pa_stream_disconnect(stream);
 }
 
-static void help(void) {
-  printf(" no settings.\n");
-}
+static void help(void) { printf(" no settings.\n"); }
 
 audio_output audio_pa = {.name = "pa",
                          .help = &help,
@@ -269,35 +264,35 @@ void stream_state_cb(pa_stream *s, void *mainloop) { pa_threaded_mainloop_signal
 
 void stream_write_cb(pa_stream *stream, size_t requested_bytes, void *userdata) {
 
-/*
-  // play with timing information
-  const struct pa_timing_info *ti = pa_stream_get_timing_info(stream);
-  if ((ti == NULL) || (ti->write_index_corrupt)) {
-    debug(2, "Timing info invalid");
-  } else {
-    struct timeval time_now;
+  /*
+    // play with timing information
+    const struct pa_timing_info *ti = pa_stream_get_timing_info(stream);
+    if ((ti == NULL) || (ti->write_index_corrupt)) {
+      debug(2, "Timing info invalid");
+    } else {
+      struct timeval time_now;
 
-    pa_gettimeofday(&time_now);
+      pa_gettimeofday(&time_now);
 
-    uint64_t time_now_fp = ((uint64_t)time_now.tv_sec << 32) +
-                           ((uint64_t)time_now.tv_usec << 32) / 1000000; // types okay
-    uint64_t time_of_ti_fp = ((uint64_t)(ti->timestamp.tv_sec) << 32) +
-                             ((uint64_t)(ti->timestamp.tv_usec) << 32) / 1000000; // types okay
+      uint64_t time_now_fp = ((uint64_t)time_now.tv_sec << 32) +
+                             ((uint64_t)time_now.tv_usec << 32) / 1000000; // types okay
+      uint64_t time_of_ti_fp = ((uint64_t)(ti->timestamp.tv_sec) << 32) +
+                               ((uint64_t)(ti->timestamp.tv_usec) << 32) / 1000000; // types okay
 
-    if (time_now_fp >= time_of_ti_fp) {
-      uint64_t estimate_age = ((time_now_fp - time_of_ti_fp) * 1000000) >> 32;
-      uint64_t bytes_in_buffer = ti->write_index - ti->read_index;
-      pa_usec_t microseconds_to_write_buffer = (bytes_in_buffer * 1000000) / (44100 * 2 * 2);
-      pa_usec_t ea = (pa_usec_t)estimate_age;
-      pa_usec_t pa_latency = ti->sink_usec + ti->transport_usec + microseconds_to_write_buffer;
-      pa_usec_t estimated_latency = pa_latency - estimate_age;
-      // debug(1,"Estimated latency is %d microseconds.",estimated_latency);
+      if (time_now_fp >= time_of_ti_fp) {
+        uint64_t estimate_age = ((time_now_fp - time_of_ti_fp) * 1000000) >> 32;
+        uint64_t bytes_in_buffer = ti->write_index - ti->read_index;
+        pa_usec_t microseconds_to_write_buffer = (bytes_in_buffer * 1000000) / (44100 * 2 * 2);
+        pa_usec_t ea = (pa_usec_t)estimate_age;
+        pa_usec_t pa_latency = ti->sink_usec + ti->transport_usec + microseconds_to_write_buffer;
+        pa_usec_t estimated_latency = pa_latency - estimate_age;
+        // debug(1,"Estimated latency is %d microseconds.",estimated_latency);
 
-//    } else {
-//      debug(1, "Time now is earlier than time of timing information");
+  //    } else {
+  //      debug(1, "Time now is earlier than time of timing information");
+      }
     }
-  }
-*/
+  */
   int bytes_to_transfer = requested_bytes;
   int bytes_transferred = 0;
   uint8_t *buffer = NULL;
@@ -307,13 +302,13 @@ void stream_write_cb(pa_stream *stream, size_t requested_bytes, void *userdata) 
     if (audio_occupancy < bytes_we_can_transfer) {
       // debug(1, "Underflow? We have %d bytes but we are asked for %d bytes", audio_occupancy,
       //      bytes_we_can_transfer);
-      pa_stream_cork(stream,1, stream_success_cb, mainloop);
+      pa_stream_cork(stream, 1, stream_success_cb, mainloop);
       // debug(1, "Corked");
       bytes_we_can_transfer = audio_occupancy;
     }
 
     // bytes we can transfer will never be greater than the bytes available
-    
+
     pa_stream_begin_write(stream, (void **)&buffer, &bytes_we_can_transfer);
     if (bytes_we_can_transfer <= (audio_umb - audio_toq)) {
       // the bytes are all in a row in the audo buffer
@@ -375,4 +370,3 @@ void alt_stream_write_cb(pa_stream *stream, size_t requested_bytes, void *userda
 }
 
 void stream_success_cb(pa_stream *stream, int success, void *userdata) { return; }
-

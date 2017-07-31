@@ -646,7 +646,7 @@ static void handle_record(rtsp_conn_info *conn, rtsp_message *req, rtsp_message 
         rtptime = uatoi(p + 1); // unsigned integer -- up to 2^32-1
         rtptime--;
         // debug(1,"RTSP Flush Requested by handle_record: %u.",rtptime);
-        player_flush(rtptime,conn);
+        player_flush(rtptime, conn);
       }
     }
   }
@@ -665,7 +665,7 @@ static void handle_teardown(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
              "it's sending a response to teardown anyway");
   resp->respcode = 200;
   msg_add_header(resp, "Connection", "close");
-  debug(2,"TEARDOWN asking connection to stop");
+  debug(2, "TEARDOWN asking connection to stop");
   conn->stop = 1;
 }
 
@@ -687,14 +687,14 @@ static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
         rtptime = uatoi(p + 1); // unsigned integer -- up to 2^32-1
     }
   }
-  // debug(1,"RTSP Flush Requested: %u.",rtptime);
-  #ifdef CONFIG_METADATA
+// debug(1,"RTSP Flush Requested: %u.",rtptime);
+#ifdef CONFIG_METADATA
   if (p)
     send_metadata('ssnc', 'flsr', p, strlen(p), req, 1);
   else
-    send_metadata('ssnc', 'flsr', NULL, 0, NULL,0);
-  #endif
-  player_flush(rtptime,conn);
+    send_metadata('ssnc', 'flsr', NULL, 0, NULL, 0);
+#endif
+  player_flush(rtptime, conn);
   resp->respcode = 200;
 }
 
@@ -799,7 +799,8 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
   tport = atoi(p);
 
   //  rtsp_take_player();
-  rtp_setup(&conn->local, &conn->remote, cport, tport, active_remote, &lsport, &lcport, &ltport, conn);
+  rtp_setup(&conn->local, &conn->remote, cport, tport, active_remote, &lsport, &lcport, &ltport,
+            conn);
   if (!lsport)
     goto error;
   char *q;
@@ -818,7 +819,7 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
       strcat(hdr, q); // should unsplice the timing port entry
   }
 
-   player_play(&conn->player_thread,conn); // the thread better be 0
+  player_play(&conn->player_thread, conn); // the thread better be 0
 
   char *resphdr = alloca(200);
   *resphdr = 0;
@@ -857,7 +858,7 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn, rtsp_message *r
     if (!strncmp(cp, "volume: ", 8)) {
       float volume = atof(cp + 8);
       // debug(1, "AirPlay request to set volume to: %f\n", volume);
-      player_volume(volume,conn);
+      player_volume(volume, conn);
     } else
 #ifdef CONFIG_METADATA
         if (!strncmp(cp, "progress: ", 10)) {
@@ -943,13 +944,10 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn, rtsp_message *r
 //		`clip` -- the payload is the IP number of the client, i.e. the sender of audio.
 //		Can be an IPv4 or an IPv6 number.
 
-
-
 //		A special sub-protocol is used for sending large data items over UDP
 //    If the payload exceeded 4 MB, it is chunked using the following format:
 //    "ssnc", "chnk", packet_ix, packet_counts, packet_tag, packet_type, chunked_data.
-//    Notice that the number of items is different to the standard 
-
+//    Notice that the number of items is different to the standard
 
 // including a simple base64 encoder to minimise malloc/free activity
 
@@ -1093,15 +1091,15 @@ void metadata_process(uint32_t type, uint32_t code, char *data, uint32_t length)
   } else if (metadata_sock >= 0) {
     // send metadata in numbered chunks using the protocol:
     // ("ssnc", "chnk", packet_ix, packet_counts, packet_tag, packet_type, chunked_data)
-    
+
     uint32_t chunk_ix = 0;
     uint32_t chunk_total = length / (config.metadata_sockmsglength - 24);
     if (chunk_total * (config.metadata_sockmsglength - 24) < length) {
-        chunk_total++;
+      chunk_total++;
     }
     uint32_t remaining = length;
     uint32_t v;
-    char* data_crsr = data;
+    char *data_crsr = data;
     do {
       char *ptr = metadata_sockmsg;
       memcpy(ptr, "ssncchnk", 8);
@@ -1120,15 +1118,16 @@ void metadata_process(uint32_t type, uint32_t code, char *data, uint32_t length)
       ptr += 4;
       uint32_t datalen = remaining;
       if (datalen > config.metadata_sockmsglength - 24) {
-          datalen = config.metadata_sockmsglength - 24;
+        datalen = config.metadata_sockmsglength - 24;
       }
       memcpy(ptr, data_crsr, datalen);
       data_crsr += datalen;
-      sendto(metadata_sock, metadata_sockmsg, datalen + 24, 0, (struct sockaddr *)&metadata_sockaddr,
-             sizeof(metadata_sockaddr));
+      sendto(metadata_sock, metadata_sockmsg, datalen + 24, 0,
+             (struct sockaddr *)&metadata_sockaddr, sizeof(metadata_sockaddr));
       chunk_ix++;
       remaining -= datalen;
-      if (remaining == 0) break;
+      if (remaining == 0)
+        break;
     } while (1);
   }
 
@@ -1400,14 +1399,15 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
     if (config.allow_session_interruption == 1) {
       // some other thread has the player ... ask it to relinquish the thread
       if (playing_conn) {
-        debug(1,"Playing connection asked to stop");
-        if (playing_conn==conn) {
-          debug(1,"ANNOUNCE asking to stop itself.");
+        debug(1, "Playing connection asked to stop");
+        if (playing_conn == conn) {
+          debug(1, "ANNOUNCE asking to stop itself.");
         } else {
           playing_conn->stop = 1;
           memory_barrier();
           pthread_kill(playing_conn->thread, SIGUSR1);
-          usleep(1000000); // here, it is possible for other connections to come in and nab the player.
+          usleep(
+              1000000); // here, it is possible for other connections to come in and nab the player.
         }
       } else {
         die("Non existent the_playing_conn with play_lock enabled.");
@@ -1417,7 +1417,7 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
       if (pthread_mutex_trylock(&play_lock) == 0)
         have_the_player = 1;
       else
-        debug(1,"ANNOUNCE failed to get the player");
+        debug(1, "ANNOUNCE failed to get the player");
     }
   }
 
@@ -1496,7 +1496,7 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
     for (i = 0; i < sizeof(conn->stream.fmtp) / sizeof(conn->stream.fmtp[0]); i++)
       conn->stream.fmtp[i] = atoi(strsep(&pfmtp, " \t"));
     // here we should check the sanity ot the fmtp values
-    //for (i = 0; i < sizeof(conn->stream.fmtp) / sizeof(conn->stream.fmtp[0]); i++)
+    // for (i = 0; i < sizeof(conn->stream.fmtp) / sizeof(conn->stream.fmtp[0]); i++)
     //  debug(1,"  fmtp[%2d] is: %10d",i,conn->stream.fmtp[i]);
 
     char *hdr = msg_get_header(req, "X-Apple-Client-Name");
@@ -1762,7 +1762,7 @@ static void *rtsp_conversation_thread_func(void *pconn) {
   pthread_sigmask(SIG_UNBLOCK, &set, NULL);
 
   rtsp_conn_info *conn = pconn;
-  
+
   rtp_initialise(conn);
 
   rtsp_message *req, *resp;
@@ -1812,7 +1812,7 @@ static void *rtsp_conversation_thread_func(void *pconn) {
 
   debug(1, "Closing down RTSP conversation thread...");
   if (rtsp_playing()) {
-    player_stop(&conn->player_thread,conn); // might be less noisy doing this first
+    player_stop(&conn->player_thread, conn); // might be less noisy doing this first
     rtp_shutdown(conn);
     // usleep(400000); // let an angel pass...
     pthread_mutex_unlock(&play_lock);
@@ -1974,7 +1974,7 @@ void rtsp_listen_loop(void) {
       continue;
 
     rtsp_conn_info *conn = malloc(sizeof(rtsp_conn_info));
-    if (conn==0)
+    if (conn == 0)
       die("Couldn't allocate memory for an rtsp_conn_info record.");
     memset(conn, 0, sizeof(rtsp_conn_info));
     socklen_t slen = sizeof(conn->remote);
@@ -2033,13 +2033,14 @@ void rtsp_listen_loop(void) {
       } else {
         debug(1, "Error figuring out Shairport Sync's own IP number.");
       }
-//      usleep(500000);
-//      pthread_t rtsp_conversation_thread;
-//      conn->thread = rtsp_conversation_thread;
-//      conn->stop = 0; // record's memory has been zeroed 
-//      conn->authorized = 0; // record's memory has been zeroed 
+      //      usleep(500000);
+      //      pthread_t rtsp_conversation_thread;
+      //      conn->thread = rtsp_conversation_thread;
+      //      conn->stop = 0; // record's memory has been zeroed
+      //      conn->authorized = 0; // record's memory has been zeroed
       conn->running = 1;
-      ret = pthread_create(&conn->thread, NULL, rtsp_conversation_thread_func, conn); // also acts as a memory barrier
+      ret = pthread_create(&conn->thread, NULL, rtsp_conversation_thread_func,
+                           conn); // also acts as a memory barrier
       if (ret)
         die("Failed to create RTSP receiver thread!");
       track_thread(conn);

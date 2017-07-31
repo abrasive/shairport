@@ -71,23 +71,20 @@ struct sndio_formats {
   unsigned int le;
 };
 
-static struct sndio_formats formats[] = {
-    {"S8", SPS_FORMAT_S8, 8, 1, 1, SIO_LE_NATIVE},
-    {"U8", SPS_FORMAT_U8, 8, 1, 0, SIO_LE_NATIVE},
-    {"S16", SPS_FORMAT_S16, 16, 2, 1, SIO_LE_NATIVE},
-    {"S24", SPS_FORMAT_S24, 24, 4, 1, SIO_LE_NATIVE},
-    {"S24_3LE", SPS_FORMAT_S24_3LE, 24, 3, 1, 1},
-    {"S24_3BE", SPS_FORMAT_S24_3BE, 24, 3, 1, 0},
-    {"S32", SPS_FORMAT_S32, 24, 4, 1, SIO_LE_NATIVE}};
+static struct sndio_formats formats[] = {{"S8", SPS_FORMAT_S8, 8, 1, 1, SIO_LE_NATIVE},
+                                         {"U8", SPS_FORMAT_U8, 8, 1, 0, SIO_LE_NATIVE},
+                                         {"S16", SPS_FORMAT_S16, 16, 2, 1, SIO_LE_NATIVE},
+                                         {"S24", SPS_FORMAT_S24, 24, 4, 1, SIO_LE_NATIVE},
+                                         {"S24_3LE", SPS_FORMAT_S24_3LE, 24, 3, 1, 1},
+                                         {"S24_3BE", SPS_FORMAT_S24_3BE, 24, 3, 1, 0},
+                                         {"S32", SPS_FORMAT_S32, 24, 4, 1, SIO_LE_NATIVE}};
 
-static void help() {
-  printf("    -d output-device    set the output device [default*|...]\n");
-}
+static void help() { printf("    -d output-device    set the output device [default*|...]\n"); }
 
 static int init(int argc, char **argv) {
   int i, found, opt, round, rate, bufsz;
   const char *devname, *tmp;
-  
+
   // set up default values first
 
   sio_initpar(&par);
@@ -98,17 +95,17 @@ static int init(int argc, char **argv) {
   par.le = 1;
   par.sig = 1;
   devname = SIO_DEVANY;
-  
+
   config.audio_backend_buffer_desired_length = 1.0;
   config.audio_backend_latency_offset = 0;
 
-  // get settings from settings file 
-  
+  // get settings from settings file
+
   // do the "general" audio  options. Note, these options are in the "general" stanza!
   parse_general_audio_options();
 
   // get the specific settings
-  
+
   if (config.cfg != NULL) {
     if (!config_lookup_string(config.cfg, "sndio.device", &devname))
       devname = SIO_DEVANY;
@@ -186,8 +183,8 @@ static int init(int argc, char **argv) {
   if (!sio_setpar(hdl, &par) || !sio_getpar(hdl, &par))
     die("sndio: failed to set audio parameters");
   for (i = 0, found = 0; i < sizeof(formats) / sizeof(formats[0]); i++) {
-    if (formats[i].bits == par.bits && formats[i].bps == par.bps &&
-        formats[i].sig == par.sig && formats[i].le == par.le) {
+    if (formats[i].bits == par.bits && formats[i].bps == par.bps && formats[i].sig == par.sig &&
+        formats[i].le == par.le) {
       config.output_format = formats[i].fmt;
       found = 1;
       break;
@@ -255,11 +252,12 @@ static int delay(long *_delay) {
     // and use it to estimate the frames that would have been output
     uint64_t time_difference = get_absolute_time_in_fp() - time_of_last_onmove_cb;
     uint64_t frame_difference = time_difference * par.rate;
-    uint64_t frame_difference_big_integer = frame_difference>>32;
+    uint64_t frame_difference_big_integer = frame_difference >> 32;
     estimated_extra_frames_output = frame_difference_big_integer;
-    // debug(1,"Frames played to last cb: %d, estimated to current time: %d.",played,estimated_extra_frames_output);
+    // debug(1,"Frames played to last cb: %d, estimated to current time:
+    // %d.",played,estimated_extra_frames_output);
   }
-  *_delay = (written / framesize) - (played+estimated_extra_frames_output);
+  *_delay = (written / framesize) - (played + estimated_extra_frames_output);
   pthread_mutex_unlock(&sndio_mutex);
   return 0;
 }

@@ -47,8 +47,8 @@ int warned = 0;
 static void start(int sample_rate, int sample_format) {
   // this will leave fd as -1 if a reader hasn't been attached
   fd = open(pipename, O_WRONLY | O_NONBLOCK);
-  if ((fd<-1) && (warned==0)) {
-    warn("Error %d opening the pipe named \"%s\".",errno,pipename);
+  if ((fd < -1) && (warned == 0)) {
+    warn("Error %d opening the pipe named \"%s\".", errno, pipename);
     warned = 1;
   }
 }
@@ -62,16 +62,16 @@ static void play(short buf[], int samples) {
   // if it's got a reader, write to it.
   if (fd > 0) {
     int rc = non_blocking_write(fd, buf, samples * 4);
-    if ((rc<0) && (warned==0)) {
-      strerror_r(errno,(char*)errorstring,1024);
-      warn("Error %d writing to the pipe named \"%s\": \"%s\".",errno,pipename,errorstring);
+    if ((rc < 0) && (warned == 0)) {
+      strerror_r(errno, (char *)errorstring, 1024);
+      warn("Error %d writing to the pipe named \"%s\": \"%s\".", errno, pipename, errorstring);
       warned = 1;
     }
-  } else if ((fd == -1) && (warned==0)) {
-    strerror_r(errno,(char*)errorstring,1024);
-    warn("Error %d opening the pipe named \"%s\": \"%s\".",errno,pipename,errorstring);
+  } else if ((fd == -1) && (warned == 0)) {
+    strerror_r(errno, (char *)errorstring, 1024);
+    warn("Error %d opening the pipe named \"%s\": \"%s\".", errno, pipename, errorstring);
     warned = 1;
-   }
+  }
 }
 
 static void stop(void) {
@@ -90,7 +90,7 @@ static int init(int argc, char **argv) {
 
   config.audio_backend_buffer_desired_length = 1.0;
   config.audio_backend_latency_offset = 0;
-  
+
   // do the "general" audio  options. Note, these options are in the "general" stanza!
   parse_general_audio_options();
 
@@ -100,10 +100,9 @@ static int init(int argc, char **argv) {
     if (config_lookup_string(config.cfg, "pipe.name", &str)) {
       pipename = (char *)str;
     }
-    
+
     if ((pipename) && (strcasecmp(pipename, "STDOUT") == 0))
       die("Can't use \"pipe\" backend for STDOUT. Use the \"stdout\" backend instead.");
-
   }
 
   if ((pipename == NULL) && (argc != 1))

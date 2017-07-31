@@ -42,30 +42,28 @@
 #include "player.h"
 #include "rtp.h"
 
-void rtp_initialise(rtsp_conn_info* conn) {
+void rtp_initialise(rtsp_conn_info *conn) {
 
   conn->rtp_running = 0;
-// initialise the timer mutex
+  // initialise the timer mutex
   int rc = pthread_mutex_init(&conn->reference_time_mutex, NULL);
   if (rc)
     debug(1, "Error initialising reference_time_mutex.");
-
 }
 
-void rtp_terminate(rtsp_conn_info* conn) {
+void rtp_terminate(rtsp_conn_info *conn) {
 
-// destroy the timer mutex
+  // destroy the timer mutex
   int rc = pthread_mutex_destroy(&conn->reference_time_mutex);
   if (rc)
     debug(1, "Error destroying reference_time_mutex variable.");
 }
 
-
-void *rtp_audio_receiver(void* arg) {
+void *rtp_audio_receiver(void *arg) {
   debug(2, "Audio receiver -- Server RTP thread starting.");
 
   // we inherit the signal mask (SIGUSR1)
-  rtsp_conn_info *conn = (rtsp_conn_info*)arg;
+  rtsp_conn_info *conn = (rtsp_conn_info *)arg;
 
   int32_t last_seqno = -1;
   uint8_t packet[2048], *pktp;
@@ -131,7 +129,7 @@ void *rtp_audio_receiver(void* arg) {
         //  debug(3, "RTP: Packets out of sequence: expected: %d, got %d.", last_seqno, seqno);
         last_seqno = seqno; // reset warning...
       }
-      int64_t timestamp = monotonic_timestamp(ntohl(*(unsigned long *)(pktp + 4)),conn);
+      int64_t timestamp = monotonic_timestamp(ntohl(*(unsigned long *)(pktp + 4)), conn);
 
       // if (packet[1]&0x10)
       //	debug(1,"Audio packet Extension bit set.");
@@ -141,7 +139,7 @@ void *rtp_audio_receiver(void* arg) {
 
       // check if packet contains enough content to be reasonable
       if (plen >= 16) {
-        player_put_packet(seqno, timestamp, pktp, plen,conn);
+        player_put_packet(seqno, timestamp, pktp, plen, conn);
         continue;
       }
       if (type == 0x56 && seqno == 0) {
@@ -160,12 +158,12 @@ void *rtp_audio_receiver(void* arg) {
   return NULL;
 }
 
-void *rtp_control_receiver(void* arg) {
+void *rtp_control_receiver(void *arg) {
   // we inherit the signal mask (SIGUSR1)
 
   debug(2, "Control receiver -- Server RTP thread starting.");
-  
-  rtsp_conn_info *conn = (rtsp_conn_info*)arg;
+
+  rtsp_conn_info *conn = (rtsp_conn_info *)arg;
 
   conn->reference_timestamp = 0; // nothing valid received yet
   uint8_t packet[2048], *pktp;
@@ -202,8 +200,8 @@ void *rtp_control_receiver(void* arg) {
 
         // debug(1,"Remote Sync Time: %0llx.",remote_time_of_sync);
 
-        rtp_timestamp_less_latency = monotonic_timestamp(ntohl(*((uint32_t *)&packet[4])),conn);
-        sync_rtp_timestamp = monotonic_timestamp(ntohl(*((uint32_t *)&packet[16])),conn);
+        rtp_timestamp_less_latency = monotonic_timestamp(ntohl(*((uint32_t *)&packet[4])), conn);
+        sync_rtp_timestamp = monotonic_timestamp(ntohl(*((uint32_t *)&packet[16])), conn);
 
         if (config.use_negotiated_latencies) {
           int64_t la = sync_rtp_timestamp - rtp_timestamp_less_latency + 11025;
@@ -222,7 +220,8 @@ void *rtp_control_receiver(void* arg) {
         }
         pthread_mutex_lock(&conn->reference_time_mutex);
         conn->remote_reference_timestamp_time = remote_time_of_sync;
-        conn->reference_timestamp_time = remote_time_of_sync - conn->local_to_remote_time_difference;
+        conn->reference_timestamp_time =
+            remote_time_of_sync - conn->local_to_remote_time_difference;
         conn->reference_timestamp = sync_rtp_timestamp;
         pthread_mutex_unlock(&conn->reference_time_mutex);
         // debug(1,"New Reference timestamp and timestamp time...");
@@ -242,7 +241,7 @@ void *rtp_control_receiver(void* arg) {
       plen -= 4;
       seq_t seqno = ntohs(*(unsigned short *)(pktp + 2));
 
-      int64_t timestamp = monotonic_timestamp(ntohl(*(unsigned long *)(pktp + 4)),conn);
+      int64_t timestamp = monotonic_timestamp(ntohl(*(unsigned long *)(pktp + 4)), conn);
 
       pktp += 12;
       plen -= 12;
@@ -266,7 +265,7 @@ void *rtp_control_receiver(void* arg) {
 
 void *rtp_timing_sender(void *arg) {
   debug(2, "Timing sender thread starting.");
-  rtsp_conn_info *conn = (rtsp_conn_info*)arg;
+  rtsp_conn_info *conn = (rtsp_conn_info *)arg;
   struct timing_request {
     char leader;
     char type;
@@ -306,8 +305,8 @@ void *rtp_timing_sender(void *arg) {
       msgsize = sizeof(struct sockaddr_in6);
     }
 #endif
-    if (sendto(conn->timing_socket, &req, sizeof(req), 0, (struct sockaddr *)&conn->rtp_client_timing_socket,
-               msgsize) == -1) {
+    if (sendto(conn->timing_socket, &req, sizeof(req), 0,
+               (struct sockaddr *)&conn->rtp_client_timing_socket, msgsize) == -1) {
       perror("Error sendto-ing to timing socket");
     }
     request_number++;
@@ -323,7 +322,7 @@ void *rtp_timing_sender(void *arg) {
 void *rtp_timing_receiver(void *arg) {
   debug(2, "Timing receiver -- Server RTP thread starting.");
   // we inherit the signal mask (SIGUSR1)
-  rtsp_conn_info *conn = (rtsp_conn_info*)arg;
+  rtsp_conn_info *conn = (rtsp_conn_info *)arg;
 
   uint8_t packet[2048], *pktp;
   ssize_t nread;
@@ -391,11 +390,11 @@ void *rtp_timing_receiver(void *arg) {
 
       uint64_t local_time_by_remote_clock = distant_transmit_time + return_time / 2;
 
-      unsigned int cc,chosen;
+      unsigned int cc, chosen;
       for (cc = time_ping_history - 1; cc > 0; cc--) {
         conn->time_pings[cc] = conn->time_pings[cc - 1];
         conn->time_pings[cc].dispersion = (conn->time_pings[cc].dispersion * 110) /
-                                    100; // make the dispersions 'age' by this rational factor
+                                          100; // make the dispersions 'age' by this rational factor
       }
       // these are for diagnostics only -- not used
       conn->time_pings[0].local_time = arrival_time;
@@ -463,9 +462,8 @@ void *rtp_timing_receiver(void *arg) {
           clock_drift_in_usec = (clock_drift * 1000000) >> 32;
         else
           clock_drift_in_usec = -(((-clock_drift) * 1000000) >> 32);
-        clock_drift_ppm = (1.0*clock_drift_in_usec)/(local_time_change>>32);
-     }
-      
+        clock_drift_ppm = (1.0 * clock_drift_in_usec) / (local_time_change >> 32);
+      }
 
       int64_t source_drift_usec;
       if (conn->play_segment_reference_frame != 0) {
@@ -475,15 +473,16 @@ void *rtp_timing_receiver(void *arg) {
                                       &remote_reference_timestamp_time, conn);
         uint64_t frame_difference = 0;
         if (reference_timestamp >= conn->play_segment_reference_frame)
-          frame_difference = (uint64_t)reference_timestamp - (uint64_t)conn->play_segment_reference_frame;
-        else // rollover
           frame_difference =
-              (uint64_t)reference_timestamp + 0x100000000 - (uint64_t)conn->play_segment_reference_frame;
+              (uint64_t)reference_timestamp - (uint64_t)conn->play_segment_reference_frame;
+        else // rollover
+          frame_difference = (uint64_t)reference_timestamp + 0x100000000 -
+                             (uint64_t)conn->play_segment_reference_frame;
         uint64_t frame_time_difference_calculated = (((uint64_t)frame_difference << 32) / 44100);
         uint64_t frame_time_difference_actual =
             remote_reference_timestamp_time -
             conn->play_segment_reference_frame_remote_time; // this is all done by reference to the
-                                                      // sources' system clock
+                                                            // sources' system clock
         // debug(1,"%llu frames since play started, %llu usec calculated, %llu usec
         // actual",frame_difference, (frame_time_difference_calculated*1000000)>>32,
         // (frame_time_difference_actual*1000000)>>32);
@@ -505,13 +504,14 @@ void *rtp_timing_receiver(void *arg) {
       //       config.output->delay(&current_delay);
       //}
       //  Useful for troubleshooting:
-      //debug(1, "clock_drift_ppm %f\tchosen %5d\tsource_drift_usec %10.1lld\treturn_time_in_usec %10.1llu",
-      //clock_drift_ppm,
-      //chosen,
+      // debug(1, "clock_drift_ppm %f\tchosen %5d\tsource_drift_usec %10.1lld\treturn_time_in_usec
+      // %10.1llu",
+      // clock_drift_ppm,
+      // chosen,
       //(session_corrections*1000000)/44100,
-      //current_delay,
-      //source_drift_usec,
-      //buffer_occupancy,
+      // current_delay,
+      // source_drift_usec,
+      // buffer_occupancy,
       //(return_time*1000000)>>32);
 
     } else {
@@ -568,7 +568,8 @@ static int bind_port(int ip_family, const char *self_ip_address, uint32_t scope_
 
   if (ret < 0) {
     close(local_socket);
-    die("error: could not bind a UDP port! Check the udp_port_range is large enough (>= 10) or check for restrictive firewall settings or a bad router!");
+    die("error: could not bind a UDP port! Check the udp_port_range is large enough (>= 10) or "
+        "check for restrictive firewall settings or a bad router!");
   }
 
   int sport;
@@ -610,7 +611,8 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
   char client_port_str[64];
   char self_addr_str[64];
 
-  conn->connection_ip_family = remote->SAFAMILY; // keep information about the kind of ip of the client
+  conn->connection_ip_family =
+      remote->SAFAMILY; // keep information about the kind of ip of the client
 
 #ifdef AF_INET6
   if (conn->connection_ip_family == AF_INET6) {
@@ -632,10 +634,13 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
     self_port = ntohs(sa4->sin_port);
   }
 
-  inet_ntop(conn->connection_ip_family, client_addr, conn->client_ip_string, sizeof(conn->client_ip_string));
-  inet_ntop(conn->connection_ip_family, self_addr, conn->self_ip_string, sizeof(conn->self_ip_string));
+  inet_ntop(conn->connection_ip_family, client_addr, conn->client_ip_string,
+            sizeof(conn->client_ip_string));
+  inet_ntop(conn->connection_ip_family, self_addr, conn->self_ip_string,
+            sizeof(conn->self_ip_string));
 
-  debug(1, "Set up play connection from %s to self at %s.", conn->client_ip_string, conn->self_ip_string);
+  debug(1, "Set up play connection from %s to self at %s.", conn->client_ip_string,
+        conn->self_ip_string);
 
   // set up a the record of the remote's control socket
   struct addrinfo hints;
@@ -683,9 +688,12 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
   // now, we open three sockets -- one for the audio stream, one for the timing and one for the
   // control
 
-  *lsport = bind_port(conn->connection_ip_family, conn->self_ip_string, conn->self_scope_id, &conn->audio_socket);
-  *lcport = bind_port(conn->connection_ip_family, conn->self_ip_string, conn->self_scope_id, &conn->control_socket);
-  *ltport = bind_port(conn->connection_ip_family, conn->self_ip_string, conn->self_scope_id, &conn->timing_socket);
+  *lsport = bind_port(conn->connection_ip_family, conn->self_ip_string, conn->self_scope_id,
+                      &conn->audio_socket);
+  *lcport = bind_port(conn->connection_ip_family, conn->self_ip_string, conn->self_scope_id,
+                      &conn->control_socket);
+  *ltport = bind_port(conn->connection_ip_family, conn->self_ip_string, conn->self_scope_id,
+                      &conn->timing_socket);
 
   debug(2, "listening for audio, control and timing on ports %d, %d, %d.", *lsport, *lcport,
         *ltport);
@@ -752,8 +760,8 @@ void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
       msgsize = sizeof(struct sockaddr_in6);
     }
 #endif
-    if (sendto(conn->audio_socket, req, sizeof(req), 0, (struct sockaddr *)&conn->rtp_client_control_socket,
-               msgsize) == -1) {
+    if (sendto(conn->audio_socket, req, sizeof(req), 0,
+               (struct sockaddr *)&conn->rtp_client_control_socket, msgsize) == -1) {
       perror("Error sendto-ing to audio socket");
     }
   } else {
