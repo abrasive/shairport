@@ -19,13 +19,13 @@ Version 3.1 brings two new backends, optional loudness and convolution filters, 
 * A new setting, `audio_backend_silent_lead_in_time`, allows you to set the duration of the period of silence played (the "silent lead-in") before a play session starts.
 * A new command-line option, `--logOutputLevel`, allows you to output the volume levels to the log whenever they are changed. This may be useful during setup.
 * Improvements have been made to the handling of large items of metadata over UDP.
-* A new command line option, `-j`, deamonizes Shairport Sync without creating a PID file.
+* A new command line option, `-j`, demonizes Shairport Sync without creating a PID file.
 * A new `alsa`-only setting, `mute_using_playback_switch`, is available for advanced use.
 
 **Bug Fixes**
-* Stability improvements. More care has been taken (!) to make code thread-safe resulting in improved stability.
+* Stability improvements. More care has been taken (!) to make code thread-safe, resulting in improved stability.
 * Conversion from stereo to mono has been fixed to avoid clipping while preserving full resolution.
-* Short intrusions of audio from the end of the previous session to the start of a new session have been eliminated.
+* Short intrusions of audio at the start of a new session from the end of the previous session have been eliminated.
 
 Version 3.1.d24
 ====
