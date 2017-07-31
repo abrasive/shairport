@@ -1,3 +1,32 @@
+Version 3.1 [Forthcoming, under revision...]
+====
+Version 3.1 brings two new backends, optional loudness and convolution filters, improvements in non-synchronised backends, enhancements, stability improvements and bug fixes.
+
+**New Features**
+* A `sndio` backend gives Shairport Sync a fully synchronised backend that works natively on OpenBSD and FreeBSD, thanks to the work of [t6](https://github.com/t6).
+* A `pa` backend now allows Shairport Sync to work well with a PulseAudio-equipped system -- many desktop Linuxes use PulseAudio as their sound manager.
+* Optional loudness and convolution filters can be incorporated in the audio processing chain, thanks to [yannpom](https://github.com/yannpom).
+* A volume-change program hook has been added to execute an application whenever the volume is changed.
+
+**Perky Changes You Shouldn't Ignore**
+* The `audio_backend_buffer_desired_length_in_seconds` and `audio_backend_latency_offset_in_seconds` settings have been moved from individual backend stanzas to the `general` stanza. They now have an effect on every type of backend.
+* If you are using a System V (aka `systemv`) installation, please note that the default location for PID file has moved -- it is now stored at `/var/run/shairport-sync/shairport-sync.pid`. This change is needed to improve security a little and to improve compatability across platforms. If you're not doing anything strange, this should make no difference.
+
+
+**Enhancements**
+* Resynchronisation, which happens when the synchronisation is incorrect by more than 50 ms by default, should be a lot less intrusive when it occurs – it should now either insert silence or skip frames, as appropriate. 
+* The Linux installer has been improved and simplified and a FreeBSD installer introduced.
+* A new setting, `audio_backend_silent_lead_in_time`, allows you to set the duration of the period of silence played (the "silent lead-in") before a play session starts.
+* A new command-line option, `--logOutputLevel`, allows you to output the volume levels to the log whenever they are changed. This may be useful during setup.
+* Improvements have been made to the handling of large items of metadata over UDP.
+* A new command line option, `-j`, deamonizes Shairport Sync without creating a PID file.
+* A new `alsa`-only setting, `mute_using_playback_switch`, is available for advanced use.
+
+**Bug Fixes**
+* Stability improvements. More care has been taken (!) to make code thread-safe resulting in improved stability.
+* Conversion from stereo to mono has been fixed to avoid clipping while preserving full resolution.
+* Short intrusions of audio from the end of the previous session to the start of a new session have been eliminated.
+
 Version 3.1.d24
 ====
 **Enhancements**
@@ -39,7 +68,7 @@ some metadata (typically the cover art) cannot be sent within a single IPv4 UDP 
 These commits fix both issues by setting larger send buffer of 4MB and chunking any metadata with a new sub-protocol ("ssnc", "chnk", packet_ix, packet_counts, packet_tag, packet_type, chunked_data).
 Thanks to [Paul Guyot](https://github.com/pguyot) for this work.
 
-* A new command line option `-j` to deamonize Shairport Sync without creating a PID file. (The "j" is from the "j" in "just daemonize".)
+* A new command line option `-j` to demonize Shairport Sync without creating a PID file. (The "j" is from the "j" in "just daemonize".)
 * Small change in startup behaviour. Shairport Sync now reads the configuration file before executing the `-k` option.
 
 Version 3.1d16
@@ -159,7 +188,7 @@ Version 3.1d0
 
 Version 3.0
 ====
-Version 3 brings in support for 24-bit and 32-bit (and 8 bit!) DACs and for DACs running at multiples of 44,100 samples per second.
+Version 3 brings support for 24-bit and 32-bit (and 8 bit!) DACs and for DACs running at multiples of 44,100 samples per second.
 
 The most obvious audible change is if you are using software volume control and can take advantage of 32- or 24-bit DACs. Dithering can now occur on a 32-bit or 24-bit sample rather than on a 16-bit sample, making the noise floor very much lower. This is the case, for example, with a Pimoroni PHAT DAC.
 
