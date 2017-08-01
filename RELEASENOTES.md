@@ -24,7 +24,7 @@ Version 3.1 brings two new backends, optional loudness and convolution filters, 
 
 **Bug Fixes**
 * Stability improvements. More care has been taken (!) to make code thread-safe, resulting in improved stability.
-* Conversion from stereo to mono has been fixed to avoid clipping while preserving full resolution. Thanks to [Robert Jones (RobDeBagel)](https://github.com/RobDeBagel) for bring this to attention.
+* Conversion from stereo to mono has been fixed to avoid clipping while preserving full resolution. Thanks to [Robert Jones (RobDeBagel)](https://github.com/RobDeBagel) for bringing this to notice.
 * Short intrusions of audio at the start of a new session from the end of the previous session have been eliminated.
 * Many (many!) miscellaneous bugs fixed.
 
