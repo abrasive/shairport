@@ -3,7 +3,7 @@ Version 3.1 [Forthcoming, under revision...]
 Version 3.1 brings two new backends, optional loudness and convolution filters, improvements in non-synchronised backends, enhancements, stability improvements and bug fixes.
 
 **New Features**
-* A `sndio` backend gives Shairport Sync a fully synchronised backend that works natively on OpenBSD and FreeBSD, thanks to the work of [t6](https://github.com/t6).
+* A `sndio` backend gives Shairport Sync a fully synchronised backend that works natively on OpenBSD and FreeBSD, thanks to the work of [Tobias Kortkamp (t6)](https://github.com/t6).
 * A `pa` backend now allows Shairport Sync to work well with a PulseAudio-equipped system -- many desktop Linuxes use PulseAudio as their sound manager.
 * Optional loudness and convolution filters can be incorporated in the audio processing chain, thanks to [yannpom](https://github.com/yannpom).
 * A volume-change program hook has been added to execute an application whenever the volume is changed.
@@ -20,10 +20,11 @@ Version 3.1 brings two new backends, optional loudness and convolution filters, 
 * Improvements have been made to the handling of large items of metadata over UDP.
 * A new command line option, `-j`, demonizes Shairport Sync without creating a PID file.
 * A new `alsa`-only setting, `mute_using_playback_switch`, is available for advanced use.
+* Other minor enhancements.
 
 **Bug Fixes**
 * Stability improvements. More care has been taken (!) to make code thread-safe, resulting in improved stability.
-* Conversion from stereo to mono has been fixed to avoid clipping while preserving full resolution.
+* Conversion from stereo to mono has been fixed to avoid clipping while preserving full resolution. Thanks to [Robert Jones (RobDeBagel)](https://github.com/RobDeBagel) for bring this to attention.
 * Short intrusions of audio at the start of a new session from the end of the previous session have been eliminated.
 * Many (many!) miscellaneous bugs fixed.
 
