@@ -271,7 +271,15 @@
     <p>If the value chosen is too short for synchronised backends such as the ALSA, sndio or PA backends, then audio will not be synchronised correctly at the start of play.
     The default is to have a silent lead-in of approximately the same time as the latency set by the client.</p></optdesc>
     </option>
-    
+    <option>
+    <p><opt>run_this_when_volume_is_set=</opt><arg>"/full/path/to/application/and/args"</arg><opt>;</opt></p>
+    <optdesc><p>Here you can specify a program and its arguments that will be run when the volume is set or changed. Be careful to include the full path to the application.
+    The application must be marked as executable and, if it is a script, its first line must begin with the standard <file>#!/bin/...</file> as appropriate.</p>
+    <p>The desired AirPlay volume is appended to the end of the command line – leave a space if you want it treated as an extra argument.
+    AirPlay volume goes from 0.0 to -30.0 and -144.0 means "mute".</p></optdesc>
+    </option>
+
+
     <option><p><opt>"ALSA" SETTINGS</opt></p></option>
     <p>These settings are for the ALSA back end, used to communicate with audio output devices in the ALSA system.
     (By the way, you can use tools such as <opt>alsamixer</opt> or <opt>aplay</opt> to discover what devices are available.)
@@ -439,8 +447,8 @@
     </option>
     <option>
     <p><opt>wait_for_completion=</opt><arg>"choice"</arg><opt>;</opt></p>
-    <optdesc><p>Set <arg>choice</arg> to "yes" to make shairport-sync wait until the programs specified in the <opt>run_this_before_play_begins</opt>
-    and <opt>run_this_after_play_ends</opt> have completed execution before continuing. The default is "no".</p></optdesc>
+    <optdesc><p>Set <arg>choice</arg> to "yes" to make shairport-sync wait until the programs specified in the <opt>run_this_before_play_begins</opt>,
+    <opt>run_this_after_play_ends</opt> and <opt>run_this_when_volume_is_set</opt> have completed execution before continuing. The default is "no".</p></optdesc>
     </option>
     <option>
     <p><opt>allow_session_interruption=</opt><arg>"choice"</arg><opt>;</opt></p>

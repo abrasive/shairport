@@ -148,6 +148,11 @@ The purpose of this silent lead-in is to give the backend sufficient time to pre
 
 If the value chosen is too short for synchronised backends such as the ALSA, sndio or PA backends, then audio will not be synchronised correctly at the start of play. The default is to have a silent lead-in of approximately the same time as the latency set by the client.
 .TP
+\fBrun_this_when_volume_is_set=\f1\fI"/full/path/to/application/and/args"\f1\fB;\f1
+Here you can specify a program and its arguments that will be run when the volume is set or changed. Be careful to include the full path to the application. The application must be marked as executable and, if it is a script, its first line must begin with the standard \fI#!/bin/...\f1 as appropriate.
+
+The desired AirPlay volume is appended to the end of the command line – leave a space if you want it treated as an extra argument. AirPlay volume goes from 0.0 to -30.0 and -144.0 means "mute".
+.TP
 \fB"ALSA" SETTINGS\f1
 These settings are for the ALSA back end, used to communicate with audio output devices in the ALSA system. (By the way, you can use tools such as \fBalsamixer\f1 or \fBaplay\f1 to discover what devices are available.) Use these settings to select the output device and the mixer control to be used to control the output volume. You can additionally set the desired size of the output buffer and you can adjust overall latency. Here are the \fBalsa\f1 group settings:
 .TP
@@ -259,7 +264,7 @@ Here you can specify a program and its arguments that will be run just before a 
 Here you can specify a program and its arguments that will be run just after a play session ends. Be careful to include the full path to the application. The application must be marked as executable and, if it is a script, its first line must begin with the standard \fI#!/bin/...\f1 as appropriate.
 .TP
 \fBwait_for_completion=\f1\fI"choice"\f1\fB;\f1
-Set \fIchoice\f1 to "yes" to make shairport-sync wait until the programs specified in the \fBrun_this_before_play_begins\f1 and \fBrun_this_after_play_ends\f1 have completed execution before continuing. The default is "no".
+Set \fIchoice\f1 to "yes" to make shairport-sync wait until the programs specified in the \fBrun_this_before_play_begins\f1, \fBrun_this_after_play_ends\f1 and \fBrun_this_when_volume_is_set\f1 have completed execution before continuing. The default is "no".
 .TP
 \fBallow_session_interruption=\f1\fI"choice"\f1\fB;\f1
 If \fBchoice\f1 is set to "yes", then another source will be able to interrupt an existing play session and start a new one. When set to "no" (the default), other devices attempting to interrupt a session will fail, receiving a busy signal.

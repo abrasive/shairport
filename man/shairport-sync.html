@@ -253,6 +253,14 @@
     The default is to have a silent lead-in of approximately the same time as the latency set by the client.</p>
     
     
+    <p><b>run_this_when_volume_is_set=</b><em>&quot;/full/path/to/application/and/args&quot;</em><b>;</b></p>
+    <p>Here you can specify a program and its arguments that will be run when the volume is set or changed. Be careful to include the full path to the application.
+    The application must be marked as executable and, if it is a script, its first line must begin with the standard <em>#!/bin/...</em> as appropriate.</p>
+    <p>The desired AirPlay volume is appended to the end of the command line – leave a space if you want it treated as an extra argument.
+    AirPlay volume goes from 0.0 to -30.0 and -144.0 means &quot;mute&quot;.</p>
+    
+
+
     <p><b>&quot;ALSA&quot; SETTINGS</b></p>
     <p>These settings are for the ALSA back end, used to communicate with audio output devices in the ALSA system.
     (By the way, you can use tools such as <b>alsamixer</b> or <b>aplay</b> to discover what devices are available.)
@@ -420,8 +428,8 @@
     
     
     <p><b>wait_for_completion=</b><em>&quot;choice&quot;</em><b>;</b></p>
-    <p>Set <em>choice</em> to &quot;yes&quot; to make shairport-sync wait until the programs specified in the <b>run_this_before_play_begins</b>
-    and <b>run_this_after_play_ends</b> have completed execution before continuing. The default is &quot;no&quot;.</p>
+    <p>Set <em>choice</em> to &quot;yes&quot; to make shairport-sync wait until the programs specified in the <b>run_this_before_play_begins</b>,
+    <b>run_this_after_play_ends</b> and <b>run_this_when_volume_is_set</b> have completed execution before continuing. The default is &quot;no&quot;.</p>
     
     
     <p><b>allow_session_interruption=</b><em>&quot;choice&quot;</em><b>;</b></p>
