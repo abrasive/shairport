@@ -332,9 +332,16 @@
     <p><opt>use_mmap_if_available=</opt><arg>"yes"</arg><opt>;</opt></p>
     <optdesc><p> Use this optional advanced setting to control whether MMAP-based output is used to communicate with the DAC. Default is <arg>"yes"</arg>.</p></optdesc>
     </option>
-
-
-
+    
+    <option>
+    <p><opt>mute_using_playback_switch=</opt><arg>"yes"</arg><opt>;</opt></p>
+    <optdesc>
+    <p>This is an advanced setting and the default is <arg>"yes"</arg>, which means that hardware mute will be implemented using a feature called a 'playback switch', where one is available;
+    set it to <arg>"no"</arg> to prevent the playback switch being used.</p>
+    <p>The motivation for this is to avoid using the alsa function call
+    "snd_mixer_selem_set_playback_switch_all", which is incorrectly implemented on certain soundcards, including the emulated card in VMWare Fusion 8.5.</p>
+    </optdesc>
+    </option>
     <option><p><opt>"SNDIO" SETTINGS</opt></p></option>
      <p>These settings are for the SNDIO back end, used to communicate with audio output devices in the SNDIO system.</p>
     <option>
