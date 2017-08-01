@@ -8,10 +8,9 @@ Version 3.1 brings two new backends, optional loudness and convolution filters, 
 * Optional loudness and convolution filters can be incorporated in the audio processing chain, thanks to [yannpom](https://github.com/yannpom).
 * A volume-change program hook has been added to execute an application whenever the volume is changed.
 
-**Perky Changes You Shouldn't Ignore**
+**Perky Changes You Should Know About**
 * The `audio_backend_buffer_desired_length_in_seconds` and `audio_backend_latency_offset_in_seconds` settings have been moved from individual backend stanzas to the `general` stanza. They now have an effect on every type of backend.
 * If you are using a System V (aka `systemv`) installation, please note that the default location for PID file has moved -- it is now stored at `/var/run/shairport-sync/shairport-sync.pid`. This change is needed to improve security a little and to improve compatability across platforms. If you're not doing anything strange, this should make no difference.
-
 
 **Enhancements**
 * Resynchronisation, which happens when the synchronisation is incorrect by more than 50 ms by default, should be a lot less intrusive when it occurs – it should now either insert silence or skip frames, as appropriate. 
@@ -26,6 +25,7 @@ Version 3.1 brings two new backends, optional loudness and convolution filters, 
 * Stability improvements. More care has been taken (!) to make code thread-safe, resulting in improved stability.
 * Conversion from stereo to mono has been fixed to avoid clipping while preserving full resolution.
 * Short intrusions of audio at the start of a new session from the end of the previous session have been eliminated.
+* Many (many!) miscellaneous bugs fixed.
 
 Version 3.1.d24
 ====
