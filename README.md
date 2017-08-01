@@ -56,7 +56,7 @@ For information about changes and updates, please refer to the RELEASENOTES.md f
 
 Building And Installing the Development Version
 ---------------------
-The following procedures will install the `shairport-sync` application into your system.
+The following procedures will build and install the `shairport-sync` application into your system.
 
 **Remove Old Versions Of Shairport Sync**
 
@@ -68,7 +68,7 @@ To build Shairport Sync from sources on FreeBSD please refer to [FREEBSD.md](htt
 
 **Determine The Configuration Needed**
 
-Shairport Sync has a number of different "backends" that connnect it to the system's audio handling infrastructure. Most recent Linux distributions that have a GUI – including Ubuntu, Debian and others – use PulseAudio to handle sound. If your system uses PulseAudio, you should build Shairport Sync with the PulseAudio backend. You can check to see if PulseAudio is running by opening a Terminal window and entering the command `$ pactl info`. Here is an example of what you'll get if PulseAudio is installed, though the exact details may vary:
+Shairport Sync has a number of different "backends" that connnect it to the system's audio handling infrastructure. Most recent Linux distributions that have a GUI – including Ubuntu, Debian and others – use PulseAudio to handle sound. In such cases, it is inadvisable to attempt to disable or remove PulseAudio. Thus, if your system uses PulseAudio, you should build Shairport Sync with the PulseAudio backend. You can check to see if PulseAudio is running by opening a Terminal window and entering the command `$ pactl info`. Here is an example of what you'll get if PulseAudio is installed, though the exact details may vary:
 ```
 $ pactl info
 Server String: unix:/run/user/1000/pulse/native
