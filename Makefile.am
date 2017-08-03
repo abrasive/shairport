@@ -3,11 +3,11 @@ SUBDIRS = man
 bin_PROGRAMS = shairport-sync
 shairport_sync_SOURCES = shairport.c rtsp.c mdns.c mdns_external.c common.c rtp.c player.c alac.c audio.c loudness.c
 
-AM_CFLAGS = -Wno-multichar -DSYSCONFDIR=\"$(sysconfdir)\" -O2
+AM_CFLAGS = -Wno-multichar -DSYSCONFDIR=\"$(sysconfdir)\"
 if BUILD_FOR_FREEBSD
   AM_CPPFLAGS = -I/usr/local/include -Wno-multichar -DSYSCONFDIR=\"$(sysconfdir)\" -O2
 else
-  AM_CPPFLAGS = -Wno-multichar -DSYSCONFDIR=\"$(sysconfdir)\" -O2
+  AM_CPPFLAGS = -Wno-multichar -DSYSCONFDIR=\"$(sysconfdir)\"
 endif
 
 if USE_APPLE_ALAC
@@ -70,7 +70,7 @@ endif
 
 if USE_CONVOLUTION
 shairport_sync_SOURCES += FFTConvolver/AudioFFT.cpp FFTConvolver/FFTConvolver.cpp FFTConvolver/Utilities.cpp FFTConvolver/convolver.cpp
-AM_CXXFLAGS = -std=c++11 -O2
+AM_CXXFLAGS = -std=c++11
 endif
 
 if USE_DNS_SD
