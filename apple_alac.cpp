@@ -52,4 +52,7 @@ extern "C" int apple_alac_decode_frame(unsigned char *sampleBuffer, uint32_t buf
   return 0;
 }
 
-extern "C" int apple_alac_terminate() { delete (theDecoder); }
+extern "C" int apple_alac_terminate() {
+  delete (theDecoder);
+  return 0;
+}

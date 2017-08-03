@@ -42,20 +42,35 @@
 static int fd = -1;
 
 char *pipename = NULL;
+int warned = 0;
 
 static void start(int sample_rate, int sample_format) {
   // this will leave fd as -1 if a reader hasn't been attached
   fd = open(pipename, O_WRONLY | O_NONBLOCK);
+  if ((fd < -1) && (warned == 0)) {
+    warn("Error %d opening the pipe named \"%s\".", errno, pipename);
+    warned = 1;
+  }
 }
 
 static void play(short buf[], int samples) {
   // if the file is not open, try to open it.
+  char errorstring[1024];
   if (fd == -1) {
     fd = open(pipename, O_WRONLY | O_NONBLOCK);
   }
   // if it's got a reader, write to it.
-  if (fd != -1) {
-    int ignore = non_blocking_write(fd, buf, samples * 4);
+  if (fd > 0) {
+    int rc = non_blocking_write(fd, buf, samples * 4);
+    if ((rc < 0) && (warned == 0)) {
+      strerror_r(errno, (char *)errorstring, 1024);
+      warn("Error %d writing to the pipe named \"%s\": \"%s\".", errno, pipename, errorstring);
+      warned = 1;
+    }
+  } else if ((fd == -1) && (warned == 0)) {
+    strerror_r(errno, (char *)errorstring, 1024);
+    warn("Error %d opening the pipe named \"%s\": \"%s\".", errno, pipename, errorstring);
+    warned = 1;
   }
 }
 
@@ -71,8 +86,13 @@ static int init(int argc, char **argv) {
   int value;
   double dvalue;
 
+  // set up default values first
+
   config.audio_backend_buffer_desired_length = 1.0;
   config.audio_backend_latency_offset = 0;
+
+  // do the "general" audio  options. Note, these options are in the "general" stanza!
+  parse_general_audio_options();
 
   if (config.cfg != NULL) {
     /* Get the Output Pipename. */
@@ -83,62 +103,8 @@ static int init(int argc, char **argv) {
 
     if ((pipename) && (strcasecmp(pipename, "STDOUT") == 0))
       die("Can't use \"pipe\" backend for STDOUT. Use the \"stdout\" backend instead.");
-
-    /* Get the desired buffer size setting. */
-    if (config_lookup_int(config.cfg, "pipe.audio_backend_buffer_desired_length", &value)) {
-      if ((value < 0) || (value > 66150)) {
-        inform("The setting pipe.audio_backend_buffer_desired_length is deprecated. "
-               "Use pipe.audio_backend_buffer_desired_length_in_seconds instead.");
-        die("Invalid pipe audio backend buffer desired length \"%d\". It "
-            "should be between 0 and "
-            "66150, default is 6615",
-            value);
-      } else {
-        inform("The setting pipe.audio_backend_buffer_desired_length is deprecated. "
-               "Use pipe.audio_backend_buffer_desired_length_in_seconds instead.");
-        config.audio_backend_buffer_desired_length = 1.0 * value / 44100;
-      }
-    }
-
-    /* Get the desired buffer size setting. */
-    if (config_lookup_float(config.cfg, "pipe.audio_backend_buffer_desired_length_in_seconds",
-                            &dvalue)) {
-      if ((dvalue < 0) || (dvalue > 1.5)) {
-        die("Invalid pipe audio backend buffer desired time \"%f\". It "
-            "should be between 0 and "
-            "1.5, default is 0.15 seconds",
-            dvalue);
-      } else {
-        config.audio_backend_buffer_desired_length = dvalue;
-      }
-    }
-
-    /* Get the latency offset. */
-    if (config_lookup_int(config.cfg, "pipe.audio_backend_latency_offset", &value)) {
-      if ((value < -66150) || (value > 66150)) {
-        inform("The setting pipe.audio_backend_latency_offset is deprecated. "
-               "Use pipe.audio_backend_latency_offset_in_seconds instead.");
-        die("Invalid pipe audio backend buffer latency offset \"%d\". It "
-            "should be between -66150 and +66150, default is 0",
-            value);
-      } else {
-        inform("The setting pipe.audio_backend_latency_offset is deprecated. "
-               "Use pipe.audio_backend_latency_offset_in_seconds instead.");
-        config.audio_backend_latency_offset = 1.0 * value / 44100;
-      }
-    }
-
-    /* Get the latency offset. */
-    if (config_lookup_float(config.cfg, "pipe.audio_backend_latency_offset_in_seconds", &dvalue)) {
-      if ((dvalue < -1.0) || (dvalue > 1.5)) {
-        die("Invalid pipe audio backend buffer latency offset time \"%f\". It "
-            "should be between -1.0 and +1.5, default is 0 seconds",
-            dvalue);
-      } else {
-        config.audio_backend_latency_offset = dvalue;
-      }
-    }
   }
+
   if ((pipename == NULL) && (argc != 1))
     die("bad or missing argument(s) to pipe");
 

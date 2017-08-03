@@ -1,3 +1,33 @@
+Version 3.1rc0
+====
+Version 3.1 brings two new backends, optional loudness and convolution filters, improvements in non-synchronised backends, enhancements, stability improvements and bug fixes.
+
+**New Features**
+* A `sndio` backend gives Shairport Sync native fully synchronised output on OpenBSD and FreeBSD, thanks to the work of [Tobias Kortkamp (t6)](https://github.com/t6).
+* A `pa` backend now allows Shairport Sync to provide synchronised output on PulseAudio-equipped systems -- many desktop Linuxes use PulseAudio as their sound manager.
+* Optional loudness and convolution filters can be incorporated in the audio processing chain, thanks to the fantastic work of [yannpom](https://github.com/yannpom).
+* A volume-change program hook `run_this_when_volume_is_set` has been added to the `general` settings stanza to execute an application whenever the volume is changed.
+
+**Pesky Changes You Should Know About**
+* The `audio_backend_buffer_desired_length_in_seconds` and `audio_backend_latency_offset_in_seconds` settings have been moved from individual backend stanzas to the `general` stanza. They now have an effect on every type of backend.
+* If you are using a System V (aka `systemv`) installation, please note that the default location for PID file has moved -- it is now stored at `/var/run/shairport-sync/shairport-sync.pid`. This change is needed to improve security a little and to improve compatability across platforms. If you're not doing anything strange, this should make no difference.
+
+**Enhancements**
+* Resynchronisation, which happens when the synchronisation is incorrect by more than 50 ms by default, should be a lot less intrusive when it occurs – it should now either insert silence or skip frames, as appropriate. 
+* The Linux installer has been improved and simplified and a FreeBSD installer introduced.
+* A new setting, `audio_backend_silent_lead_in_time`, allows you to set the duration of the period of silence played (the "silent lead-in") before a play session starts.
+* A new command-line option, `--logOutputLevel`, allows you to output the volume levels to the log whenever they are changed. This may be useful during setup.
+* Improvements have been made to the handling of large items of metadata over UDP.
+* A new command line option, `-j`, demonizes Shairport Sync without creating a PID file.
+* A new `alsa`-only setting, `mute_using_playback_switch`, is available for advanced use.
+* Other minor enhancements.
+
+**Bug Fixes**
+* Stability improvements. More care has been taken (!) to make code thread-safe, resulting in improved stability.
+* Conversion from stereo to mono has been fixed to avoid clipping while preserving full resolution. Thanks to [Robert Jones (RobDeBagel)](https://github.com/RobDeBagel) for bringing this to notice.
+* Short intrusions of audio at the start of a new session from the end of the previous session have been eliminated.
+* Many (many!) miscellaneous bugs fixed.
+
 Version 3.0.2
 ====
 **Bug Fixes**

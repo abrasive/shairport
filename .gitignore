@@ -1,7 +1,7 @@
 /INSTALL
 /shairport-sync
 /shairport-sync.exe
-/*.o
+*.o
 /*~
 *.xml~
 /config.mk
@@ -17,6 +17,7 @@ depcomp
 install-sh
 missing
 stamp-h1
+.dirstamp
 .deps
 man/Makefile
 man/Makefile.in
@@ -26,3 +27,7 @@ scripts/shairport-sync
 # Some eclipse project files
 .cproject
 .project
+
+# macOS stuff
+.DS_Store
+shairport-sync.xcodeproj

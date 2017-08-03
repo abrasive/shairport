@@ -2,21 +2,19 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.50])
-AC_INIT([shairport-sync], [3.0.2], [mikebrady@eircom.net])
+AC_INIT([shairport-sync], [3.1rc0], [mikebrady@eircom.net])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([shairport.c])
 AC_CONFIG_HEADERS([config.h])
 
 # Derived from the Avahi configure.ac file
-#
-#
 # Specifying the OS type, defaulting to linux.
 #
-AC_ARG_WITH(os_type, AS_HELP_STRING([--with-os-type=OSType],[Specify the distribution to target: One of linux freebsd or darwin]))
-if test "z$with_os_type" = "z"; then
-  with_os_type="linux"
+AC_ARG_WITH(os, AS_HELP_STRING([--with-os=OSType],[Specify the distribution to target: One of linux freebsd or darwin]))
+if test "z$with_os" = "z"; then
+  with_os="linux"
 fi
-with_os_type=`echo ${with_os_type} | tr '[[:upper:]]' '[[:lower:]]' `
+with_os=`echo ${with_os} | tr '[[:upper:]]' '[[:lower:]]' `
 
 # Checks for programs.
 AC_PROG_CC
@@ -26,9 +24,11 @@ AC_PROG_INSTALL
 PKG_PROG_PKG_CONFIG([0.9.0])
 
 # Checks for libraries.
-if test "x${with_os_type}" = xlinux -o "x${with_os_type}" = xfreebsd ; then
+if test "x${with_os}" = xlinux -o "x${with_os}" = xfreebsd ; then
  AC_CHECK_LIB([rt],[clock_gettime], , AC_MSG_ERROR(librt needed))
 fi
+
+AM_CONDITIONAL([BUILD_FOR_FREEBSD], [test "x${with_os}" = xfreebsd ])
 
 ##### Some build systems are not fully using pkg-config, so we can use the flag ${with_pkg_config} on a case-by-case basis
 ##### to control how to deal with them
@@ -78,8 +78,12 @@ AM_CONDITIONAL([INSTALL_SYSTEMV], [test "x$with_systemv" = "xyes"])
 # Check to see if we should include the systemd stuff to define it as a service
 
 AC_ARG_WITH([systemd],
-[  --with-systemd = install a systemd service description file during a make install], , )
+[  --with-systemd = install a systemd startup script during a make install], , )
 AM_CONDITIONAL([INSTALL_SYSTEMD], [test "x$with_systemd" = "xyes"])
+
+AC_ARG_WITH([freebsd-service],
+[  --with-freebsd-service = install a FreeBSD startup script during a make install], , )
+AM_CONDITIONAL([INSTALL_FREEBSD_SERVICE], [test "x$with_freebsd_service" = "xyes"])
 
 # Add the libconfig package
 if  test "x${with_pkg_config}" = xyes ; then
@@ -110,6 +114,19 @@ AC_ARG_WITH(apple-alac, [  --with-apple-alac = include support for the Apple ALA
     AC_DEFINE([HAVE_APPLE_ALAC],[1],[Define to 1 if you have the Apple ALAC library])
   fi ])
 AM_CONDITIONAL([USE_APPLE_ALAC], [test "x$HAS_APPLE_ALAC" = "x1"])
+
+# Look for firstconfdir flag
+AC_ARG_WITH(firstconfdir, [ --with-firstconfdir=<pathname> Specify a pathname to a directory where a configuration file will be searched for before looking in sysconfdir.], [
+	AC_MSG_CHECKING(--with-firstconfdir argument)
+	if test "x${with_firstconfdir}" = x -o "x${with_firstconfdir}" = xyes ; then
+		AC_MSG_RESULT(not found)
+		AC_MSG_ERROR(when you use the --with-firstconfdir directive you must specify a pathname to a directory where a configuration file will be searched for before looking in sysconfdir.)
+	fi
+	AC_MSG_RESULT(${with_firstconfdir})
+  HAS_FIRSTCONFDIR=1
+  AC_SUBST(FIRST_CONF_DIR,["${with_firstconfdir}"])
+  AC_DEFINE([USE_FIRSTCONFDIR],1,[Look for a configuration file here before looking in the sysconfdir])], )
+AM_CONDITIONAL([USE_FIRSTCONFDIR], [test "x$HAS_FIRSTCONFDIR" = "x1"])
 
 # Look for piddir flag
 AC_ARG_WITH(piddir, [ --with-piddir=<pathname> Specify a pathname to a directory in which to write the PID file.], [
@@ -206,8 +223,8 @@ AC_ARG_WITH(alsa, [  --with-alsa = choose ALSA API support (GNU/Linux only)],
 AM_CONDITIONAL([USE_ALSA], [test "x$HAS_ALSA" = "x1"])
 
 # Look for SNDIO flag
-AC_ARG_WITH(sndio, [  --with-sndio = choose SNDIO API support (FreeBSD) -- probably broken], [
-  AC_MSG_RESULT(>>Including a SNDIO back end -- N.B. this is probably broken!)
+AC_ARG_WITH(sndio, [  --with-sndio = choose SNDIO API support], [
+  AC_MSG_RESULT(>>Including a SNDIO back end)
   HAS_SNDIO=1
   AC_DEFINE([CONFIG_SNDIO], 1, [Needed by the compiler.])
   AC_CHECK_LIB([sndio], [sio_open], , AC_MSG_ERROR(SNDIO support requires the sndio library!))], )
@@ -230,13 +247,37 @@ AC_ARG_WITH(soundio, [  --with-soundio = choose soundio API support.], [
 AM_CONDITIONAL([USE_SOUNDIO], [test "x$HAS_SOUNDIO" = "x1"])
 
 # Look for pulseaudio flag
-AC_ARG_WITH(pulseaudio, [  --with-pulseaudio = choose PulseAudio API support. N.B. no synchronisation -- so underflow or overflow is inevitable!], [
-  AC_MSG_RESULT(>>Including a PulseAudio back end. N.B. no synchronisation -- so underflow or overflow is inevitable!)
+AC_ARG_WITH(pa, [  --with-pa = choose PulseAudio support.], [
+  AC_MSG_RESULT(>>Including a PulseAudio back end.)
+  HAS_PA=1
+  AC_DEFINE([CONFIG_PA], 1, [Needed by the compiler.])
+  if  test "x${with_pkg_config}" = xyes ; then
+    PKG_CHECK_MODULES(
+      [PULSEAUDIO], [libpulse >= 0.9.2],
+      [LIBS="${PULSEAUDIO_LIBS} ${LIBS}"],[AC_MSG_ERROR(PulseAudio support requires the libpulse-dev library!)])
+  else
+    AC_CHECK_LIB([pulse-simple], [pa_simple_new], , AC_MSG_ERROR(PulseAudio support requires the libpulse library!))
+    AC_CHECK_LIB([pulse], [pa_stream_peek], , AC_MSG_ERROR(PulseAudio support requires the libpulse-dev library.))
+  fi ])
+AM_CONDITIONAL([USE_PA], [test "x$HAS_PA" = "x1"])
+
+# Look for old pulseaudio flag
+AC_ARG_WITH(pulseaudio, [  --with-pulseaudio = choose PulseAudio API support. Note that this backend is deprecated. Use --with-pa for an updated PulseAudio backend!], [
+  AC_MSG_RESULT(>>Including an outdated PulseAudio back end. Note that this backend is deprecated. Use --with-pa for an updated PulseAudio backend!)
   HAS_PULSE=1
   AC_DEFINE([CONFIG_PULSE], 1, [Needed by the compiler.])
   AC_CHECK_LIB([pulse-simple], [pa_simple_new], , AC_MSG_ERROR(PulseAudio support requires the pulse-simple library -- possibly in the libpulse-dev package!))
   AC_CHECK_LIB([pulse], [pa_stream_peek], , AC_MSG_ERROR(PulseAudio support requires the libpulse-dev library.))], )
 AM_CONDITIONAL([USE_PULSE], [test "x$HAS_PULSE" = "x1"])
+
+# Look for Convolution flag
+AC_ARG_WITH(convolution, [  --with-convolution = choose audio DSP convolution support], [
+  AC_MSG_RESULT(>>Including convolution support)
+  HAS_CONVOLUTION=1
+  AM_INIT_AUTOMAKE([subdir-objects])
+  AC_DEFINE([CONFIG_CONVOLUTION], 1, [Needed by the compiler.])
+  AC_CHECK_LIB([sndfile], [sf_open], , AC_MSG_ERROR(Convolution support requires the sndfile library!))], )
+AM_CONDITIONAL([USE_CONVOLUTION], [test "x$HAS_CONVOLUTION" = "x1"])
 
 # Look for dns_sd flag
 AC_ARG_WITH(dns_sd, [  --with-dns_sd = choose dns_sd mDNS support], [
@@ -295,8 +336,6 @@ AC_TYPE_UINT8_T
 AC_FUNC_ALLOCA
 AC_FUNC_ERROR_AT_LINE
 AC_FUNC_FORK
-AC_FUNC_MALLOC
-AC_FUNC_REALLOC
 AC_CHECK_FUNCS([atexit clock_gettime gethostname inet_ntoa memchr memmove memset mkfifo pow select socket stpcpy strcasecmp strchr strdup strerror strstr strtol strtoul])
 
 AC_CONFIG_FILES([Makefile man/Makefile scripts/shairport-sync.service])

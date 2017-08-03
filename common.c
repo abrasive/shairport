@@ -32,6 +32,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <time.h>
@@ -79,6 +80,10 @@
 
 #include <libdaemon/dlog.h>
 
+#ifdef CONFIG_ALSA
+void set_alsa_out_dev(char *);
+#endif
+
 // true if Shairport Sync is supposed to be sending output to the output device, false otherwise
 
 static volatile int requested_connection_state_to_output = 1;
@@ -91,7 +96,7 @@ int get_requested_connection_state_to_output() { return requested_connection_sta
 
 void set_requested_connection_state_to_output(int v) { requested_connection_state_to_output = v; }
 
-void die(char *format, ...) {
+void die(const char *format, ...) {
   char s[1024];
   s[0] = 0;
   va_list args;
@@ -103,7 +108,7 @@ void die(char *format, ...) {
   exit(1);
 }
 
-void warn(char *format, ...) {
+void warn(const char *format, ...) {
   char s[1024];
   s[0] = 0;
   va_list args;
@@ -113,7 +118,7 @@ void warn(char *format, ...) {
   daemon_log(LOG_WARNING, "%s", s);
 }
 
-void debug(int level, char *format, ...) {
+void debug(int level, const char *format, ...) {
   if (level > debuglev)
     return;
   char s[1024];
@@ -125,7 +130,7 @@ void debug(int level, char *format, ...) {
   daemon_log(LOG_DEBUG, "%s", s);
 }
 
-void inform(char *format, ...) {
+void inform(const char *format, ...) {
   char s[1024];
   s[0] = 0;
   va_list args;
@@ -454,13 +459,78 @@ uint8_t *rsa_apply(uint8_t *input, int inlen, int *outlen, int mode) {
 }
 #endif
 
-void command_start(void) {
-  if (config.cmd_start) {
+void command_set_volume(double volume) {
+  if (config.cmd_set_volume) {
     /*Spawn a child to run the program.*/
     pid_t pid = fork();
     if (pid == 0) { /* child process */
+      size_t command_buffer_size = strlen(config.cmd_set_volume) + 32;
+      char *command_buffer = (char *)malloc(command_buffer_size);
+      if (command_buffer == NULL) {
+        inform("Couldn't allocate memory for set_volume argument string");
+      } else {
+        memset(command_buffer, 0, command_buffer_size);
+        sprintf(command_buffer, "%s%f", config.cmd_set_volume, volume);
+        // debug(1,"command_buffer is \"%s\".",command_buffer);
+        int argC;
+        char **argV;
+        // debug(1,"set_volume command found.");
+        if (poptParseArgvString(command_buffer, &argC, (const char ***)&argV) != 0) {
+          // note that argV should be free()'d after use, but we expect this fork to exit
+          // eventually.
+          warn("Can't decipher on-set-volume command arguments \"%s\".", command_buffer);
+          free(argV);
+          free(command_buffer);
+        } else {
+          free(command_buffer);
+          // debug(1,"Executing on-set-volume command %s with %d arguments.",argV[0],argC);
+          execv(argV[0], argV);
+          warn("Execution of on-set-volume command \"%s\" failed to start", config.cmd_set_volume);
+          // debug(1, "Error executing on-set-volume command %s", config.cmd_set_volume);
+          exit(127); /* only if execv fails */
+        }
+      }
+
+    } else {
+      if (config.cmd_blocking) { /* pid!=0 means parent process and if blocking is true, wait for
+                                    process to finish */
+        pid_t rc = waitpid(pid, 0, 0); /* wait for child to exit */
+        if (rc != pid) {
+          warn("Execution of on-set-volume command returned an error.");
+          debug(1, "on-set-volume command %s finished with error %d", config.cmd_set_volume, errno);
+        }
+      }
+      // debug(1,"Continue after on-set-volume command");
+    }
+  }
+}
+
+void command_start(void) {
+  if (config.cmd_start) {
+    pid_t pid;
+    int pipes[2];
+
+    if (config.cmd_start_returns_output && pipe(pipes) != 0) {
+      warn("Unable to allocate pipe for popen of start command.");
+      debug(1, "pipe finished with error %d", errno);
+      return;
+    }
+    /*Spawn a child to run the program.*/
+    pid = fork();
+    if (pid == 0) { /* child process */
       int argC;
       char **argV;
+
+      if (config.cmd_start_returns_output) {
+        close(pipes[0]);
+        if (dup2(pipes[1], 1) < 0) {
+          warn("Unable to reopen pipe as stdout for popen of start command");
+          debug(1, "dup2 finished with error %d", errno);
+          close(pipes[1]);
+          return;
+        }
+      }
+
       // debug(1,"on-start command found.");
       if (poptParseArgvString(config.cmd_start, &argC, (const char ***)&argV) !=
           0) // note that argV should be free()'d after use, but we expect this fork to exit
@@ -474,12 +544,27 @@ void command_start(void) {
         exit(127); /* only if execv fails */
       }
     } else {
-      if (config.cmd_blocking) { /* pid!=0 means parent process and if blocking is true, wait for
+      if (config.cmd_blocking || config.cmd_start_returns_output) { /* pid!=0 means parent process
+                                    and if blocking is true, wait for
                                     process to finish */
-        pid_t rc = waitpid(pid, 0, 0); /* wait for child to exit */
+        pid_t rc = waitpid(pid, 0, 0);                              /* wait for child to exit */
         if (rc != pid) {
           warn("Execution of on-start command returned an error.");
           debug(1, "on-start command %s finished with error %d", config.cmd_start, errno);
+        }
+        if (config.cmd_start_returns_output) {
+          static char buffer[256];
+          int len;
+          close(pipes[1]);
+          len = read(pipes[0], buffer, 255);
+          close(pipes[0]);
+          buffer[len] = '\0';
+          if (buffer[len - 1] == '\n')
+            buffer[len - 1] = '\0'; // strip trailing newlines
+          debug(1, "received '%s' as the device to use from the on-start command", buffer);
+#ifdef CONFIG_ALSA
+          set_alsa_out_dev(buffer);
+#endif
         }
       }
       // debug(1,"Continue after on-start command");
@@ -647,9 +732,10 @@ ssize_t non_blocking_write(int fd, const void *buf, size_t count) {
       // debug(1, "non-blocking write error waiting for pipe to become ready for writing...");
     } else if (rc == 0) {
       // warn("non-blocking write timeout waiting for pipe to become ready for writing");
-      rc = -2;
+      rc = -1;
+      errno = -ETIMEDOUT;
     } else { // rc > 0, implying it might be ready
-      size_t bytes_written = write(fd, ibuf, bytes_remaining);
+      ssize_t bytes_written = write(fd, ibuf, bytes_remaining);
       if (bytes_written == -1) {
         // debug(1,"Error %d in non_blocking_write: \"%s\".",errno,strerror(errno));
         rc = -1;
@@ -754,11 +840,13 @@ void ranarrayinit() {
 
 uint64_t ranarrayval() {
   uint64_t v = ranarray[ranarraynext];
-  ranarraynext = (ranarraynext++) % ranarraylength;
+  ranarraynext++;
+  ranarraynext = ranarraynext % ranarraylength;
+  return v;
 }
 
 void r64arrayinit() { ranarrayinit(); }
 
 uint64_t ranarray64u() { return (ranarrayval()); }
 
-int64_t ranarray64i() { return (ranarrayval(&rx) >> 1); }
+int64_t ranarray64i() { return (ranarrayval() >> 1); }

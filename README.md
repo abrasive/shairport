@@ -1,29 +1,27 @@
 Shairport Sync
 =============
-**Welcome to Version 3 of Shairport Sync. This is a big update from Version 2. Please see the Release Notes for more information.**
-
 Shairport Sync is an AirPlay audio player – it plays audio streamed from iTunes, iOS devices and other AirPlay sources such as Quicktime Player and ForkedDaapd, among others.
 Audio played by a Shairport Sync-powered device stays synchronised with the source and hence with similar devices playing the same source. In this way, synchronised multi-room audio is possible without difficulty. (Hence the name Shairport Sync, BTW.)
 
-Shairport Sync does not support AirPlay video or photo streaming.
+Shairport Sync runs on Linux and FreeBSD. It does not support AirPlay video or photo streaming.
 
 This is the stable "master" branch. Changes and updates are incorporated into this branch relatively slowly. To access the development version, where all the latest changes are made first, please switch to the "development" branch.
 
-**Please note that, between 2.8.4 and 2.8.5, there is a change in the standard ./configure arguments which you should not ignore!** If you are updating Shairport Sync from a version that is 2.8.4 or older, please read the [UPDATING](https://github.com/mikebrady/shairport-sync/blob/master/UPDATING.md) page very carefully.
-
 More Information
 ----------
-Shairport Sync works by using timing information and timestamps present in data coming from the audio source (e.g. an iPhone) to play audio at exactly the right time. It does this by monitoring and controlling the *latency* — the time-gap between when a sound frame is supposed to be played, as specified by its `timestamp`, and the time when it is actually played by the audio output device, usually a Digital to Audio Converter (DAC).
+Shairport Sync works by using timing information and timestamps present in data coming from the audio source (e.g. an iPhone) to play audio at exactly the right time. It uses the information to monitor and control the *latency* — the time-gap between when a sound frame is supposed to be played, as specified by its `timestamp`, and the time when it is actually played by the audio output device, usually a Digital to Audio Converter (DAC).
 
 The latency to be used is specified by the source when it negotiates with Shairport Sync. Most sources set a latency of exactly two seconds. Recent versions of iTunes and forkedDaapd use a latency of just over 2.25 seconds.
 
-Timestamps are measured relative to the source computer's clock – the `source clock`, but timing must be done relative to the clock of the computer running Shairport Sync – the `local clock`. This is done by synchronising the two clocks, usually to within a fraction of a millisecond, using a variant of NTP synchronisation protocols. 
+Timestamps are referenced relative to the source computer's clock – the `source clock`, but timing must be done relative to the clock of the computer running Shairport Sync – the `local clock`. So, another thing Shairport Sync has to do is to synchronize the source clock and the local clock, and it does this usually to within a fraction of a millisecond, using a variant of NTP synchronisation protocols. 
 
 To maintain the exact latency required, if an output device is running slow relative to the source, Shairport Sync will delete frames of audio to allow the device to keep up. If the output device is running fast, Shairport Sync will insert frames to keep time. The number of frames inserted or deleted is so small as to be almost inaudible on normal audio material. Frames are inserted or deleted as necessary at pseudorandom intervals. Alternatively, with `libsoxr` support, Shairport Sync can resample the audio feed to ensure the output device can keep up. This is less obtrusive than insertion and deletion but requires a good deal of processing power — most embedded devices probably can't support it. The process of insertion/deletion or resampling is rather inelegantly called “stuffing”.
 
 Shairport Sync is a substantial rewrite of the fantastic work done in Shairport 1.0 by James Laird and others — please see https://github.com/abrasive/shairport/blob/master/README.md#contributors-to-version-1x for a list of the contributors to Shairport 1.x and Shairport 0.x. From a "heritage" point of view, Shairport Sync is a fork of Shairport 1.0.
 
-Shairport Sync is mainly designed for `alsa` and thus for Linux, although since `alsa` has been ported to FreeBSD, Shairport Sync runs in FreeBSD too. It must have direct access to the output device, which must be a real sound card capable of working with 44,100, 88,200 or 176,400 samples per second, interleaved PCM stereo of 8, 16, 24 or 32 bits. The default is 44,100 samples per second / 16 bits (you'll get a message in the logfile if there's a problem).
+Shairport Sync is designed for audio back ends that offer accurate timing and synchronisation information, including `alsa` on Linux and `sndio` on FreeBSD. It must have direct access to the output device, which must be a real sound card capable of working with 44,100, 88,200 or 176,400 samples per second, interleaved PCM stereo of 8, 16, 24 or 32 bits. The default is 44,100 samples per second / 16 bits (you'll get a message in the logfile if there's a problem).
+
+Shairport Sync works well with PulseAudio, a widely used sound server found on many desktop Linuxes. While the timing and synchronsiation information is not as accurate as that of `alsa` or `sndio`, removing or disabling PulseAudio so that Shairport Sync can have direct access to a sound card via `alsa` is often impractical. In that case, the `pa` backend can be used.
 
 For more about the motivation behind Shairport Sync, please see the wiki at https://github.com/mikebrady/shairport-sync/wiki.
 
@@ -35,70 +33,78 @@ What else?
 * Bit depths of 8, 16, 24 and 32 bits, rather than the standard 16 bits.
 * Fast Response — With hardware volume control, response is instantaneous; otherwise the response time is 0.15 seconds.
 * Non-Interruptible — Shairport Sync sends back a "busy" signal if it's already playing audio from another source, so other sources can't disrupt an existing Shairport Sync session. (If a source disappears without warning, the session automatically terminates after two minutes and the device becomes available again.)
-* Metadata — Shairport Sync can deliver metadata supplied by the source, such as Album Name, Artist Name, Cover Art, etc. through a pipe  or UDP socket to a recipient application program — see https://github.com/mikebrady/shairport-sync-metadata-reader for a sample recipient. Sources that supply metadata include iTunes and the Music app in iOS.
+* Metadata — Shairport Sync can deliver metadata supplied by the source, such as Album Name, Artist Name, Cover Art, etc. through a pipe or UDP socket to a recipient application program — see https://github.com/mikebrady/shairport-sync-metadata-reader for a sample recipient. Sources that supply metadata include iTunes and the Music app in iOS.
 * Raw Audio — Shairport Sync can deliver raw PCM audio to standard output or to a pipe. This output is delivered synchronously with the source after the appropriate latency and is not interpolated or "stuffed" on its way through Shairport Sync.
 * Autotools and Libtool Support — the Shairport Sync build process uses GNU `autotools` and `libtool` to examine and configure the build environment — important for portability and for cross compilation. Previous versions of Shairport looked at the current system to determine which packages were available, instead of looking at the target system for what packages were available.
 
 Status
 ------
-Shairport Sync works on a wide variety of Linux devices. It works on standard Ubuntu laptops, on the Raspberry Pi with Raspbian Wheezy and Jessie, Arch Linux and OpenWrt, and it runs on a Linksys NSLU2 and a TP-Link 710N using OpenWrt. It works with built-in audio and with a variety of USB-connected audio amplifiers and DACs, including a cheapo USB "3D Sound" dongle, a first generation iMic and a Topping TP30 amplifier with a USB DAC input. It will not work properly — if at all — with a PulseAudio (pseudo-)output device. Using a port of the `alsa` system, Shairport Sync runs rather well on FreeBSD.
+Shairport Sync works on a wide variety of Linux devices and FreeBSD. It works on standard Ubuntu laptops, on the Raspberry Pi with Raspbian Wheezy and Jessie, Arch Linux and OpenWrt, and it runs on a Linksys NSLU2 and a TP-Link 710N using OpenWrt. It works with built-in audio and with a variety of USB-connected audio amplifiers and DACs, including a cheapo USB "3D Sound" dongle, a first generation iMic and a Topping TP30 amplifier with a USB DAC input.
+
+Shairport Sync will work with PulseAudio, which is installed in many desktop Linuxes. PulseAudio normallys run in the *user mode* but can be configured to run in *system mode*, though this is not recommended. Shairport Sync can work with it in either mode.
 
 Shairport Sync runs well on the Raspberry Pi on USB and I2S cards. It can drive the built-in sound card – see the note below on configuring the Raspberry Pi to make best use of it. 
 
-At the time of writing, OpenWrt trunk does not support USB audio well on the Raspberry Pi.
+Shairport Sync runs natively on FreeBSD using the `sndio` sound system.
 
-Shairport Sync runs on Ubuntu, OpenWrt, Debian, Arch Linux and Fedora inside VMWare Fusion on a Mac, but synchronisation in inaccurate — possibly because the soundcard is being emulated.
+Shairport Sync runs on Ubuntu, OpenWrt, Debian, Arch Linux, Fedora and FreeBSD inside VMWare Fusion on a Mac, but synchronisation in inaccurate — possibly because the sound card is being emulated.
 
-Shairport Sync will output to `alsa` cards, to standard output and to pipes using appropriate backends. You can try compiling additional backends in as you wish, but it definitely will not work properly with them. Maybe someday...
+In addition, Shairport Sync can output to standard output, pipes, `soundio` and `ao` devices using appropriate backends.
 
 For information about changes and updates, please refer to the RELEASENOTES.md file in the distribution.
 
-Note: Historically, Shairport Sync has taken its settings from command line arguments. While this is still the case, it does not always work well across distributions. Accordingly, from version 2.4 onwards, Shairport Sync reads settings from the file `/etc/shairport-sync.conf`. Access to new features will only be provided via the settings file.
-
 Building And Installing
 ---------------------
-
 Shairport Sync may already be available as a package in your Linux distribution (search for `shairport-sync` – the package named `shairport` is a different program). Packages are available on recent versions of Debian, Ubuntu, Arch, OpenWrt and possibly more. If you wish to build and install the latest version of Shairport Sync on OpenWrt, Arch or Fedora platforms, please follow the appropriate instructions below. Limited support is also available for Mac OS X. Otherwise follow the General Build Instructions. Then, when the program has been installed, refer to the section on Configuring Shairport Sync that follows.
 
-**Note**
+**Remove Old Versions Of Shairport Sync**
 
-The following procedures will install the `shairport-sync` application into your system. Before continuing, you should check to see if `shairport-sync` is already installed – you can use the command `$ which shairport-sync` to find where it is located, if installed. If it is installed you should delete it – you may need superuser privileges. After deleting, check again in case further copies are installed elsewhere.
-(If the existing installation of `shairport-sync` is where the new copy will be installed into, it will be overwritten;  sometimes, however, the installation is to another location, so it is safer, initially, to delete previous versions manually.)
+You should check to see if `shairport-sync` is already installed – you can use the command `$ which shairport-sync` to find where it is located, if installed. If it is installed you should delete it – you may need superuser privileges. After deleting, check again in case further copies are installed elsewhere.
 
-**Ubuntu:**
-Personal Package Archives for Shairport Sync master and development branches are available at https://launchpad.net/~dantheperson. A `shairport-sync` installer package is available in Ubuntu 16.04.
+**FreeBSD**
 
-**Debian:**
-`shairport-sync` is in the Debian archive and is scheduled for release with Debian Stretch (9): https://tracker.debian.org/shairport-sync. A backport for Debian Jessie (8) may be provided given enough demand.
+To build Shairport Sync from sources on FreeBSD please refer to [FREEBSD.md](https://github.com/mikebrady/shairport-sync/blob/master/FREEBSD.md).
 
-**OpenWrt:**
-There is a Shairport Sync package in OpenWrt `trunk`. Also, there's an OpenWrt package at https://github.com/mikebrady/shairport-sync-for-openwrt, including one that builds back to `Barrier Breaker`.
+**Determine The Configuration Needed**
 
-**Arch Linux:**
-Shairport Sync is available for `x86_64` and `i686` platforms in the Arch Linux Community Repository -- search for `shairport-sync`. See also https://www.archlinux.org/packages/.
+Shairport Sync has a number of different "backends" that connnect it to the system's audio handling infrastructure. Most recent Linux distributions that have a GUI – including Ubuntu, Debian and others – use PulseAudio to handle sound. In such cases, it is inadvisable to attempt to disable or remove PulseAudio. Thus, if your system uses PulseAudio, you should build Shairport Sync with the PulseAudio backend. You can check to see if PulseAudio is running by opening a Terminal window and entering the command `$ pactl info`. Here is an example of what you'll get if PulseAudio is installed, though the exact details may vary:
+```
+$ pactl info
+Server String: unix:/run/user/1000/pulse/native
+Library Protocol Version: 30
+Server Protocol Version: 30
+Is Local: yes
+Client Index: 9
+Tile Size: 65472
+User Name: mike
+Host Name: ubuntu
+Server Name: pulseaudio
+Server Version: 8.0
+Default Sample Specification: s16le 2ch 44100Hz
+Default Channel Map: front-left,front-right
+Default Sink: alsa_output.pci-0000_02_02.0.analog-stereo
+Default Source: alsa_input.pci-0000_02_02.0.analog-stereo
+Cookie: 96f9:3e8d
+$
+```
+If PulseAudio in not installed, you'll get something like this:
+```
+$  pactl info
+-bash: pactl: command not found
+$ 
+```
+If your system does not use PulseAudio, then it is likely that it uses the Advanced Linux Sound Architecture (ALSA), so you should build Shairport Sync with the ALSA backend. By the way, many systems with PulseAudio also have ALSA (in fact, PulseAudio is effectively a client of ALSA); in those cases you should choose the PulseAudio backend.
 
-An Arch Linux installation package, suitable for compilation on any platform, is available at  [EliaCereda/shairport-sync-PKGBUILD](https://github.com/EliaCereda/shairport-sync-PKGBUILD).
+If PulseAudio is not installed, there is no necessity to install it for Shairport Sync. In fact, Shairport Sync works better without it.
 
-**Mac OS X:**
-A [HomeBrew](http://brew.sh) package exists for Shairport Sync. With HomeBrew installed, Shairport Sync can be installed using the command `$brew install shairport-sync`. Note that the installation uses the `libao` library and so synchronisation is not available — playback glitches will occur occasionally, when the `ao` system's buffers overflow or underflow.
-
-**Fedora:**
-Please see the guide at [FEDORA.md](https://github.com/mikebrady/shairport-sync/blob/master/FEDORA.md).
-
-**Cygwin:**
-Please see the guide at [CYGWIN.md](https://github.com/mikebrady/shairport-sync/blob/master/CYGWIN.md).
-
-Sincere thanks to all package contributors!
-
-**General Build Instructions**
-The following procedures will install the shairport-sync application into your system. Before continuing, you should check to see if shairport-sync is already installed – you can use the command `$ which shairport-sync` to find where it is located, if installed. If it is installed you should delete it – you may need superuser privileges. After deleting, check again in case further copies are installed elsewhere.
+**Building** 
 
 To build Shairport Sync from sources on Debian, Ubuntu, Raspbian, etc. follow these instructions.
 
 The following libraries are required:
 * OpenSSL or  mbed TLS (PolarSSL is supported but deprecated)
 * Avahi
-* ALSA
+* ALSA and/or PulseAudio
 * libdaemon
 * autoconf
 * automake
@@ -116,16 +122,18 @@ Debian, Ubuntu and Raspbian users can get the basics with:
 
 - `apt-get install build-essential git xmltoman` – these may already be installed.
 - `apt-get install autoconf automake libtool libdaemon-dev libasound2-dev libpopt-dev libconfig-dev`
+- `apt-get install libasound2-dev` for the ALSA libraries
+- `apt-get install libpulse-dev` for the PulseAudio libraries
 - `apt-get install avahi-daemon libavahi-client-dev` if you want to use Avahi (recommended).
 - `apt-get install libssl-dev` if you want to use OpenSSL and libcrypto, or use mbed TLS otherwise.
 - `apt-get install libmbedtls-dev` if you want to use mbed TLS, or use OpenSSL/libcrypto otherwise. You can still use PolarSSL with `apt-get install libpolarssl-dev` if you want to use PolarSSL, but it is deprecated as it's not longer being supported. (It is suggested you use mbed TLS, where available. It doesn't seem to be in Raspbian at the time of writing, March 2017.)
-- `apt-get install libsoxr-dev` if you want support for libsoxr-based resampling. This library is in many recent distributions, including Jessie and Raspbian Jessie; if not, instructions for how to build it from source for Rasbpian/Debian Wheezy are available at [LIBSOXR.md](https://github.com/mikebrady/shairport-sync/blob/development/LIBSOXR.md).
+- `apt-get install libsoxr-dev` if you want support for libsoxr-based resampling. This library is in many recent distributions, including Jessie and Raspbian Jessie; if not, instructions for how to build it from source for Rasbpian/Debian Wheezy are available at [LIBSOXR.md](https://github.com/mikebrady/shairport-sync/blob/master/LIBSOXR.md).
 
 If you wish to include the Apple ALAC decoder, you need install it first – please refer to the [ALAC](https://github.com/mikebrady/alac) repository for more information.
 
 **Download Shairport Sync:**
 
-`$ git clone https://github.com/mikebrady/shairport-sync.git`
+`git clone https://github.com/mikebrady/shairport-sync.git`
 
 Next, `cd` into the shairport-sync directory and execute the following command:
 
@@ -136,25 +144,31 @@ $ autoreconf -i -f
 
 **Choose the appropriate `--with-*` options:**
 
-- `--with-alsa` for the ALSA audio back end. This is required.
+(Don't worry -- there's a standard set of configuration options recommended further down.)
+
+- `--with-alsa` include the ALSA backend module to audio to be output through the Advanced Linux Sound Architecture (ALSA) system directly. This is recommended for highest quality. 
+- `--with-pa` include the PulseAudio audio back end. This is recommended if your Linux installation already has PulseAudio installed. Although ALSA would be better, it requires direct and exclusive access to to a real (hardware) soundcard, and this is often impractical if PulseAudio is installed.
 - `--with-stdout` include an optional backend module to enable raw audio to be output through standard output (stdout).
 - `--with-pipe` include an optional backend module to enable raw audio to be output through a unix pipe.
+- `--with-soundio` include an optional backend module to enable raw audio to be output through the soundio system.
 - `--with-avahi` or `--with-tinysvcmdns` for mdns support. Avahi is a widely-used system-wide zero-configuration networking (zeroconf) service — it may already be in your system. If you don't have Avahi, or similar, then consider including tinysvcmdns, which is a tiny zeroconf service embedded inside the shairport-sync application itself. To enable multicast for `tinysvcmdns`, you may have to add a default route with the following command: `route add -net 224.0.0.0 netmask 224.0.0.0 eth0` (substitute the correct network port for `eth0`). You should not have more than one zeroconf service on the same system — bad things may happen, according to RFC 6762, §15.
 - `--with-ssl=openssl`, `--with-ssl=mbedtls` or `--with-ssl=polarssl` (deprecated) for encryption and related utilities using either OpenSSL, mbed TLS or PolarSSL.
 - `--with-soxr` for libsoxr-based resampling.
 - `--with-piddir` for specifying where the PID file should be stored. This directory is normally chosen automatically. The directory must be writable. If you use this option, you may have to edit the init script to search for the PID file in your new location.
 - `--with-metadata` to add support for Shairport Sync to pipe metadata to a compatible application of your choice. See https://github.com/mikebrady/shairport-sync-metadata-reader for a sample metadata reader.
-- `--with-systemv` to install a System V init script at the `make install` stage. Default is not to to install.
-- `--with-systemd` to install a systemd service description at the `make install` stage. Default is not to to install.
 - `--with-configfile` to install a configuration file and a separate sample file at the `make install` stage. Default is to install. An existing `/etc/shairport-sync.conf` will not be overwritten.
 - `--with-pkg-config` to use pkg-config to find libraries. Default is to use pkg-config — this option is for special purpose use.
 - `--with-apple-alac` to include the Apple ALAC Decoder.
+- `--with-systemd` to include a script to create a Shairport Sync service that can optionally launch automatically at startup on `systemd`-based Linuxes. Default is not to to install.
+- `--with-systemv` to include a script to create a Shairport Sync service that can optionally launch automatically at startup on System V based Linuxes. Default is not to to install.
 
 **Determine if it's a `systemd` or a "System V" installation:**
 
+If you wish to have Shairport Sync start automatically when your systewm reboots, you need to figure out whether the system is using `systemd` or the older System V startup facilities. If you are using Shairport Sync with PulseAudio, as installed in many desktop systems, this section doesn't apply.
+
 At the time of writing, there are two widely-used systems for starting programs automatically at startup: `systemd` and "System V" . (There are others, but they are not considered here.) To see if the `systemd` process is running on your system, enter the following command:
 
-`$ ps aux | grep systemd | grep -v grep`
+`ps aux | grep systemd | grep -v grep`
 
 On a system using `systemd` (this is from a Raspberry Pi running Raspbian Jessie) you'll get many lines containing `systemd`, for example:
 ```
@@ -179,14 +193,15 @@ A final consideration is the location of the configuration file `shairport-sync.
 
 **Sample `./configure` command with parameters for a typical Linux `systemd` installation:**
 
-Here is an example, suitable for Linux installations that use `systemd`, such as Ubuntu 16.04 and Raspbian Jessie:
+Here is a recommended set of configuration options suitable for Linux installations that use `systemd`, such as Ubuntu 15.10 and Raspbian Jessie. It specifies bothe ALSA and PulseAudio backends and includes a sample configuration file and an script for automatic startup on system boot:
 
-`$ ./configure --sysconfdir=/etc --with-alsa --with-avahi --with-ssl=openssl --with-metadata --with-soxr --with-systemd`
+`$ ./configure --sysconfdir=/etc --with-alsa --with-pa --with-avahi --with-ssl=openssl --with-metadata --with-soxr --with-systemd`
 
 * Omit the `--with-soxr` if the libsoxr library is not available.
 * For installation into a System V system, replace the `--with-systemd` with `--with-systemv`.
+* If you intend to use Shairport Sync with PulseAudio in the standard user mode, it can not be a system service, so you should omit both `--with-systemd` and `--with-systemv`.
 
-**Build the application:**
+**Build and Install the Application:**
 
 Enter:
 
@@ -194,38 +209,25 @@ Enter:
 
 to build the application.
 
-**Install into to a `systemd` system**
-To complete the installation, you need to define a `shairport-sync` group and user. This is a security measure – the user and group are relatively unprivileged, and the user does not have login priviliges. The user must be a member of the `audio` group to be able to access the audio hardware. The following commands define the group and user correctly if they do not already exist (note the use of `sudo` – omit this if you already have superuser privileges:
-
-```
-$ getent group shairport-sync &>/dev/null || sudo groupadd -r shairport-sync >/dev/null
-$ getent passwd shairport-sync &> /dev/null || sudo useradd -r -M -g shairport-sync -s /usr/bin/nologin -G audio shairport-sync >/dev/null
-```
-
-Next, enter:
+Assuming you have used the `./configure` settings suggested above, you can now install the application:
 
 ```
 $ sudo make install
 ```
+The user and group `shairport-sync` will be created if necessary, and a runtime folder will be created at `/var/run/shairport-sync` if you have chosen `--with-systemv`. In addition, a `man` page, a default configuration file and automatic power-on startup script will be installed.
 
-to install `shairport-sync` along with a `man` page, a default configuration file and a `systemd` configuration file called `shairport-sync.service` to launch it automatically at system startup.
 
-To enable Shairport Sync to start automatically at system startup, enter:
+**Complete installation into to a `systemd` system**
 
-`$ sudo systemctl enable shairport-sync`
+If you have chosen the `--with-systemd` configuration option, then, to enable Shairport Sync to start automatically at system startup, enter:
 
-**Install into a System V system**
-If you are installing onto a System V system, enter:
+`$sudo systemctl enable shairport-sync`
 
+**Complete installation into a System V system**
+
+If you have chosen the `--with-systemd` configuration option, enter:
 ```
-$ sudo make install
-```
-
-to install `shairport-sync` along with a `man` page, a default configuration file and a System V startup script to launch it automatically at system startup.
-
-To complete the installation, enter:
-```
-$ sudo update-rc.d shairport-sync defaults 90 10
+$sudo update-rc.d shairport-sync defaults 90 10
 ```
 
 **Man Page**
@@ -234,15 +236,19 @@ You can view the man page here: http://htmlpreview.github.io/?https://github.com
 
 Configuring Shairport Sync
 --------
-There are two logically distinct parts to getting Shairport Sync to run properly on your machine — (1) starting and stopping it and (2) ensuring it has the right settings.
+There are two logically distinct parts to getting Shairport Sync to run properly on your machine: (1) starting and stopping it and (2) ensuring it has the right settings.
 
 **(1) Starting and Stopping:**
 Starting and stopping Shairport Sync automatically is taken care of differently in different versions of Linux – see the previous section for an example of installing into a `systemd` or a System V based system.
 
-**(2) Settings:**
-To get the best from Shairport Sync, you’ll need to (a) give Shairport Sync a service name by which it will be seen in iTunes etc., (b) specify the output device to use and (c) specify the name of the mixer volume control to use to control the output level. To get values for (b) and (c) you might need to explore the ALSA output devices with a program like `alsamixer` or similar.
+If you are using PulseAudio in the standard "user" mode, you can not start Shairport Sync automatically at boot time – it must be started when the user logs in to a GUI session. Various GUI tools exist to enable you to build a Startup Application. However, there does not appear to be a similar tool for terminating the program when you log out. Also, it the GUI switches to another user, the user's PulseAudio session is disconnected from the output device.
 
-Shairport Sync reads settings from a configuration file at `/etc/shairport-sync.conf`. When you run `$sudo make install`, a sample configuration file is installed (or updated) at `/etc/shairport-sync.conf.sample`. This contains all the setting groups and all the settings available, but they all are commented out (comments begin with `//`) so that default values are used. The file contains explanations of the settings, useful hints and suggestions. In addition, if the file doesn't already exist, a default configuration is installed at `/etc/shairport-sync.conf`, which should work in almost any system with a sound card.
+**(2) Settings:**
+To get the best from Shairport Sync, you’ll need to (a) give Shairport Sync a service name by which it will be seen in iTunes etc. and (b) specify the backend you wish to use - `alsa` for the ALSA backend, or `pa` for the PulseAudio back end. If only one backend is included at compilation, or if the backend is ALSA, there is no need to explicitly specify the backend.
+
+For the ALSA backend you may need to (c) specify the output device to use and (d) specify the name of the mixer volume control to use to control the output level. To get values for (b) and (c) you might need to explore the ALSA output devices with a program like `alsamixer` or similar.
+
+Shairport Sync reads settings from a configuration file at `/etc/shairport-sync.conf` (note that in FreeBSD it will be at `/usr/local/etc/shairport-sync.conf`). When you run `$sudo make install`, a sample configuration file is installed or updated at `/etc/shairport-sync.conf.sample` (`/usr/local/etc/shairport-sync.conf.sample` in FreeBSD). This contains all the setting groups and all the settings available, but they all are commented out (comments begin with `//`) so that default values are used. The file contains explanations of the settings, useful hints and suggestions. In addition, if the file doesn't already exist, a default configuration is installed, which should work in almost any system with a sound card.
 
 Settings in the configuration file are grouped. For instance, there is a `general` group within which you can use the `name` tag to set the service name. Suppose you wanted to set the name of the service to `Front Room`, give the service the password `secret` and used `libsoxr` interpolation, then you should do the following:
 
@@ -255,7 +261,12 @@ general =
 	// ... other general settings
 };
 ```
-(Remember, anything preceded by `//` is a comment and will have no effect on the setting of Shairport Sync.)
+(Remember, anything preceded by `//` is a comment and will have no effect on the setting of Shairport Sync.) No backend is specified here, so it will default to the `alsa` backend if more than one back end has been compiled. To route the output to PulseAudio, add:
+
+```
+	output_backend = "pa";
+```
+to the `general` stanza.
 
 The `alsa` group is used to specify properties of the output device. The most obvious setting is the name of the output device which you can set using the `output_device` tag.
 
@@ -273,11 +284,15 @@ alsa =
 };
 ```
 
+The `pa` group is used to specify settings relevant to the PulseAudio backend. You can set the "Application Name" that will appear in the "Sound" control panel.
+
 Shairport Sync can run programs just before it starts to play an audio stream and just after it finishes. You specify them using the `sessioncontrol` group settings `run_this_before_play_begins` and `run_this_after_play_ends`. This is to facilitate situations where something has to be done before and after playing, e.g. switching on an amplifier beforehand and switching it off afterwards. Set the `wait_for_completion` value to `"yes"` for Shairport Sync to wait until the respective commands have been completed before continuing.
 
-Please note that the full path to the programs must be specified, and script files will not be executed unless they are marked as executable and have the standard `#!/bin/...` first line. (This behaviour may be different from other Shairports.)
+Note that the full path to the programs must be specified, and script files will not be executed unless they are marked as executable and have the standard `#!/bin/...` first line. (This behaviour may be different from other Shairports.)
 
-Note: Shairport Sync can take configuration settings from command line options. This is mainly for backward compatability, but sometimes still useful. For normal use, it is strongly recommended that you use the configuration file method.
+Shairport Sync can run a program whenever the volume is set or changed. You specify them using the `general` group settings `run_this_when_volume_changes`. This is to facilitate situations where something has to be done when the volume changes, e.g. adjust an external mixer value. Set the `wait_for_completion` value to `"yes"` for Shairport Sync to wait until the command has been completed before continuing. Again, please note that the full path to the program must be specified, and script files will not be executed unless they are marked as executable and have the standard `#!/bin/...` first line.
+
+Note: Shairport Sync can take configuration settings from command line options. This is mainly for backward compatibility, but sometimes still useful. For normal use, it is strongly recommended that you use the configuration file method.
 
 **Raspberry Pi**
 The Raspberry Pi has a built-in audio DAC that is connected to the device's headphone jack. An updated audio driver has greatly improved the quality of the output – see [#525](https://github.com/mikebrady/shairport-sync/issues/525) for details. To activate the updated driver, add the line:
@@ -297,13 +312,13 @@ As previously mentioned, you can use command line arguments to provide settings 
 
 Apart from the following options, all command line options can be replaced by settings in the configuration file. Here is a brief description of command line options that are not replicated by settings in the settings file.
 
-* The `-c` option allows you to specify the location of the configuration file — default is `/etc/shairport-sync.conf`.
+* The `-c` option allows you to specify the location of the configuration file.
 * The `-V` option gives you version information about  Shairport Sync and then quits.
 * The `-d` option causes Shairport Sync to properly daemonise itself, that is, to run in the background. You may need sudo privileges for this.
 * The `-k` option causes Shairport Sync to kill an existing Shairport Sync daemon. You may need to have sudo privileges for this.
 
 The System V init script at `/etc/init.d/shairport-sync` has a bare minimum :
-`-d`. Basically all it does is put the program in daemon mode. The program will read its settings from the configuration file, normally `/etc/shairport-sync.conf`.
+`-d`. Basically all it does is put the program in daemon mode. The program will read its settings from the configuration file.
 
 Examples
 --------
@@ -322,7 +337,7 @@ alsa = {
 
 This gives the service a particular name — "Joe's Stereo" and specifies that audio device hw:0 be used.
 
-For best results — including getting true mute and instant response to volume control and pause commands — you should access the hardware volume controls. Use `amixer` or `alsamixer` or similar to discover the name of the mixer control to be used as the `mixer_control_name`.
+For best results with the `alsa` backend — including getting true mute and instant response to volume control and pause commands — you should access the hardware volume controls. Use `amixer` or `alsamixer` or similar to discover the name of the mixer control to be used as the `mixer_control_name`.
 
 Here is an example for for a Raspberry Pi using its internal soundcard — device hw:0 — that drives the headphone jack:
 ```
@@ -373,7 +388,7 @@ alsa = {
 };
 ```
 
-For an NSLU2, which has no internal soundcard, there appears to be a bug in ALSA — you can not specify a device other than "default". Thus:
+For an NSLU2, which has no internal sound card, there appears to be a bug in ALSA — you can not specify a device other than "default". Thus:
 
 On an NSLU2, to drive a first generation Griffin iMic:
 ```
@@ -396,6 +411,16 @@ alsa = {
   mixer_control_name = "Speaker";
 };
 ```
+
+Finally, here is an example of using the PulseAudio backend:
+```
+general = {
+  name = "Zoe's Computer";
+  output_backend = "pa";
+};
+
+```
+
 
 Metadata broadcasting over UDP
 ------------------------------
@@ -456,7 +481,7 @@ It's not unusual to have resend requests, late packets and even missing packets 
 
 WiFi Issues
 ---------
-If you are using WiFi, you should ensure that WiFi power management is off. See [TROUBLESHOOTING](https://github.com/mikebrady/shairport-sync/blob/development/TROUBLESHOOTING.md) for more details.
+If you are using WiFi, you should ensure that WiFi power management is off. See [TROUBLESHOOTING](https://github.com/mikebrady/shairport-sync/blob/master/TROUBLESHOOTING.md) for more details.
 
 Troubleshooting
 ---------------

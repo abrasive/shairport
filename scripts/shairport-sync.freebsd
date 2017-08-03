@@ -1,0 +1,28 @@
+#!/bin/sh
+#
+
+# PROVIDE: shairport_sync
+# REQUIRE: FILESYSTEMS DAEMON hostname avahi_daemon
+
+. /etc/rc.subr
+
+name="shairport_sync"
+rcvar="shairport_sync_enable"
+
+start_cmd="${name}_start"
+stop_cmd="${name}_stop"
+
+shairport_sync_start()
+{
+	checkyesno shairport_sync_enable && echo "Starting shairport-sync." && \
+    su -m shairport-sync -c "/usr/local/bin/shairport-sync -d"
+}
+
+shairport_sync_stop()
+{
+    checkyesno shairport_sync_enable && echo "Stopping shairport-sync." && \
+    /usr/local/bin/shairport-sync -k
+}
+
+load_rc_config $name
+run_rc_command "$1"
