@@ -21,7 +21,7 @@ Shairport Sync is a substantial rewrite of the fantastic work done in Shairport 
 
 Shairport Sync is designed for audio back ends that offer accurate timing and synchronisation information, including `alsa` on Linux and `sndio` on FreeBSD. It must have direct access to the output device, which must be a real sound card capable of working with 44,100, 88,200 or 176,400 samples per second, interleaved PCM stereo of 8, 16, 24 or 32 bits. The default is 44,100 samples per second / 16 bits (you'll get a message in the logfile if there's a problem).
 
-Shairport Sync works well with PulseAudio, a widely used sound server found on many desktop Linuxes. While the timing and synchronsiation information is not as accurate as that of `alsa` or `sndio`, removing or disabling PulseAudio so that Shairport Sync can have direct access to a sound card via `alsa` is often impractical. In that case, the `pa` backend can be used.
+Shairport Sync works well with PulseAudio, a widely used sound server found on many desktop Linuxes. While the timing and synchronsiation information is not as accurate as that of `alsa` or `sndio`, removing or disabling PulseAudio so that Shairport Sync can have direct access to a sound card via `alsa` is often impractical. In that case, the `pa` backend should be used. An older backend for PulseAudio called `pulse` never supported synchronisation and is deprecated.
 
 For more about the motivation behind Shairport Sync, please see the wiki at https://github.com/mikebrady/shairport-sync/wiki.
 
@@ -41,7 +41,7 @@ Status
 ------
 Shairport Sync works on a wide variety of Linux devices and FreeBSD. It works on standard Ubuntu laptops, on the Raspberry Pi with Raspbian Wheezy and Jessie, Arch Linux and OpenWrt, and it runs on a Linksys NSLU2 and a TP-Link 710N using OpenWrt. It works with built-in audio and with a variety of USB-connected audio amplifiers and DACs, including a cheapo USB "3D Sound" dongle, a first generation iMic and a Topping TP30 amplifier with a USB DAC input.
 
-Shairport Sync will work with PulseAudio, which is installed in many desktop Linuxes. PulseAudio normallys run in the *user mode* but can be configured to run in *system mode*, though this is not recommended. Shairport Sync can work with it in either mode.
+Shairport Sync will work with PulseAudio, which is installed in many desktop Linuxes. PulseAudio normally run in the *user mode* but can be configured to run in *system mode*, though this is not recommended. Shairport Sync can work with it in either mode.
 
 Shairport Sync runs well on the Raspberry Pi on USB and I2S cards. It can drive the built-in sound card – see the note below on configuring the Raspberry Pi to make best use of it. 
 
@@ -422,8 +422,13 @@ general = {
 ```
 
 
-Metadata broadcasting over UDP
-------------------------------
+Metadata
+--------
+
+Shairport Sync can deliver metadata supplied by the source, such as Album Name, Artist Name, Cover Art, etc. through a pipe or UDP socket to a recipient application program — see https://github.com/mikebrady/shairport-sync-metadata-reader for a sample recipient. Sources that supply metadata include iTunes and the Music app in iOS.
+
+**Metadata broadcasting over UDP**
+
 As an alternative to sending metadata to a pipe, the `socket_address` and `socket_port` tags may be set in the metadata group to cause Shairport Sync to broadcast UDP packets containing the track metadata.
 
 The advantage of UDP is that packets can be sent to a single listener or, if a multicast address is used, to multiple listeners. It also allows metadata to be routed to a different host. However UDP has a maximum packet size of about 65000 bytes; while large enough for most data, Cover Art will often exceed this value. Any metadata exceeding this limit will not be sent over the socket interface. The maximum packet size may be set with the `socket_msglength` tag to any value between 500 and 65000 to control this - lower values may be used to ensure that each UDP packet is sent in a single network frame. The default is 500. Other than this restriction, metadata sent over the socket interface is identical to metadata sent over the pipe interface.
