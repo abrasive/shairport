@@ -55,7 +55,27 @@ For information about changes and updates, please refer to the RELEASENOTES.md f
 
 Building And Installing
 ---------------------
-Shairport Sync may already be available as a package in your Linux distribution (search for `shairport-sync` – the package named `shairport` is a different program). Packages are available on recent versions of Debian, Ubuntu, Arch, OpenWrt and possibly more. If you wish to build and install the latest version of Shairport Sync on OpenWrt, Arch or Fedora platforms, please follow the appropriate instructions below. Limited support is also available for Mac OS X. Otherwise follow the General Build Instructions. Then, when the program has been installed, refer to the section on Configuring Shairport Sync that follows.
+Shairport Sync may already be available as a package in your Linux distribution (search for `shairport-sync` – the package named `shairport` is a different program). Packages are available on recent versions of Debian, Ubuntu, Arch, OpenWrt and possibly more:
+
+**Ubuntu:** Personal Package Archives for Shairport Sync master and development branches are available at https://launchpad.net/~dantheperson. A `shairport-sync` installer package is available in Ubuntu 16.04.
+
+**Debian:** shairport-sync is in the Debian archive and is scheduled for release with Debian Stretch (9): https://tracker.debian.org/shairport-sync. A backport for Debian Jessie (8) may be provided given enough demand.
+
+**OpenWrt:** There is a Shairport Sync package in OpenWrt trunk. Also, there's an OpenWrt package at https://github.com/mikebrady/shairport-sync-for-openwrt, including one that builds back to Barrier Breaker.
+
+**Arch Linux:** Shairport Sync is available for x86_64 and i686 platforms in the Arch Linux Community Repository -- search for `shairport-sync`. See also https://www.archlinux.org/packages/.
+
+An Arch Linux installation package, suitable for compilation on any platform, is available at (EliaCereda/shairport-sync-PKGBUILD)[https://github.com/EliaCereda/shairport-sync-PKGBUILD].
+
+**Mac OS X:** A HomeBrew package exists for Shairport Sync. With HomeBrew installed, Shairport Sync can be installed using the command $brew install shairport-sync. Note that the installation uses the libao library and so synchronisation is not available — playback glitches will occur occasionally, when the ao system's buffers overflow or underflow.
+
+**Fedora:** Please see the guide at (FEDORA.md)[https://github.com/mikebrady/shairport-sync/blob/master/FEDORA.md].
+
+**Cygwin:** Please see the guide at (CYGWIN.md)[https://github.com/mikebrady/shairport-sync/blob/master/CYGWIN.md].
+
+Sincere thanks to all package contributors!
+
+If you wish to build and install the latest version of Shairport Sync on OpenWrt, Arch or Fedora platforms, please follow the appropriate instructions below. Limited support is also available for Mac OS X. Otherwise follow the General Build Instructions. Then, when the program has been installed, refer to the section on Configuring Shairport Sync that follows.
 
 **Remove Old Versions Of Shairport Sync**
 
@@ -164,7 +184,7 @@ $ autoreconf -i -f
 
 **Determine if it's a `systemd` or a "System V" installation:**
 
-If you wish to have Shairport Sync start automatically when your systewm reboots, you need to figure out whether the system is using `systemd` or the older System V startup facilities. If you are using Shairport Sync with PulseAudio, as installed in many desktop systems, this section doesn't apply.
+If you wish to have Shairport Sync start automatically when your system reboots, you need to figure out whether the system is using `systemd` or the older System V startup facilities. If you are using Shairport Sync with PulseAudio, as installed in many desktop systems, this section doesn't apply.
 
 At the time of writing, there are two widely-used systems for starting programs automatically at startup: `systemd` and "System V" . (There are others, but they are not considered here.) To see if the `systemd` process is running on your system, enter the following command:
 
