@@ -65,13 +65,13 @@ Shairport Sync may already be available as a package in your Linux distribution 
 
 **Arch Linux:** Shairport Sync is available for x86_64 and i686 platforms in the Arch Linux Community Repository -- search for `shairport-sync`. See also https://www.archlinux.org/packages/.
 
-An Arch Linux installation package, suitable for compilation on any platform, is available at (EliaCereda/shairport-sync-PKGBUILD)[https://github.com/EliaCereda/shairport-sync-PKGBUILD].
+An Arch Linux installation package, suitable for compilation on any platform, is available at [EliaCereda/shairport-sync-PKGBUILD](https://github.com/EliaCereda/shairport-sync-PKGBUILD).
 
 **Mac OS X:** A HomeBrew package exists for Shairport Sync. With HomeBrew installed, Shairport Sync can be installed using the command $brew install shairport-sync. Note that the installation uses the libao library and so synchronisation is not available — playback glitches will occur occasionally, when the ao system's buffers overflow or underflow.
 
-**Fedora:** Please see the guide at (FEDORA.md)[https://github.com/mikebrady/shairport-sync/blob/master/FEDORA.md].
+**Fedora:** Please see the guide at [FEDORA.md](https://github.com/mikebrady/shairport-sync/blob/master/FEDORA.md).
 
-**Cygwin:** Please see the guide at (CYGWIN.md)[https://github.com/mikebrady/shairport-sync/blob/master/CYGWIN.md].
+**Cygwin:** Please see the guide at [CYGWIN.md](https://github.com/mikebrady/shairport-sync/blob/master/CYGWIN.md).
 
 Sincere thanks to all package contributors!
 
@@ -270,7 +270,7 @@ For the ALSA backend you may need to (c) specify the output device to use and (d
 
 Shairport Sync reads settings from a configuration file at `/etc/shairport-sync.conf` (note that in FreeBSD it will be at `/usr/local/etc/shairport-sync.conf`). When you run `$sudo make install`, a sample configuration file is installed or updated at `/etc/shairport-sync.conf.sample` (`/usr/local/etc/shairport-sync.conf.sample` in FreeBSD). This contains all the setting groups and all the settings available, but they all are commented out (comments begin with `//`) so that default values are used. The file contains explanations of the settings, useful hints and suggestions. In addition, if the file doesn't already exist, a default configuration is installed, which should work in almost any system with a sound card.
 
-Settings in the configuration file are grouped. For instance, there is a `general` group within which you can use the `name` tag to set the service name. Suppose you wanted to set the name of the service to `Front Room`, give the service the password `secret` and used `libsoxr` interpolation, then you should do the following:
+Settings in the configuration file are grouped. For instance, there is a `general` group within which you can use the `name` tag to set the service name. Suppose you wanted to set the name of the service to `Front Room`, give the service the password `secret` and use `libsoxr` interpolation, then you should do the following:
 
 ```
 general =
