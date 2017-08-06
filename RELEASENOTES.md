@@ -1,4 +1,4 @@
-Version 3.1rc0
+Version 3.1
 ====
 Version 3.1 brings two new backends, optional loudness and convolution filters, improvements in non-synchronised backends, enhancements, stability improvements and bug fixes.
 
