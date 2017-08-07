@@ -1481,7 +1481,7 @@ static void *player_thread_func(void *arg) {
   // I think it's useful to keep this prime to prevent it from falling into a pattern with some
   // other process.
 
-  char rnstate[256];
+  static char rnstate[256];
   initstate(time(NULL), rnstate, 256);
 
   signed short *inbuf, *tbuf, *silence;
