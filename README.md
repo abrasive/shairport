@@ -141,7 +141,7 @@ Many Linux distributions have Avahi and OpenSSL already in place, so normally it
 Debian, Ubuntu and Raspbian users can get the basics with:
 
 - `apt-get install build-essential git xmltoman` – these may already be installed.
-- `apt-get install autoconf automake libtool libdaemon-dev libasound2-dev libpopt-dev libconfig-dev`
+- `apt-get install autoconf automake libtool libdaemon-dev libpopt-dev libconfig-dev`
 - `apt-get install libasound2-dev` for the ALSA libraries
 - `apt-get install libpulse-dev` for the PulseAudio libraries
 - `apt-get install avahi-daemon libavahi-client-dev` if you want to use Avahi (recommended).
