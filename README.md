@@ -184,28 +184,50 @@ $ autoreconf -i -f
 
 **Determine if it's a `systemd` or a "System V" installation:**
 
-If you wish to have Shairport Sync start automatically when your system reboots, you need to figure out whether the system is using `systemd` or the older System V startup facilities. If you are using Shairport Sync with PulseAudio, as installed in many desktop systems, this section doesn't apply.
+If you wish to have Shairport Sync start automatically when your system boots, you need to figure out what so-called "init system" it is using. (If you are using Shairport Sync with PulseAudio, as installed in many desktop systems, this section doesn't apply.) 
 
-At the time of writing, there are two widely-used systems for starting programs automatically at startup: `systemd` and "System V" . (There are others, but they are not considered here.) To see if the `systemd` process is running on your system, enter the following command:
+There are a number of init systems in use: `systemd`, `upstart` and "System V" among others, and it's actually difficult to be which one your system is using. Recent systems tend to use `systemd`, whereas older systems use `upstart` or the earleir System V init system. For Shairport Sync, all you have to do is figure out if it's a `systemd` init system or not. If it is not a `systemd` init system, you can assume that it is either a System V init system or else it is compatible with a System V init system.
 
-`ps aux | grep systemd | grep -v grep`
+The easiest way to find out is to enter the command:
 
-On a system using `systemd` (this is from a Raspberry Pi running Raspbian Jessie) you'll get many lines containing `systemd`, for example:
 ```
-pi@raspberrypi ~ $ ps aux | grep systemd | grep -v grep
-root        90  0.1  0.6   8088  2764 ?        Ss   08:00   0:01 /lib/systemd/systemd-journald
-root        93  0.0  0.6  11816  3004 ?        Ss   08:00   0:00 /lib/systemd/systemd-udevd
-root       502  0.0  0.5   3824  2436 ?        Ss   08:00   0:00 /lib/systemd/systemd-logind
-message+   528  0.0  0.7   5568  3172 ?        Ss   08:00   0:01 /usr/bin/dbus-daemon --system --address=systemd: --nofork --nopidfile --systemd-activation
-pi         983  0.0  0.7   4912  3256 ?        Ss   08:00   0:00 /lib/systemd/systemd --user
-pi@raspberrypi ~ $ 
+$ man init
 ```
-whereas on a system without `systemd` – presumably using System V – (this is a from a Raspberry Pi running Raspbian Wheezy) , you'll get nothing:
+In a `systemd` system, the top lines of the `man` page make it clear that it's a `systemd` system, as follows (from Ubuntu 16.04):
 ```
-pi@raspberrypi ~ $ ps aux | grep systemd | grep -v grep
-pi@raspberrypi ~ $ 
+SYSTEMD(1)                          systemd                         SYSTEMD(1)
+
+NAME
+       systemd, init - systemd system and service manager
+...
 ```
-Choose `--with-systemd` or `--with-systemv` on the basis of the outcome.
+Other init systems will look considerably different. For instance, in an `upstart` system,  the top lines of the `man` page indicate it's using `upstart` system, as follows (from Ubuntu 14.04):
+
+```
+init(8)                                    System Manager's Manual                                   init(8)
+
+NAME
+       init - Upstart process management daemon
+
+SYNOPSIS
+       init [OPTION]...
+...
+```
+In a System V system, the top lines of the `man` page are as follows (from Debian 7.11):
+```
+INIT(8)               Linux System Administrator's Manual              INIT(8)
+
+NAME
+       init, telinit - process control initialization
+
+SYNOPSIS
+       /sbin/init [ -a ] [ -s ] [ -b ] [ -z xxx ] [ 0123456Ss ]
+       /sbin/telinit [ -t SECONDS ] [ 0123456sSQqabcUu ]
+       /sbin/telinit [ -e VAR[=VAL] ]
+
+...
+```
+If your system is definitely a `systemd` system, choose `--with-systemd` below. Otherwise, choose or `--with-systemv`.
 
 **Choose the location of the configuration file**
 
