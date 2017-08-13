@@ -184,11 +184,11 @@ $ autoreconf -i -f
 
 **Determine if it's a `systemd` or a "System V" installation:**
 
-If you wish to have Shairport Sync start automatically when your system boots, you need to figure out what so-called "init system" it is using. (If you are using Shairport Sync with PulseAudio, as installed in many desktop systems, this section doesn't apply.) 
+If you wish to have Shairport Sync start automatically when your system boots, you need to figure out what so-called "init system" your system is using. (If you are using Shairport Sync with PulseAudio, as installed in many desktop systems, this section doesn't apply.) 
 
-There are a number of init systems in use: `systemd`, `upstart` and "System V" among others, and it's actually difficult to be which one your system is using. Recent systems tend to use `systemd`, whereas older systems use `upstart` or the earleir System V init system. For Shairport Sync, all you have to do is figure out if it's a `systemd` init system or not. If it is not a `systemd` init system, you can assume that it is either a System V init system or else it is compatible with a System V init system.
+There are a number of init systems in use: `systemd`, `upstart` and "System V" among others, and it's actually difficult to be certain which one your system is using. Fortunately, for Shairport Sync, all you have to do is figure out if it's a `systemd` init system or not. If it is not a `systemd` init system, you can assume that it is either a System V init system or else it is compatible with a System V init system. Recent systems tend to use `systemd`, whereas older systems use `upstart` or the earleir System V init system. 
 
-The easiest way to find out is to enter the command:
+The easiest way to look at the first few lines of the `init` manual. Enter the command:
 
 ```
 $ man init
@@ -227,7 +227,7 @@ SYNOPSIS
 
 ...
 ```
-If your system is definitely a `systemd` system, choose `--with-systemd` below. Otherwise, choose or `--with-systemv`.
+If your system is definitely a `systemd` system, choose `--with-systemd` below. Otherwise, choose `--with-systemv`.
 
 **Choose the location of the configuration file**
 
