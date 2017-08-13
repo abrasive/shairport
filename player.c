@@ -1509,7 +1509,7 @@ static void *player_thread_func(void *arg) {
              "depth");
   }
   if (conn->fix_volume != 0x10000) {
-    debug(1, "Dithering will be enabled becasuse the output volume is being altered in software");
+    debug(1, "Dithering will be enabled because the output volume is being altered in software");
   }
 
   // we need an intermediate "transition" buffer
