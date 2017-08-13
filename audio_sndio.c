@@ -237,11 +237,9 @@ static void stop() {
 }
 
 static void onmove_cb(void *arg, int delta) {
-  pthread_mutex_lock(&sndio_mutex);
   time_of_last_onmove_cb = get_absolute_time_in_fp();
   at_least_one_onmove_cb_seen = 1;
   played += delta;
-  pthread_mutex_unlock(&sndio_mutex);
 }
 
 static int delay(long *_delay) {
