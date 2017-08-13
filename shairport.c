@@ -477,7 +477,12 @@ int parse_options(int argc, char **argv) {
         if (strcasecmp(str, "basic") == 0)
           config.packet_stuffing = ST_basic;
         else if (strcasecmp(str, "soxr") == 0)
-          config.packet_stuffing = ST_soxr;
+#ifdef HAVE_LIBSOXR
+        config.packet_stuffing = ST_soxr;
+#else
+        die("The soxr option not available because this version of shairport-sync was built without libsoxr "
+            "support. Change the \"general/interpolation\" setting in the configuration file.");
+#endif
         else
           die("Invalid interpolation option choice. It should be \"basic\" or \"soxr\"");
       }
@@ -843,8 +848,8 @@ int parse_options(int argc, char **argv) {
 #ifdef HAVE_LIBSOXR
         config.packet_stuffing = ST_soxr;
 #else
-        die("soxr option not available -- this version of shairport-sync was built without libsoxr "
-            "support");
+        die("The soxr option not available because this version of shairport-sync was built without libsoxr "
+            "support. Change the -S option setting.");
 #endif
       else
         die("Illegal stuffing option \"%s\" -- must be \"basic\" or \"soxr\"", stuffing);
