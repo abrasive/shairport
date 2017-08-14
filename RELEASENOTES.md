@@ -1,3 +1,12 @@
+Version 3.1.1rc0
+====
+
+**Bug Fixes**
+* A bug in the `sndio` backend has been fixed that caused problems on some versions of Linux.
+* A change has been made to how Shairport Sync responds to a `TEARDOWN` request, which should make it respond better to sequences of rapid termination and restarting of play sessions. This can happen, for example, playing YouTube videos in Safari or Chrome on a Mac.
+* Choosing `soxr` interpolation in the configuration file will now cause Shairport Sync to terminate with a message if Shairport Sync has not been compiled with SoX support.
+* Other small changes.
+
 Version 3.1
 ====
 Version 3.1 brings two new backends, optional loudness and convolution filters, improvements in non-synchronised backends, enhancements, stability improvements and bug fixes. 
