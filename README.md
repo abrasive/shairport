@@ -152,11 +152,11 @@ Debian, Ubuntu and Raspbian users can get the basics with:
 If you wish to include the Apple ALAC decoder, you need install it first – please refer to the [ALAC](https://github.com/mikebrady/alac) repository for more information.
 
 **Download Shairport Sync:**
-
-`$ git clone https://github.com/mikebrady/shairport-sync.git`
+```
+$ git clone https://github.com/mikebrady/shairport-sync.git
+```
 
 Next, `cd` into the shairport-sync directory and execute the following command:
-
 ```
 $ autoreconf -i -f
 ```
