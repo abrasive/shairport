@@ -31,7 +31,7 @@ Version 3.1 brings two new backends, optional loudness and convolution filters, 
 Version 3.0.2
 ====
 **Bug Fixes**
-* Fixed bugs in the `ao`, `pulseaudio` and `sndio` back ends. Basically they were expecting default sample rate and depth information, and were terminating whne they saw explicit rate and depth data.
+* Fixed bugs in the `ao`, `pulseaudio` and `sndio` back ends. Basically they were expecting default sample rate and depth information, and were terminating when they saw explicit rate and depth data.
 
 Version 3.0.1
 ====
