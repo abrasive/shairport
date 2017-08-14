@@ -51,11 +51,10 @@ Install the packages that are needed for Shairport Sync to be downloaded and bui
 ```
 Omit `alsa-utils` if you're not using ALSA. Likewise, omit `sndio` if you don't intend to use the `sndio` subsystem.
 
-Now, download Shairport Sync from GitHub and check out the `development` branch.
+Now, download Shairport Sync from GitHub:
 ```
 $ git clone https://github.com/mikebrady/shairport-sync.git
 $ cd shairport-sync
-$ git checkout development
 ```
 Next, configure the build and compile it:
 
