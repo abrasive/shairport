@@ -153,7 +153,7 @@ If you wish to include the Apple ALAC decoder, you need install it first – ple
 
 **Download Shairport Sync:**
 
-`git clone https://github.com/mikebrady/shairport-sync.git`
+`$ git clone https://github.com/mikebrady/shairport-sync.git`
 
 Next, `cd` into the shairport-sync directory and execute the following command:
 
