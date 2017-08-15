@@ -548,9 +548,9 @@ static enum rtsp_read_request_response rtsp_read_request(rtsp_conn_info *conn,
       reply = rtsp_read_request_response_error;
       goto shutdown;
     }
-    if (nread == EINTR)
-      continue;
     if (nread < 0) {
+      if (errno == EINTR)
+        continue;
       perror("read failure");
       reply = rtsp_read_request_response_error;
       goto shutdown;
