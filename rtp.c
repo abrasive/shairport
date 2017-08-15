@@ -32,16 +32,18 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <pthread.h>
-#include <signal.h>
 #include <stdio.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #include "common.h"
 #include "player.h"
 #include "rtp.h"
+
+void memory_barrier();
 
 void rtp_initialise(rtsp_conn_info *conn) {
 
@@ -81,6 +83,15 @@ void *rtp_audio_receiver(void *arg) {
 
   ssize_t nread;
   while (conn->please_stop == 0) {
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    FD_SET(conn->audio_socket, &readfds);
+    do {
+      memory_barrier();
+    } while (conn->please_stop == 0 && pselect(conn->audio_socket + 1, &readfds, NULL, NULL, NULL, &pselect_sigset) <= 0);
+    if (conn->please_stop != 0) {
+      break;
+    }
     nread = recv(conn->audio_socket, packet, sizeof(packet), 0);
 
     uint64_t local_time_now_fp = get_absolute_time_in_fp();
@@ -173,6 +184,15 @@ void *rtp_control_receiver(void *arg) {
   int64_t sync_rtp_timestamp, rtp_timestamp_less_latency;
   ssize_t nread;
   while (conn->please_stop == 0) {
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    FD_SET(conn->control_socket, &readfds);
+    do {
+      memory_barrier();
+    } while (conn->please_stop == 0 && pselect(conn->control_socket + 1, &readfds, NULL, NULL, NULL, &pselect_sigset) <= 0);
+    if (conn->please_stop != 0) {
+      break;
+    }
     nread = recv(conn->control_socket, packet, sizeof(packet), 0);
     local_time_now = get_absolute_time_in_fp();
     //        clock_gettime(CLOCK_MONOTONIC,&tn);
@@ -308,6 +328,15 @@ void *rtp_timing_sender(void *arg) {
       msgsize = sizeof(struct sockaddr_in6);
     }
 #endif
+    fd_set writefds;
+    FD_ZERO(&writefds);
+    FD_SET(conn->timing_socket, &writefds);
+    do {
+      memory_barrier();
+    } while (conn->timing_sender_stop == 0 && pselect(conn->timing_socket + 1, NULL, &writefds, NULL, NULL, &pselect_sigset) <= 0);
+    if (conn->timing_sender_stop != 0) {
+      break;
+    }
     if (sendto(conn->timing_socket, &req, sizeof(req), 0,
                (struct sockaddr *)&conn->rtp_client_timing_socket, msgsize) == -1) {
       perror("Error sendto-ing to timing socket");
@@ -344,6 +373,15 @@ void *rtp_timing_receiver(void *arg) {
   uint64_t first_local_to_remote_time_difference_time;
   uint64_t l2rtd = 0;
   while (conn->please_stop == 0) {
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    FD_SET(conn->timing_socket, &readfds);
+    do {
+      memory_barrier();
+    } while (conn->please_stop == 0 && pselect(conn->timing_socket + 1, &readfds, NULL, NULL, NULL, &pselect_sigset) <= 0);
+    if (conn->please_stop != 0) {
+      break;
+    }
     nread = recv(conn->timing_socket, packet, sizeof(packet), 0);
     arrival_time = get_absolute_time_in_fp();
     //      clock_gettime(CLOCK_MONOTONIC,&att);
@@ -589,6 +627,7 @@ static int bind_port(int ip_family, const char *self_ip_address, uint32_t scope_
     struct sockaddr_in *sa = (struct sockaddr_in *)&local;
     sport = ntohs(sa->sin_port);
   }
+  fcntl(local_socket, F_SETFL, O_NONBLOCK);
 
   *sock = local_socket;
   return sport;
