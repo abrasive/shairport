@@ -35,12 +35,13 @@ Shairport Sync does not support AirPlay video or photo streaming.
 
 %build
 autoreconf -i -f
-%configure --with-avahi --with-alsa --with-ssl=openssl --with-soxr --with-systemd
+%configure --with-avahi --with-alsa --with-ssl=openssl --with-soxr
 make %{?_smp_mflags}
 
 %install
 make install DESTDIR=%{buildroot}
 rm %{buildroot}/etc/shairport-sync.conf.sample
+install -p -m644 -D scripts/shairport-sync.service $RPM_BUILD_ROOT%{_unitdir}/%{name}.service
 
 %pre
 getent group %{name} &>/dev/null || groupadd --system %{name} >/dev/null
