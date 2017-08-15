@@ -723,9 +723,9 @@ uint64_t get_absolute_time_in_fp() {
 ssize_t non_blocking_write(int fd, const void *buf, size_t count) {
   void *ibuf = (void *)buf;
   size_t bytes_remaining = count;
-  int rc = 0;
+  int rc = 1;
   struct pollfd ufds[1];
-  while ((bytes_remaining > 0) && (rc == 0)) {
+  while ((bytes_remaining > 0) && (rc > 0)) {
     // check that we can do some writing
     ufds[0].fd = fd;
     ufds[0].events = POLLOUT;
