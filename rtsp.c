@@ -665,8 +665,11 @@ static void handle_teardown(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
              "it's sending a response to teardown anyway");
   resp->respcode = 200;
   msg_add_header(resp, "Connection", "close");
-  debug(1, "TEARDOWN asking connection to stop");
+  debug(2, "TEARDOWN asking connection to stop");
   conn->stop = 1;
+	memory_barrier();
+	pthread_kill(conn->thread, SIGUSR1);
+	usleep(1000000);
 }
 
 static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
@@ -1795,17 +1798,6 @@ static void *rtsp_conversation_thread_func(void *pconn) {
             break;
           }
         }
-        if (conn->stop!=0) { // the only way this can happen here is if it's been set by a handler
-          debug(1,"Synchronously terminating the player thread.");
-          player_stop(&conn->player_thread, conn); // might be less noisy doing this first
-          rtp_shutdown(conn);
-          rtp_terminate(conn);
-          if (pthread_mutex_unlock(&play_lock)) {
-            debug(1,"Error at play_unlock 1");
-          };
-          debug(1,"Synchronously termination of the player thread is complete. Player is unlocked.");
-          
-        }
         if (method_selected == 0)
           debug(1, "Unrecognised and unhandled rtsp request \"%s\".", req->method);
       }
@@ -1818,30 +1810,27 @@ static void *rtsp_conversation_thread_func(void *pconn) {
       if (reply != rtsp_read_request_response_shutdown_requested)
         debug(1, "rtsp_read_request error %d, packet ignored.", (int)reply);
     }
-  } while ((reply != rtsp_read_request_response_shutdown_requested) || (conn->stop == 0));
+  } while (reply != rtsp_read_request_response_shutdown_requested);
 
   debug(1, "Closing down RTSP conversation thread...");
-//  if (rtsp_playing()) {
-    if (reply==rtsp_read_request_response_shutdown_requested) {
-      player_stop(&conn->player_thread, conn); // might be less noisy doing this first
-      rtp_shutdown(conn);
-      rtp_terminate(conn);
-    }
-//  }
+  if (rtsp_playing()) {
+    player_stop(&conn->player_thread, conn); // might be less noisy doing this first
+    rtp_shutdown(conn);
+    // usleep(400000); // let an angel pass...
+    pthread_mutex_unlock(&play_lock);
+  }
   conn->running = 0;
   if (conn->fd > 0)
     close(conn->fd);
   if (auth_nonce)
     free(auth_nonce);
-  if (pthread_mutex_unlock(&play_lock)) {
-    debug(1,"Error at play_unlock");
-  };
   //    pthread_mutex_unlock(&playing_mutex);
   // usleep(1000000);
   //  } // else {
   // debug(1, "This RTSP conversation thread doesn't think it's playing for a "
   //         "close RTSP connection.");
   // }
+  rtp_terminate(conn);
   debug(2, "RTSP conversation thread terminated.");
   //  please_shutdown = 0;
   return NULL;
