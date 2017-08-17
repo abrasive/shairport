@@ -5,7 +5,7 @@ Summary:        AirTunes emulator. Multi-Room with Audio Synchronisation
 # MIT licensed except for tinysvcmdns under BSD, 
 # FFTConvolver/ under GPLv3+ and audio_sndio.c 
 # under ISC
-License:        MIT, BSD, GPLv3+ and ISC
+License:        MIT and BSD and GPLv3+ and ISC
 URL:            https://github.com/mikebrady/shairport-sync
 Source0:        https://github.com/mikebrady/%{name}/archive/%{version}/%{name}-%{version}.tar.gz
 
