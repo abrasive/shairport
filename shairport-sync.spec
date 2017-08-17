@@ -1,9 +1,11 @@
 Name:           shairport-sync
 Version:        3.1
 Release:        1%{?dist}
-Summary:        AirTunes emulator. Shairport Sync adds multi-room capability with Audio Synchronisation.
-# For a breakdown of the licensing, see LICENSES file
-License:        MIT and BSD
+Summary:        AirTunes emulator. Multi-Room with Audio Synchronisation
+# MIT licensed except for tinysvcmdns under BSD, 
+# FFTConvolver/ under GPLv3+ and audio_sndio.c 
+# under ISC
+License:        MIT, BSD, GPLv3+ and ISC
 URL:            https://github.com/mikebrady/shairport-sync
 Source0:        https://github.com/mikebrady/%{name}/archive/%{version}/%{name}-%{version}.tar.gz
 
@@ -65,7 +67,7 @@ getent passwd %{name} &> /dev/null || useradd --system -c "%{name} User" \
 %license LICENSES
 
 %changelog
-* Thu Aug 17 2017 Bill Peck <bpeck@redhat.com> 3.1
+* Thu Aug 17 2017 Bill Peck <bpeck@redhat.com> 3.1-1
 - new backend offering synchronised PulseAudio support. 
 - new optional loudness and convolution filters
 - improvements in non-synchronised backends
