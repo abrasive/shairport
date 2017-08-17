@@ -57,7 +57,7 @@ getent passwd %{name} &> /dev/null || useradd --system -c "%{name} User" \
 %systemd_postun_with_restart %{name}.service
 
 %files
-%config /etc/shairport-sync.conf
+%config(noreplace) /etc/shairport-sync.conf
 /usr/bin/shairport-sync
 /usr/share/man/man7/shairport-sync.7.gz
 %{_unitdir}/%{name}.service
