@@ -667,6 +667,9 @@ static void handle_teardown(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
   msg_add_header(resp, "Connection", "close");
   debug(2, "TEARDOWN asking connection to stop");
   conn->stop = 1;
+	memory_barrier();
+	pthread_kill(conn->thread, SIGUSR1);
+	usleep(1000000);
 }
 
 static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
@@ -1406,8 +1409,7 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
           playing_conn->stop = 1;
           memory_barrier();
           pthread_kill(playing_conn->thread, SIGUSR1);
-          usleep(
-              1000000); // here, it is possible for other connections to come in and nab the player.
+          usleep(1000000); // here, it is possible for other connections to come in and nab the player.
         }
       } else {
         die("Non existent the_playing_conn with play_lock enabled.");

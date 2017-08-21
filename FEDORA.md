@@ -17,7 +17,7 @@ The RPM will be built in a directory and will have a pathname like, for example,
 ```
 %sudo rpm -i ~/rpmbuild/RPMS/i686/shairport-sync-2.6-1.fc22.i686.rpm
 ```
-You may have to manually create the directory `/var/shairport-sync` for the installation to succeed. Having edited the configuration file `/etc/shairport-sync.conf` as appropriate (see "Configuring Shairport Sync" below), enable and start the service with:
+You may have to manually create the directory `/var/shairport-sync` for the installation to succeed. Having edited the configuration file `/etc/shairport-sync.conf` as appropriate (see ("Configuring Shairport Sync")[https://github.com/mikebrady/shairport-sync/blob/master/README.md#configuring-shairport-sync]), enable and start the service with:
 ```
 %sudo systemctl enable shairport-sync.service
 %sudo systemctl start shairport-sync.service

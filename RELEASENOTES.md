@@ -1,6 +1,15 @@
-Version 3.1 [Forthcoming, under revision...]
+Version 3.1.1
 ====
-Version 3.1 brings two new backends, optional loudness and convolution filters, improvements in non-synchronised backends, enhancements, stability improvements and bug fixes.
+
+**Bug Fixes**
+* A bug in the `sndio` backend has been fixed that caused problems on some versions of Linux.
+* A change has been made to how Shairport Sync responds to a `TEARDOWN` request, which should make it respond better to sequences of rapid termination and restarting of play sessions. This can happen, for example, playing YouTube videos in Safari or Chrome on a Mac.
+* Choosing `soxr` interpolation in the configuration file will now cause Shairport Sync to terminate with a message if Shairport Sync has not been compiled with SoX support.
+* Other small changes.
+
+Version 3.1
+====
+Version 3.1 brings two new backends, optional loudness and convolution filters, improvements in non-synchronised backends, enhancements, stability improvements and bug fixes. 
 
 **New Features**
 * A `sndio` backend gives Shairport Sync native fully synchronised output on OpenBSD and FreeBSD, thanks to the work of [Tobias Kortkamp (t6)](https://github.com/t6).
@@ -28,168 +37,24 @@ Version 3.1 brings two new backends, optional loudness and convolution filters, 
 * Short intrusions of audio at the start of a new session from the end of the previous session have been eliminated.
 * Many (many!) miscellaneous bugs fixed.
 
-Version 3.1.d24
-====
-**Enhancements**
-* Resynchronisation, which happens when the synchronisation is incorrect by more than 50 ms by default, should be a lot less intrusive when it occurs – it should now either insert silence or skip frames, as appropriate.
-* The `audio_backend_buffer_desired_length_in_seconds` and `audio_backend_latency_offset_in_seconds` settings have been moved from individual backend stanzas to the `general` stanza. They now have an effect on every type of backend.
-* A new general setting, for advanced use only, called `audio_backend_silent_lead_in_time` had been introduced to set the length of the silent lead-in time from 0.0 up to a maximum of either 4.0 seconds or approximately the latency, whichever is the lower.
-* It is now possible to read `stdout` from the on-start command to choose ALSA output device. This is a highly specialised facility (i.e. a kind of hack) and will hopefully be replaced by a more general solution. Thanks to [Cody Cutrer](https://github.com/ccutrer) for it.
-
-**Bug Fixes**
-* Fixed a typo in shairport.c, thanks to [Troy Liu](https://github.com/troyliu0105).
-
-Version 3.1.d22
-====
-**Bug Fix**
-* Before starting a play session, Shairport Sync sends a period of silence – a "silent lead-in" – to the backend to prepare it. The lead-in starts when the command to start a play session is received and ends when the first frame of audio is played. Normally, the lead-in time corresponds approximately to the latency set by the client – typically two seconds. Due to a bug, when playing to a non-synchronised backend, such as the `stdout` or `pipe` backends, Shairport Sync can introduce a silent lead-in that is much too long. This bug is fixed in 3.1.d22 and the silent lead-in time should now be roughly equal to the latency set by the client.
-
-**Enhancement**
-* Some parameters in the new PulseAudio back end are now settable -- the Application Name, the buffer length and a delay offset. More details later.
-
-Version 3.1.d21
+Version 3.0.2
 ====
 **Bug Fixes**
-* If a fault was detected during initialisation of the ALSA subsystem and Shairport Sync attempted to terminate, sometimes it  would hang up waiting indefinitely for a mutex to be unlocked. Unlocking is now done before attempting to terminate. This fixes the issue in #539. Thanks to [f3flight](https://github.com/f3flight) for the report.
+* Fixed bugs in the `ao`, `pulseaudio` and `sndio` back ends. Basically they were expecting default sample rate and depth information, and were terminating when they saw explicit rate and depth data.
 
-Version 3.1.d20
+Version 3.0.1
 ====
-**Bug Fix**
-* Fixed bug whereby Shairport Sync was searching the wrong directory for the configuration file.
-Thanks to [hui13](https://github.com/hui13) for reporting this.
-* Also fixed typo in version -- (3.1d19 was mistyped 3.1d189!).
-
-Version 3.1.d19
-====
-**Enhancement**
-* Improvement in sending metadata over UDP.
-Sending metadata over UDP currently suffers from two main issues:
-The send buffer is left to system default, and consequently packets can be lost as Airplay clients send a lot of metadata;
-some metadata (typically the cover art) cannot be sent within a single IPv4 UDP packet because it is too large.
-These commits fix both issues by setting larger send buffer of 4MB and chunking any metadata with a new sub-protocol ("ssnc", "chnk", packet_ix, packet_counts, packet_tag, packet_type, chunked_data).
-Thanks to [Paul Guyot](https://github.com/pguyot) for this work.
-
-* A new command line option `-j` to demonize Shairport Sync without creating a PID file. (The "j" is from the "j" in "just daemonize".)
-* Small change in startup behaviour. Shairport Sync now reads the configuration file before executing the `-k` option.
-
-Version 3.1d16
-====
-**New Feature**
-* PulseAudio support. A new fully-synchronised PulseAudio back end has been developed. Use the `--with-pa` configuration option instead of  `--with-pulseaudio`. Then, select the new PulseAudio back end with the command line option `-o pa`. At present, it takes no options and has quite a few settings hard wired. The existing PulseAudio back end, which is available using the `--with-pulseaudio` configuration option and which has no synchronisation, is deprecated and will be removed.
-
-PulseAudio is built in to many recent desktop versions of Linux to manage the system's audio and, up to now, Shairport Sync would not play well with it because the ALSA back end normally used with Shairport Sync requires exclusive access to the soundcard, thus interfering with PulseAudio. By using the new `pa` back end, Shairport Sync can share the existing PulseAudio infrastructure without difficulty. On Ubuntu, it shows up as a new "Application" in the Sound Settings window.
-
-If you are using the PulseAudio back end, note that Shairport Sync can not run as a system daemon that runs automatically from startup. Instead, you need to start it up after you log in. This is a limitation of the way PulseAudio is set up on desktops, and it is recommended that you don't change the setup.
-
-If you are trying this out on a virtual machine, you might have to turn off resynchronisation to get it to work.
-
-Your feedback is welcome – this is a work in progress!
-
-**Pesky Changes You Can't Ignore**
-
-If you are using a System V (aka `systemv`) installation, please note that the default location for PID file has moved -- it is now stored at `/var/run/shairport-sync/shairport-sync.pid`. This change is needed to improve security a little and to improve compatability across platforms. If you're not doing anything strange, this should make no difference.
-
-
-Version 3.1d15
-====
-**Bug fix**
-* Fixed the production of mono from stereo. The bug was that mono was being produced by adding left and right (and not dividing by two), clamping the result if necessary, resulting in a signal that was twice as loud as it should have been and needlessly introducing the likelyhood of clipping. The bug has been fixed, preserving all 17 bits of the mono signal when translating to 32 bits for later processing. Dithering is also automatically enabled when mono output is selected. Fixes #522, with thanks to [RobDeBagel](https://github.com/RobDeBagel).
-
-Version 3.1d14 -- Version 3.1d9
-====
-**New Features**
-* Shairport Sync has changed the way it deals with pauses and resumes, caused either by using the controls of the source program, e.g. iTunes, or caused by resynchronisations. Specifically, from now on, on resumption after a short pause or glitch, it does not reset the output volume of the hardware mixer. This is so that any changes made by external controls are not needlessly reset by occasional network outages.
-* A new advanced setting for the `alsa` stanza is added: `mute_using_playback_switch`. The default is `"yes"`, which means that hardware mute using a feature called a playback switch will be used where available. Set it to `"no"` to prevent the playback switch being used. The motivation for this is to avoid using the alsa function call: `snd_mixer_selem_set_playback_switch_all`, which is incorrectly implemented on certain soundcards, including the emulated card in VMWare Fusion 8.5.
-
-Version 3.1d8
-====
-**New Features**
-* A volume-changed program hook has been added – a program can now be run whenever the volume control is set or changed. Similar to the `run_this_before_play_begins` and `run_this_after_play_ends` program hooks, you can specify a command line in the `general` `run_this_when_volume_is_set` setting. The AirPlay volume is simply appended to the end of the command line – leave a space if you want it treated as an extra argument. AirPlay volume goes from 0.0 to -30.0 and -144.0 means "mute".
-* A FreeBSD installer and startup script is now available. Use the `./configure` option `--with-os=freebsd` to get the right compilation flags, and use the `./configure` option `--with-freebsd-installer` to have a startup script installed and to have a user, group and runtime directory created.
-* The standard linux System V and `systemd` installers have been enhanced to create the user and
-group `shairport-sync` if necessary.
-* The standard linux System V installer creates a special runtime directory at `/var/run/shairport-sync` owned by the user `shairport-sync` and used to store its PID file.
-
-**Improvements**
-* The FreeBSD installation based on the `sndio` back end works well.
-
-Version 3.1d7
-====
-**Improvements**
-
-Synchronisation is now working reasonably well in the `sndio` back end. Further work is necessary, but it looks pretty solid and the workarounds are no longer needed.
-
-Version 3.1d6
-====
-**New Feature**
-
-An extensively enhanced and updated backend for `sndio` thanks to the work of [t6](https://github.com/t6).
-
-`sndio` is *"the software layer of the OpenBSD operating system that manages the use of sound cards and MIDI ports."* Additionally, `sndio` *"... pays special attention to synchronization mechanisms and reliability required by music applications"*. 
-
-Using `sndio` brings the possibility of "native" synchronisation to \*BSD. In fact, it already works but with some workarounds. The synchronization may not be exact, but it doesn't overrun or underrun. More exploration necessary.
-
-**Bug fix**
-* Fixed an off-by-one bug which allowed one more port than specified in the `udp_port_range` setting. Thanks to [kingosticks](https://github.com/kingosticks) for the alert.
-* Various small bugfixes to the `sndio` backend.
-
-**Enhancements**
-* Fixed some warnings detected by `clang` on FreeBSD. One was potentially a significant error.
-
-Version 3.1s5
-====
-Generally, more extensive changes have been to make all relevant operations reentrant. 
-
-Your stability reports would be welcome.
-
-**New Feature**
-* A new command line option **--logOutputLevel** that logs the output level whenever the volume is changed. It's meant to be useful if you have to to determine the right level to set in volume_max_db. 
-
-**Bug fix**
-* Sometimes when you stop a play and quickly start another, a short piece of audio from the end of the old session will play before the new session starts. Fixed by improving the flush command and by ignoring the first few frames after a play starts.
-
-**Enhancements**
-* Better reporting when a pipe can't be written to or can't be opened.
-
-Version 3.1s4
-====
-**Bug fix**
-* If Shairport Sync tried to change a mixer level and failed, it would terminate. Now it just logs a debug report.
-
-Version 3.1s3
-====
-More extensive changes have been made to improve stability by making some operations reentrant. The instabilities occur sometimes when interrupting a play session by another.
-
-Version 3.1s1 and 3.1s2
-====
-**Bug fix**
-* 3.1s2 fixes issues with audio backend latency offset calculations.
-
-Other minor fixes will be detailed later.
-
-Version 3.1d1
-====
-This is a stability update. Some users have reported occasional crashes particularly when a play session ends and another begins immediately. The thread that plays a session was not reentrant, and this _may_ have been causing those stability problems. The player thread is now fully re-entrant, so those stability problems should be gone. The changes made were quite extensive, so more bugs may have been reintroduced.
-
-Please note that there are still problems with SoundCloud. Soundcloud seems to have problems with AirPlay in general -- the problems are not specific to Shairport Sync.
-
+This update fixes one alarming and potentially very noisy bug and restores the identification of Shairport Sync as "ShairportSync" so that TuneBlade recognises it as an open source application.
 **Bug Fixes**
 * Fixed a bug that was causing Shairport Sync to possibly make a very loud and alarming noise whenever an audio frame was missing.
-* In 2.8.6, a change was made to the way Shairport Sync identified itself, so that it could be recognised by TuneBlade as an open source application and treated preferentially. That change was inadvertently lost in the transition from 2.8.6 to 3.0. Now it's restored.
-
-
-Version 3.1d0
-====
-**New Features**
-* Two audio filters added – a volume-dependent-loudness and a convolution filter. Many thanks to [yannpom](https://github.com/yannpom) for this. for more information right now, please refer to the conversation at [#484](https://github.com/mikebrady/shairport-sync/pull/484).
-
-**Note**
-* Some housekeeping needs to be done on the location of configuration files and convolution impulse response files, and maybe compilation configuration settings, but they can wait for a little while.
-* Documentation isn't updated
+* In 2.8.6, a change was made to the way Shairport Sync identified itself, so that it could be recognised by TuneBlade as an open source application and treated preferentially. That change was inadventently lost in the transition from 2.8.6 to 3.0. Now it's restored.
 
 Version 3.0
 ====
-Version 3 brings support for 24-bit and 32-bit (and 8 bit!) DACs and for DACs running at multiples of 44,100 samples per second.
+
+Big Update
+----
+Version 3 brings in support for 24-bit and 32-bit (and 8 bit!) DACs and for DACs running at multiples of 44,100 samples per second.
 
 The most obvious audible change is if you are using software volume control and can take advantage of 32- or 24-bit DACs. Dithering can now occur on a 32-bit or 24-bit sample rather than on a 16-bit sample, making the noise floor very much lower. This is the case, for example, with a Pimoroni PHAT DAC.
 
@@ -256,14 +121,14 @@ Version 3.0d20 – Development Version
 Note: all Version 3 changes are summarized above.
 
 **Bug Fix**
-* Fix a small and generally silent error in configure.ac so that it only looks for the systemd directory if systemd has been chosen. It caused a warning when cross-compiling.
+* Fix a small and generally silent error in configure.ac so that it only looks for the systemd direcotry if systemd has been chosen. It caused a warning when cross-compiling.
 
 Version 3.0d19 – Development Version
 ----
 Note: all Version 3 changes are summarized above.
 
 **New Feature**
-* Reduces processor load back to V2.X levels by using a pre-calculated array of pseudorandom numbers to do dithering. Doesn't seem to make any audible difference.
+* Reduces processor load back to V2.X levels by using a precalculated array of pseudorandom numbers to do dithering. Doesn't seem to make any audible difference.
 
 Version 3.0d18 – Development Version
 ----
@@ -280,7 +145,7 @@ Note: all Version 3 changes are summarized above.
 Pesky Changes You Cannot Ignore
 ====
 * Settings have changed -- basically, any timings that were denominated in frames are now in seconds. Please refer to the shairport-sync.conf.sample file for details.
-* Sox-based interpolation at higher sample rates may overload your CPU -- you might have to choose between higher sample rates and sox-based interpolation.
+* Sox-based interpolation at higher sample rates may overload your CPU -- yopu might have to choose between higher sample rates and sox-based interpolation.
 
 **Bugs**
 * Documentation is not updated.
@@ -399,7 +264,7 @@ The following is a summary of the bug fixes and enhancements since version 2.8.3
 * Metadata can now be provided via UDP -- thanks to [faceless2](https://github.com/faceless2).
 
 * Statistics output is more machine readable -- thanks to [Jörg Krause](https://github.com/joerg-krause)
-* The `shairport-sync.spec` file has been updated for compatibility with building Debian packages using `checkinstall` -- thanks to [vru1](https://github.com/vru1).
+* The `shairport-sync.spec` file has been updated for compatability with building Debian packages using `checkinstall` -- thanks to [vru1](https://github.com/vru1).
 
 Version 2.8.3.11 – Development Version
 ----
@@ -570,7 +435,7 @@ Version 2.7.9 -- Development Version
 Version 2.7.8 -- Development Version
 ----
 **Bug Fix**
-* Fixed an issue whereby Shairport Sync did not reset the hardware mixer volume level before resuming playing. The issue was caused by not releasing and later reacquiring the mixer when pausing and resuming. Thanks to [Tim Curtis](https://github.com/moodeaudio) for reporting the issue.
+* Fixed an issue whereby Shairport Sync did not reset the hardware mixer volume level before resuming playing. The issue was caused by not releasing and later reaquiring the mixer when pausing and resuming. Thanks to [Tim Curtis](https://github.com/moodeaudio) for reporting the issue.
 
 Version 2.7.7 -- Development Version
 ----
@@ -605,7 +470,7 @@ Version 2.7.5 -- Development Version
 Version 2.7.4 -- Development Version
 ----
 **Enhancements**
-* Use the correct method for finding the `systemd` unit path, as recommended by debian maintainers and
+* Use the correct method for finding the `systemd` unit path, as recomended by debain maintainers and
 http://www.freedesktop.org/software/systemd/man/daemon.html#Installing%20Systemd%20Service%20Files. Thanks to [dantheperson](https://github.com/dantheperson).
 * Rather than hardwire the path `/usr/local/bin` as the path to the shairport-sync executable, the value of `$PREFIX` is now used during configuration. Thanks to [Nick Steel](https://github.com/kingosticks).
 * Add some extra diagnostic messages if the hardware buffer in the DAC is smaller than desired.
@@ -619,7 +484,7 @@ http://www.freedesktop.org/software/systemd/man/daemon.html#Installing%20Systemd
 Version 2.7.3 -- Development Version
 ----
 **Bug Fix**
-* The dither code was broken in Shairport Sync and also less than ideal anyway. Fixed and improved. Dither is added whenever you use the software volume control at less than full volume. See http://www.ece.rochester.edu/courses/ECE472/resources/Papers/Lipshitz_1992.pdf for a very influential paper by Lipshitz, Wannamaker and Vanderkooy, 1992. The dither code in Shairport Sync was inherited from Shairport and does not conform to the recommendations in the paper -- specifically the implementation would give one bit of dither where the paper recommends two bits peak-to-peak. The other thing is that the inherited dither code was actually broken in Shairport Sync. So, the new dither code gives a two bit peak-to-peak dither based on a Triangular Probability Distribution Function (TPDF). It sounds like a very low-level white noise, unmodulated by the audio material. It would be nice if it was even lower, but it's better than listening to the artefacts present when dithering is disabled.
+* The dither code was broken in Shairport Sync and also less than ideal anyway. Fixed and improved. Dither is added whenever you use the software volume control at less than full volume. See http://www.ece.rochester.edu/courses/ECE472/resources/Papers/Lipshitz_1992.pdf for a very influential paper by Lipshitz, Wannamaker and Vanderkooy, 1992. The dither code in Shairport Sync was inherited from Shairport and does not conform to the recommendations in the paper -- specifically the implementation would give one bit of dither where the paper recommends two bits peak-to-peak. The other thing is that the inherited dither code was actually broken in Shairport Sync. So, the new dither code gives a two bit peak-to-peak dither based on a Triangular Probability Distribution Function (TPDF). It sounds like a very low-level white noise, unmodulated by the audio material. It would be nice if it was even lower, but it's better than listening to the artifacts present when dithering is disabled.
 
 Version 2.7.2 -- Development Version
 ----
@@ -637,7 +502,7 @@ Version 2.7.1 -- Development Version
 Version 2.7 -- Development Version
 ----
 **New Features**
-* Extend the volume range for some DACs. Background: some of the cheaper DACS have a very small volume range (that is, the ratio of the highest to the lowest volume, expressed in decibels, is very small). In some really cheap DACs it's only around 30 dB. That means that the difference between the lowest and highest volume settings isn't large enough. With the new feature, if you set the `general` `volume_range_db` to more than the hardware mixer's range, Shairport Sync will combine the hardware mixer's range with a software attenuator to give the desired range. For example, suppose you want a volume range of 70 dB and the hardware mixer offers only 30 dB, then Shairport Sync will make up the other 40 dB with a software attenuator. One drawback is that, when the volume is being changed, there may be a slight delay (0.15 seconds by default) as the audio, whose volume may have been adjusted in software, propagates through the system. Another slight possible drawback is a slightly heavier load on the processor.
+* Extend the volume range for some DACs. Background: some of the cheaper DACS have a very small volume range (that is, the ratio of the highest to the lowest volume, expressed in decibels, is very small). In some really cheap DACs it's only around 30 dB. That means that the difference betweeen the lowest and highest volume settings isn't large enough. With the new feature, if you set the `general` `volume_range_db` to more than the hardware mixer's range, Shairport Sync will combine the hardware mixer's range with a software attenuator to give the desired range. For example, suppose you want a volume range of 70 dB and the hardware mixer offers only 30 dB, then Shairport Sync will make up the other 40 dB with a software attenuator. One drawback is that, when the volume is being changed, there may be a slight delay (0.15 seconds by default) as the audio, whose volume may have been adjusted in software, propagates through the system. Another slight possible drawback is a slightly heavier load on the processor.
 * Check for underflow a little better when buffer aliasing occurs on very bad connections...
 * Add extra debug messages to the alsa back end to diagnose strange DACs.
 * Add configuration file for the `libao` back end -- to change the buffer size and the latency offset, same as for stdout.
@@ -659,7 +524,7 @@ This is basically version 2.4.2 with two small fixes. It's been bumped to 2.6 be
 
 Version 2.4.2
 ----
-This release has important enhancements, bug fixes and documentation updates. It also appears to bring compatibility with Synology NAS devices.
+This release has important enhancements, bug fixes and documentation updates. It also appears to bring compatiblity with Synology NAS devices.
 
 
 **New Features**
@@ -678,7 +543,7 @@ Using source-specified latencies is now automatic unless non-standard static lat
 * Volume ratios expressed in decibels are now consistently denominated in voltage decibels rather than power decibels. The rationale is that the levels refer to voltage levels, and power is proportional to the square of voltage.
 Thus a ratio of levels of 65535 to 1 is 96.3 dB rather than the 48.15 dB used before.
 * The latency figure returned to the source as part of the response to an rtsp request packet is 11,025, which may (?) be meant to indicate the minimum latency the device is capable of. 
-* An experimental handler for a GET_PARAMETER rtsp request has been added. It does nothing except log the occurrence.
+* An experimental handler for a GET_PARAMETER rtsp request has been added. It does nothing except log the occurence.
 * The RTSP request dispatcher now logs an event whenever an unrecognised rtsp has been made.
 
 
@@ -690,8 +555,8 @@ This release has three small bug fixes and some small documentation updates.
 
 Changes from the previous stable version -- 2.4 -- are summarised here:
  * The USE_CUSTOM_LOCAL_STATE_DIR macro was still being used when it should have been USE_CUSTOM_PID_DIR. This could affect users using a custom location for the PID directory.
- * A compiler error has been fixed that occurred if metadata was enabled and tinysvcmdns was included.
- * A crash has been fixed that occurred if metadata was enabled and a metadata pipename was not specified.
+ * A compiler error has been fixed that occured if metadata was enabled and tinysvcmdns was included.
+ * A crash has been fixed that occured if metadata was enabled and a metadata pipename was not specified.
 (Thanks to the contributors who reported bugs.)
  
 **Small Changes**
@@ -711,7 +576,7 @@ Changes from the previous stable version -- 2.2.5 -- are summarised here:
  * Metadata is now supported -- it can be delivered to a unix pipe for processing by a helper application. See https://github.com/mikebrady/shairport-sync-metadata-reader for a sample metadata reader.
  * Raw PCM audio can be delivered to standard output ("stdout") or to a unix pipe. The internal architecture has changed considerably to support this.
  * Support for compilation on OpenWrt back to Attitude Adjustment.
- * Can play unencrypted audio streams -- compatible with, e.g. Whaale.
+ * Can play unencrypted audio streams -- complatible with, e.g. Whaale.
  * Uses the libconfig library.
  * Runs on a wider range of platforms, including Arch Linux and Fedora.
  * Bug fixes.
@@ -738,7 +603,7 @@ Version 2.3.12
 
 
 **Enhancements**
-* Larger range of interpolation. Shairport Sync was previously constrained not to make interpolations ("corrections") of more than about 1 per 1000 frames. This constraint has been relaxed, and it is now able to make corrections of up to 1 in 352 frames. This might result in a faster and undesirably sudden correction early during a play session, so a number of further changes have been made. The full set of these changes is as follows:
+* Larger range of interpolation. Shairport Sync was previously constrained not to make interpolations ("corrections") of more than about 1 per 1000 frames. This contraint has been relaxed, and it is now able to make corrections of up to 1 in 352 frames. This might result in a faster and undesirably sudden correction early during a play session, so a number of further changes have been made. The full set of these changes is as follows:
   * No corrections happen for the first five seconds.
   * Corrections of up to about 1 in 1000 for the next 25 seconds.
   * Corrections of up to 1 in 352 thereafter.
@@ -757,7 +622,7 @@ Bug fix
 * The "pipe" backend used output code that would block if the pipe didn't have a reader. This has been replaced by non-blocking code. Here are some implications:
   * When the pipe is created, Shairport Sync will not block if a reader isn't present.
   * If the pipe doesn't have a reader when Shairport Sync wants to output to it, the output will be discarded.
-  * If a reader disappears while writing is occurring, the write will time out after five seconds.
+  * If a reader disappears while writing is occuring, the write will time out after five seconds.
   * Shairport Sync will only close the pipe on termination.
 
 Version 2.3.9
@@ -831,10 +696,10 @@ These releases were faulty and have been deleted.
 
 Version 2.3.1
 -----
-Some big changes "under the hood" have been made, leading to limited support for unsynchronised output to `stdout` or to a named pipe and continuation of de facto support for unsynchronised PulseAudio. Also, support for a configuration file in preference to command line options, an option to ignore volume control and other improvements are provided.
+Some big changes "under the hood" have been made, leading to limited support for unsynchronised output to `stdout` or to a named pipe and continuation of defacto support for unsynchronised PulseAudio. Also, support for a configuration file in preference to command line options, an option to ignore volume control and other improvements are provided.
 
 In this release, Shairport Sync gains the ability to read settings from `/etc/shairport-sync.conf`.
-This gives more flexibility in adding features gives better compatibility across different versions of Linux.
+This gives more flexibility in adding features gives better compatability across different versions of Linux.
 Existing command-line options continue to work, but some will be deprecated and may disappear in a future version of Shairport Sync. New settings will only be available via the configuration file.
 
 Note that, for the present, settings in the configuration will have priority over command line options for Shairport Sync itself, in contravention of the normal unix convention. Audio back end command line options, i.e. those after the `--`, have priority over configuration file settings for the audio backends.
@@ -858,7 +723,7 @@ If you are using metadata, please note that the option has changed somewhat. The
  * Support for the `pipe` back end has been enhanced to provide raw 16-bit 44.1kHz stereo PCM output to a named pipe. To activate, set `output_backend = "pipe"` in the general section of the configuration and give the fully-specified pathname to the pipe in the pipe section of the configuration file -- see `etc/shairport-sync.conf.sample` for an example. No stuffing or stripping is done. If you are feeding it to an output device that runs slower or faster, you'll eventually get buffer overflow or underflow in that device.  To include support for this back end, use the configuration option `--with-pipe`.
  * Support for the `dummy` audio backend device continues. To activate, set  `output_backend = "dummy"` in  in the general section of the configuration. To include support for this back end, use the configuration option `--with-dummy`.
  * Limited support for the PulseAudio audio backend continues. To activate, set  `output_backend = "pulse"` in  in the general section of the configuration. You must still enter its settings via the command line, after the `--` as before. Note that no stuffing or stripping is done: if the PulseAudio sink runs slower or faster, you'll eventually get buffer overflow or underflow.
- * New backend-specific settings are provided for setting the size of the backend's buffer and for adding or removing a fixed offset to the overall latency. The `audio_backend_buffer_desired_length` default is 6615 frames, or 0.15 seconds. On some slower machines, particularly with metadata processing going on, the DAC buffer can underflow on this setting, so it might be worth making the buffer larger. A problem on software mixers only is that changes to volume control settings have to propagate through the buffer to be heard, so the larger the buffer, the longer the response time. If you're using an alsa back end and are using a hardware mixers, this isn't a problem. The `audio_backend_latency_offset` allows you emit frames to the audio back end some time before or after the synchronised time. This would be useful, for example, if you are outputting to a device that takes 20 ms to process audio; you would specify a `audio_backend_latency_offset = -882`, where 882 is the number of frames in 20 ms, to compensate for the device delay.
+ * New backend-specific settings are provided for setting the size of the backend's buffer and for adding or removing a fixed offset to the overall latency. The `audio_backend_buffer_desired_length` default is 6615 frames, or 0.15 seconds. On some slower machines, particularly with metadata processing going on, the DAC buffer can underflow on this setting, so it might be worth making the buffer larger. A problem on software mixers only is that changes to volume control settings have to propagate through the buffer to be heard, so the larger the buffer, the longer the response time. If you're using an alsa back end and are using a hardware mixers, this isn't a problem. The `audio_backend_latency_offset` allows you emit frames to the audio back end some time before or after the synchronised time. This would be useful, for example, if you are outputting to a device that takes 20 ms to process audio; yoou would specify a `audio_backend_latency_offset = -882`, where 882 is the number of frames in 20 ms, to compensate for the device delay.
 
 Version 2.3
 -----
@@ -912,7 +777,7 @@ Version 2.2
 -----
 * Enhancements:
  * New password option: `--password=SECRET`
- * New tolerance option: `--tolerance=FRAMES`. Use this option to specify the largest synchronisation error to allow before making corrections. The default is 88 frames, i.e. 2 milliseconds. The default tolerance is fine for streaming over wired ethernet; however, if some of the stream's path is via WiFi, or if the source is a third-party product, it may lead to much overcorrection -- i.e. the difference between "corrections" and "net correction" in the `--statistics` option. Increasing the tolerance may reduce the amount of overcorrection.
+ * New tolerance option: `--tolerance=FRAMES`. Use this option to specify the largest synchronisation error to allow before making corrections. The default is 88 frames, i.e. 2 milliseconds. The default tolerance is fine for streaming over wired ethernet; however, if some of the stream's path is via WiFi, or if the source is a third-party product, it may lead to much overcorrection -- i.e. the difference between "corrections" and "net correction" in the `--statistics` option. Increasing the tolerence may reduce the amount of overcorrection.
 
 Version 2.1.15
 -----
@@ -967,7 +832,7 @@ With this feature, you can allow Shairport Sync always to advertise and provide 
 	
 * Annoying things you should know about if you're updating from a previous version:
 	* Options `--with-openssl`, `--with-polarssl` have been replaced with a new option `--with-ssl=<option>` where `<option>` is either `openssl` or `polarssl`.
-	* Option `--with-localstatedir` has been replaced with `--with-piddir`. This compilation option allows you to specify the directory in which the PID file will be written. The directory must exist and be writable. Supersedes the `--with-localstatedir` and describes the intended functionality a little more accurately.
+	* Option `--with-localstatedir` has been replaced with `--with-piddir`. This compilation option allows you to specify the directory in which the PID file will be written. The directory must exist and be writable. Supercedes the `--with-localstatedir` and describes the intended functionality a little more accurately.
 
 * Bugfixes
 	* A small (?) bug in the flush logic has been corrected. Not causing any known problem.

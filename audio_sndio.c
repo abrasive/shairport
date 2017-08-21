@@ -1,10 +1,10 @@
 /*
- * sndio output driver. This file is part of Shairport.
+ * sndio output driver. This file is part of Shairport Sync.
  * Copyright (c) 2013 Dimitri Sokolyuk <demon@dim13.org>
  * Copyright (c) 2017 Tobias Kortkamp <t@tobik.me>
  *
  * Modifications for audio synchronisation
- * and related work, copyright (c) Mike Brady 2014
+ * and related work, copyright (c) Mike Brady 2014 -- 2017
  * All rights reserved.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -237,11 +237,9 @@ static void stop() {
 }
 
 static void onmove_cb(void *arg, int delta) {
-  pthread_mutex_lock(&sndio_mutex);
   time_of_last_onmove_cb = get_absolute_time_in_fp();
   at_least_one_onmove_cb_seen = 1;
   played += delta;
-  pthread_mutex_unlock(&sndio_mutex);
 }
 
 static int delay(long *_delay) {

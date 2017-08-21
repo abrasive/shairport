@@ -1509,7 +1509,7 @@ static void *player_thread_func(void *arg) {
              "depth");
   }
   if (conn->fix_volume != 0x10000) {
-    debug(1, "Dithering will be enabled becasuse the output volume is being altered in software");
+    debug(1, "Dithering will be enabled because the output volume is being altered in software");
   }
 
   // we need an intermediate "transition" buffer
@@ -2145,7 +2145,7 @@ static void *player_thread_func(void *arg) {
     int elapsedHours = rawSeconds / 3600;
     int elapsedMin = (rawSeconds / 60) % 60;
     int elapsedSec = rawSeconds % 60;
-    inform("Playback Stopped. Total playing time %02d:%02d:%02d\n", elapsedHours, elapsedMin,
+    inform("Playback Stopped. Total playing time %02d:%02d:%02d.", elapsedHours, elapsedMin,
            elapsedSec);
   }
 
