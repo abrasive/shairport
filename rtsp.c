@@ -621,7 +621,7 @@ static void msg_write_response(int fd, rtsp_message *resp) {
 }
 
 static void handle_record(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
-  // debug(1,"Handle Record");
+  // debug(1,"Connection thread %d: Handle Record",conn->connection_number);
   resp->respcode = 200;
   // I think this is for telling the client what the absolute minimum latency
   // actually is,
@@ -662,12 +662,12 @@ static void handle_options(rtsp_conn_info *conn, rtsp_message *req, rtsp_message
 }
 
 static void handle_teardown(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
+  debug(2, "Connection thread %d: TEARDOWN asking connection to stop",conn->connection_number);
   if (!rtsp_playing())
-    debug(1, "This RTSP conversation thread doesn't think it's playing, but "
-             "it's sending a response to teardown anyway");
+    debug(1, "This RTSP connection thread (%d) doesn't think it's playing, but "
+             "it's sending a response to teardown anyway",conn->connection_number);
   resp->respcode = 200;
   msg_add_header(resp, "Connection", "close");
-  debug(2, "TEARDOWN asking connection to stop");
   conn->stop = 1;
 	memory_barrier();
 	pthread_kill(conn->thread, SIGUSR1);
@@ -676,8 +676,8 @@ static void handle_teardown(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
 
 static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
   if (!rtsp_playing())
-    debug(1, "This RTSP conversation thread doesn't think it's playing, but "
-             "it's sending a response to flush anyway");
+    debug(1, "This RTSP conversation thread (%d) doesn't think it's playing, but "
+             "it's sending a response to flush anyway",conn->connection_number);
   char *p = NULL;
   uint32_t rtptime = 0;
   char *hdr = msg_get_header(req, "RTP-Info");
@@ -704,7 +704,7 @@ static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
 }
 
 static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
-  // debug(1,"Handle Setup");
+  debug(1,"Connection %d: Handle Setup",conn->connection_number);
   int cport, tport;
   int lsport, lcport, ltport;
   uint32_t active_remote = 0;
@@ -1404,7 +1404,7 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
     if (config.allow_session_interruption == 1) {
       // some other thread has the player ... ask it to relinquish the thread
       if (playing_conn) {
-        debug(1, "Playing connection asked to stop");
+        debug(1, "ANNOUNCE: playing connection %d being interrupted by connection %d.",playing_conn->connection_number,conn->connection_number);
         if (playing_conn == conn) {
           debug(1, "ANNOUNCE asking to stop itself.");
         } else {
@@ -1802,9 +1802,9 @@ static void *rtsp_conversation_thread_func(void *pconn) {
           }
         }
         if (method_selected == 0)
-          debug(1, "Unrecognised and unhandled rtsp request \"%s\".", req->method);
+          debug(1, "RTSP thread %d: Unrecognised and unhandled rtsp request \"%s\".",conn->connection_number, req->method);
       }
-      debug(3, "RTSP Response:");
+      debug(3, "RTSP thread %d: RTSP Response:",conn->connection_number);
       debug_print_msg_headers(3, resp);
       msg_write_response(conn->fd, resp);
       msg_free(req);
