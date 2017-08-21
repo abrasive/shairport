@@ -5,7 +5,7 @@ Audio played by a Shairport Sync-powered device stays synchronised with the sour
 
 Shairport Sync runs on Linux and FreeBSD. It does not support AirPlay video or photo streaming.
 
-This is the stable "master" branch. Changes and updates are incorporated into this branch relatively slowly. To access the development version, where all the latest changes are made first, please switch to the "development" branch.
+This is the unstable "development" branch. Changes and updates are incorporated into this branch quickly. To access the stable version, where changes are made after due time, please switch to the "master" branch.
 
 More Information
 ----------
@@ -53,32 +53,9 @@ In addition, Shairport Sync can output to standard output, pipes, `soundio` and 
 
 For information about changes and updates, please refer to the RELEASENOTES.md file in the distribution.
 
-Building And Installing
+Building And Installing the Development Version
 ---------------------
-Shairport Sync may already be available as a package in your Linux distribution (search for `shairport-sync` – the package named `shairport` is a different program). Packages are available on recent versions of Debian, Ubuntu, Arch, OpenWrt and possibly more:
-
-**Ubuntu:** A `shairport-sync` installer package is available for Ubuntu. Additionally, a Personal Package Archives for Shairport Sync master and development branches are available at https://launchpad.net/~dantheperson. 
-
-**Debian:** shairport-sync is in the Debian archive.
-
-**OpenWrt:** There is a Shairport Sync package in OpenWrt trunk. Also, there's an OpenWrt package at https://github.com/mikebrady/shairport-sync-for-openwrt, including one that builds back to Barrier Breaker.
-
-**Arch Linux:** Shairport Sync is available for x86_64 and i686 platforms in the Arch Linux Community Repository -- search for `shairport-sync`. See also https://www.archlinux.org/packages/.
-An Arch Linux installation package, suitable for compilation on any platform, is also available at [EliaCereda/shairport-sync-PKGBUILD](https://github.com/EliaCereda/shairport-sync-PKGBUILD).
-
-**Mac OS X:** A HomeBrew package exists for Shairport Sync. With HomeBrew installed, Shairport Sync can be installed using the command: 
-```
-$brew install shairport-sync
-```
-Note that the installation uses the libao library and so synchronisation is not available — playback glitches will occur occasionally, when the ao system's buffers overflow or underflow.
-
-**Fedora:** Please see the guide at [FEDORA.md](https://github.com/mikebrady/shairport-sync/blob/master/FEDORA.md).
-
-**Cygwin:** Please see the guide at [CYGWIN.md](https://github.com/mikebrady/shairport-sync/blob/master/CYGWIN.md).
-
-Sincere thanks to all package contributors!
-
-If you wish to build and install the latest version of Shairport Sync on OpenWrt, Arch or Fedora platforms, please follow the appropriate instructions below. Limited support is also available for Mac OS X. Otherwise follow the General Build Instructions. Then, when the program has been installed, refer to the section on Configuring Shairport Sync that follows.
+The following procedures will build and install the `shairport-sync` application into your system.
 
 **Remove Old Versions Of Shairport Sync**
 
@@ -143,14 +120,14 @@ Many Linux distributions have Avahi and OpenSSL already in place, so normally it
 
 Debian, Ubuntu and Raspbian users can get the basics with:
 
-- `apt-get install build-essential git xmltoman` – these may already be installed.
-- `apt-get install autoconf automake libtool libdaemon-dev libpopt-dev libconfig-dev`
-- `apt-get install libasound2-dev` for the ALSA libraries
-- `apt-get install libpulse-dev` for the PulseAudio libraries
-- `apt-get install avahi-daemon libavahi-client-dev` if you want to use Avahi (recommended).
-- `apt-get install libssl-dev` if you want to use OpenSSL and libcrypto, or use mbed TLS otherwise.
-- `apt-get install libmbedtls-dev` if you want to use mbed TLS, or use OpenSSL/libcrypto otherwise. You can still use PolarSSL with `apt-get install libpolarssl-dev` if you want to use PolarSSL, but it is deprecated as it's not longer being supported. (It is suggested you use mbed TLS, where available. It doesn't seem to be in Raspbian at the time of writing, March 2017.)
-- `apt-get install libsoxr-dev` if you want support for libsoxr-based resampling. This library is in many recent distributions, including Jessie and Raspbian Jessie; if not, instructions for how to build it from source for Rasbpian/Debian Wheezy are available at [LIBSOXR.md](https://github.com/mikebrady/shairport-sync/blob/master/LIBSOXR.md).
+- `# apt-get install build-essential git xmltoman` – these may already be installed.
+- `# apt-get install autoconf automake libtool libdaemon-dev libpopt-dev libconfig-dev`
+- `# apt-get install libasound2-dev` for the ALSA libraries
+- `# apt-get install libpulse-dev` for the PulseAudio libraries
+- `# apt-get install avahi-daemon libavahi-client-dev` if you want to use Avahi (recommended).
+- `# apt-get install libssl-dev` if you want to use OpenSSL and libcrypto, or use mbed TLS otherwise.
+- `# apt-get install libmbedtls-dev` if you want to use mbed TLS, or use OpenSSL/libcrypto otherwise. You can still use PolarSSL with `apt-get install libpolarssl-dev` if you want to use PolarSSL, but it is deprecated as it's not longer being supported. (It is suggested you use mbed TLS, where available. It doesn't seem to be in Raspbian at the time of writing, March 2017.)
+- `# apt-get install libsoxr-dev` if you want support for libsoxr-based resampling. This library is in many recent distributions, including Jessie and Raspbian Jessie; if not, instructions for how to build it from source for Rasbpian/Debian Wheezy are available at [LIBSOXR.md](https://github.com/mikebrady/shairport-sync/blob/master/LIBSOXR.md).
 
 If you wish to include the Apple ALAC decoder, you need install it first – please refer to the [ALAC](https://github.com/mikebrady/alac) repository for more information.
 
@@ -159,8 +136,9 @@ If you wish to include the Apple ALAC decoder, you need install it first – ple
 $ git clone https://github.com/mikebrady/shairport-sync.git
 ```
 
-Next, `cd` into the shairport-sync directory and execute the following command:
+Next, `cd` into the shairport-sync directory and execute the following commands:
 ```
+$ git checkout development
 $ autoreconf -i -f
 ```
 (Note that the `autoreconf...` step may take some time on less powerful machines.)
@@ -250,7 +228,9 @@ Here is a recommended set of configuration options suitable for Linux installati
 
 Enter:
 
-`$ make` 
+```
+$ make
+```
 
 to build the application.
 
@@ -266,7 +246,9 @@ The user and group `shairport-sync` will be created if necessary, and a runtime 
 
 If you have chosen the `--with-systemd` configuration option, then, to enable Shairport Sync to start automatically at system startup, enter:
 
-`$sudo systemctl enable shairport-sync`
+```
+$sudo systemctl enable shairport-sync
+```
 
 **Complete installation into a System V system**
 
@@ -277,7 +259,7 @@ $sudo update-rc.d shairport-sync defaults 90 10
 
 **Man Page**
 
-You can view the man page here: http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/master/man/shairport-sync.html
+You can view the man page here: http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/development/man/shairport-sync.html
 
 Configuring Shairport Sync
 --------
@@ -300,16 +282,16 @@ Settings in the configuration file are grouped. For instance, there is a `genera
 ```
 general =
 {
-	name = "Front Room";
-	password = "secret";
-	interpolation = "soxr";
-	// ... other general settings
+  name = "Front Room";
+  password = "secret";
+  interpolation = "soxr";
+  // ... other general settings
 };
 ```
 (Remember, anything preceded by `//` is a comment and will have no effect on the setting of Shairport Sync.) No backend is specified here, so it will default to the `alsa` backend if more than one back end has been compiled. To route the output to PulseAudio, add:
 
 ```
-	output_backend = "pa";
+  output_backend = "pa";
 ```
 to the `general` stanza.
 
@@ -353,7 +335,7 @@ Another setting to consider is the `general` `drift_tolerance_in_seconds` settin
 
 *Command Line Arguments*
 
-As previously mentioned, you can use command line arguments to provide settings to Shairport Sync as before, though newer settings will only be available via the configuration file. For full information, please read the Shairport Sync `man` page, also available at  http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/master/man/shairport-sync.html.
+As previously mentioned, you can use command line arguments to provide settings to Shairport Sync as before, though newer settings will only be available via the configuration file. For full information, please read the Shairport Sync `man` page, also available at  http://htmlpreview.github.io/?https://github.com/mikebrady/shairport-sync/blob/development/man/shairport-sync.html.
 
 Apart from the following options, all command line options can be replaced by settings in the configuration file. Here is a brief description of command line options that are not replicated by settings in the settings file.
 
