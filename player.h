@@ -52,6 +52,7 @@ typedef struct {
 } stream_cfg;
 
 typedef struct {
+  int connection_number; // for debug ID purposes, nothing else...
   int fd;
   int authorized; // set if a password is required and has been supplied
   stream_cfg stream;

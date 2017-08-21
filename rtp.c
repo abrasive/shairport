@@ -713,6 +713,9 @@ void get_reference_timestamp_stuff(int64_t *timestamp, uint64_t *timestamp_time,
   pthread_mutex_lock(&conn->reference_time_mutex);
   *timestamp = conn->reference_timestamp;
   *timestamp_time = conn->reference_timestamp_time;
+  if ((*timestamp == 0) && (*timestamp_time == 0)) {
+    debug(1,"Reference timestamp is invalid.");
+  }
   *remote_timestamp_time = conn->remote_reference_timestamp_time;
   pthread_mutex_unlock(&conn->reference_time_mutex);
 }

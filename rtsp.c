@@ -96,6 +96,8 @@ static rtsp_conn_info *playing_conn =
     NULL; // the data structure representing the connection that has the player.
 static rtsp_conn_info **conns = NULL;
 
+int RTSP_connection_index = 0;
+
 void memory_barrier() {
   pthread_mutex_lock(&barrier_mutex);
   pthread_mutex_unlock(&barrier_mutex);
@@ -1771,11 +1773,12 @@ static void *rtsp_conversation_thread_func(void *pconn) {
   char *hdr, *auth_nonce = NULL;
 
   enum rtsp_read_request_response reply;
-
+  
+  conn->running = 1;
   do {
     reply = rtsp_read_request(conn, &req);
     if (reply == rtsp_read_request_response_ok) {
-      debug(3, "RTSP Packet received of type \"%s\":", req->method),
+      debug(3, "RTSP thread %d received an RTSP Packet of type \"%s\":",conn->connection_number, req->method),
           debug_print_msg_headers(3, req);
       resp = msg_init();
       resp->respcode = 400;
@@ -1812,7 +1815,7 @@ static void *rtsp_conversation_thread_func(void *pconn) {
     }
   } while (reply != rtsp_read_request_response_shutdown_requested);
 
-  debug(1, "Closing down RTSP conversation thread...");
+  debug(1, "Closing down RTSP conversation thread %d...",conn->connection_number);
   if (rtsp_playing()) {
     player_stop(&conn->player_thread, conn); // might be less noisy doing this first
     rtp_shutdown(conn);
@@ -1831,7 +1834,7 @@ static void *rtsp_conversation_thread_func(void *pconn) {
   //         "close RTSP connection.");
   // }
   rtp_terminate(conn);
-  debug(2, "RTSP conversation thread terminated.");
+  debug(2, "RTSP conversation thread %d terminated.",conn->connection_number);
   //  please_shutdown = 0;
   return NULL;
 }
@@ -1979,6 +1982,7 @@ void rtsp_listen_loop(void) {
     if (conn == 0)
       die("Couldn't allocate memory for an rtsp_conn_info record.");
     memset(conn, 0, sizeof(rtsp_conn_info));
+    conn->connection_number = RTSP_connection_index++;
     socklen_t slen = sizeof(conn->remote);
 
     conn->fd = accept(acceptfd, (struct sockaddr *)&conn->remote, &slen);
@@ -2040,11 +2044,12 @@ void rtsp_listen_loop(void) {
       //      conn->thread = rtsp_conversation_thread;
       //      conn->stop = 0; // record's memory has been zeroed
       //      conn->authorized = 0; // record's memory has been zeroed
-      conn->running = 1;
+      
       ret = pthread_create(&conn->thread, NULL, rtsp_conversation_thread_func,
                            conn); // also acts as a memory barrier
       if (ret)
-        die("Failed to create RTSP receiver thread!");
+        die("Failed to create RTSP receiver thread %d!",conn->connection_number);
+      debug(1,"Successfully created RTSP receiver thread %d.",conn->connection_number);
       track_thread(conn);
     }
   }
