@@ -39,7 +39,7 @@ What else?
 
 Status
 ------
-Shairport Sync works on a wide variety of Linux devices and FreeBSD. It works on standard Ubuntu laptops, on the Raspberry Pi with Raspbian Wheezy and Jessie, Arch Linux and OpenWrt, and it runs on a Linksys NSLU2 and a TP-Link 710N using OpenWrt. It works with built-in audio and with a variety of USB-connected audio amplifiers and DACs, including a cheapo USB "3D Sound" dongle, a first generation iMic and a Topping TP30 amplifier with a USB DAC input.
+Shairport Sync works on a wide variety of Linux devices and FreeBSD. It works on standard Ubuntu laptops, on the Raspberry Pi with Raspbian Stretch, Jessie and Wheezy, Arch Linux and OpenWrt, and it runs on a Linksys NSLU2 and a TP-Link 710N using OpenWrt. It works with built-in audio and with a variety of USB-connected audio amplifiers and DACs, including a cheapo USB "3D Sound" dongle, a first generation iMic and a Topping TP30 amplifier with a USB DAC input.
 
 Shairport Sync will work with PulseAudio, which is installed in many desktop Linuxes. PulseAudio normally run in the *user mode* but can be configured to run in *system mode*, though this is not recommended. Shairport Sync can work with it in either mode.
 
@@ -126,8 +126,8 @@ Debian, Ubuntu and Raspbian users can get the basics with:
 - `# apt-get install libpulse-dev` for the PulseAudio libraries
 - `# apt-get install avahi-daemon libavahi-client-dev` if you want to use Avahi (recommended).
 - `# apt-get install libssl-dev` if you want to use OpenSSL and libcrypto, or use mbed TLS otherwise.
-- `# apt-get install libmbedtls-dev` if you want to use mbed TLS, or use OpenSSL/libcrypto otherwise. You can still use PolarSSL with `apt-get install libpolarssl-dev` if you want to use PolarSSL, but it is deprecated as it's not longer being supported. (It is suggested you use mbed TLS, where available. It doesn't seem to be in Raspbian at the time of writing, March 2017.)
-- `# apt-get install libsoxr-dev` if you want support for libsoxr-based resampling. This library is in many recent distributions, including Jessie and Raspbian Jessie; if not, instructions for how to build it from source for Rasbpian/Debian Wheezy are available at [LIBSOXR.md](https://github.com/mikebrady/shairport-sync/blob/master/LIBSOXR.md).
+- `# apt-get install libmbedtls-dev` if you want to use mbed TLS, or use OpenSSL/libcrypto otherwise. You can still use PolarSSL with `apt-get install libpolarssl-dev` if you want to use PolarSSL, but it is deprecated as it's not longer being supported.
+- `# apt-get install libsoxr-dev` if you want support for libsoxr-based resampling. This library is in many recent distributions; if not, instructions for how to build it from source for Rasbpian/Debian Wheezy are available at [LIBSOXR.md](https://github.com/mikebrady/shairport-sync/blob/master/LIBSOXR.md).
 
 If you wish to include the Apple ALAC decoder, you need install it first – please refer to the [ALAC](https://github.com/mikebrady/alac) repository for more information.
 
@@ -216,7 +216,7 @@ A final consideration is the location of the configuration file `shairport-sync.
 
 **Sample `./configure` command with parameters for a typical Linux `systemd` installation:**
 
-Here is a recommended set of configuration options suitable for Linux installations that use `systemd`, such as Ubuntu 15.10 and Raspbian Jessie. It specifies both the ALSA and PulseAudio backends and includes a sample configuration file and an script for automatic startup on system boot:
+Here is a recommended set of configuration options suitable for Linux installations that use `systemd`, such as Ubuntu 15.10 and later, and Raspbian Stretch and Jessie. It specifies both the ALSA and PulseAudio backends and includes a sample configuration file and an script for automatic startup on system boot:
 
 `$ ./configure --sysconfdir=/etc --with-alsa --with-pa --with-avahi --with-ssl=openssl --with-metadata --with-soxr --with-systemd`
 
