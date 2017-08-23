@@ -289,10 +289,10 @@ static void cleanup_threads(void) {
   // debug(2, "culling threads.");
   for (i = 0; i < nconns;) {
     if (conns[i]->running == 0) {
-      debug(1, "found a non-running thread");
+      debug(1, "found RTSP connection thread %d in a non-running state.",conns[i]->connection_number);
       pthread_join(conns[i]->thread, &retval);
+      debug(1, "RTSP connection thread %d deleted...",conns[i]->connection_number);
       free(conns[i]);
-      debug(1, "one thread joined...");
       nconns--;
       if (nconns)
         conns[i] = conns[nconns];
@@ -1401,6 +1401,11 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
   if (pthread_mutex_trylock(&play_lock) == 0) {
     have_the_player = 1;
   } else {
+  	if (playing_conn) {
+  		debug(1,"RTSP Conversation thread %d already playing.",playing_conn->connection_number);
+  	} else {
+  		debug(1,"play_lock locked but no playing_conn.");
+  	}
     if (config.allow_session_interruption == 1) {
       // some other thread has the player ... ask it to relinquish the thread
       if (playing_conn) {
