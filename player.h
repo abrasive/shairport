@@ -60,7 +60,9 @@ typedef struct {
   int stop;
   int running;
   pthread_t thread;
-  pthread_t player_thread;
+  
+  // pthread_t *ptp;
+  pthread_t *player_thread;
 
   abuf_t audio_buffer[BUFFER_FRAMES];
   int max_frames_per_packet, input_num_channels, input_bit_depth, input_rate;
@@ -160,8 +162,8 @@ typedef struct {
 
 } rtsp_conn_info;
 
-int player_play(pthread_t *thread, rtsp_conn_info *conn);
-void player_stop(pthread_t *thread, rtsp_conn_info *conn);
+int player_play(rtsp_conn_info *conn);
+void player_stop(rtsp_conn_info *conn);
 
 void player_volume(double f, rtsp_conn_info *conn);
 void player_flush(int64_t timestamp, rtsp_conn_info *conn);

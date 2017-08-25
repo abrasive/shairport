@@ -672,14 +672,10 @@ static void handle_teardown(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
   resp->respcode = 200;
   msg_add_header(resp, "Connection", "close");
   
-	debug(1, "TEARDOWN: synchronous closing the player thread of RTSP conversation thread %d (2).",conn->connection_number);
+	debug(1, "TEARDOWN: synchronously terminating the player thread of RTSP conversation thread %d (2).",conn->connection_number);
 	if (rtsp_playing()) {
-		player_stop(&conn->player_thread, conn); // might be less noisy doing this first
+		player_stop(conn); // might be less noisy doing this first
 	}
-	debug(1,"TEARDOWN leaving the conversation thread open...");
-	//debug(1, "RTSP conversation thread %d synchronously closed (2).",conn->connection_number);
-  //conn->stop = 1;
-//	usleep(1000000);
 }
 
 static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
@@ -833,7 +829,7 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
       strcat(hdr, q); // should unsplice the timing port entry
   }
 
-  player_play(&conn->player_thread, conn); // the thread better be 0
+  player_play(conn); // the thread better be 0
 
   char *resphdr = alloca(200);
   *resphdr = 0;
@@ -1828,11 +1824,11 @@ static void *rtsp_conversation_thread_func(void *pconn) {
     	if ((reply==rtsp_read_request_response_immediate_shutdown_requested) ||
     		(reply==rtsp_read_request_response_channel_closed)) {
 
-				debug(1, "Synchronous closing down of RTSP conversation thread %d (1).",conn->connection_number);
-				if (rtsp_playing()) {
-					player_stop(&conn->player_thread, conn); // might be less noisy doing this first
+				if ((rtsp_playing()) && (conn->player_thread)) {
+				  debug(1, "Synchronously terminate playing thread of RTSP conversation thread %d.",conn->connection_number);
+					player_stop(conn); // might be less noisy doing this first
 				}
-				debug(1, "RTSP conversation thread %d synchronously closed (1).",conn->connection_number);
+				debug(1, "Synchronously terminate RTSP conversation thread %d.",conn->connection_number);
 				conn->stop = 1;
     	} else {
         debug(1, "rtsp_read_request error %d, packet ignored.", (int)reply);

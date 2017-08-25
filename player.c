@@ -2433,11 +2433,10 @@ void player_flush(int64_t timestamp, rtsp_conn_info *conn) {
 #endif
 }
 
-int player_play(pthread_t *player_thread, rtsp_conn_info *conn) {
-
+int player_play(rtsp_conn_info *conn) {
   // need to use conn in place of streram below. Need to put the stream as a parameter to he
-  // if (*player_thread!=NULL)
-  //	die("Trying to create a second player thread for this RTSP session");
+  if (conn->player_thread!=NULL)
+    die("Trying to create a second player thread for this RTSP session");
   if (config.buffer_start_fill > BUFFER_FRAMES)
     die("specified buffer starting fill %d > buffer size %d", config.buffer_start_fill,
         BUFFER_FRAMES);
@@ -2445,28 +2444,34 @@ int player_play(pthread_t *player_thread, rtsp_conn_info *conn) {
 #ifdef CONFIG_METADATA
   send_ssnc_metadata('pbeg', NULL, 0, 1);
 #endif
+  pthread_t *pt = malloc(sizeof(pthread_t));
+  if (pt==NULL)
+    die("Couldn't allocate space for pthread_t");
+  conn->player_thread = pt;
   size_t size = (PTHREAD_STACK_MIN + 256 * 1024);
   pthread_attr_t tattr;
   pthread_attr_init(&tattr);
   int rc = pthread_attr_setstacksize(&tattr, size);
   if (rc)
     debug(1, "Error setting stack size for player_thread: %s", strerror(errno));
-  pthread_create(player_thread, &tattr, player_thread_func, (void *)conn);
+  pthread_create(pt, &tattr, player_thread_func, (void *)conn);
   pthread_attr_destroy(&tattr);
   return 0;
 }
 
-void player_stop(pthread_t *player_thread, rtsp_conn_info *conn) {
-  if (player_thread) {
+void player_stop(rtsp_conn_info *conn) {
+  if (conn->player_thread) {
 		conn->player_thread_please_stop = 1;
 		pthread_cond_signal(&conn->flowcontrol); // tell it to give up
-		pthread_join(*player_thread, NULL);
+		pthread_kill(*conn->player_thread, SIGUSR1);
+		pthread_join(*conn->player_thread, NULL);
 #ifdef CONFIG_METADATA
 		send_ssnc_metadata('pend', NULL, 0, 1);
 #endif
 		command_stop();
-		player_thread = NULL;
+		free(conn->player_thread);
+		conn->player_thread = NULL;
   } else {
-  	debug(1,"Attempting to kill the non-existent player thread of RTSP conversation %d.",conn->connection_number);
+  	debug(1,"player thread of RTSP conversation %d is already deleted.",conn->connection_number);
   }
 }
