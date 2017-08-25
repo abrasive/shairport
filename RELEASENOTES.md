@@ -5,6 +5,8 @@ Version 3.2d1
 * There has been a persistent problem with Shairport Sync becoming unavailable after playing, say, a YouTube clip.
 Previously, it has been partially caused by Shairport Sync crashing due to not being written in a thread-safe manner. That's been fixed, so it has stopped crashing, but the non-availability problem has occasionally remained. This may be due a misunderstanding of part of the [unpublished!] AirPlay protocol. Shairport Sync 3.2d1 incorporates an experimental change to how a TEARDOWN request is handled. This seems to fix the non-availability issue. As a bonus, Shairport Sync works properly with SoundCloud in Safari and Chrome on a Mac.
 
+[Update] It's not quite there yet. Some other parts of the code must be adjusted, but it looks very hopeful.
+
 Version 3.2d0 is Version 3.1.1
 ====
 
