@@ -703,8 +703,8 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
   // pthread_create(&rtp_control_thread, NULL, &rtp_control_receiver, NULL);
   // pthread_create(&rtp_timing_thread, NULL, &rtp_timing_receiver, NULL);
 
-  conn->rtp_running = 1;
   conn->request_sent = 0;
+  conn->rtp_running = 1;
 }
 
 void get_reference_timestamp_stuff(int64_t *timestamp, uint64_t *timestamp_time,
@@ -725,23 +725,6 @@ void clear_reference_timestamp(rtsp_conn_info *conn) {
   conn->reference_timestamp = 0;
   conn->reference_timestamp_time = 0;
   pthread_mutex_unlock(&conn->reference_time_mutex);
-}
-
-void rtp_shutdown(rtsp_conn_info *conn) {
-  if (!conn->rtp_running)
-    debug(1, "rtp_shutdown called without active stream!");
-
-  debug(2, "shutting down RTP thread");
-  clear_reference_timestamp(conn);
-  //  debug(1,"Shut down audio, control and timing threads");
-  //  usleep(3000000); // hack
-  //  pthread_kill(rtp_audio_thread, SIGUSR1);
-  //  pthread_kill(rtp_control_thread, SIGUSR1);
-  //  pthread_kill(rtp_timing_thread, SIGUSR1);
-  //  pthread_join(rtp_audio_thread, &retval);
-  //  pthread_join(rtp_control_thread, &retval);
-  //  pthread_join(rtp_timing_thread, &retval);
-  conn->rtp_running = 0;
 }
 
 void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {

@@ -487,7 +487,7 @@ static enum rtsp_read_request_response rtsp_read_request(rtsp_conn_info *conn,
   while (msg_size < 0) {
     memory_barrier();
     if (conn->stop != 0) {
-      debug(1, "RTSP shutdown requested.");
+      debug(1, "RTSP conversation thread %d shutdown requested.",conn->connection_number);
       reply = rtsp_read_request_response_immediate_shutdown_requested;
       goto shutdown;
     }
@@ -495,7 +495,7 @@ static enum rtsp_read_request_response rtsp_read_request(rtsp_conn_info *conn,
 
     if (nread == 0) {
       // a blocking read that returns zero means eof -- implies connection closed
-      debug(3, "RTSP connection closed.");
+      debug(1, "RTSP conversation thread %d -- connection closed.",conn->connection_number);
       reply = rtsp_read_request_response_channel_closed;
       goto shutdown;
     }
@@ -622,7 +622,7 @@ static void msg_write_response(int fd, rtsp_message *resp) {
 }
 
 static void handle_record(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
-  debug(1,"Connection thread %d: RECORD",conn->connection_number);
+  debug(3,"Connection %d: RECORD",conn->connection_number);
   resp->respcode = 200;
   // I think this is for telling the client what the absolute minimum latency
   // actually is,
@@ -653,10 +653,11 @@ static void handle_record(rtsp_conn_info *conn, rtsp_message *req, rtsp_message 
       }
     }
   }
+  usleep(500000);
 }
 
 static void handle_options(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
-  debug(1, "Connection thread %d: OPTIONS",conn->connection_number);
+  debug(3, "Connection %d: OPTIONS",conn->connection_number);
   resp->respcode = 200;
   msg_add_header(resp, "Public", "ANNOUNCE, SETUP, RECORD, "
                                  "PAUSE, FLUSH, TEARDOWN, "
@@ -664,26 +665,25 @@ static void handle_options(rtsp_conn_info *conn, rtsp_message *req, rtsp_message
 }
 
 static void handle_teardown(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
-  debug(1, "Connection thread %d: TEARDOWN",conn->connection_number);
+  debug(3, "Connection %d: TEARDOWN",conn->connection_number);
   if (!rtsp_playing())
     debug(1, "This RTSP connection thread (%d) doesn't think it's playing, but "
              "it's sending a response to teardown anyway",conn->connection_number);
   resp->respcode = 200;
   msg_add_header(resp, "Connection", "close");
   
-	debug(1, "Synchronous closing down of RTSP conversation thread %d (2).",conn->connection_number);
+	debug(1, "TEARDOWN: synchronous closing the player thread of RTSP conversation thread %d (2).",conn->connection_number);
 	if (rtsp_playing()) {
 		player_stop(&conn->player_thread, conn); // might be less noisy doing this first
-		rtp_shutdown(conn);
-		// usleep(400000); // let an angel pass...
 	}
-	debug(1, "RTSP conversation thread %d synchronously closed (2).",conn->connection_number);
-  conn->stop = 1;
+	debug(1,"TEARDOWN leaving the conversation thread open...");
+	//debug(1, "RTSP conversation thread %d synchronously closed (2).",conn->connection_number);
+  //conn->stop = 1;
 //	usleep(1000000);
 }
 
 static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
-  debug(1, "Connection thread %d: FLUSH",conn->connection_number);
+  debug(3, "Connection %d: FLUSH",conn->connection_number);
   if (!rtsp_playing())
     debug(1, "This RTSP conversation thread (%d) doesn't think it's playing, but "
              "it's sending a response to flush anyway",conn->connection_number);
@@ -713,7 +713,7 @@ static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
 }
 
 static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
-  debug(1,"Connection %d: SETUP",conn->connection_number);
+  debug(3,"Connection %d: SETUP",conn->connection_number);
   int cport, tport;
   int lsport, lcport, ltport;
   uint32_t active_remote = 0;
@@ -872,7 +872,7 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn, rtsp_message *r
 
     if (!strncmp(cp, "volume: ", 8)) {
       float volume = atof(cp + 8);
-      // debug(1, "AirPlay request to set volume to: %f\n", volume);
+      debug(3, "AirPlay request to set volume to: %f.", volume);
       player_volume(volume, conn);
     } else
 #ifdef CONFIG_METADATA
@@ -1309,12 +1309,12 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn, rtsp_message *re
 #endif
 
 static void handle_get_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
-  debug(1,"Connection %d: GET_PARAMETER",conn->connection_number);
+  debug(3,"Connection %d: GET_PARAMETER",conn->connection_number);
   resp->respcode = 200;
 }
 
 static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
-  debug(1,"Connection %d: SET_PARAMETER",conn->connection_number);
+  debug(3,"Connection %d: SET_PARAMETER",conn->connection_number);
   // if (!req->contentlength)
   //    debug(1, "received empty SET_PARAMETER request.");
 
@@ -1401,12 +1401,11 @@ static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_m
   } else {
     debug(1, "missing Content-Type header in SET_PARAMETER request.");
   }
-
   resp->respcode = 200;
 }
 
 static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
-  debug(1,"Connection %d: ANNOUNCE",conn->connection_number);
+  debug(3,"Connection %d: ANNOUNCE",conn->connection_number);
   int have_the_player = 0;
 
   // interrupt session if permitted
@@ -1785,7 +1784,6 @@ static void *rtsp_conversation_thread_func(void *pconn) {
   rtsp_conn_info *conn = pconn;
 
   rtp_initialise(conn);
-  conn->running = 1;
 
   rtsp_message *req, *resp;
   char *hdr, *auth_nonce = NULL;
@@ -1833,8 +1831,6 @@ static void *rtsp_conversation_thread_func(void *pconn) {
 				debug(1, "Synchronous closing down of RTSP conversation thread %d (1).",conn->connection_number);
 				if (rtsp_playing()) {
 					player_stop(&conn->player_thread, conn); // might be less noisy doing this first
-					rtp_shutdown(conn);
-					// usleep(400000); // let an angel pass...
 				}
 				debug(1, "RTSP conversation thread %d synchronously closed (1).",conn->connection_number);
 				conn->stop = 1;
@@ -2067,12 +2063,12 @@ void rtsp_listen_loop(void) {
       //      conn->thread = rtsp_conversation_thread;
       //      conn->stop = 0; // record's memory has been zeroed
       //      conn->authorized = 0; // record's memory has been zeroed
-      
       ret = pthread_create(&conn->thread, NULL, rtsp_conversation_thread_func,
                            conn); // also acts as a memory barrier
       if (ret)
         die("Failed to create RTSP receiver thread %d!",conn->connection_number);
       debug(1,"Successfully created RTSP receiver thread %d.",conn->connection_number);
+      conn->running = 1; // this must happen before the thread is tracked
       track_thread(conn);
     }
   }

@@ -443,7 +443,7 @@ static void init_buffer(rtsp_conn_info *conn) {
   ab_resync(conn);
 }
 
-static void free_buffer(rtsp_conn_info *conn) {
+static void free_audio_buffers(rtsp_conn_info *conn) {
   int i;
   for (i = 0; i < BUFFER_FRAMES; i++)
     free(conn->audio_buffer[i].data);
@@ -2164,7 +2164,10 @@ static void *player_thread_func(void *arg) {
   debug(1, "audio thread joined");
   pthread_join(rtp_control_thread, NULL);
   debug(1, "control thread joined");
-  free_buffer(conn);
+  clear_reference_timestamp(conn);
+  conn->rtp_running = 0;
+
+  free_audio_buffers(conn);
   terminate_decoders(conn);
   // remove flow control and mutexes
   rc = pthread_cond_destroy(&conn->flowcontrol);
@@ -2179,6 +2182,7 @@ static void *player_thread_func(void *arg) {
   rc = pthread_mutex_destroy(&conn->vol_mutex);
   if (rc)
     debug(1, "Error destroying vol_mutex variable.");
+  
   debug(1, "Player thread exit");
   if (outbuf)
     free(outbuf);
@@ -2453,14 +2457,16 @@ int player_play(pthread_t *player_thread, rtsp_conn_info *conn) {
 }
 
 void player_stop(pthread_t *player_thread, rtsp_conn_info *conn) {
-  // if (*thread==NULL)
-  //	debug(1,"Trying to stop a non-existent player thread");
-  // else {
-  conn->player_thread_please_stop = 1;
-  pthread_cond_signal(&conn->flowcontrol); // tell it to give up
-  pthread_join(*player_thread, NULL);
+  if (player_thread) {
+		conn->player_thread_please_stop = 1;
+		pthread_cond_signal(&conn->flowcontrol); // tell it to give up
+		pthread_join(*player_thread, NULL);
 #ifdef CONFIG_METADATA
-  send_ssnc_metadata('pend', NULL, 0, 1);
+		send_ssnc_metadata('pend', NULL, 0, 1);
 #endif
-  command_stop();
+		command_stop();
+		player_thread = NULL;
+  } else {
+  	debug(1,"Attempting to kill the non-existent player thread of RTSP conversation %d.",conn->connection_number);
+  }
 }
