@@ -1827,8 +1827,9 @@ static void *rtsp_conversation_thread_func(void *pconn) {
 				if ((rtsp_playing()) && (conn->player_thread)) {
 				  debug(1, "Synchronously terminate playing thread of RTSP conversation thread %d.",conn->connection_number);
 					player_stop(conn); // might be less noisy doing this first
+				  debug(1, "Successful termination of playing thread of RTSP conversation thread %d.",conn->connection_number);
 				}
-				debug(1, "Synchronously terminate RTSP conversation thread %d.",conn->connection_number);
+				debug(1, "Request termination of RTSP conversation thread %d.",conn->connection_number);
 				conn->stop = 1;
     	} else {
         debug(1, "rtsp_read_request error %d, packet ignored.", (int)reply);
@@ -1848,7 +1849,7 @@ static void *rtsp_conversation_thread_func(void *pconn) {
   // }
   rtp_terminate(conn);
 	pthread_mutex_unlock(&play_lock);
-  debug(2, "RTSP conversation thread %d terminated.",conn->connection_number);
+  debug(1, "RTSP conversation thread %d terminated.",conn->connection_number);
   //  please_shutdown = 0;
   conn->running = 0;
   return NULL;
