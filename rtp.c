@@ -152,7 +152,7 @@ void *rtp_audio_receiver(void *arg) {
     warn("Audio receiver -- Unknown RTP packet of type 0x%02X length %d.", type, nread);
   }
 
-  debug(1, "Audio receiver -- Server RTP thread interrupted. terminating.");
+  debug(3, "Audio receiver -- Server RTP thread interrupted. terminating.");
   close(conn->audio_socket);
 
   return NULL;
@@ -251,13 +251,13 @@ void *rtp_control_receiver(void *arg) {
         player_put_packet(seqno, timestamp, pktp, plen, conn);
         continue;
       } else {
-        debug(1, "Too-short retransmitted audio packet received in control port, ignored.");
+        debug(3, "Too-short retransmitted audio packet received in control port, ignored.");
       }
     } else
-      debug(1, "Control Port -- Unknown RTP packet of type 0x%02X length %d.", packet[1], nread);
+      debug(1, "Control Port -- Unknown RTP packet of type 0x%02X length %d, ignored.", packet[1], nread);
   }
 
-  debug(1, "Control RTP thread interrupted. terminating.");
+  debug(3, "Control RTP thread interrupted. terminating.");
   close(conn->control_socket);
 
   return NULL;
@@ -315,7 +315,7 @@ void *rtp_timing_sender(void *arg) {
     else
       sleep(3);
   }
-  debug(1, "rtp_timing_sender thread interrupted. terminating.");
+  debug(3, "rtp_timing_sender thread interrupted. terminating.");
   return NULL;
 }
 
@@ -519,14 +519,14 @@ void *rtp_timing_receiver(void *arg) {
     }
   }
 
-  debug(1, "Timing thread interrupted. terminating.");
+  debug(3, "Timing thread interrupted. terminating.");
   conn->timing_sender_stop = 1;
   void *retval;
   pthread_kill(timer_requester, SIGUSR1);
-  debug(1, "Wait for timer requester to exit.");
+  debug(3, "Wait for timer requester to exit.");
   pthread_join(timer_requester, &retval);
-  debug(1, "Closed and terminated timer requester thread.");
-  debug(1, "Timing RTP thread terminated.");
+  debug(3, "Closed and terminated timer requester thread.");
+  debug(3, "Timing RTP thread terminated.");
   close(conn->timing_socket);
 
   return NULL;

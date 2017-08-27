@@ -1084,7 +1084,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
     if (do_wait == 0)
       if ((conn->ab_synced != 0) && (conn->ab_read == conn->ab_write)) { // the buffer is empty!
         if (notified_buffer_empty == 0) {
-          debug(1, "Buffers exhausted.");
+          debug(3, "Buffers exhausted.");
           notified_buffer_empty = 1;
         }
         do_wait = 1;
@@ -2160,11 +2160,11 @@ static void *player_thread_func(void *arg) {
   pthread_kill(rtp_control_thread, SIGUSR1);
   pthread_kill(rtp_timing_thread, SIGUSR1);
   pthread_join(rtp_timing_thread, NULL);
-  debug(1, "timing thread joined");
+  debug(3, "timing thread joined");
   pthread_join(rtp_audio_thread, NULL);
-  debug(1, "audio thread joined");
+  debug(3, "audio thread joined");
   pthread_join(rtp_control_thread, NULL);
-  debug(1, "control thread joined");
+  debug(3, "control thread joined");
   clear_reference_timestamp(conn);
   conn->rtp_running = 0;
 
@@ -2473,6 +2473,6 @@ void player_stop(rtsp_conn_info *conn) {
 		free(conn->player_thread);
 		conn->player_thread = NULL;
   } else {
-  	debug(1,"player thread of RTSP conversation %d is already deleted.",conn->connection_number);
+  	debug(3,"player thread of RTSP conversation %d is already deleted.",conn->connection_number);
   }
 }
