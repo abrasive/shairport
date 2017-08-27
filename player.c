@@ -707,14 +707,15 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
     // config.timeout of zero means don't check..., but iTunes may be confused by a long gap
     // followed by a resumption...
 
-    if ((conn->time_of_last_audio_packet != 0) && (conn->shutdown_requested == 0) &&
+    if ((conn->time_of_last_audio_packet != 0) && (conn->stop == 0) &&
         (config.dont_check_timeout == 0)) {
       uint64_t ct = config.timeout; // go from int to 64-bit int
+//      if (conn->packet_count>500) { //for testing -- about 4 seconds of play first
       if ((local_time_now > conn->time_of_last_audio_packet) &&
           (local_time_now - conn->time_of_last_audio_packet >= ct << 32)) {
-        debug(1, "As Yeats almost said, \"Too long a silence / can make a stone of the heart\"");
-        rtsp_request_shutdown_stream();
-        conn->shutdown_requested = 1;
+        debug(1, "As Yeats almost said, \"Too long a silence / can make a stone of the heart\" from RTSP conversation %d.",conn->connection_number);
+        conn->stop = 1;
+        pthread_kill(conn->thread, SIGUSR1);
       }
     }
     int rco = get_requested_connection_state_to_output();
@@ -1461,7 +1462,7 @@ static void *player_thread_func(void *arg) {
   conn->play_number_after_flush = 0;
   //  int last_timestamp = 0; // for debugging only
   conn->time_of_last_audio_packet = 0;
-  conn->shutdown_requested = 0;
+  // conn->shutdown_requested = 0;
   number_of_statistics = oldest_statistic = newest_statistic = 0;
   tsum_of_sync_errors = tsum_of_corrections = tsum_of_insertions_and_deletions = tsum_of_drifts = 0;
 

@@ -243,38 +243,10 @@ int pc_queue_get_item(pc_queue *the_queue, void *the_stuff) {
 
 void ask_other_rtsp_conversation_threads_to_stop(pthread_t except_this_thread);
 
-// determine if we are the currently playing thread
-static inline int rtsp_playing(void) {
-  if (pthread_mutex_trylock(&play_lock)) {
-    // if playing_mutex is locked...
-    // return 0 if the threads are different, non-zero if the threads are the same
-    return pthread_equal(playing_conn->thread, pthread_self());
-  } else {
-    // you actually acquired the playing_mutex, implying that there is no currently playing thread
-    // so unlock it return 0, implying you are not playing
-    pthread_mutex_unlock(&play_lock);
-    return 0;
-  }
-}
-
 void rtsp_request_shutdown_stream(void) {
   debug(1, "Request to shut down all rtsp conversation threads");
   ask_other_rtsp_conversation_threads_to_stop(0); // i.e. ask all playing threads to stop
 }
-
-// static void rtsp_take_player(void) {
-//  if (rtsp_playing())
-//    return;
-
-//  if (pthread_mutex_trylock(&playing_mutex)) {
-//    debug(1, "Request to all other playing threads to stop.");
-//    ask_other_rtsp_conversation_threads_to_stop(
-//        pthread_self()); // all threads apart from self
-//    pthread_mutex_lock(&playing_mutex);
-//  }
-//  playing_thread =
-//      pthread_self(); // make us the currently-playing thread (why?)
-//}
 
 // keep track of the threads we have spawned so we can join() them
 static int nconns = 0;
@@ -666,23 +638,24 @@ static void handle_options(rtsp_conn_info *conn, rtsp_message *req, rtsp_message
 
 static void handle_teardown(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
   debug(3, "Connection %d: TEARDOWN",conn->connection_number);
-  if (!rtsp_playing())
-    debug(1, "This RTSP connection thread (%d) doesn't think it's playing, but "
-             "it's sending a response to teardown anyway",conn->connection_number);
+  //if (!rtsp_playing())
+  //  debug(1, "This RTSP connection thread (%d) doesn't think it's playing, but "
+  //           "it's sending a response to teardown anyway",conn->connection_number);
   resp->respcode = 200;
   msg_add_header(resp, "Connection", "close");
   
 	debug(1, "TEARDOWN: synchronously terminating the player thread of RTSP conversation thread %d (2).",conn->connection_number);
-	if (rtsp_playing()) {
-		player_stop(conn); // might be less noisy doing this first
-	}
+	//if (rtsp_playing()) {
+		player_stop(conn);
+		debug(1, "TEARDOWN: successful termination of playing thread of RTSP conversation thread %d.",conn->connection_number);
+	//}
 }
 
 static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
   debug(3, "Connection %d: FLUSH",conn->connection_number);
-  if (!rtsp_playing())
-    debug(1, "This RTSP conversation thread (%d) doesn't think it's playing, but "
-             "it's sending a response to flush anyway",conn->connection_number);
+//  if (!rtsp_playing())
+//    debug(1, "This RTSP conversation thread (%d) doesn't think it's playing, but "
+ //            "it's sending a response to flush anyway",conn->connection_number);
   char *p = NULL;
   uint32_t rtptime = 0;
   char *hdr = msg_get_header(req, "RTP-Info");
@@ -704,7 +677,7 @@ static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
   else
     send_metadata('ssnc', 'flsr', NULL, 0, NULL, 0);
 #endif
-  player_flush(rtptime, conn);
+  player_flush(rtptime, conn); // will not crash even it there is no player thread.
   resp->respcode = 200;
 }
 
@@ -847,7 +820,8 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
   return;
 
 error:
-  warn("Error in setup request.");
+  warn("Error in setup request -- unlocking play lock on RTSP conversation thread %d.",conn->connection_number);
+  playing_conn = NULL;
   pthread_mutex_unlock(&play_lock);
   resp->respcode = 451; // invalid arguments
 }
@@ -1401,7 +1375,7 @@ static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_m
 }
 
 static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
-  debug(3,"Connection %d: ANNOUNCE",conn->connection_number);
+  debug(1,"Connection %d: ANNOUNCE",conn->connection_number);
   int have_the_player = 0;
 
   // interrupt session if permitted
@@ -1439,6 +1413,7 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
 
   if (have_the_player) {
     playing_conn = conn;  // the present connection is now playing
+    debug(1,"RTSP conversation thread %d has acquired play lock.",conn->connection_number);
     resp->respcode = 456; // 456 - Header Field Not Valid for Resource
     char *paesiv = NULL;
     char *prsaaeskey = NULL;
@@ -1537,6 +1512,8 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
 
 out:
   if (resp->respcode != 200 && resp->respcode != 453) {
+    debug(1,"Error in handling ANNOUNCE on conversation thread %d. Unlocking the play lock.",conn->connection_number);
+    playing_conn = NULL;
     pthread_mutex_unlock(&play_lock);
   }
 }
@@ -1823,12 +1800,9 @@ static void *rtsp_conversation_thread_func(void *pconn) {
     } else {
     	if ((reply==rtsp_read_request_response_immediate_shutdown_requested) ||
     		(reply==rtsp_read_request_response_channel_closed)) {
-
-				if ((rtsp_playing()) && (conn->player_thread)) {
-				  debug(1, "Synchronously terminate playing thread of RTSP conversation thread %d.",conn->connection_number);
-					player_stop(conn); // might be less noisy doing this first
-				  debug(1, "Successful termination of playing thread of RTSP conversation thread %d.",conn->connection_number);
-				}
+        debug(1, "Synchronously terminate playing thread of RTSP conversation thread %d.",conn->connection_number);
+        player_stop(conn);
+        debug(1, "Successful termination of playing thread of RTSP conversation thread %d.",conn->connection_number);
 				debug(1, "Request termination of RTSP conversation thread %d.",conn->connection_number);
 				conn->stop = 1;
     	} else {
@@ -1841,14 +1815,12 @@ static void *rtsp_conversation_thread_func(void *pconn) {
     close(conn->fd);
   if (auth_nonce)
     free(auth_nonce);
-  //    pthread_mutex_unlock(&playing_mutex);
-  // usleep(1000000);
-  //  } // else {
-  // debug(1, "This RTSP conversation thread doesn't think it's playing for a "
-  //         "close RTSP connection.");
-  // }
   rtp_terminate(conn);
-	pthread_mutex_unlock(&play_lock);
+  if (playing_conn==conn) {
+    debug(1,"Unlocking play lock on RTSP conversation thread %d.",conn->connection_number);
+    playing_conn = NULL;
+    pthread_mutex_unlock(&play_lock);
+	}
   debug(1, "RTSP conversation thread %d terminated.",conn->connection_number);
   //  please_shutdown = 0;
   conn->running = 0;

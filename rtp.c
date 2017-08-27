@@ -290,7 +290,7 @@ void *rtp_timing_sender(void *arg) {
     // debug(1,"Send a timing request");
 
     if (!conn->rtp_running)
-      die("rtp_timing_sender called without active stream!");
+      debug(1,"rtp_timing_sender called without active stream in RTSP conversation thread %d!",conn->connection_number);
 
     // debug(1, "Requesting ntp timestamp exchange.");
 
@@ -639,8 +639,8 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
   inet_ntop(conn->connection_ip_family, self_addr, conn->self_ip_string,
             sizeof(conn->self_ip_string));
 
-  debug(1, "Set up play connection from %s to self at %s.", conn->client_ip_string,
-        conn->self_ip_string);
+  debug(1, "Set up play connection from %s to self at %s on RTSP conversation thread %d.", conn->client_ip_string,
+        conn->self_ip_string, conn->connection_number);
 
   // set up a the record of the remote's control socket
   struct addrinfo hints;

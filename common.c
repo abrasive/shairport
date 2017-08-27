@@ -103,7 +103,7 @@ void die(const char *format, ...) {
   va_start(args, format);
   vsprintf(s, format, args);
   va_end(args);
-  daemon_log(LOG_EMERG, "%s", s);
+  daemon_log(LOG_EMERG, "fatal error: %s", s);
   shairport_shutdown();
   exit(1);
 }
