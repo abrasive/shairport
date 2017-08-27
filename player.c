@@ -135,10 +135,10 @@ int64_t monotonic_timestamp(uint32_t timestamp, rtsp_conn_info *conn) {
   return_value += timestamp;
   if (previous_value > return_value) {
     if ((previous_value - return_value) > conn->maximum_timestamp_interval)
-      debug(1, "interval between successive rtptimes greater than allowed!");
+      debug(2, "interval between successive rtptimes greater than allowed!");
   } else {
     if ((return_value - previous_value) > conn->maximum_timestamp_interval)
-      debug(1, "interval between successive rtptimes greater than allowed!");
+      debug(2, "interval between successive rtptimes greater than allowed!");
   }
   if (return_value < 0)
     debug(1, "monotonic rtptime is negative!");
@@ -2154,7 +2154,7 @@ static void *player_thread_func(void *arg) {
     config.output->stop();
   usleep(100000); // allow this time to (?) allow the alsa subsystem to finish cleaning up after
                   // itself. 50 ms seems too short
-  debug(1, "Shut down audio, control and timing threads");
+  debug(2, "Shut down audio, control and timing threads");
   conn->please_stop = 1;
   pthread_kill(rtp_audio_thread, SIGUSR1);
   pthread_kill(rtp_control_thread, SIGUSR1);
