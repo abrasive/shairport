@@ -1,5 +1,5 @@
 [Unit]
-Description=Shairport Sync AirPlay Receiver
+Description=Shairport Sync - AirPlay Audio Receiver
 After=sound.target
 Requires=avahi-daemon.service
 After=avahi-daemon.service
