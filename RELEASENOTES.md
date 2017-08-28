@@ -1,3 +1,9 @@
+Version 3.2d3
+====
+
+**Bug Fixes**
+* Fix handling of player lock, simplify and improve handling of loss of connection, improve some debug messages. This all folllows on from the change to protocol handling in 3.2d0, which has simplified and clarified a number of situations.
+
 Version 3.2d1
 ====
 
