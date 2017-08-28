@@ -1821,7 +1821,7 @@ static void *rtsp_conversation_thread_func(void *pconn) {
     playing_conn = NULL;
     pthread_mutex_unlock(&play_lock);
 	}
-  debug(3, "RTSP conversation thread %d terminated.",conn->connection_number);
+  debug(1, "RTSP conversation thread %d terminated.",conn->connection_number);
   //  please_shutdown = 0;
   conn->running = 0;
   return NULL;

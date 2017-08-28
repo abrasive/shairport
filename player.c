@@ -2184,7 +2184,7 @@ static void *player_thread_func(void *arg) {
   if (rc)
     debug(1, "Error destroying vol_mutex variable.");
   
-  debug(1, "Player thread exit");
+  debug(1, "Player thread exit on RTSP conversation thread %d.",conn->connection_number);
   if (outbuf)
     free(outbuf);
   if (silence)
