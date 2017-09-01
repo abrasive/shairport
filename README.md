@@ -258,7 +258,7 @@ $sudo systemctl enable shairport-sync
 
 **Complete installation into a System V system**
 
-If you have chosen the `--with-systemd` configuration option, enter:
+If you have chosen the `--with-systemv` configuration option, enter:
 ```
 $sudo update-rc.d shairport-sync defaults 90 10
 ```
