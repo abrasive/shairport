@@ -994,6 +994,9 @@ int main(int argc, char **argv) {
     endianness = SS_BIG_ENDIAN;
   else
     die("Can not recognise the endianness of the processor.");
+    
+  // set non-zero / non-NULL default values here
+  // but note that audio back ends also have a chance to set defaults
 
   strcpy(configuration_file_path, SYSCONFDIR);
   // strcat(configuration_file_path, "/shairport-sync"); // thinking about adding a special
