@@ -1,3 +1,9 @@
+Version 3.2d4
+====
+
+**Change of Default**
+* The default value for the `alsa` setting `mute_using_playback_switch` has been change to `"no"` for compatability with other audio players on the same machine. The reason is that when this setting is set to `"yes"`, the output device will be muted when Shairport Sync releases it. Unfortunately, other audio players using the output device expect it to be unmuted, causing problems. Thanks to [Tim Curtis](https://github.com/moodeaudio) at [Moode Audio](http://moodeaudio.org) and [Peter Pablo](https://github.com/PeterPablo) for clarifying the issue.
+
 Version 3.2d3
 ====
 
