@@ -1025,10 +1025,12 @@ void metadata_create(void) {
       metadata_sockaddr.sin_family = AF_INET;
       metadata_sockaddr.sin_addr.s_addr = inet_addr(config.metadata_sockaddr);
       metadata_sockaddr.sin_port = htons(config.metadata_sockport);
-      if (!(metadata_sockmsg = malloc(config.metadata_sockmsglength))) {
+      metadata_sockmsg = malloc(config.metadata_sockmsglength);
+      if (metadata_sockmsg) {
+        memset(metadata_sockmsg, 0, config.metadata_sockmsglength);
+      } else {
         die("Could not malloc metadata socket buffer");
       }
-      memset(metadata_sockmsg, 0, config.metadata_sockmsglength);
     }
   }
 
@@ -1550,6 +1552,8 @@ static void apple_challenge(int fd, rtsp_message *req, rtsp_message *resp) {
 
   int chall_len;
   uint8_t *chall = base64_dec(hdr, &chall_len);
+  if (chall==NULL) 
+    die("null chall in apple_challenge");
   uint8_t buf[48], *bp = buf;
   int i;
   memset(buf, 0, sizeof(buf));
@@ -1586,7 +1590,8 @@ static void apple_challenge(int fd, rtsp_message *req, rtsp_message *resp) {
 
   uint8_t *challresp = rsa_apply(buf, buflen, &resplen, RSA_MODE_AUTH);
   char *encoded = base64_enc(challresp, resplen);
-
+  if (encoded==NULL)
+    die("could not allocate memory for \"encoded\"");
   // strip the padding.
   char *padding = strchr(encoded, '=');
   if (padding)

@@ -94,7 +94,8 @@ public:
         _size = size;
       }
     }
-    setZero();
+    if (_data)
+      setZero();   
   }
 
   size_t size() const

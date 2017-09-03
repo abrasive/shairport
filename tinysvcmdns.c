@@ -91,7 +91,10 @@ uint8_t *dup_label(const uint8_t *label) {
   if (len > 63)
     return NULL;
   uint8_t *newlabel = malloc(len + 1);
-  strncpy((char *)newlabel, (char *)label, len);
+  if (newlabel)
+    strncpy((char *)newlabel, (char *)label, len);
+  else
+    die("could not allocate memory for \"newlabel\" in tinysvcmdns");
   newlabel[len] = '\0';
   return newlabel;
 }
@@ -106,9 +109,13 @@ uint8_t *join_nlabel(const uint8_t *n1, const uint8_t *n2) {
   len2 = strlen((char *)n2);
 
   s = malloc(len1 + len2 + 1);
-  strncpy((char *)s, (char *)n1, len1);
-  strncpy((char *)s + len1, (char *)n2, len2);
-  s[len1 + len2] = '\0';
+  if (s) {
+    strncpy((char *)s, (char *)n1, len1);
+    strncpy((char *)s + len1, (char *)n2, len2);
+    s[len1 + len2] = '\0';
+  } else {
+    die("can not allocate memory for \"s\" in tinysvcmdns");
+  }
   return s;
 }
 
@@ -120,17 +127,21 @@ char *nlabel_to_str(const uint8_t *name) {
   assert(name != NULL);
 
   label = labelp = malloc(256);
+  
+  if (label) {
+    for (p = name; *p; p++) {
+      strncpy(labelp, (char *)p + 1, *p);
+      labelp += *p;
+      *labelp = '.';
+      labelp++;
 
-  for (p = name; *p; p++) {
-    strncpy(labelp, (char *)p + 1, *p);
-    labelp += *p;
-    *labelp = '.';
-    labelp++;
+      p += *p;
+    }
 
-    p += *p;
+    *labelp = '\0';
+  } else {
+    die("could not allocate memory for \"label\" in tinysvcmdns.c.");
   }
-
-  *labelp = '\0';
 
   return label;
 }
@@ -169,10 +180,13 @@ uint8_t *create_label(const char *txt) {
     return NULL;
 
   s = malloc(len + 2);
-  s[0] = len;
-  strncpy((char *)s + 1, txt, len);
-  s[len + 1] = '\0';
-
+  if (s) {
+    s[0] = len;
+    strncpy((char *)s + 1, txt, len);
+    s[len + 1] = '\0';
+  } else {
+    die("can not allocate memory for \"s\" 2 in tinysvcmdns.");
+  }
   return s;
 }
 
@@ -383,23 +397,27 @@ struct rr_entry *rr_list_remove(struct rr_list **rr_head, struct rr_entry *rr) {
 // return value of 0 means item not added
 int rr_list_append(struct rr_list **rr_head, struct rr_entry *rr) {
   struct rr_list *node = malloc(sizeof(struct rr_list));
-  node->e = rr;
-  node->next = NULL;
+  if (node) {
+    node->e = rr;
+    node->next = NULL;
 
-  if (*rr_head == NULL) {
-    *rr_head = node;
-  } else {
-    struct rr_list *e = *rr_head, *taile;
-    for (; e; e = e->next) {
-      // already in list - don't add
-      if (e->e == rr) {
-        free(node);
-        return 0;
+    if (*rr_head == NULL) {
+      *rr_head = node;
+    } else {
+      struct rr_list *e = *rr_head, *taile;
+      for (; e; e = e->next) {
+        // already in list - don't add
+        if (e->e == rr) {
+          free(node);
+          return 0;
+        }
+        if (e->next == NULL)
+          taile = e;
       }
-      if (e->next == NULL)
-        taile = e;
+      taile->next = node;
     }
-    taile->next = node;
+  } else {
+    die("can not allocate memory for \"node\" in tinysvcmdns.");
   }
   return 1;
 }
@@ -413,39 +431,59 @@ int rr_list_append(struct rr_list **rr_head, struct rr_entry *rr) {
 
 struct rr_entry *rr_create_a(uint8_t *name, uint32_t addr) {
   DECL_MALLOC_ZERO_STRUCT(rr, rr_entry);
-  FILL_RR_ENTRY(rr, name, RR_A);
-  rr->data.A.addr = addr;
-  rr->ttl = DEFAULT_TTL_FOR_RECORD_WITH_HOSTNAME; // 120 seconds -- see RFC 6762 Section 10
+  if (rr) {
+    FILL_RR_ENTRY(rr, name, RR_A);
+    rr->data.A.addr = addr;
+    rr->ttl = DEFAULT_TTL_FOR_RECORD_WITH_HOSTNAME; // 120 seconds -- see RFC 6762 Section 10
+  } else {
+    die("could not allocate an RR data structure in tinysvcmdns.c.");
+  }
   return rr;
 }
 
 struct rr_entry *rr_create_aaaa(uint8_t *name, struct in6_addr *addr) {
   DECL_MALLOC_ZERO_STRUCT(rr, rr_entry);
-  FILL_RR_ENTRY(rr, name, RR_AAAA);
-  rr->data.AAAA.addr = addr;
-  rr->ttl = DEFAULT_TTL_FOR_RECORD_WITH_HOSTNAME; // 120 seconds -- see RFC 6762 Section 10
+  if (rr) {
+    FILL_RR_ENTRY(rr, name, RR_AAAA);
+    rr->data.AAAA.addr = addr;
+    rr->ttl = DEFAULT_TTL_FOR_RECORD_WITH_HOSTNAME; // 120 seconds -- see RFC 6762 Section 10
+  } else {
+    die("could not allocate an RR 2 data structure in tinysvcmdns.c.");
+  }
   return rr;
 }
 
 struct rr_entry *rr_create_srv(uint8_t *name, uint16_t port, uint8_t *target) {
   DECL_MALLOC_ZERO_STRUCT(rr, rr_entry);
-  FILL_RR_ENTRY(rr, name, RR_SRV);
-  rr->data.SRV.port = port;
-  rr->data.SRV.target = target;
+  if (rr) {
+    FILL_RR_ENTRY(rr, name, RR_SRV);
+    rr->data.SRV.port = port;
+    rr->data.SRV.target = target;
+  } else {
+    die("could not allocate an RR 3 data structure in tinysvcmdns.c.");
+  }
   return rr;
 }
 
 struct rr_entry *rr_create_ptr(uint8_t *name, struct rr_entry *d_rr) {
   DECL_MALLOC_ZERO_STRUCT(rr, rr_entry);
-  FILL_RR_ENTRY(rr, name, RR_PTR);
-  rr->cache_flush = 0; // PTRs shouldn't have their cache flush bit set
-  rr->data.PTR.entry = d_rr;
+  if (rr) {
+    FILL_RR_ENTRY(rr, name, RR_PTR);
+    rr->cache_flush = 0; // PTRs shouldn't have their cache flush bit set
+    rr->data.PTR.entry = d_rr;
+  } else {
+    die("could not allocate an RR 4 data structure in tinysvcmdns.c.");
+  }
   return rr;
 }
 
 struct rr_entry *rr_create(uint8_t *name, enum rr_type type) {
   DECL_MALLOC_ZERO_STRUCT(rr, rr_entry);
-  FILL_RR_ENTRY(rr, name, type);
+  if (rr) {
+    FILL_RR_ENTRY(rr, name, type);
+  } else {
+    die("could not allocate an RR 4 data structure in tinysvcmdns.c.");
+  }
   return rr;
 }
 
@@ -495,12 +533,16 @@ void rr_group_add(struct rr_group **group, struct rr_entry *rr) {
   }
 
   MALLOC_ZERO_STRUCT(g, rr_group);
-  g->name = dup_nlabel(rr->name);
-  rr_list_append(&g->rr, rr);
+  if (g) {
+    g->name = dup_nlabel(rr->name);
+    rr_list_append(&g->rr, rr);
 
-  // prepend to list
-  g->next = *group;
-  *group = g;
+    // prepend to list
+    g->next = *group;
+    *group = g;
+  } else {
+    die("can not allocate memory for \"g\" in tinysvcmdns");
+  }
 }
 
 // finds a rr_group matching the given name
@@ -618,7 +660,10 @@ static size_t mdns_parse_qn(uint8_t *pkt_buf, size_t pkt_len, size_t off, struct
   assert(pkt != NULL);
 
   rr = malloc(sizeof(struct rr_entry));
-  memset(rr, 0, sizeof(struct rr_entry));
+  if (rr)
+    memset(rr, 0, sizeof(struct rr_entry));
+  else
+    die("could not allocate memory for \"rr\" in tinysvcmdns");
 
   name = uncompress_nlabel(pkt_buf, pkt_len, off);
   p += label_len(pkt_buf, pkt_len, off);
@@ -653,7 +698,10 @@ static size_t mdns_parse_rr(uint8_t *pkt_buf, size_t pkt_len, size_t off, struct
     return 0;
 
   rr = malloc(sizeof(struct rr_entry));
-  memset(rr, 0, sizeof(struct rr_entry));
+  if (rr)
+    memset(rr, 0, sizeof(struct rr_entry));
+  else
+    die("could not allocate memory for \"rr (2)\" in tinysvcmdns");
 
   name = uncompress_nlabel(pkt_buf, pkt_len, off);
   p += label_len(pkt_buf, pkt_len, off);
@@ -772,6 +820,9 @@ struct mdns_pkt *mdns_parse_pkt(uint8_t *pkt_buf, size_t pkt_len) {
     return NULL;
 
   MALLOC_ZERO_STRUCT(pkt, mdns_pkt);
+  
+  if (pkt==NULL)
+    die("cannot allocate memory for \"pkt\" in tinysvcmdns.c.");
 
   // parse header
   pkt->id = mdns_read_u16(p);
@@ -1391,7 +1442,10 @@ static void main_loop(struct mdnsd *svr) {
     max_fd = svr->notify_pipe[0];
 
   struct mdns_pkt *mdns_reply = malloc(sizeof(struct mdns_pkt));
-  memset(mdns_reply, 0, sizeof(struct mdns_pkt));
+  if (mdns_reply)
+    memset(mdns_reply, 0, sizeof(struct mdns_pkt));
+  else
+    die("could not allocate memory for \"mdns_reply\" in tinysvcmdns");
 
   while (!svr->stop_flag) {
     FD_ZERO(&sockfd_set);
@@ -1536,12 +1590,18 @@ struct mdns_service *mdnsd_register_svc(struct mdnsd *svr, const char *instance_
   uint8_t *target;
   uint8_t *inst_nlabel, *type_nlabel, *nlabel;
   struct mdns_service *service = malloc(sizeof(struct mdns_service));
-  memset(service, 0, sizeof(struct mdns_service));
-
+  if (service)
+    memset(service, 0, sizeof(struct mdns_service));
+  else
+    die("could not allocate memory for \"service\" in tinysvcmdns");
   // combine service name
   type_nlabel = create_nlabel(type);
   inst_nlabel = create_label(instance_name);
-  nlabel = join_nlabel(inst_nlabel, type_nlabel);
+  if (inst_nlabel) {
+    nlabel = join_nlabel(inst_nlabel, type_nlabel);
+  } else {
+    die("could not allocate memory for \"inst_nlabel\" in tinysvcmdns");  
+  }
 
   // create TXT record
   if (txt && *txt) {
@@ -1603,7 +1663,10 @@ struct mdnsd *mdnsd_start() {
   pthread_attr_t attr;
 
   struct mdnsd *server = malloc(sizeof(struct mdnsd));
-  memset(server, 0, sizeof(struct mdnsd));
+  if (server)
+    memset(server, 0, sizeof(struct mdnsd));
+  else
+    die("could not allocate memory for \"server\" in tinysvcmdns");
 
   if (create_pipe(server->notify_pipe) != 0) {
     log_message(LOG_ERR, "pipe(): %m\n");

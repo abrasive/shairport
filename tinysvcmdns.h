@@ -47,6 +47,7 @@
 
 #define MALLOC_ZERO_STRUCT(x, type)                                                                \
   x = malloc(sizeof(struct type));                                                                 \
+  if (x)                                                                 \
   memset(x, 0, sizeof(struct type));
 
 #define DECL_MALLOC_ZERO_STRUCT(x, type) struct type *MALLOC_ZERO_STRUCT(x, type)

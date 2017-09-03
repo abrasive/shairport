@@ -357,10 +357,13 @@ void alt_stream_write_cb(pa_stream *stream, size_t requested_bytes, void *userda
       bytes_to_fill = bytes_remaining;
 
     pa_stream_begin_write(stream, (void **)&buffer, &bytes_to_fill);
-
-    for (i = 0; i < bytes_to_fill; i += 2) {
-      buffer[i] = (i % 100) * 40 / 100 + 44;
-      buffer[i + 1] = (i % 100) * 40 / 100 + 44;
+    if (buffer) {
+      for (i = 0; i < bytes_to_fill; i += 2) {
+        buffer[i] = (i % 100) * 40 / 100 + 44;
+        buffer[i + 1] = (i % 100) * 40 / 100 + 44;
+      }
+    } else {
+      die("buffer not allocated in alt_stream_write_cb.");
     }
 
     pa_stream_write(stream, buffer, bytes_to_fill, NULL, 0LL, PA_SEEK_RELATIVE);
