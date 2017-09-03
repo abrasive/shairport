@@ -971,6 +971,8 @@ int main(int argc, char **argv) {
   char *basec = strdup(argv[0]);
   char *bname = basename(basec);
   appName = strdup(bname);
+  if (appName==NULL)
+    die("can not allocate memory for the app name!");
   free(basec);
 
   // set defaults

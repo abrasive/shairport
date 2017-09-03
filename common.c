@@ -767,22 +767,26 @@ char *str_replace(const char *string, const char *substr, const char *replacemen
     return strdup(string);
   newstr = strdup(string);
   head = newstr;
-  while ((tok = strstr(head, substr))) {
-    oldstr = newstr;
-    newstr = malloc(strlen(oldstr) - strlen(substr) + strlen(replacement) + 1);
-    /*failed to alloc mem, free old string and return NULL */
-    if (newstr == NULL) {
+  if (head) {
+    while ((tok = strstr(head, substr))) {
+      oldstr = newstr;
+      newstr = malloc(strlen(oldstr) - strlen(substr) + strlen(replacement) + 1);
+      /*failed to alloc mem, free old string and return NULL */
+      if (newstr == NULL) {
+        free(oldstr);
+        return NULL;
+      }
+      memcpy(newstr, oldstr, tok - oldstr);
+      memcpy(newstr + (tok - oldstr), replacement, strlen(replacement));
+      memcpy(newstr + (tok - oldstr) + strlen(replacement), tok + strlen(substr),
+             strlen(oldstr) - strlen(substr) - (tok - oldstr));
+      memset(newstr + strlen(oldstr) - strlen(substr) + strlen(replacement), 0, 1);
+      /* move back head right after the last replacement */
+      head = newstr + (tok - oldstr) + strlen(replacement);
       free(oldstr);
-      return NULL;
     }
-    memcpy(newstr, oldstr, tok - oldstr);
-    memcpy(newstr + (tok - oldstr), replacement, strlen(replacement));
-    memcpy(newstr + (tok - oldstr) + strlen(replacement), tok + strlen(substr),
-           strlen(oldstr) - strlen(substr) - (tok - oldstr));
-    memset(newstr + strlen(oldstr) - strlen(substr) + strlen(replacement), 0, 1);
-    /* move back head right after the last replacement */
-    head = newstr + (tok - oldstr) + strlen(replacement);
-    free(oldstr);
+  } else {
+    die("failed to allocate memory in str_replace.");
   }
   return newstr;
 }
@@ -832,10 +836,14 @@ int ranarraynext;
 
 void ranarrayinit() {
   ranarray = (uint64_t *)malloc(ranarraylength * sizeof(uint64_t));
-  int i;
-  for (i = 0; i < ranarraylength; i++)
-    ranarray[i] = r64u();
-  ranarraynext = 0;
+  if (ranarray) {
+    int i;
+    for (i = 0; i < ranarraylength; i++)
+      ranarray[i] = r64u();
+    ranarraynext = 0;
+  } else {
+    die("failed to allocate space for the ranarray.");
+  }
 }
 
 uint64_t ranarrayval() {

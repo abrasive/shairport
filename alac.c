@@ -998,12 +998,13 @@ void alac_decode_frame(alac_file *alac, unsigned char *inbuffer, void *outbuffer
 
 alac_file *alac_create(int samplesize, int numchannels) {
   alac_file *newfile = malloc(sizeof(alac_file));
-
-  memset(newfile, 0, sizeof(alac_file));
-
-  newfile->samplesize = samplesize;
-  newfile->numchannels = numchannels;
-  newfile->bytespersample = (samplesize / 8) * numchannels;
-
+  if (newfile) {
+    memset(newfile, 0, sizeof(alac_file));
+    newfile->samplesize = samplesize;
+    newfile->numchannels = numchannels;
+    newfile->bytespersample = (samplesize / 8) * numchannels;
+  } else {
+    fprintf(stderr, "FIXME: can not allocate memory for a new file in alac_cxreate."); 
+  }
   return newfile;
 }

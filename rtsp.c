@@ -252,8 +252,12 @@ void rtsp_request_shutdown_stream(void) {
 static int nconns = 0;
 static void track_thread(rtsp_conn_info *conn) {
   conns = realloc(conns, sizeof(rtsp_conn_info *) * (nconns + 1));
-  conns[nconns] = conn;
-  nconns++;
+  if (conns) {
+    conns[nconns] = conn;
+    nconns++;
+  } else {
+    die("could not reallocate memnory for \"conns\" in rtsp.c.");
+  }
 }
 
 static void cleanup_threads(void) {
@@ -329,8 +333,12 @@ static void msg_retain(rtsp_message *msg) {
 
 static rtsp_message *msg_init(void) {
   rtsp_message *msg = malloc(sizeof(rtsp_message));
-  memset(msg, 0, sizeof(rtsp_message));
-  msg->referenceCount = 1; // from now on, any access to this must be protected with the lock
+  if (msg) {
+    memset(msg, 0, sizeof(rtsp_message));
+    msg->referenceCount = 1; // from now on, any access to this must be protected with the lock
+  } else {
+    die("can not allocate memory for an rtsp_message.");
+  }
   return msg;
 }
 
