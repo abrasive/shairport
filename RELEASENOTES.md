@@ -1,3 +1,9 @@
+Version 3.2d5
+====
+
+**Bug Fixes??**
+* Using [infer](https://github.com/facebook/infer/blob/master/README.md), a number of silent issues have been detected, such as not checking some calls to `malloc` to  ensure the response is not NULL. Most of these have been addressed by additional checks.
+
 Version 3.2d4
 ====
 
