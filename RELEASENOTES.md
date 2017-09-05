@@ -1,35 +1,15 @@
-Version 3.2d5
+Version 3.1.2
 ====
 
-**Bug Fixes??**
-* Using [infer](https://github.com/facebook/infer/blob/master/README.md), a number of silent issues have been detected, such as not checking some calls to `malloc` to  ensure the response is not NULL. Most of these have been addressed by additional checks.
-
-Version 3.2d4
-====
+**Pesky Changes You Should Not Ignore**
+* When you update from a previous version of Shairport Sync, your output device may have been left in a muted state. You should use a command line tool like `alsamixer` or `amixer` to unmute the output device before further use.
 
 **Change of Default**
 * The default value for the `alsa` setting `mute_using_playback_switch` has been changed to `"no"` for compatability with other audio players on the same machine. The reason is that when this setting is set to `"yes"`, the output device will be muted when Shairport Sync releases it. Unfortunately, other audio players using the output device expect it to be unmuted, causing problems. Thanks to [Tim Curtis](https://github.com/moodeaudio) at [Moode Audio](http://moodeaudio.org) and [Peter Pablo](https://github.com/PeterPablo) for clarifying the issue.
 
-**Important Note**
-* When you update to the from a previous version of Shairport Sync, your output device may have been left in a muted state. You should use a command line tool like `alsamixer` to unmute the output device before further use. 
-
-Version 3.2d3
-====
-
 **Bug Fixes**
-* Fix handling of player lock, simplify and improve handling of loss of connection, improve some debug messages. This all folllows on from the change to protocol handling in 3.2d0, which has simplified and clarified a number of situations.
-
-Version 3.2d1
-====
-
-**Bug Fixes**
-* There has been a persistent problem with Shairport Sync becoming unavailable after playing, say, a YouTube clip.
-Previously, it has been partially caused by Shairport Sync crashing due to not being written in a thread-safe manner. That's been fixed, so it has stopped crashing, but the non-availability problem has occasionally remained. This may be due a misunderstanding of part of the [unpublished!] AirPlay protocol. Shairport Sync 3.2d1 incorporates an experimental change to how a TEARDOWN request is handled. This seems to fix the non-availability issue. As a bonus, Shairport Sync works properly with SoundCloud in Safari and Chrome on a Mac.
-
-[Update] It's not quite there yet. Some other parts of the code must be adjusted, but it looks very hopeful.
-
-Version 3.2d0 is Version 3.1.1
-====
+* Fixed bugs that made Shairport Sync drop out or become unavailable when playing YouTube videos, SoundCloud streams etc. from the Mac. Background: there has been a persistent problem with Shairport Sync becoming unavailable after playing, say, a YouTube clip in a browser on the Mac. Shairport Sync 3.1.2 incorporates a change to how certain AirPlay messages are handled. Introduced in nascent form in 3.1.1, further follow-on changes have improved the handling of player lock and have simplified and improved the handling of unexpected loss of connection. Shairport Sync also now works properly with SoundCloud clips played in a browser on the Mac.
+* Using [infer](https://github.com/facebook/infer/blob/master/README.md), a number of silent issues have been detected, such as not checking some calls to `malloc` to  ensure the response is not NULL. Most of these have been addressed by additional checks.
 
 Version 3.1.1 
 ====
