@@ -710,10 +710,12 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
     if ((conn->time_of_last_audio_packet != 0) && (conn->stop == 0) &&
         (config.dont_check_timeout == 0)) {
       uint64_t ct = config.timeout; // go from int to 64-bit int
-//      if (conn->packet_count>500) { //for testing -- about 4 seconds of play first
+      //      if (conn->packet_count>500) { //for testing -- about 4 seconds of play first
       if ((local_time_now > conn->time_of_last_audio_packet) &&
           (local_time_now - conn->time_of_last_audio_packet >= ct << 32)) {
-        debug(1, "As Yeats almost said, \"Too long a silence / can make a stone of the heart\" from RTSP conversation %d.",conn->connection_number);
+        debug(1, "As Yeats almost said, \"Too long a silence / can make a stone of the heart\" "
+                 "from RTSP conversation %d.",
+              conn->connection_number);
         conn->stop = 1;
         pthread_kill(conn->thread, SIGUSR1);
       }
@@ -1830,12 +1832,13 @@ static void *player_thread_func(void *arg) {
               } else if ((sync_error < 0) && ((-sync_error) > filler_length)) {
                 // debug(1, "Large negative sync error: %lld. Inserting silence.", sync_error);
                 size_t silence_length = -sync_error;
-                if (silence_length>(filler_length*5))
-                  silence_length = filler_length*5;
-                  
+                if (silence_length > (filler_length * 5))
+                  silence_length = filler_length * 5;
+
                 char *long_silence = malloc(conn->output_bytes_per_frame * silence_length);
                 if (long_silence == NULL)
-                  die("Failed to allocate memory for a long_silence buffer of %d frames.",silence_length);
+                  die("Failed to allocate memory for a long_silence buffer of %d frames.",
+                      silence_length);
                 memset(long_silence, 0, conn->output_bytes_per_frame * silence_length);
                 config.output->play((short *)long_silence, silence_length);
                 free(long_silence);
@@ -2187,8 +2190,8 @@ static void *player_thread_func(void *arg) {
   rc = pthread_mutex_destroy(&conn->vol_mutex);
   if (rc)
     debug(1, "Error destroying vol_mutex variable.");
-  
-  debug(1, "Player thread exit on RTSP conversation thread %d.",conn->connection_number);
+
+  debug(1, "Player thread exit on RTSP conversation thread %d.", conn->connection_number);
   if (outbuf)
     free(outbuf);
   if (silence)
@@ -2440,7 +2443,7 @@ void player_flush(int64_t timestamp, rtsp_conn_info *conn) {
 
 int player_play(rtsp_conn_info *conn) {
   // need to use conn in place of streram below. Need to put the stream as a parameter to he
-  if (conn->player_thread!=NULL)
+  if (conn->player_thread != NULL)
     die("Trying to create a second player thread for this RTSP session");
   if (config.buffer_start_fill > BUFFER_FRAMES)
     die("specified buffer starting fill %d > buffer size %d", config.buffer_start_fill,
@@ -2450,7 +2453,7 @@ int player_play(rtsp_conn_info *conn) {
   send_ssnc_metadata('pbeg', NULL, 0, 1);
 #endif
   pthread_t *pt = malloc(sizeof(pthread_t));
-  if (pt==NULL)
+  if (pt == NULL)
     die("Couldn't allocate space for pthread_t");
   conn->player_thread = pt;
   size_t size = (PTHREAD_STACK_MIN + 256 * 1024);
@@ -2466,17 +2469,17 @@ int player_play(rtsp_conn_info *conn) {
 
 void player_stop(rtsp_conn_info *conn) {
   if (conn->player_thread) {
-		conn->player_thread_please_stop = 1;
-		pthread_cond_signal(&conn->flowcontrol); // tell it to give up
-		pthread_kill(*conn->player_thread, SIGUSR1);
-		pthread_join(*conn->player_thread, NULL);
+    conn->player_thread_please_stop = 1;
+    pthread_cond_signal(&conn->flowcontrol); // tell it to give up
+    pthread_kill(*conn->player_thread, SIGUSR1);
+    pthread_join(*conn->player_thread, NULL);
 #ifdef CONFIG_METADATA
-		send_ssnc_metadata('pend', NULL, 0, 1);
+    send_ssnc_metadata('pend', NULL, 0, 1);
 #endif
-		command_stop();
-		free(conn->player_thread);
-		conn->player_thread = NULL;
+    command_stop();
+    free(conn->player_thread);
+    conn->player_thread = NULL;
   } else {
-  	debug(3,"player thread of RTSP conversation %d is already deleted.",conn->connection_number);
+    debug(3, "player thread of RTSP conversation %d is already deleted.", conn->connection_number);
   }
 }

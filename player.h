@@ -60,7 +60,7 @@ typedef struct {
   int stop;
   int running;
   pthread_t thread;
-  
+
   // pthread_t *ptp;
   pthread_t *player_thread;
 

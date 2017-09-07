@@ -127,7 +127,7 @@ char *nlabel_to_str(const uint8_t *name) {
   assert(name != NULL);
 
   label = labelp = malloc(256);
-  
+
   if (label) {
     for (p = name; *p; p++) {
       strncpy(labelp, (char *)p + 1, *p);
@@ -820,8 +820,8 @@ struct mdns_pkt *mdns_parse_pkt(uint8_t *pkt_buf, size_t pkt_len) {
     return NULL;
 
   MALLOC_ZERO_STRUCT(pkt, mdns_pkt);
-  
-  if (pkt==NULL)
+
+  if (pkt == NULL)
     die("cannot allocate memory for \"pkt\" in tinysvcmdns.c.");
 
   // parse header
@@ -1600,7 +1600,7 @@ struct mdns_service *mdnsd_register_svc(struct mdnsd *svr, const char *instance_
   if (inst_nlabel) {
     nlabel = join_nlabel(inst_nlabel, type_nlabel);
   } else {
-    die("could not allocate memory for \"inst_nlabel\" in tinysvcmdns");  
+    die("could not allocate memory for \"inst_nlabel\" in tinysvcmdns");
   }
 
   // create TXT record

@@ -259,7 +259,7 @@ char *base64_enc(uint8_t *input, int length) {
   BIO_get_mem_ptr(b64, &bptr);
 
   char *buf = (char *)malloc(bptr->length);
-  if (buf==NULL)
+  if (buf == NULL)
     die("could not allocate memory for buf in base64_enc");
   if (bptr->length) {
     memcpy(buf, bptr->data, bptr->length - 1);

@@ -478,10 +478,11 @@ int parse_options(int argc, char **argv) {
           config.packet_stuffing = ST_basic;
         else if (strcasecmp(str, "soxr") == 0)
 #ifdef HAVE_LIBSOXR
-        config.packet_stuffing = ST_soxr;
+          config.packet_stuffing = ST_soxr;
 #else
-        die("The soxr option not available because this version of shairport-sync was built without libsoxr "
-            "support. Change the \"general/interpolation\" setting in the configuration file.");
+          die("The soxr option not available because this version of shairport-sync was built "
+              "without libsoxr "
+              "support. Change the \"general/interpolation\" setting in the configuration file.");
 #endif
         else
           die("Invalid interpolation option choice. It should be \"basic\" or \"soxr\"");
@@ -848,7 +849,8 @@ int parse_options(int argc, char **argv) {
 #ifdef HAVE_LIBSOXR
         config.packet_stuffing = ST_soxr;
 #else
-        die("The soxr option not available because this version of shairport-sync was built without libsoxr "
+        die("The soxr option not available because this version of shairport-sync was built "
+            "without libsoxr "
             "support. Change the -S option setting.");
 #endif
       else
@@ -971,7 +973,7 @@ int main(int argc, char **argv) {
   char *basec = strdup(argv[0]);
   char *bname = basename(basec);
   appName = strdup(bname);
-  if (appName==NULL)
+  if (appName == NULL)
     die("can not allocate memory for the app name!");
   free(basec);
 
@@ -996,7 +998,7 @@ int main(int argc, char **argv) {
     endianness = SS_BIG_ENDIAN;
   else
     die("Can not recognise the endianness of the processor.");
-    
+
   // set non-zero / non-NULL default values here
   // but note that audio back ends also have a chance to set defaults
 

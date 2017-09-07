@@ -254,7 +254,8 @@ void *rtp_control_receiver(void *arg) {
         debug(3, "Too-short retransmitted audio packet received in control port, ignored.");
       }
     } else
-      debug(1, "Control Port -- Unknown RTP packet of type 0x%02X length %d, ignored.", packet[1], nread);
+      debug(1, "Control Port -- Unknown RTP packet of type 0x%02X length %d, ignored.", packet[1],
+            nread);
   }
 
   debug(3, "Control RTP thread interrupted. terminating.");
@@ -290,7 +291,8 @@ void *rtp_timing_sender(void *arg) {
     // debug(1,"Send a timing request");
 
     if (!conn->rtp_running)
-      debug(1,"rtp_timing_sender called without active stream in RTSP conversation thread %d!",conn->connection_number);
+      debug(1, "rtp_timing_sender called without active stream in RTSP conversation thread %d!",
+            conn->connection_number);
 
     // debug(1, "Requesting ntp timestamp exchange.");
 
@@ -639,8 +641,8 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
   inet_ntop(conn->connection_ip_family, self_addr, conn->self_ip_string,
             sizeof(conn->self_ip_string));
 
-  debug(1, "Set up play connection from %s to self at %s on RTSP conversation thread %d.", conn->client_ip_string,
-        conn->self_ip_string, conn->connection_number);
+  debug(1, "Set up play connection from %s to self at %s on RTSP conversation thread %d.",
+        conn->client_ip_string, conn->self_ip_string, conn->connection_number);
 
   // set up a the record of the remote's control socket
   struct addrinfo hints;
@@ -713,7 +715,7 @@ void get_reference_timestamp_stuff(int64_t *timestamp, uint64_t *timestamp_time,
   pthread_mutex_lock(&conn->reference_time_mutex);
   *timestamp = conn->reference_timestamp;
   *timestamp_time = conn->reference_timestamp_time;
-  //if ((*timestamp == 0) && (*timestamp_time == 0)) {
+  // if ((*timestamp == 0) && (*timestamp_time == 0)) {
   //  debug(1,"Reference timestamp is invalid.");
   //}
   *remote_timestamp_time = conn->remote_reference_timestamp_time;

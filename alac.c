@@ -1004,7 +1004,7 @@ alac_file *alac_create(int samplesize, int numchannels) {
     newfile->numchannels = numchannels;
     newfile->bytespersample = (samplesize / 8) * numchannels;
   } else {
-    fprintf(stderr, "FIXME: can not allocate memory for a new file in alac_cxreate."); 
+    fprintf(stderr, "FIXME: can not allocate memory for a new file in alac_cxreate.");
   }
   return newfile;
 }

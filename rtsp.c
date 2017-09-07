@@ -266,9 +266,10 @@ static void cleanup_threads(void) {
   // debug(2, "culling threads.");
   for (i = 0; i < nconns;) {
     if (conns[i]->running == 0) {
-      debug(3, "found RTSP connection thread %d in a non-running state.",conns[i]->connection_number);
+      debug(3, "found RTSP connection thread %d in a non-running state.",
+            conns[i]->connection_number);
       pthread_join(conns[i]->thread, &retval);
-      debug(3, "RTSP connection thread %d deleted...",conns[i]->connection_number);
+      debug(3, "RTSP connection thread %d deleted...", conns[i]->connection_number);
       free(conns[i]);
       nconns--;
       if (nconns)
@@ -467,7 +468,7 @@ static enum rtsp_read_request_response rtsp_read_request(rtsp_conn_info *conn,
   while (msg_size < 0) {
     memory_barrier();
     if (conn->stop != 0) {
-      debug(3, "RTSP conversation thread %d shutdown requested.",conn->connection_number);
+      debug(3, "RTSP conversation thread %d shutdown requested.", conn->connection_number);
       reply = rtsp_read_request_response_immediate_shutdown_requested;
       goto shutdown;
     }
@@ -475,7 +476,7 @@ static enum rtsp_read_request_response rtsp_read_request(rtsp_conn_info *conn,
 
     if (nread == 0) {
       // a blocking read that returns zero means eof -- implies connection closed
-      debug(3, "RTSP conversation thread %d -- connection closed.",conn->connection_number);
+      debug(3, "RTSP conversation thread %d -- connection closed.", conn->connection_number);
       reply = rtsp_read_request_response_channel_closed;
       goto shutdown;
     }
@@ -602,7 +603,7 @@ static void msg_write_response(int fd, rtsp_message *resp) {
 }
 
 static void handle_record(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
-  debug(3,"Connection %d: RECORD",conn->connection_number);
+  debug(3, "Connection %d: RECORD", conn->connection_number);
   resp->respcode = 200;
   // I think this is for telling the client what the absolute minimum latency
   // actually is,
@@ -637,7 +638,7 @@ static void handle_record(rtsp_conn_info *conn, rtsp_message *req, rtsp_message 
 }
 
 static void handle_options(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
-  debug(3, "Connection %d: OPTIONS",conn->connection_number);
+  debug(3, "Connection %d: OPTIONS", conn->connection_number);
   resp->respcode = 200;
   msg_add_header(resp, "Public", "ANNOUNCE, SETUP, RECORD, "
                                  "PAUSE, FLUSH, TEARDOWN, "
@@ -645,25 +646,28 @@ static void handle_options(rtsp_conn_info *conn, rtsp_message *req, rtsp_message
 }
 
 static void handle_teardown(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
-  debug(3, "Connection %d: TEARDOWN",conn->connection_number);
-  //if (!rtsp_playing())
+  debug(3, "Connection %d: TEARDOWN", conn->connection_number);
+  // if (!rtsp_playing())
   //  debug(1, "This RTSP connection thread (%d) doesn't think it's playing, but "
   //           "it's sending a response to teardown anyway",conn->connection_number);
   resp->respcode = 200;
   msg_add_header(resp, "Connection", "close");
-  
-	debug(3, "TEARDOWN: synchronously terminating the player thread of RTSP conversation thread %d (2).",conn->connection_number);
-	//if (rtsp_playing()) {
-		player_stop(conn);
-		debug(3, "TEARDOWN: successful termination of playing thread of RTSP conversation thread %d.",conn->connection_number);
-	//}
+
+  debug(3,
+        "TEARDOWN: synchronously terminating the player thread of RTSP conversation thread %d (2).",
+        conn->connection_number);
+  // if (rtsp_playing()) {
+  player_stop(conn);
+  debug(3, "TEARDOWN: successful termination of playing thread of RTSP conversation thread %d.",
+        conn->connection_number);
+  //}
 }
 
 static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
-  debug(3, "Connection %d: FLUSH",conn->connection_number);
-//  if (!rtsp_playing())
-//    debug(1, "This RTSP conversation thread (%d) doesn't think it's playing, but "
- //            "it's sending a response to flush anyway",conn->connection_number);
+  debug(3, "Connection %d: FLUSH", conn->connection_number);
+  //  if (!rtsp_playing())
+  //    debug(1, "This RTSP conversation thread (%d) doesn't think it's playing, but "
+  //            "it's sending a response to flush anyway",conn->connection_number);
   char *p = NULL;
   uint32_t rtptime = 0;
   char *hdr = msg_get_header(req, "RTP-Info");
@@ -690,7 +694,7 @@ static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
 }
 
 static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
-  debug(3,"Connection %d: SETUP",conn->connection_number);
+  debug(3, "Connection %d: SETUP", conn->connection_number);
   int cport, tport;
   int lsport, lcport, ltport;
   uint32_t active_remote = 0;
@@ -828,14 +832,15 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
   return;
 
 error:
-  warn("Error in setup request -- unlocking play lock on RTSP conversation thread %d.",conn->connection_number);
+  warn("Error in setup request -- unlocking play lock on RTSP conversation thread %d.",
+       conn->connection_number);
   playing_conn = NULL;
   pthread_mutex_unlock(&play_lock);
   resp->respcode = 451; // invalid arguments
 }
 
 static void handle_ignore(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
-  debug(1, "Connection thread %d: IGNORE",conn->connection_number);
+  debug(1, "Connection thread %d: IGNORE", conn->connection_number);
   resp->respcode = 200;
 }
 
@@ -1289,12 +1294,12 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn, rtsp_message *re
 #endif
 
 static void handle_get_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
-  debug(3,"Connection %d: GET_PARAMETER",conn->connection_number);
+  debug(3, "Connection %d: GET_PARAMETER", conn->connection_number);
   resp->respcode = 200;
 }
 
 static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
-  debug(3,"Connection %d: SET_PARAMETER",conn->connection_number);
+  debug(3, "Connection %d: SET_PARAMETER", conn->connection_number);
   // if (!req->contentlength)
   //    debug(1, "received empty SET_PARAMETER request.");
 
@@ -1385,29 +1390,32 @@ static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_m
 }
 
 static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
-  debug(3,"Connection %d: ANNOUNCE",conn->connection_number);
+  debug(3, "Connection %d: ANNOUNCE", conn->connection_number);
   int have_the_player = 0;
 
   // interrupt session if permitted
   if (pthread_mutex_trylock(&play_lock) == 0) {
     have_the_player = 1;
   } else {
-  	if (playing_conn) {
-  		debug(1,"RTSP Conversation thread %d already playing when asked by thread %d.",playing_conn->connection_number,conn->connection_number);
-  	} else {
-  		debug(1,"play_lock locked but no playing_conn.");
-  	}
+    if (playing_conn) {
+      debug(1, "RTSP Conversation thread %d already playing when asked by thread %d.",
+            playing_conn->connection_number, conn->connection_number);
+    } else {
+      debug(1, "play_lock locked but no playing_conn.");
+    }
     if (config.allow_session_interruption == 1) {
       // some other thread has the player ... ask it to relinquish the thread
       if (playing_conn) {
-        debug(1, "ANNOUNCE: playing connection %d being interrupted by connection %d.",playing_conn->connection_number,conn->connection_number);
+        debug(1, "ANNOUNCE: playing connection %d being interrupted by connection %d.",
+              playing_conn->connection_number, conn->connection_number);
         if (playing_conn == conn) {
           debug(1, "ANNOUNCE asking to stop itself.");
         } else {
           playing_conn->stop = 1;
           memory_barrier();
           pthread_kill(playing_conn->thread, SIGUSR1);
-          usleep(1000000); // here, it is possible for other connections to come in and nab the player.
+          usleep(
+              1000000); // here, it is possible for other connections to come in and nab the player.
         }
       } else {
         die("Non existent the_playing_conn with play_lock enabled.");
@@ -1422,8 +1430,8 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
   }
 
   if (have_the_player) {
-    playing_conn = conn;  // the present connection is now playing
-    debug(3,"RTSP conversation thread %d has acquired play lock.",conn->connection_number);
+    playing_conn = conn; // the present connection is now playing
+    debug(3, "RTSP conversation thread %d has acquired play lock.", conn->connection_number);
     resp->respcode = 456; // 456 - Header Field Not Valid for Resource
     char *paesiv = NULL;
     char *prsaaeskey = NULL;
@@ -1502,14 +1510,16 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
 
     char *hdr = msg_get_header(req, "X-Apple-Client-Name");
     if (hdr) {
-      debug(1, "Play connection from device named \"%s\" on RTSP conversation thread %d.", hdr,conn->connection_number);
+      debug(1, "Play connection from device named \"%s\" on RTSP conversation thread %d.", hdr,
+            conn->connection_number);
 #ifdef CONFIG_METADATA
       send_metadata('ssnc', 'snam', hdr, strlen(hdr), req, 1);
 #endif
     }
     hdr = msg_get_header(req, "User-Agent");
     if (hdr) {
-      debug(1, "Play connection from user agent \"%s\" on RTSP conversation thread %d.", hdr,conn->connection_number);
+      debug(1, "Play connection from user agent \"%s\" on RTSP conversation thread %d.", hdr,
+            conn->connection_number);
 #ifdef CONFIG_METADATA
       send_metadata('ssnc', 'snua', hdr, strlen(hdr), req, 1);
 #endif
@@ -1522,7 +1532,8 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
 
 out:
   if (resp->respcode != 200 && resp->respcode != 453) {
-    debug(1,"Error in handling ANNOUNCE on conversation thread %d. Unlocking the play lock.",conn->connection_number);
+    debug(1, "Error in handling ANNOUNCE on conversation thread %d. Unlocking the play lock.",
+          conn->connection_number);
     playing_conn = NULL;
     pthread_mutex_unlock(&play_lock);
   }
@@ -1552,7 +1563,7 @@ static void apple_challenge(int fd, rtsp_message *req, rtsp_message *resp) {
 
   int chall_len;
   uint8_t *chall = base64_dec(hdr, &chall_len);
-  if (chall==NULL) 
+  if (chall == NULL)
     die("null chall in apple_challenge");
   uint8_t buf[48], *bp = buf;
   int i;
@@ -1590,7 +1601,7 @@ static void apple_challenge(int fd, rtsp_message *req, rtsp_message *resp) {
 
   uint8_t *challresp = rsa_apply(buf, buflen, &resplen, RSA_MODE_AUTH);
   char *encoded = base64_enc(challresp, resplen);
-  if (encoded==NULL)
+  if (encoded == NULL)
     die("could not allocate memory for \"encoded\"");
   // strip the padding.
   char *padding = strchr(encoded, '=');
@@ -1775,11 +1786,12 @@ static void *rtsp_conversation_thread_func(void *pconn) {
   char *hdr, *auth_nonce = NULL;
 
   enum rtsp_read_request_response reply;
-  
-  while (conn->stop==0) {
+
+  while (conn->stop == 0) {
     reply = rtsp_read_request(conn, &req);
     if (reply == rtsp_read_request_response_ok) {
-      debug(3, "RTSP thread %d received an RTSP Packet of type \"%s\":",conn->connection_number, req->method),
+      debug(3, "RTSP thread %d received an RTSP Packet of type \"%s\":", conn->connection_number,
+            req->method),
           debug_print_msg_headers(3, req);
       resp = msg_init();
       resp->respcode = 400;
@@ -1803,22 +1815,25 @@ static void *rtsp_conversation_thread_func(void *pconn) {
           }
         }
         if (method_selected == 0)
-          debug(1, "RTSP thread %d: Unrecognised and unhandled rtsp request \"%s\".",conn->connection_number, req->method);
+          debug(1, "RTSP thread %d: Unrecognised and unhandled rtsp request \"%s\".",
+                conn->connection_number, req->method);
       }
-      debug(3, "RTSP thread %d: RTSP Response:",conn->connection_number);
+      debug(3, "RTSP thread %d: RTSP Response:", conn->connection_number);
       debug_print_msg_headers(3, resp);
       msg_write_response(conn->fd, resp);
       msg_free(req);
       msg_free(resp);
     } else {
-    	if ((reply==rtsp_read_request_response_immediate_shutdown_requested) ||
-    		(reply==rtsp_read_request_response_channel_closed)) {
-        debug(3, "Synchronously terminate playing thread of RTSP conversation thread %d.",conn->connection_number);
+      if ((reply == rtsp_read_request_response_immediate_shutdown_requested) ||
+          (reply == rtsp_read_request_response_channel_closed)) {
+        debug(3, "Synchronously terminate playing thread of RTSP conversation thread %d.",
+              conn->connection_number);
         player_stop(conn);
-        debug(3, "Successful termination of playing thread of RTSP conversation thread %d.",conn->connection_number);
-				debug(3, "Request termination of RTSP conversation thread %d.",conn->connection_number);
-				conn->stop = 1;
-    	} else {
+        debug(3, "Successful termination of playing thread of RTSP conversation thread %d.",
+              conn->connection_number);
+        debug(3, "Request termination of RTSP conversation thread %d.", conn->connection_number);
+        conn->stop = 1;
+      } else {
         debug(1, "rtsp_read_request error %d, packet ignored.", (int)reply);
       }
     }
@@ -1829,12 +1844,12 @@ static void *rtsp_conversation_thread_func(void *pconn) {
   if (auth_nonce)
     free(auth_nonce);
   rtp_terminate(conn);
-  if (playing_conn==conn) {
-    debug(3,"Unlocking play lock on RTSP conversation thread %d.",conn->connection_number);
+  if (playing_conn == conn) {
+    debug(3, "Unlocking play lock on RTSP conversation thread %d.", conn->connection_number);
     playing_conn = NULL;
     pthread_mutex_unlock(&play_lock);
-	}
-  debug(1, "RTSP conversation thread %d terminated.",conn->connection_number);
+  }
+  debug(1, "RTSP conversation thread %d terminated.", conn->connection_number);
   //  please_shutdown = 0;
   conn->running = 0;
   return NULL;
@@ -2011,8 +2026,8 @@ void rtsp_listen_loop(void) {
           send_ssnc_metadata('clip', strdup(remote_ip4), strlen(remote_ip4), 1);
           send_ssnc_metadata('svip', strdup(ip4), strlen(ip4), 1);
 #endif
-          debug(1, "New RTSP connection from %s:%u to self at %s:%u on conversation thread %d.", remote_ip4, rport, ip4,
-                tport,conn->connection_number);
+          debug(1, "New RTSP connection from %s:%u to self at %s:%u on conversation thread %d.",
+                remote_ip4, rport, ip4, tport, conn->connection_number);
         }
 #ifdef AF_INET6
         if (local_info->SAFAMILY == AF_INET6) {
@@ -2032,8 +2047,8 @@ void rtsp_listen_loop(void) {
           send_ssnc_metadata('clip', strdup(remote_ip6), strlen(remote_ip6), 1);
           send_ssnc_metadata('svip', strdup(ip6), strlen(ip6), 1);
 #endif
-          debug(1, "New RTSP connection from [%s]:%u to self at [%s]:%u on conversation thread %d.", remote_ip6, rport, ip6,
-                tport,conn->connection_number);
+          debug(1, "New RTSP connection from [%s]:%u to self at [%s]:%u on conversation thread %d.",
+                remote_ip6, rport, ip6, tport, conn->connection_number);
         }
 #endif
 
@@ -2048,8 +2063,8 @@ void rtsp_listen_loop(void) {
       ret = pthread_create(&conn->thread, NULL, rtsp_conversation_thread_func,
                            conn); // also acts as a memory barrier
       if (ret)
-        die("Failed to create RTSP receiver thread %d!",conn->connection_number);
-      debug(3,"Successfully created RTSP receiver thread %d.",conn->connection_number);
+        die("Failed to create RTSP receiver thread %d!", conn->connection_number);
+      debug(3, "Successfully created RTSP receiver thread %d.", conn->connection_number);
       conn->running = 1; // this must happen before the thread is tracked
       track_thread(conn);
     }
