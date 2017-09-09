@@ -1,6 +1,8 @@
 Version 3.1.2
 ====
 
+Shairport Sync is more stable playing audio from YouTube and SoundCloud on the Mac.
+
 **Pesky Changes You Should Not Ignore**
 * When you update from a previous version of Shairport Sync, your output device may have been left in a muted state. You should use a command line tool like `alsamixer` or `amixer` to unmute the output device before further use.
 
