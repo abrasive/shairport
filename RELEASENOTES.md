@@ -1,4 +1,4 @@
-Version 3.1.2rc0
+Version 3.1.2
 ====
 
 **Pesky Changes You Should Not Ignore**
