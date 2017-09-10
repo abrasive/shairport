@@ -9,7 +9,7 @@
 #include "dbus_service.h"
 
 void notify_loudness_filter_active_callback(ShairportSync *skeleton, gpointer user_data) {
-  debug(1,"\"notify_loudness_filter_active_callback\" called with a gpointer of %lx.",(int64_t)user_data);
+  debug(1,"\"notify_loudness_filter_active_callback\" called.");
   if (shairport_sync_get_loudness_filter_active (skeleton)) {
     debug(1,"activating loudness filter");
     config.loudness = 1;

@@ -1,42 +1,22 @@
+#Enable the loudness filter (multiline)
 dbus-send --system --print-reply --dest=org.gnome.ShairportSync /org/gnome/ShairportSync \
 org.freedesktop.DBus.Properties.Set string:"org.gnome.ShairportSync" \
 string:"LoudnessFilterActive" variant:boolean:true
 
 
 
-
+#Here it is in action:
 mike@ubuntu:~/sps$ dbus-send --system --print-reply --dest=org.gnome.ShairportSync /org/gnome/ShairportSync \
 > org.freedesktop.DBus.Properties.Set string:"org.gnome.ShairportSync" \
 > string:"LoudnessFilterActive" variant:boolean:true
 method return time=1505039217.715753 sender=:1.87 -> destination=:1.91 serial=27 reply_serial=2
+
+#Set the Loudness Threshold:
 mike@ubuntu:~/sps$ dbus-send --system --print-reply --dest=org.gnome.ShairportSync /org/gnome/ShairportSync org.freedesktop.DBus.Properties.Set string:"org.gnome.ShairportSync" string:"LoudnessThreshold" variant:double:-10.0
 method return time=1505039378.650185 sender=:1.87 -> destination=:1.92 serial=61 reply_serial=2
+
+#Set the Volume:
 mike@ubuntu:~/sps$ dbus-send --system --print-reply --dest=org.gnome.ShairportSync /org/gnome/ShairportSync org.freedesktop.DBus.Properties.Set string:"org.gnome.ShairportSync" string:"Volume" variant:double:-13.5
 method return time=1505039453.757603 sender=:1.87 -> destination=:1.93 serial=73 reply_serial=2
-mike@ubuntu:~/sps$ dbus-send --system --print-reply --dest=org.gnome.ShairportSync /org/gnome/ShairportSync org.freedesktop.DBus.Properties.Set string:"org.gnome.ShairportSync" string:"Volume" variant:double:-13.5
-method return time=1505039476.152207 sender=:1.87 -> destination=:1.94 serial=75 reply_serial=2
-mike@ubuntu:~/sps$ dbus-send --system --print-reply --dest=org.gnome.ShairportSync /org/gnome/ShairportSync org.freedesktop.DBus.Properties.Set string:"org.gnome.ShairportSync" string:"Volume" variant:double:-10.0
-method return time=1505039495.549155 sender=:1.87 -> destination=:1.95 serial=76 reply_serial=2
-mike@ubuntu:~/sps$ dbus-send --system --print-reply --dest=org.gnome.ShairportSync /org/gnome/ShairportSync org.freedesktop.DBus.Properties.Set string:"org.gnome.ShairportSync" string:"Volume" variant:double:-10.0
-method return time=1505039508.765168 sender=:1.87 -> destination=:1.96 serial=78 reply_serial=2
-mike@ubuntu:~/sps$ dbus-send --system --print-reply --dest=org.gnome.ShairportSync /org/gnome/ShairportSync org.freedesktop.DBus.Properties.Set string:"org.gnome.ShairportSync" string:"Volume" variant:double:-6
-method return time=1505039515.416719 sender=:1.87 -> destination=:1.97 serial=79 reply_serial=2
-mike@ubuntu:~/sps$ dbus-send --system --print-reply --dest=org.gnome.ShairportSync /org/gnome/ShairportSync org.freedesktop.DBus.Properties.Set string:"org.gnome.ShairportSync" string:"Volume" variant:double:-10
-method return time=1505039537.148590 sender=:1.87 -> destination=:1.98 serial=81 reply_serial=2
-mike@ubuntu:~/sps$ dbus-send --system --print-reply --dest=org.gnome.ShairportSync /org/gnome/ShairportSync org.freedesktop.DBus.Properties.Set string:"org.gnome.ShairportSync" string:"Volume" variant:double:0
-method return time=1505039553.095614 sender=:1.87 -> destination=:1.99 serial=83 reply_serial=2
-mike@ubuntu:~/sps$ dbus-send --system --print-reply --dest=org.gnome.ShairportSync /org/gnome/ShairportSync org.freedesktop.DBus.Properties.Set string:"org.gnome.ShairportSync" string:"Volume" variant:double:-30
-method return time=1505039569.235297 sender=:1.87 -> destination=:1.100 serial=85 reply_serial=2
-mike@ubuntu:~/sps$ dbus-send --system --print-reply --dest=org.gnome.ShairportSync /org/gnome/ShairportSync org.freedesktop.DBus.Properties.Set string:"org.gnome.ShairportSync" string:"Volume" variant:double:-29
-method return time=1505039585.083032 sender=:1.87 -> destination=:1.101 serial=87 reply_serial=2
-mike@ubuntu:~/sps$ dbus-send --system --print-reply --dest=org.gnome.ShairportSync /org/gnome/ShairportSync org.freedesktop.DBus.Properties.Set string:"org.gnome.ShairportSync" string:"Volume" variant:double:-20
-method return time=1505039591.981307 sender=:1.87 -> destination=:1.102 serial=89 reply_serial=2
-mike@ubuntu:~/sps$ dbus-send --system --print-reply --dest=org.gnome.ShairportSync /org/gnome/ShairportSync org.freedesktop.DBus.Properties.Set string:"org.gnome.ShairportSync" string:"Volume" variant:double:-15
-method return time=1505039605.035592 sender=:1.87 -> destination=:1.103 serial=91 reply_serial=2
-mike@ubuntu:~/sps$ dbus-send --system --print-reply --dest=org.gnome.ShairportSync /org/gnome/ShairportSync org.freedesktop.DBus.Properties.Set string:"org.gnome.ShairportSync" string:"Volume" variant:double:-144
-method return time=1505039689.227557 sender=:1.87 -> destination=:1.104 serial=93 reply_serial=2
-mike@ubuntu:~/sps$ dbus-send --system --print-reply --dest=org.gnome.ShairportSync /org/gnome/ShairportSync org.freedesktop.DBus.Properties.Set string:"org.gnome.ShairportSync" string:"Volume" variant:double:-143
-method return time=1505039702.614409 sender=:1.87 -> destination=:1.105 serial=95 reply_serial=2
-mike@ubuntu:~/sps$ dbus-send --system --print-reply --dest=org.gnome.ShairportSync /org/gnome/ShairportSync org.freedesktop.DBus.Properties.Set string:"org.gnome.ShairportSync" string:"Volume" variant:double:-10
-method return time=1505039728.154118 sender=:1.87 -> destination=:1.106 serial=97 reply_serial=2
+
 

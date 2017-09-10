@@ -24,6 +24,12 @@ man/Makefile.in
 scripts/shairport-sync.service
 scripts/shairport-sync
 
+#Some dbus files that are automatically generated
+dbus/data/org.gnome.ShairportSync.service
+dbus/src/shairport-sync-dbus-client
+dbus/src/shairportsync.c
+dbus/src/shairportsync.h
+
 # Some eclipse project files
 .cproject
 .project
