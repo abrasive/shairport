@@ -55,6 +55,14 @@
 #include <openssl/md5.h>
 #endif
 
+#if defined(HAVE_DBUS)
+#include <glib.h>
+#endif
+
+#ifdef HAVE_DBUS
+#include "dbus/src/dbus_service.h"
+#endif
+
 #include "common.h"
 #include "mdns.h"
 #include "rtp.h"
@@ -897,6 +905,16 @@ int parse_options(int argc, char **argv) {
   return optind + 1;
 }
 
+#if defined(HAVE_DBUS) || defined (HAVE_MPRIS)
+GMainLoop *loop;
+
+pthread_t dbus_thread;
+void *dbus_thread_func(void *arg) {
+  loop = g_main_loop_new(NULL, FALSE); 
+  g_main_loop_run(loop);
+}
+#endif
+
 void signal_setup(void) {
   // mask off all signals before creating threads.
   // this way we control which thread gets which signals.
@@ -1402,6 +1420,16 @@ int main(int argc, char **argv) {
 #ifdef CONFIG_METADATA
   metadata_init(); // create the metadata pipe if necessary
 #endif
+
+#if defined(HAVE_DBUS)
+  // Start up DBUS services after initial settings are all made
+  debug(1,"Starting up D-Bus services");
+  pthread_create(&dbus_thread, NULL, &dbus_thread_func, NULL);      
+  #ifdef HAVE_DBUS
+    start_dbus_service();
+  #endif  
+#endif
+
   daemon_log(LOG_INFO, "Successful Startup");
   rtsp_listen_loop();
 

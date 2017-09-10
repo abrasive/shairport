@@ -62,6 +62,7 @@
 #include "mdns.h"
 #include "player.h"
 #include "rtp.h"
+#include "rtsp.h"
 
 #ifdef AF_INET6
 #define INETx_ADDRSTRLEN INET6_ADDRSTRLEN
@@ -93,8 +94,6 @@ static pthread_mutex_t reference_counter_lock = PTHREAD_MUTEX_INITIALIZER;
 // static int please_shutdown = 0;
 // static pthread_t playing_thread = 0;
 
-static rtsp_conn_info *playing_conn =
-    NULL; // the data structure representing the connection that has the player.
 static rtsp_conn_info **conns = NULL;
 
 int RTSP_connection_index = 0;
@@ -1878,6 +1877,8 @@ void rtsp_listen_loop(void) {
   int *sockfd = NULL;
   int nsock = 0;
   int i, ret;
+  
+  playing_conn = NULL; // the data structure representing the connection that has the player.
 
   memset(&hints, 0, sizeof(hints));
   hints.ai_family = AF_UNSPEC;

@@ -6,6 +6,7 @@ AC_INIT([shairport-sync], [3.2d6], [mikebrady@eircom.net])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([shairport.c])
 AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_MACRO_DIR([m4])
 
 # Derived from the Avahi configure.ac file
 # Specifying the OS type, defaulting to linux.
@@ -287,6 +288,29 @@ AC_ARG_WITH(dns_sd, [  --with-dns_sd = choose dns_sd mDNS support], [
   AC_SEARCH_LIBS([DNSServiceRefDeallocate], [dns_sd], , AC_MSG_ERROR(dns_sd support requires the dns_sd library!))], )
 AM_CONDITIONAL([USE_DNS_SD], [test "x$HAS_DNS_SD" = "x1"])
 
+# Look for dbus flag
+AC_ARG_WITH(dbus, [  --with-dbus = choose dbus support], [
+  AC_MSG_RESULT(>>Including dbus support)
+  HAS_DBUS=1
+  AC_DEFINE([HAVE_DBUS], 1, [Needed by the compiler.])
+  PKG_CHECK_MODULES([GIO_UNIX], [gio-unix-2.0 >= 2.30.0],[CFLAGS="${GIO_UNIX_CFLAGS} ${CFLAGS}" LIBS="${GIO_UNIX_LIBS} ${LIBS}"])
+  ], )
+AM_CONDITIONAL([USE_DBUS], [test "x$HAS_DBUS" = "x1"])
+
+# Look for dbus test client flag
+AC_ARG_WITH(dbus-test-client, [  --with-dbus-test-client = compile dbus test client], [
+  AC_MSG_RESULT(>>Including dbus test client)
+  HAS_DBUS_CLIENT=1
+  AC_DEFINE([HAVE_DBUS_CLIENT], 1, [Needed by the compiler.])
+  PKG_CHECK_MODULES([GIO_UNIX], [gio-unix-2.0 >= 2.30.0],[CFLAGS="${GIO_UNIX_CFLAGS} ${CFLAGS}" LIBS="${GIO_UNIX_LIBS} ${LIBS}"])
+  ], )
+AM_CONDITIONAL([USE_DBUS_CLIENT], [test "x$HAS_DBUS_CLIENT" = "x1"])
+
+AS_AC_EXPAND(DATADIR, $datadir)
+DBUS_SERVICES_DIR="$DATADIR/dbus-1/services"
+AC_SUBST(DBUS_SERVICES_DIR)
+AC_DEFINE_UNQUOTED(DBUS_SERVICES_DIR, "$DBUS_SERVICES_DIR", [This is where the local services directory for DBUS is located])
+
 if  test "x${with_systemd}" = xyes ; then
   # Find systemd unit dir
   AC_ARG_WITH([systemdsystemunitdir],
@@ -338,6 +362,6 @@ AC_FUNC_ERROR_AT_LINE
 AC_FUNC_FORK
 AC_CHECK_FUNCS([atexit clock_gettime gethostname inet_ntoa memchr memmove memset mkfifo pow select socket stpcpy strcasecmp strchr strdup strerror strstr strtol strtoul])
 
-AC_CONFIG_FILES([Makefile man/Makefile scripts/shairport-sync.service])
+AC_CONFIG_FILES([Makefile man/Makefile dbus/src/Makefile dbus/data/Makefile scripts/shairport-sync.service])
 AC_CONFIG_FILES([scripts/shairport-sync],[chmod +x scripts/shairport-sync])
 AC_OUTPUT

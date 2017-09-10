@@ -165,6 +165,7 @@ int player_play(rtsp_conn_info *conn);
 void player_stop(rtsp_conn_info *conn);
 
 void player_volume(double f, rtsp_conn_info *conn);
+void player_volume_without_notification(double f, rtsp_conn_info *conn);
 void player_flush(int64_t timestamp, rtsp_conn_info *conn);
 void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len,
                        rtsp_conn_info *conn);

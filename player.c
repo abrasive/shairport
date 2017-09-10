@@ -69,6 +69,15 @@
 #include <FFTConvolver/convolver.h>
 #endif
 
+#if defined(HAVE_DBUS)
+#include <glib.h>
+#endif
+
+#ifdef HAVE_DBUS
+#include "dbus/src/dbus_service.h"
+#include "dbus/src/shairportsync.h"
+#endif
+
 #include "common.h"
 #include "player.h"
 #include "rtp.h"
@@ -2204,7 +2213,7 @@ static void *player_thread_func(void *arg) {
 }
 
 // takes the volume as specified by the airplay protocol
-void player_volume(double airplay_volume, rtsp_conn_info *conn) {
+void player_volume_without_notification(double airplay_volume, rtsp_conn_info *conn) {
 
   // The volume ranges -144.0 (mute) or -30 -- 0. See
   // http://git.zx2c4.com/Airtunes2/about/#setting-volume
@@ -2236,7 +2245,6 @@ void player_volume(double airplay_volume, rtsp_conn_info *conn) {
   // Thus, we ask our vol2attn function for an appropriate dB between -96.3 and 0 dB and translate
   // it back to a number.
 
-  command_set_volume(airplay_volume);
 
   int32_t hw_min_db, hw_max_db, hw_range_db, range_to_use, min_db,
       max_db; // hw_range_db is a flag; if 0 means no mixer
@@ -2425,6 +2433,14 @@ void player_volume(double airplay_volume, rtsp_conn_info *conn) {
     send_ssnc_metadata('pvol', dv, strlen(dv), 1);
   }
 #endif
+}
+
+void player_volume(double airplay_volume, rtsp_conn_info *conn) {
+  command_set_volume(airplay_volume); 
+  #ifdef HAVE_DBUS
+  shairport_sync_set_volume(SHAIRPORT_SYNC(skeleton), airplay_volume);
+  #endif  
+  player_volume_without_notification(airplay_volume, conn);
 }
 
 void player_flush(int64_t timestamp, rtsp_conn_info *conn) {
