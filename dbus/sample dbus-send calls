@@ -11,6 +11,11 @@ mike@ubuntu:~/sps$ dbus-send --system --print-reply --dest=org.gnome.ShairportSy
 > string:"LoudnessFilterActive" variant:boolean:true
 method return time=1505039217.715753 sender=:1.87 -> destination=:1.91 serial=27 reply_serial=2
 
+#Get the state of LoudnessFilterActive:
+mike@ubuntu:~/sps$ dbus-send --system --print-reply --dest=org.gnome.ShairportSync /org/gnome/ShairportSync org.freedesktop.DBus.Properties.Get string:"org.gnome.ShairportSync" string:"LoudnessFilterActive"
+method return time=1505047038.024401 sender=:1.131 -> destination=:1.144 serial=34 reply_serial=2
+   variant       boolean true
+
 #Set the Loudness Threshold:
 mike@ubuntu:~/sps$ dbus-send --system --print-reply --dest=org.gnome.ShairportSync /org/gnome/ShairportSync org.freedesktop.DBus.Properties.Set string:"org.gnome.ShairportSync" string:"LoudnessThreshold" variant:double:-10.0
 method return time=1505039378.650185 sender=:1.87 -> destination=:1.92 serial=61 reply_serial=2
@@ -18,5 +23,10 @@ method return time=1505039378.650185 sender=:1.87 -> destination=:1.92 serial=61
 #Set the Volume:
 mike@ubuntu:~/sps$ dbus-send --system --print-reply --dest=org.gnome.ShairportSync /org/gnome/ShairportSync org.freedesktop.DBus.Properties.Set string:"org.gnome.ShairportSync" string:"Volume" variant:double:-13.5
 method return time=1505039453.757603 sender=:1.87 -> destination=:1.93 serial=73 reply_serial=2
+
+#Get the Volume:
+mike@ubuntu:~/sps$ dbus-send --system --print-reply --dest=org.gnome.ShairportSync /org/gnome/ShairportSync org.freedesktop.DBus.Properties.Get string:"org.gnome.ShairportSync" string:"Volume"
+method return time=1505046937.165751 sender=:1.131 -> destination=:1.141 serial=30 reply_serial=2
+   variant       double -13.5
 
 
