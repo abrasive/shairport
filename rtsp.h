@@ -1,6 +1,10 @@
 #ifndef _RTSP_H
 #define _RTSP_H
 
+#include "player.h"
+
+rtsp_conn_info *playing_conn;
+
 void rtsp_listen_loop(void);
 // void rtsp_shutdown_stream(void);
 void rtsp_request_shutdown_stream(void);

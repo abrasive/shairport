@@ -69,6 +69,15 @@
 #include <FFTConvolver/convolver.h>
 #endif
 
+#if defined(HAVE_DBUS)
+#include <glib.h>
+#endif
+
+#ifdef HAVE_DBUS
+#include "dbus/src/dbus_service.h"
+#include "dbus/src/shairportsync.h"
+#endif
+
 #include "common.h"
 #include "player.h"
 #include "rtp.h"
@@ -135,10 +144,10 @@ int64_t monotonic_timestamp(uint32_t timestamp, rtsp_conn_info *conn) {
   return_value += timestamp;
   if (previous_value > return_value) {
     if ((previous_value - return_value) > conn->maximum_timestamp_interval)
-      debug(1, "interval between successive rtptimes greater than allowed!");
+      debug(2, "interval between successive rtptimes greater than allowed!");
   } else {
     if ((return_value - previous_value) > conn->maximum_timestamp_interval)
-      debug(1, "interval between successive rtptimes greater than allowed!");
+      debug(2, "interval between successive rtptimes greater than allowed!");
   }
   if (return_value < 0)
     debug(1, "monotonic rtptime is negative!");
@@ -443,7 +452,7 @@ static void init_buffer(rtsp_conn_info *conn) {
   ab_resync(conn);
 }
 
-static void free_buffer(rtsp_conn_info *conn) {
+static void free_audio_buffers(rtsp_conn_info *conn) {
   int i;
   for (i = 0; i < BUFFER_FRAMES; i++)
     free(conn->audio_buffer[i].data);
@@ -707,14 +716,17 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
     // config.timeout of zero means don't check..., but iTunes may be confused by a long gap
     // followed by a resumption...
 
-    if ((conn->time_of_last_audio_packet != 0) && (conn->shutdown_requested == 0) &&
+    if ((conn->time_of_last_audio_packet != 0) && (conn->stop == 0) &&
         (config.dont_check_timeout == 0)) {
       uint64_t ct = config.timeout; // go from int to 64-bit int
+      //      if (conn->packet_count>500) { //for testing -- about 4 seconds of play first
       if ((local_time_now > conn->time_of_last_audio_packet) &&
           (local_time_now - conn->time_of_last_audio_packet >= ct << 32)) {
-        debug(1, "As Yeats almost said, \"Too long a silence / can make a stone of the heart\"");
-        rtsp_request_shutdown_stream();
-        conn->shutdown_requested = 1;
+        debug(1, "As Yeats almost said, \"Too long a silence / can make a stone of the heart\" "
+                 "from RTSP conversation %d.",
+              conn->connection_number);
+        conn->stop = 1;
+        pthread_kill(conn->thread, SIGUSR1);
       }
     }
     int rco = get_requested_connection_state_to_output();
@@ -1083,7 +1095,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
     if (do_wait == 0)
       if ((conn->ab_synced != 0) && (conn->ab_read == conn->ab_write)) { // the buffer is empty!
         if (notified_buffer_empty == 0) {
-          debug(1, "Buffers exhausted.");
+          debug(3, "Buffers exhausted.");
           notified_buffer_empty = 1;
         }
         do_wait = 1;
@@ -1461,7 +1473,7 @@ static void *player_thread_func(void *arg) {
   conn->play_number_after_flush = 0;
   //  int last_timestamp = 0; // for debugging only
   conn->time_of_last_audio_packet = 0;
-  conn->shutdown_requested = 0;
+  // conn->shutdown_requested = 0;
   number_of_statistics = oldest_statistic = newest_statistic = 0;
   tsum_of_sync_errors = tsum_of_corrections = tsum_of_insertions_and_deletions = tsum_of_drifts = 0;
 
@@ -1509,7 +1521,7 @@ static void *player_thread_func(void *arg) {
              "depth");
   }
   if (conn->fix_volume != 0x10000) {
-    debug(1, "Dithering will be enabled becasuse the output volume is being altered in software");
+    debug(1, "Dithering will be enabled because the output volume is being altered in software");
   }
 
   // we need an intermediate "transition" buffer
@@ -1828,11 +1840,16 @@ static void *player_thread_func(void *arg) {
                 // debug(1, "Large positive sync error: %lld. Dropping the frame.", sync_error);
               } else if ((sync_error < 0) && ((-sync_error) > filler_length)) {
                 // debug(1, "Large negative sync error: %lld. Inserting silence.", sync_error);
-                char *long_silence = malloc(conn->output_bytes_per_frame * (-sync_error));
+                size_t silence_length = -sync_error;
+                if (silence_length > (filler_length * 5))
+                  silence_length = filler_length * 5;
+
+                char *long_silence = malloc(conn->output_bytes_per_frame * silence_length);
                 if (long_silence == NULL)
-                  die("Failed to allocate memory for a long_silence buffer.");
-                memset(long_silence, 0, conn->output_bytes_per_frame * (-sync_error));
-                config.output->play((short *)long_silence, (-sync_error));
+                  die("Failed to allocate memory for a long_silence buffer of %d frames.",
+                      silence_length);
+                memset(long_silence, 0, conn->output_bytes_per_frame * silence_length);
+                config.output->play((short *)long_silence, silence_length);
                 free(long_silence);
               }
             } else {
@@ -2145,7 +2162,7 @@ static void *player_thread_func(void *arg) {
     int elapsedHours = rawSeconds / 3600;
     int elapsedMin = (rawSeconds / 60) % 60;
     int elapsedSec = rawSeconds % 60;
-    inform("Playback Stopped. Total playing time %02d:%02d:%02d\n", elapsedHours, elapsedMin,
+    inform("Playback Stopped. Total playing time %02d:%02d:%02d.", elapsedHours, elapsedMin,
            elapsedSec);
   }
 
@@ -2153,18 +2170,21 @@ static void *player_thread_func(void *arg) {
     config.output->stop();
   usleep(100000); // allow this time to (?) allow the alsa subsystem to finish cleaning up after
                   // itself. 50 ms seems too short
-  debug(1, "Shut down audio, control and timing threads");
+  debug(2, "Shut down audio, control and timing threads");
   conn->please_stop = 1;
   pthread_kill(rtp_audio_thread, SIGUSR1);
   pthread_kill(rtp_control_thread, SIGUSR1);
   pthread_kill(rtp_timing_thread, SIGUSR1);
   pthread_join(rtp_timing_thread, NULL);
-  debug(1, "timing thread joined");
+  debug(3, "timing thread joined");
   pthread_join(rtp_audio_thread, NULL);
-  debug(1, "audio thread joined");
+  debug(3, "audio thread joined");
   pthread_join(rtp_control_thread, NULL);
-  debug(1, "control thread joined");
-  free_buffer(conn);
+  debug(3, "control thread joined");
+  clear_reference_timestamp(conn);
+  conn->rtp_running = 0;
+
+  free_audio_buffers(conn);
   terminate_decoders(conn);
   // remove flow control and mutexes
   rc = pthread_cond_destroy(&conn->flowcontrol);
@@ -2179,7 +2199,8 @@ static void *player_thread_func(void *arg) {
   rc = pthread_mutex_destroy(&conn->vol_mutex);
   if (rc)
     debug(1, "Error destroying vol_mutex variable.");
-  debug(1, "Player thread exit");
+
+  debug(1, "Player thread exit on RTSP conversation thread %d.", conn->connection_number);
   if (outbuf)
     free(outbuf);
   if (silence)
@@ -2192,7 +2213,7 @@ static void *player_thread_func(void *arg) {
 }
 
 // takes the volume as specified by the airplay protocol
-void player_volume(double airplay_volume, rtsp_conn_info *conn) {
+void player_volume_without_notification(double airplay_volume, rtsp_conn_info *conn) {
 
   // The volume ranges -144.0 (mute) or -30 -- 0. See
   // http://git.zx2c4.com/Airtunes2/about/#setting-volume
@@ -2224,7 +2245,6 @@ void player_volume(double airplay_volume, rtsp_conn_info *conn) {
   // Thus, we ask our vol2attn function for an appropriate dB between -96.3 and 0 dB and translate
   // it back to a number.
 
-  command_set_volume(airplay_volume);
 
   int32_t hw_min_db, hw_max_db, hw_range_db, range_to_use, min_db,
       max_db; // hw_range_db is a flag; if 0 means no mixer
@@ -2415,6 +2435,14 @@ void player_volume(double airplay_volume, rtsp_conn_info *conn) {
 #endif
 }
 
+void player_volume(double airplay_volume, rtsp_conn_info *conn) {
+  command_set_volume(airplay_volume); 
+  #ifdef HAVE_DBUS
+  shairport_sync_set_volume(SHAIRPORT_SYNC(skeleton), airplay_volume);
+  #endif  
+  player_volume_without_notification(airplay_volume, conn);
+}
+
 void player_flush(int64_t timestamp, rtsp_conn_info *conn) {
   debug(3, "Flush requested up to %u. It seems as if 0 is special.", timestamp);
   pthread_mutex_lock(&conn->flush_mutex);
@@ -2429,11 +2457,10 @@ void player_flush(int64_t timestamp, rtsp_conn_info *conn) {
 #endif
 }
 
-int player_play(pthread_t *player_thread, rtsp_conn_info *conn) {
-
+int player_play(rtsp_conn_info *conn) {
   // need to use conn in place of streram below. Need to put the stream as a parameter to he
-  // if (*player_thread!=NULL)
-  //	die("Trying to create a second player thread for this RTSP session");
+  if (conn->player_thread != NULL)
+    die("Trying to create a second player thread for this RTSP session");
   if (config.buffer_start_fill > BUFFER_FRAMES)
     die("specified buffer starting fill %d > buffer size %d", config.buffer_start_fill,
         BUFFER_FRAMES);
@@ -2441,26 +2468,34 @@ int player_play(pthread_t *player_thread, rtsp_conn_info *conn) {
 #ifdef CONFIG_METADATA
   send_ssnc_metadata('pbeg', NULL, 0, 1);
 #endif
+  pthread_t *pt = malloc(sizeof(pthread_t));
+  if (pt == NULL)
+    die("Couldn't allocate space for pthread_t");
+  conn->player_thread = pt;
   size_t size = (PTHREAD_STACK_MIN + 256 * 1024);
   pthread_attr_t tattr;
   pthread_attr_init(&tattr);
   int rc = pthread_attr_setstacksize(&tattr, size);
   if (rc)
     debug(1, "Error setting stack size for player_thread: %s", strerror(errno));
-  pthread_create(player_thread, &tattr, player_thread_func, (void *)conn);
+  pthread_create(pt, &tattr, player_thread_func, (void *)conn);
   pthread_attr_destroy(&tattr);
   return 0;
 }
 
-void player_stop(pthread_t *player_thread, rtsp_conn_info *conn) {
-  // if (*thread==NULL)
-  //	debug(1,"Trying to stop a non-existent player thread");
-  // else {
-  conn->player_thread_please_stop = 1;
-  pthread_cond_signal(&conn->flowcontrol); // tell it to give up
-  pthread_join(*player_thread, NULL);
+void player_stop(rtsp_conn_info *conn) {
+  if (conn->player_thread) {
+    conn->player_thread_please_stop = 1;
+    pthread_cond_signal(&conn->flowcontrol); // tell it to give up
+    pthread_kill(*conn->player_thread, SIGUSR1);
+    pthread_join(*conn->player_thread, NULL);
 #ifdef CONFIG_METADATA
-  send_ssnc_metadata('pend', NULL, 0, 1);
+    send_ssnc_metadata('pend', NULL, 0, 1);
 #endif
-  command_stop();
+    command_stop();
+    free(conn->player_thread);
+    conn->player_thread = NULL;
+  } else {
+    debug(3, "player thread of RTSP conversation %d is already deleted.", conn->connection_number);
+  }
 }

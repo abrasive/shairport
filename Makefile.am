@@ -1,13 +1,26 @@
 SUBDIRS = man
 
+if USE_DBUS
+  SUBDIRS += dbus/src dbus/data
+else
+if USE_DBUS_CLIENT
+  SUBDIRS += dbus/src dbus/data
+endif
+endif
+
 bin_PROGRAMS = shairport-sync
+
+if USE_DBUS_CLIENT
+noinst_PROGRAMS = dbus/src/shairport-sync-dbus-client
+endif
+
 shairport_sync_SOURCES = shairport.c rtsp.c mdns.c mdns_external.c common.c rtp.c player.c alac.c audio.c loudness.c
 
-AM_CFLAGS = -Wno-multichar -DSYSCONFDIR=\"$(sysconfdir)\" -O2
+AM_CFLAGS = -Wno-multichar -DSYSCONFDIR=\"$(sysconfdir)\"
 if BUILD_FOR_FREEBSD
   AM_CPPFLAGS = -I/usr/local/include -Wno-multichar -DSYSCONFDIR=\"$(sysconfdir)\" -O2
 else
-  AM_CPPFLAGS = -Wno-multichar -DSYSCONFDIR=\"$(sysconfdir)\" -O2
+  AM_CPPFLAGS = -Wno-multichar -DSYSCONFDIR=\"$(sysconfdir)\"
 endif
 
 if USE_APPLE_ALAC
@@ -70,11 +83,15 @@ endif
 
 if USE_CONVOLUTION
 shairport_sync_SOURCES += FFTConvolver/AudioFFT.cpp FFTConvolver/FFTConvolver.cpp FFTConvolver/Utilities.cpp FFTConvolver/convolver.cpp
-AM_CXXFLAGS = -std=c++11 -O2
+AM_CXXFLAGS = -std=c++11
 endif
 
 if USE_DNS_SD
 shairport_sync_SOURCES += mdns_dns_sd.c
+endif
+
+if USE_DBUS
+shairport_sync_SOURCES += dbus/src/dbus_service.c dbus/src/shairportsync.c
 endif
 
 install-exec-hook:
@@ -82,6 +99,9 @@ if INSTALL_CONFIG_FILES
 	[ -e $(DESTDIR)$(sysconfdir) ] || mkdir $(DESTDIR)$(sysconfdir)
 	cp scripts/shairport-sync.conf $(DESTDIR)$(sysconfdir)/shairport-sync.conf.sample
 	[ -f $(DESTDIR)$(sysconfdir)/shairport-sync.conf ] || cp scripts/shairport-sync.conf $(DESTDIR)$(sysconfdir)/shairport-sync.conf
+if USE_DBUS
+	cp dbus/config/system-bus-policy/shairport-sync.conf $(DESTDIR)$(sysconfdir)/dbus-1/system.d/shairport-sync.conf
+endif
 endif
 if INSTALL_SYSTEMV
 	getent group shairport-sync &>/dev/null || groupadd -r shairport-sync >/dev/null

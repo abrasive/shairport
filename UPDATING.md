@@ -1,13 +1,13 @@
 
 ### Updating Shairport Sync
-This guide is for updating an installation of Shairport Sync you built yourself. If you installed Shairport Sync from a package, these instructions don't apply. 
+This guide is for updating an installation of Shairport Sync. If you installed Shairport Sync from a package, most of these instructions don't apply – please go to the section at the end called "Post Update Tasks"
 
 To do an update, you basically have to go through the whole process of building Shairport Sync again,
 but a few steps are shorter because you've done them before; you won't have to reinstall the build tools or libraries needed, and you won't have to define the user and group or reconfigure the settings in the configuration file.
 
 But before you begin, you should update and upgrade any packages.
 
-Here is the sequence for Raspbian Jessie, which is based on Debian Jessie. The same commands work for Ubuntu, and maybe more. Here, a non-`root` user with `sudo` privileges is assumed.
+Here is the sequence for Raspbian Stretch, which is based on Debian Stretch. The same commands work for Ubuntu, and maybe more. Here, a non-`root` user with `sudo` privileges is assumed.
 
 ```
 $ sudo apt-get update
@@ -52,4 +52,12 @@ Otherwise execute the following command:
 $ sudo service shairport-sync restart
 ```
 
-That's it. Your Shairport Sync should be upgraded now. 
+Your Shairport Sync should be upgraded now. 
+
+### Post Update Tasks
+1 **Unmute the Output Device Mixer** (This applies only if you are using a hardware mixer for volume control.) Certain older versions of Shairport Sync could leave the output device mixer in a muted state after use to minimuse the possibility of noise. However, this is not generally compatible with other audio players using the same device, as they would generally expect the device to be unmuted. Recent versions of Shairport Sync therefore do not use the mute facility by default. When you update Shairport Sync, the output device mixer might have been muted by the previous version, so you should unmute it, using, for instance, the following command:
+```
+$ sudo amixer sset <mixer_name> unmute
+```
+Alternatively you can use `alsamixer`. A muted output has the letter(s) `M` as its value. Select it an type `M` again to unmute. 
+

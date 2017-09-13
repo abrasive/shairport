@@ -55,6 +55,14 @@
 #include <openssl/md5.h>
 #endif
 
+#if defined(HAVE_DBUS)
+#include <glib.h>
+#endif
+
+#ifdef HAVE_DBUS
+#include "dbus/src/dbus_service.h"
+#endif
+
 #include "common.h"
 #include "mdns.h"
 #include "rtp.h"
@@ -477,7 +485,13 @@ int parse_options(int argc, char **argv) {
         if (strcasecmp(str, "basic") == 0)
           config.packet_stuffing = ST_basic;
         else if (strcasecmp(str, "soxr") == 0)
+#ifdef HAVE_LIBSOXR
           config.packet_stuffing = ST_soxr;
+#else
+          die("The soxr option not available because this version of shairport-sync was built "
+              "without libsoxr "
+              "support. Change the \"general/interpolation\" setting in the configuration file.");
+#endif
         else
           die("Invalid interpolation option choice. It should be \"basic\" or \"soxr\"");
       }
@@ -843,8 +857,9 @@ int parse_options(int argc, char **argv) {
 #ifdef HAVE_LIBSOXR
         config.packet_stuffing = ST_soxr;
 #else
-        die("soxr option not available -- this version of shairport-sync was built without libsoxr "
-            "support");
+        die("The soxr option not available because this version of shairport-sync was built "
+            "without libsoxr "
+            "support. Change the -S option setting.");
 #endif
       else
         die("Illegal stuffing option \"%s\" -- must be \"basic\" or \"soxr\"", stuffing);
@@ -889,6 +904,16 @@ int parse_options(int argc, char **argv) {
 
   return optind + 1;
 }
+
+#if defined(HAVE_DBUS) || defined (HAVE_MPRIS)
+GMainLoop *loop;
+
+pthread_t dbus_thread;
+void *dbus_thread_func(void *arg) {
+  loop = g_main_loop_new(NULL, FALSE); 
+  g_main_loop_run(loop);
+}
+#endif
 
 void signal_setup(void) {
   // mask off all signals before creating threads.
@@ -966,6 +991,8 @@ int main(int argc, char **argv) {
   char *basec = strdup(argv[0]);
   char *bname = basename(basec);
   appName = strdup(bname);
+  if (appName == NULL)
+    die("can not allocate memory for the app name!");
   free(basec);
 
   // set defaults
@@ -989,6 +1016,9 @@ int main(int argc, char **argv) {
     endianness = SS_BIG_ENDIAN;
   else
     die("Can not recognise the endianness of the processor.");
+
+  // set non-zero / non-NULL default values here
+  // but note that audio back ends also have a chance to set defaults
 
   strcpy(configuration_file_path, SYSCONFDIR);
   // strcat(configuration_file_path, "/shairport-sync"); // thinking about adding a special
@@ -1390,6 +1420,16 @@ int main(int argc, char **argv) {
 #ifdef CONFIG_METADATA
   metadata_init(); // create the metadata pipe if necessary
 #endif
+
+#if defined(HAVE_DBUS)
+  // Start up DBUS services after initial settings are all made
+  debug(1,"Starting up D-Bus services");
+  pthread_create(&dbus_thread, NULL, &dbus_thread_func, NULL);      
+  #ifdef HAVE_DBUS
+    start_dbus_service();
+  #endif  
+#endif
+
   daemon_log(LOG_INFO, "Successful Startup");
   rtsp_listen_loop();
 

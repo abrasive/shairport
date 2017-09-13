@@ -52,6 +52,7 @@ typedef struct {
 } stream_cfg;
 
 typedef struct {
+  int connection_number; // for debug ID purposes, nothing else...
   int fd;
   int authorized; // set if a password is required and has been supplied
   stream_cfg stream;
@@ -59,7 +60,9 @@ typedef struct {
   int stop;
   int running;
   pthread_t thread;
-  pthread_t player_thread;
+
+  // pthread_t *ptp;
+  pthread_t *player_thread;
 
   abuf_t audio_buffer[BUFFER_FRAMES];
   int max_frames_per_packet, input_num_channels, input_bit_depth, input_rate;
@@ -69,7 +72,6 @@ typedef struct {
   alac_file *decoder_info;
   uint32_t please_stop;
   uint64_t packet_count;
-  int shutdown_requested;
   int connection_state_to_output;
   int player_thread_please_stop;
   int64_t first_packet_time_to_play, time_since_play_started; // nanoseconds
@@ -159,10 +161,11 @@ typedef struct {
 
 } rtsp_conn_info;
 
-int player_play(pthread_t *thread, rtsp_conn_info *conn);
-void player_stop(pthread_t *thread, rtsp_conn_info *conn);
+int player_play(rtsp_conn_info *conn);
+void player_stop(rtsp_conn_info *conn);
 
 void player_volume(double f, rtsp_conn_info *conn);
+void player_volume_without_notification(double f, rtsp_conn_info *conn);
 void player_flush(int64_t timestamp, rtsp_conn_info *conn);
 void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len,
                        rtsp_conn_info *conn);

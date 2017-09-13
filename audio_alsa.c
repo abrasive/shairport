@@ -162,7 +162,7 @@ static int init(int argc, char **argv) {
   // set up default values first
   set_period_size_request = 0;
   set_buffer_size_request = 0;
-  config.alsa_use_playback_switch_for_mute = 1;
+  config.alsa_use_playback_switch_for_mute = 0; // don't use it by default
 
   config.audio_backend_latency_offset = 0;
   config.audio_backend_buffer_desired_length = 0.15;
