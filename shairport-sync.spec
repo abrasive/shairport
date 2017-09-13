@@ -1,5 +1,5 @@
 Name:           shairport-sync
-Version:        3.1
+Version:        3.1.2
 Release:        1%{?dist}
 Summary:        AirTunes emulator. Multi-Room with Audio Synchronisation
 # MIT licensed except for tinysvcmdns under BSD, 
@@ -67,6 +67,25 @@ getent passwd %{name} &> /dev/null || useradd --system -c "%{name} User" \
 %license LICENSES
 
 %changelog
+* Wed Sep 13 2017 Bill Peck <bpeck@redhat.com> 3.1.2-1
+- New upstream release
+- The default value for the alsa setting mute_using_playback_switch has
+  been changed to "no" for compatability with other audio players on the
+  same machine. Because of this you may need to unmute your audio device
+  if you are upgrading from an older release.
+- Fixed bugs that made Shairport Sync drop out or become unavailable when
+  playing YouTube videos, SoundCloud streams etc. from the Mac.
+* Sun Aug 20 2017 Bill Peck <bpeck@redhat.com> 3.1.1-1
+- A bug in the sndio backend has been fixed that caused problems on some
+  versions of Linux.
+- A change has been made to how Shairport Sync responds to a TEARDOWN request,
+  which should make it respond better to sequences of rapid termination and
+  restarting of play sessions. This can happen, for example, playing YouTube
+  videos in Safari or Chrome on a Mac.
+- Choosing soxr interpolation in the configuration file will now cause
+  Shairport Sync to terminate with a message if Shairport Sync has not been
+  compiled with SoX support.
+- Other small changes.
 * Thu Aug 17 2017 Bill Peck <bpeck@redhat.com> 3.1-1
 - new backend offering synchronised PulseAudio support. 
 - new optional loudness and convolution filters
