@@ -893,6 +893,18 @@ int parse_options(int argc, char **argv) {
   free(i2);
   free(i3);
   free(vs);
+  
+  // now, check and calculate the pid directory
+#ifdef USE_CUSTOM_PID_DIR
+  char *use_this_pid_dir = PIDDIR;
+#else
+  char *use_this_pid_dir = "/var/run/shairport-sync";
+#endif
+  // debug(1,"config.piddir \"%s\".",config.piddir);
+  if (config.piddir)
+    use_this_pid_dir = config.piddir;
+  if (use_this_pid_dir)
+    config.computed_piddir = strdup(use_this_pid_dir);
 
   return optind + 1;
 }
@@ -942,16 +954,9 @@ void shairport_startup_complete(void) {
 }
 
 const char *pid_file_proc(void) {
-#ifdef USE_CUSTOM_PID_DIR
-  char *use_this_pid_dir = PIDDIR;
-#else
-  char *use_this_pid_dir = "/var/run/shairport-sync";
-#endif
-  // debug(1,"config.piddir \"%s\".",config.piddir);
-  if (config.piddir)
-    use_this_pid_dir = config.piddir;
+  
   char fn[8192];
-  snprintf(fn, sizeof(fn), "%s/%s.pid", use_this_pid_dir,
+  snprintf(fn, sizeof(fn), "%s/%s.pid", config.computed_piddir,
            daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
   // debug(1,"fn \"%s\".",fn);
   return strdup(fn);
@@ -1192,6 +1197,8 @@ int main(int argc, char **argv) {
 
       /* Create the PID file if required */
       if (config.daemonise_store_pid) {
+        /* Create the PID directory if required -- we don't really care about the result */
+        mkdir(config.computed_piddir, 0700);
         if (daemon_pid_file_create() < 0) {
           daemon_log(LOG_ERR, "Could not create PID file (%s).", strerror(errno));
           daemon_retval_send(2);
