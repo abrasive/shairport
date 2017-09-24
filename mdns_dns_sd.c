@@ -24,8 +24,8 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "mdns.h"
 #include "common.h"
+#include "mdns.h"
 #include <arpa/inet.h>
 #include <dns_sd.h>
 #include <stdlib.h>

@@ -24,8 +24,8 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "mdns.h"
 #include "common.h"
+#include "mdns.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
