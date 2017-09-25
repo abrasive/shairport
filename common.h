@@ -118,7 +118,8 @@ typedef struct {
   int daemonise;
   int daemonise_store_pid; // don't try to save a PID file
   char *piddir;
-  int logOutputLevel; // log output level
+  char *computed_piddir; // the actual pid directory to create, if any
+  int logOutputLevel;    // log output level
   int statistics_requested, use_negotiated_latencies;
   enum playback_mode_type playback_mode;
   char *cmd_start, *cmd_stop, *cmd_set_volume;

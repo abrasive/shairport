@@ -122,6 +122,54 @@ static void sig_connect_audio_output(int foo, siginfo_t *bar, void *baz) {
   set_requested_connection_state_to_output(1);
 }
 
+// The following two functions are adapted slightly and with thanks from Jonathan Leffler's sample
+// code at
+// https://stackoverflow.com/questions/675039/how-can-i-create-directory-tree-in-c-linux
+
+int do_mkdir(const char *path, mode_t mode) {
+  struct stat st;
+  int status = 0;
+
+  if (stat(path, &st) != 0) {
+    /* Directory does not exist. EEXIST for race condition */
+    if (mkdir(path, mode) != 0 && errno != EEXIST)
+      status = -1;
+  } else if (!S_ISDIR(st.st_mode)) {
+    errno = ENOTDIR;
+    status = -1;
+  }
+
+  return (status);
+}
+
+// mkpath - ensure all directories in path exist
+// Algorithm takes the pessimistic view and works top-down to ensure
+// each directory in path exists, rather than optimistically creating
+// the last element and working backwards.
+
+int mkpath(const char *path, mode_t mode) {
+  char *pp;
+  char *sp;
+  int status;
+  char *copypath = strdup(path);
+
+  status = 0;
+  pp = copypath;
+  while (status == 0 && (sp = strchr(pp, '/')) != 0) {
+    if (sp != pp) {
+      /* Neither root nor double slash in path */
+      *sp = '\0';
+      status = do_mkdir(copypath, mode);
+      *sp = '/';
+    }
+    pp = sp + 1;
+  }
+  if (status == 0)
+    status = do_mkdir(path, mode);
+  free(copypath);
+  return (status);
+}
+
 char *get_version_string() {
   char *version_string = malloc(200);
   if (version_string) {
@@ -902,6 +950,18 @@ int parse_options(int argc, char **argv) {
   free(i3);
   free(vs);
 
+// now, check and calculate the pid directory
+#ifdef USE_CUSTOM_PID_DIR
+  char *use_this_pid_dir = PIDDIR;
+#else
+  char *use_this_pid_dir = "/var/run/shairport-sync";
+#endif
+  // debug(1,"config.piddir \"%s\".",config.piddir);
+  if (config.piddir)
+    use_this_pid_dir = config.piddir;
+  if (use_this_pid_dir)
+    config.computed_piddir = strdup(use_this_pid_dir);
+
   return optind + 1;
 }
 
@@ -960,16 +1020,9 @@ void shairport_startup_complete(void) {
 }
 
 const char *pid_file_proc(void) {
-#ifdef USE_CUSTOM_PID_DIR
-  char *use_this_pid_dir = PIDDIR;
-#else
-  char *use_this_pid_dir = "/var/run/shairport-sync";
-#endif
-  // debug(1,"config.piddir \"%s\".",config.piddir);
-  if (config.piddir)
-    use_this_pid_dir = config.piddir;
+
   char fn[8192];
-  snprintf(fn, sizeof(fn), "%s/%s.pid", use_this_pid_dir,
+  snprintf(fn, sizeof(fn), "%s/%s.pid", config.computed_piddir,
            daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
   // debug(1,"fn \"%s\".",fn);
   return strdup(fn);
@@ -1193,10 +1246,23 @@ int main(int argc, char **argv) {
         return 255;
       }
 
-      if (ret != 0)
-        daemon_log(ret != 0 ? LOG_ERR : LOG_INFO, "Daemon returned %i as return value.", ret);
+      switch (ret) {
+      case 0:
+        break;
+      case 1:
+        daemon_log(LOG_ERR,
+                   "daemon failed to launch: could not close open file descriptors after forking.");
+        break;
+      case 2:
+        daemon_log(LOG_ERR, "daemon failed to launch: could not create PID file.");
+        break;
+      case 3:
+        daemon_log(LOG_ERR, "daemon failed to launch: could not create or access PID directory.");
+        break;
+      default:
+        daemon_log(LOG_ERR, "daemon failed to launch, error %i.", ret);
+      }
       return ret;
-
     } else { /* The daemon */
 
       /* Close FDs */
@@ -1210,6 +1276,14 @@ int main(int argc, char **argv) {
 
       /* Create the PID file if required */
       if (config.daemonise_store_pid) {
+        /* Create the PID directory if required -- we don't really care about the result */
+        printf("PID directory is \"%s\".", config.computed_piddir);
+        int result = mkpath(config.computed_piddir, 0700);
+        if ((result != 0) && (result != -EEXIST)) {
+          // error creating or accessing the PID file directory
+          daemon_retval_send(3);
+          goto finish;
+        }
         if (daemon_pid_file_create() < 0) {
           daemon_log(LOG_ERR, "Could not create PID file (%s).", strerror(errno));
           daemon_retval_send(2);
