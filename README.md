@@ -1,6 +1,6 @@
 Shairport Sync
 =============
-Shairport Sync is an AirPlay audio player – it plays audio streamed from iTunes, iOS and macOS devices and AirPlay sources such as Quicktime Player and [ForkedDaapd](http://ejurgensen.github.io/forked-daapd/), among others.
+Shairport Sync is an AirPlay audio player – it plays audio streamed from iTunes, iOS, Apple TV and macOS devices and AirPlay sources such as Quicktime Player and [ForkedDaapd](http://ejurgensen.github.io/forked-daapd/), among others.
 
 Audio played by a Shairport Sync-powered device stays synchronised with the source and hence with similar devices playing the same source. In this way, synchronised multi-room audio is possible for suitable players. (Hence the name Shairport Sync, BTW.)
 
@@ -20,7 +20,7 @@ For more about the motivation behind Shairport Sync, please see the wiki at http
 
 Synchronisation, Latency, "Stuffing"
 ---------
-The AirPlay protocol uses an agreed *latency* – the time difference between the time represented by a sound sample's `timestamp` and the time it is actually played by the audio output device, typically a Digital to Audio Converter (DAC). The latency to be used is specified by the audio source when it negotiates with Shairport Sync. Most sources set a latency of two seconds. Recent versions of iTunes and forkedDaapd use a latency of just over 2.25 seconds. A latency of this length allows AirPlay players to correct for network delays, processing time variations and so on. 
+The AirPlay protocol uses an agreed *latency* – the time difference, or delay, between the time represented by a sound sample's `timestamp` and the time it is actually played by the audio output device, typically a Digital to Audio Converter (DAC). The latency to be used is specified by the audio source when it negotiates with Shairport Sync. Most sources set a latency of two seconds. Recent versions of iTunes and forkedDaapd use a latency of just over 2.25 seconds. A latency of this length allows AirPlay players to correct for network delays, processing time variations and so on. 
 
 As mentioned previously, Shairport Sync implements full audio synchronisation when used with `alsa`, `sndio` or PulseAudio systems. This is done by monitoring the timestamps present in data coming from the audio source and the timing information from the audio system, e.g. `alsa`. To maintain the  latency required for exact synchronisation, if the output device is running slow relative to the source, Shairport Sync will delete frames of audio to allow the device to keep up. If the output device is running fast, Shairport Sync will insert frames to keep time. The number of frames inserted or deleted is so small as to be almost inaudible on normal audio material. Frames are inserted or deleted as necessary at pseudorandom intervals. Alternatively, with `libsoxr` support, Shairport Sync can resample the audio feed to ensure the output device can keep up. This is less obtrusive than insertion and deletion but requires a good deal of processing power — most embedded devices probably can't support it. The process of insertion/deletion or resampling is rather inelegantly called “stuffing”.
 
@@ -50,7 +50,7 @@ Shairport Sync works on a wide variety of Linux devices and FreeBSD. It works on
 
 Shairport Sync will work with PulseAudio, which is installed in many desktop Linuxes. PulseAudio normally runs in the *user mode* but can be configured to run in *system mode*, though this is not recommended. Shairport Sync can work with it in either mode.
 
-Shairport Sync runs well on the Raspberry Pi on USB and I2S cards. It can drive the built-in sound card – see the note below on configuring the Raspberry Pi to make best use of it. 
+Shairport Sync runs well on the Raspberry Pi on USB and I2S cards. It can drive the built-in sound card – see the note below on configuring the Raspberry Pi to make best use of it. It runs well on the Raspberry Pi Zero W with a suitable USB or I2S card.
 
 Shairport Sync runs natively on FreeBSD using the `sndio` sound system.
 
@@ -85,7 +85,7 @@ Note that the installation uses the libao library and so synchronisation is not 
 
 Sincere thanks to all package contributors!
 
-If you wish to build and install the latest version of Shairport Sync on Debian, Ubuntu, Fedora or Arch platforms, please follow the General Build Instructions. When the program has been installed, refer to the section on Configuring Shairport Sync that follows. To build Shairport Sync from sources on FreeBSD please refer to [FREEBSD.md](https://github.com/mikebrady/shairport-sync/blob/master/FREEBSD.md).
+If you wish to build and install the latest version of Shairport Sync on Debian, Ubuntu, Fedora or Arch platforms, please continue to follow these instructions. When the program has been compiled and installed, refer to the section on Configuring Shairport Sync that follows. To build Shairport Sync from sources on FreeBSD please refer to [FREEBSD.md](https://github.com/mikebrady/shairport-sync/blob/master/FREEBSD.md).
 
 **Remove Old Versions Of Shairport Sync**
 
@@ -171,7 +171,7 @@ $ autoreconf -i -f
 
 **Choose the appropriate `--with-*` options:**
 
-(Don't worry -- there's a standard set of configuration options recommended further down.)
+(Don't worry -- there's a recommended set of configuration options further down.)
 
 - `--with-alsa` include the ALSA backend module to audio to be output through the Advanced Linux Sound Architecture (ALSA) system directly. This is recommended for highest quality. 
 - `--with-pa` include the PulseAudio audio back end. This is recommended if your Linux installation already has PulseAudio installed. Although ALSA would be better, it requires direct and exclusive access to to a real (hardware) soundcard, and this is often impractical if PulseAudio is installed.
@@ -193,7 +193,7 @@ $ autoreconf -i -f
 
 If you wish to have Shairport Sync start automatically when your system boots, you need to figure out what so-called "init system" your system is using. (If you are using Shairport Sync with PulseAudio, as installed in many desktop systems, this section doesn't apply.) 
 
-There are a number of init systems in use: `systemd`, `upstart` and "System V" among others, and it's actually difficult to be certain which one your system is using. Fortunately, for Shairport Sync, all you have to do is figure out if it's a `systemd` init system or not. If it is not a `systemd` init system, you can assume that it is either a System V init system or else it is compatible with a System V init system. Recent systems tend to use `systemd`, whereas older systems use `upstart` or the earleir System V init system. 
+There are a number of init systems in use: `systemd`, `upstart` and "System V" among others, and it's actually difficult to be certain which one your system is using. Fortunately, for Shairport Sync, all you have to do is figure out if it's a `systemd` init system or not. If it is not a `systemd` init system, you can assume that it is either a System V init system or else it is compatible with a System V init system. Recent systems tend to use `systemd`, whereas older systems use `upstart` or the earlier System V init system. 
 
 The easiest way to look at the first few lines of the `init` manual. Enter the command:
 
