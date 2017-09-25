@@ -1,3 +1,9 @@
+Version 3.1.3
+====
+
+**Bug Fixes**
+* Fixed a bug that prevented Shairport Sync from starting automatically on systems using the System V startup system (e.g. Ubuntu 14.04). The problem was that the directory to be used – `/var/run/shairport-sync/` – was deleted on power down and needed to be recreated on startup. In it's absence, Shairport Sync would not start and would report a mysterious daemon error \#2.
+
 Version 3.1.2
 ====
 
