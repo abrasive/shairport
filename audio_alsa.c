@@ -48,9 +48,6 @@ void do_mute(int request);
 static void volume(double vol);
 void do_volume(double vol);
 
-static void linear_volume(double vol);
-void do_linear_volume(double vol);
-
 static void parameters(audio_parameters *info);
 static void mute(int do_mute);
 static double set_volume;
@@ -397,7 +394,7 @@ static int init(int argc, char **argv) {
           debug(1, "Volume control \"%s\" has dB volume from %f to %f.", alsa_mix_ctrl,
                 (1.0 * alsa_mix_mindb) / 100.0, (1.0 * alsa_mix_maxdb) / 100.0);
           has_softvol = 1;
-          audio_alsa.volume = &volume; // insert the volume function now we know it can do dB stuff
+          audio_alsa.volume = &volume;
           audio_alsa.parameters = &parameters; // likewise the parameters stuff
         } else {
           debug(1, "Cannot get the dB range from the volume control \"%s\"", alsa_mix_ctrl);
@@ -941,7 +938,7 @@ void do_volume(double vol) { // caller is assumed to have the alsa_mutex when us
         snd_ctl_elem_value_t *value;
         long raw;
 
-        if (snd_ctl_convert_from_dB(ctl, elem_id, (long)vol, &raw, 0) < 0)
+        if (snd_ctl_convert_from_dB(ctl, elem_id, vol, &raw, 0) < 0)
           debug(1, "Failed converting dB gain to raw volume value for the "
                    "software volume control.");
 
