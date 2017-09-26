@@ -43,11 +43,14 @@ static void play(short buf[], int samples);
 static void stop(void);
 static void flush(void);
 int delay(long *the_delay);
-static void volume(double vol);
-void do_volume(double vol);
 void do_mute(int request);
 
+static void volume(double vol);
+void do_volume(double vol);
+
 static void linear_volume(double vol);
+void do_linear_volume(double vol);
+
 static void parameters(audio_parameters *info);
 static void mute(int do_mute);
 static double set_volume;
@@ -376,8 +379,7 @@ static int init(int argc, char **argv) {
       } else {
         // use the linear scale and do the db conversion ourselves
         debug(1, "note: the hardware mixer specified -- \"%s\" -- does not have "
-                 "a dB volume scale, so it can't be used. Trying software "
-                 "volume control.",
+                 "a dB volume scale.",
               alsa_mix_ctrl);
 
         if (snd_ctl_open(&ctl, alsa_mix_dev, 0) < 0) {
@@ -395,9 +397,13 @@ static int init(int argc, char **argv) {
           debug(1, "Volume control \"%s\" has dB volume from %f to %f.", alsa_mix_ctrl,
                 (1.0 * alsa_mix_mindb) / 100.0, (1.0 * alsa_mix_maxdb) / 100.0);
           has_softvol = 1;
+          audio_alsa.volume = &volume; // insert the volume function now we know it can do dB stuff
+          audio_alsa.parameters = &parameters; // likewise the parameters stuff
         } else {
           debug(1, "Cannot get the dB range from the volume control \"%s\"", alsa_mix_ctrl);
         }
+
+
 
         /*
         debug(1, "Min and max volumes are %d and
