@@ -155,6 +155,7 @@ Debian, Ubuntu and Raspbian users can get the basics with:
 - `# apt-get install libssl-dev` if you want to use OpenSSL and libcrypto, or use mbed TLS otherwise.
 - `# apt-get install libmbedtls-dev` if you want to use mbed TLS, or use OpenSSL/libcrypto otherwise. You can still use PolarSSL with `apt-get install libpolarssl-dev` if you want to use PolarSSL, but it is deprecated as it's not longer being supported.
 - `# apt-get install libsoxr-dev` if you want support for libsoxr-based resampling. This library is in many recent distributions; if not, instructions for how to build it from source for Rasbpian/Debian Wheezy are available at [LIBSOXR.md](https://github.com/mikebrady/shairport-sync/blob/master/LIBSOXR.md).
+- `# apt-get install libsndfile1-dev` if you want to use the convolution filter.
 
 If you wish to include the Apple ALAC decoder, you need install it first – please refer to the [ALAC](https://github.com/mikebrady/alac) repository for more information.
 
@@ -186,6 +187,7 @@ $ autoreconf -i -f
 - `--with-configfile` to install a configuration file and a separate sample file at the `make install` stage. Default is to install. An existing `/etc/shairport-sync.conf` will not be overwritten.
 - `--with-pkg-config` to use pkg-config to find libraries. Default is to use pkg-config — this option is for special purpose use.
 - `--with-apple-alac` to include the Apple ALAC Decoder.
+- `--with-convolution` to include a convolution filter that can be used to apply effects such as frequency and phase correction, and a loudness filter that compensates for human ear non-linearity. Requires libsndfile.
 - `--with-systemd` to include a script to create a Shairport Sync service that can optionally launch automatically at startup on `systemd`-based Linuxes. Default is not to to install.
 - `--with-systemv` to include a script to create a Shairport Sync service that can optionally launch automatically at startup on System V based Linuxes. Default is not to to install.
 
