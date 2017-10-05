@@ -23,6 +23,7 @@ man/Makefile
 man/Makefile.in
 scripts/shairport-sync.service
 scripts/shairport-sync
+shairport-sync.core
 
 #Some dbus files that are automatically generated
 dbus/data/org.gnome.ShairportSync.service

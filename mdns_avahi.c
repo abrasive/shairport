@@ -26,6 +26,7 @@
  */
 
 #include <stdlib.h>
+#include <pthread.h>
 
 #include "common.h"
 #include "mdns.h"
@@ -40,112 +41,119 @@
 #include <avahi-client/lookup.h>
 #include <avahi-common/alternative.h>
 
-static AvahiServiceBrowser *sb = NULL;
+
+typedef struct {
+	AvahiThreadedPoll *service_poll;
+	AvahiClient *service_client;
+	AvahiServiceBrowser *service_browser;
+	char *dacp_id;
+	uint16_t *dacp_port;
+} dacp_browser_struct;
+
+//static AvahiServiceBrowser *sb = NULL;
 static AvahiClient *client = NULL;
+// static AvahiClient *service_client = NULL;
 static AvahiEntryGroup *group = NULL;
 static AvahiThreadedPoll *tpoll = NULL;
+// static AvahiThreadedPoll *service_poll = NULL;
 
-static char *name = NULL;
+static char *service_name = NULL;
 static int port = 0;
 
-static void resolve_callback(AvahiServiceResolver *r, AVAHI_GCC_UNUSED AvahiIfIndex interface,
-                             AVAHI_GCC_UNUSED AvahiProtocol protocol, AvahiResolverEvent event,
-                             const char *name, const char *type, const char *domain,
-                             const char *host_name, const AvahiAddress *address, uint16_t port,
-                             AvahiStringList *txt, AvahiLookupResultFlags flags,
-                             AVAHI_GCC_UNUSED void *userdata) {
-
-  assert(r);
-
-  /* Called whenever a service has been resolved successfully or timed out */
-
-  switch (event) {
-  case AVAHI_RESOLVER_FAILURE:
-    debug(2, "(Resolver) Failed to resolve service '%s' of type '%s' in domain '%s': %s\n", name,
-          type, domain, avahi_strerror(avahi_client_errno(avahi_service_resolver_get_client(r))));
-    break;
-
-  case AVAHI_RESOLVER_FOUND: {
-    if (flags & AVAHI_LOOKUP_RESULT_OUR_OWN) {
-      char a[AVAHI_ADDRESS_STR_MAX], *t;
-
-      //              debug(1, "avahi: service '%s' of type '%s' in domain '%s' added.", name, type,
-      //              domain);
-      avahi_address_snprint(a, sizeof(a), address);
-      debug(1, "avahi: address advertised is: \"%s\".", a);
-      /*
-      t = avahi_string_list_to_string(txt);
-      debug(1,
-              "\t%s:%u (%s)\n"
-              "\tTXT=%s\n"
-              "\tcookie is %u\n"
-              "\tis_local: %i\n"
-              "\tour_own: %i\n"
-              "\twide_area: %i\n"
-              "\tmulticast: %i\n"
-              "\tcached: %i\n",
-              host_name, port, a,
-              t,
-              avahi_string_list_get_service_cookie(txt),
-              !!(flags & AVAHI_LOOKUP_RESULT_LOCAL),
-              !!(flags & AVAHI_LOOKUP_RESULT_OUR_OWN),
-              !!(flags & AVAHI_LOOKUP_RESULT_WIDE_AREA),
-              !!(flags & AVAHI_LOOKUP_RESULT_MULTICAST),
-              !!(flags & AVAHI_LOOKUP_RESULT_CACHED));
-
-      avahi_free(t);
-      */
+static void resolve_callback(
+    AvahiServiceResolver *r,
+    AVAHI_GCC_UNUSED AvahiIfIndex interface,
+    AVAHI_GCC_UNUSED AvahiProtocol protocol,
+    AvahiResolverEvent event,
+    const char *name,
+    const char *type,
+    const char *domain,
+    const char *host_name,
+    const AvahiAddress *address,
+    uint16_t port,
+    AvahiStringList *txt,
+    AvahiLookupResultFlags flags,
+    void* userdata) {
+    assert(r);
+    
+    dacp_browser_struct *dbs = (dacp_browser_struct *)userdata;
+    
+    /* Called whenever a service has been resolved successfully or timed out */
+    switch (event) {
+        case AVAHI_RESOLVER_FAILURE:
+            debug(1, "(Resolver) Failed to resolve service '%s' of type '%s' in domain '%s': %s.", name, type, domain, avahi_strerror(avahi_client_errno(avahi_service_resolver_get_client(r))));
+            break;
+        case AVAHI_RESOLVER_FOUND: {
+            char a[AVAHI_ADDRESS_STR_MAX], *t;
+            //debug(1, "Resolve callback: Service '%s' of type '%s' in domain '%s':", name, type, domain);
+          	char* dacpid = strstr(name,"iTunes_Ctrl_");
+            if (dacpid) {
+            	dacpid+=strlen("iTunes_Ctrl_");
+            	if (strcmp(dacpid,dbs->dacp_id)==0) {
+            		uint16_t *p = dbs->dacp_port;
+            		if (*p != port) {
+            			debug(1,"Client's DACP port: %u.",port);
+            			*p = port;
+            		}
+            	}
+            } else {
+            	debug(1,"Resolve callback: Can't see a DACP string in a DACP Record!");
+            }
+        }
     }
-  }
-  }
+    avahi_service_resolver_free(r);
+}
+static void browse_callback(
+    AvahiServiceBrowser *b,
+    AvahiIfIndex interface,
+    AvahiProtocol protocol,
+    AvahiBrowserEvent event,
+    const char *name,
+    const char *type,
+    const char *domain,
+    AVAHI_GCC_UNUSED AvahiLookupResultFlags flags,
+    void* userdata) {
+    dacp_browser_struct *dbs = (dacp_browser_struct *)userdata;
+    assert(b);
+    /* Called whenever a new services becomes available on the LAN or is removed from the LAN */
+    switch (event) {
+        case AVAHI_BROWSER_FAILURE:
+            warn("avahi: browser failure.", avahi_strerror(avahi_client_errno(avahi_service_browser_get_client(b))));
+            avahi_threaded_poll_quit(tpoll);
+            break;
+        case AVAHI_BROWSER_NEW:
+            // debug(1, "(Browser) NEW: service '%s' of type '%s' in domain '%s'.", name, type, domain);
+            /* We ignore the returned resolver object. In the callback
+               function we free it. If the server is terminated before
+               the callback function is called the server will free
+               the resolver for us. */
+            if (!(avahi_service_resolver_new(dbs->service_client, interface, protocol, name, type, domain, AVAHI_PROTO_UNSPEC, 0, resolve_callback, userdata)))
+                debug(1, "Failed to resolve service '%s': %s.", name, avahi_strerror(avahi_client_errno(dbs->service_client)));
+            break;
+        case AVAHI_BROWSER_REMOVE:
+            debug(1, "(Browser) REMOVE: service '%s' of type '%s' in domain '%s'.", name, type, domain);
+            char* dacpid = strstr(name,"iTunes_Ctrl_");
+            if (dacpid) {
+            	dacpid+=strlen("iTunes_Ctrl_");
+            	if (strcmp(dacpid,dbs->dacp_id)==0) {
+            		uint16_t *p = dbs->dacp_port;
+            		if (*p != 0) {
+            			debug(1,"Client's DACP status withdrawn.");
+            			*p = 0;
+            		}
+            	}
+            } else {
+            	debug(1,"Browse callback: Can't see a DACP string in a DACP Record!");
+            }
 
-  avahi_service_resolver_free(r);
+            break;
+        case AVAHI_BROWSER_ALL_FOR_NOW:
+        case AVAHI_BROWSER_CACHE_EXHAUSTED:
+            // debug(1, "(Browser) %s.", event == AVAHI_BROWSER_CACHE_EXHAUSTED ? "CACHE_EXHAUSTED" : "ALL_FOR_NOW");
+            break;
+    }
 }
 
-static void browse_callback(AvahiServiceBrowser *b, AvahiIfIndex interface, AvahiProtocol protocol,
-                            AvahiBrowserEvent event, const char *name, const char *type,
-                            const char *domain, AVAHI_GCC_UNUSED AvahiLookupResultFlags flags,
-                            void *userdata) {
-
-  AvahiClient *c = userdata;
-  assert(b);
-
-  /* Called whenever a new services becomes available on the LAN or is removed from the LAN */
-
-  switch (event) {
-  case AVAHI_BROWSER_FAILURE:
-
-    //            debug(1, "(Browser) %s\n",
-    //            avahi_strerror(avahi_client_errno(avahi_service_browser_get_client(b))));
-    return;
-
-  case AVAHI_BROWSER_NEW:
-    //            debug(1, "(Browser) NEW: service '%s' of type '%s' in domain '%s'\n", name, type,
-    //            domain);
-
-    /* We ignore the returned resolver object. In the callback
-       function we free it. If the server is terminated before
-       the callback function is called the server will free
-       the resolver for us. */
-
-    if (!(avahi_service_resolver_new(c, interface, protocol, name, type, domain, AVAHI_PROTO_UNSPEC,
-                                     0, resolve_callback, c)))
-      debug(1, "Failed to resolve service '%s': %s\n", name, avahi_strerror(avahi_client_errno(c)));
-
-    break;
-
-  case AVAHI_BROWSER_REMOVE:
-    //            debug(1, "(Browser) REMOVE: service '%s' of type '%s' in domain '%s'\n", name,
-    //            type, domain);
-    break;
-
-  case AVAHI_BROWSER_ALL_FOR_NOW:
-  case AVAHI_BROWSER_CACHE_EXHAUSTED:
-    //            debug(1, "(Browser) %s\n", event == AVAHI_BROWSER_CACHE_EXHAUSTED ?
-    //            "CACHE_EXHAUSTED" : "ALL_FOR_NOW");
-    break;
-  }
-}
 
 static void register_service(AvahiClient *c);
 
@@ -154,7 +162,7 @@ static void egroup_callback(AvahiEntryGroup *g, AvahiEntryGroupState state,
   switch (state) {
   case AVAHI_ENTRY_GROUP_ESTABLISHED:
     /* The entry group has been established successfully */
-    debug(1, "avahi: service '%s' successfully added.", name);
+    debug(1, "avahi: service '%s' successfully added.", service_name);
     break;
 
   case AVAHI_ENTRY_GROUP_COLLISION: {
@@ -162,11 +170,11 @@ static void egroup_callback(AvahiEntryGroup *g, AvahiEntryGroupState state,
 
     /* A service name collision with a remote service
      * happened. Let's pick a new name */
-    n = avahi_alternative_service_name(name);
-    avahi_free(name);
-    name = n;
+    n = avahi_alternative_service_name(service_name);
+    avahi_free(service_name);
+    service_name = n;
 
-    debug(2, "avahi: service name collision, renaming service to '%s'", name);
+    debug(2, "avahi: service name collision, renaming service to '%s'", service_name);
 
     /* And recreate the services */
     register_service(avahi_entry_group_get_client(g));
@@ -179,11 +187,11 @@ static void egroup_callback(AvahiEntryGroup *g, AvahiEntryGroupState state,
     break;
 
   case AVAHI_ENTRY_GROUP_UNCOMMITED:
-    debug(2, "avahi: service '%s' group is not yet committed.", name);
+    debug(2, "avahi: service '%s' group is not yet committed.", service_name);
     break;
 
   case AVAHI_ENTRY_GROUP_REGISTERING:
-    debug(2, "avahi: service '%s' group is registering.", name);
+    debug(2, "avahi: service '%s' group is registering.", service_name);
     break;
 
   default:
@@ -211,14 +219,14 @@ static void register_service(AvahiClient *c) {
       selected_interface = AVAHI_IF_UNSPEC;
 #ifdef CONFIG_METADATA
     if (config.metadata_enabled) {
-      ret = avahi_entry_group_add_service(group, selected_interface, AVAHI_PROTO_UNSPEC, 0, name,
+      ret = avahi_entry_group_add_service(group, selected_interface, AVAHI_PROTO_UNSPEC, 0, service_name,
                                           config.regtype, NULL, NULL, port,
                                           MDNS_RECORD_WITH_METADATA, NULL);
       if (ret == 0)
         debug(1, "avahi: request to add \"%s\" service with metadata", config.regtype);
     } else {
 #endif
-      ret = avahi_entry_group_add_service(group, selected_interface, AVAHI_PROTO_UNSPEC, 0, name,
+      ret = avahi_entry_group_add_service(group, selected_interface, AVAHI_PROTO_UNSPEC, 0, service_name,
                                           config.regtype, NULL, NULL, port,
                                           MDNS_RECORD_WITHOUT_METADATA, NULL);
       if (ret == 0)
@@ -273,7 +281,7 @@ static void client_callback(AvahiClient *c, AvahiClientState state,
     break;
 
   case AVAHI_CLIENT_S_COLLISION:
-    debug(2, "avahi: state is AVAHI_CLIENT_S_COLLISION...needs a rename: %s", name);
+    debug(2, "avahi: state is AVAHI_CLIENT_S_COLLISION...needs a rename: %s", service_name);
     break;
 
   case AVAHI_CLIENT_CONNECTING:
@@ -286,9 +294,56 @@ static void client_callback(AvahiClient *c, AvahiClientState state,
   }
 }
 
+static void service_client_callback(AvahiClient *c, AvahiClientState state,
+                            void *userdata) {
+  int err;
+  
+  dacp_browser_struct *dbs = (dacp_browser_struct *)userdata;
+
+  switch (state) {
+  case AVAHI_CLIENT_S_REGISTERING:
+    break;
+
+  case AVAHI_CLIENT_S_RUNNING:
+    break;
+
+  case AVAHI_CLIENT_FAILURE:
+    err = avahi_client_errno(c);
+    debug(1, "avahi: service client failure: %s", avahi_strerror(err));
+
+    if (err == AVAHI_ERR_DISCONNECTED) {
+      /* We have been disconnected, so lets reconnect */
+      avahi_client_free(c);
+      c = NULL;
+
+      if (!(dbs->service_client = avahi_client_new(avahi_threaded_poll_get(dbs->service_poll), AVAHI_CLIENT_NO_FAIL,
+                                      service_client_callback, userdata, &err))) {
+        warn("avahi: failed to create service client object: %s", avahi_strerror(err));
+        avahi_threaded_poll_quit(dbs->service_poll);
+      }
+    } else {
+      warn("avahi: service client failure: %s", avahi_strerror(err));
+      avahi_threaded_poll_quit(dbs->service_poll);
+    }
+    break;
+
+  case AVAHI_CLIENT_S_COLLISION:
+    debug(2, "avahi: service client state is AVAHI_CLIENT_S_COLLISION...needs a rename: %s", service_name);
+    break;
+
+  case AVAHI_CLIENT_CONNECTING:
+    debug(2, "avahi: service client received AVAHI_CLIENT_CONNECTING");
+    break;
+
+  default:
+    debug(1, "avahi: unexpected and unhandled avahi service client state: %d", state);
+    break;
+  }
+}
+
 static int avahi_register(char *srvname, int srvport) {
   debug(1, "avahi: avahi_register.");
-  name = strdup(srvname);
+  service_name = strdup(srvname);
   port = srvport;
 
   int err;
@@ -301,13 +356,6 @@ static int avahi_register(char *srvname, int srvport) {
     warn("couldn't create avahi client: %s!", avahi_strerror(err));
     return -1;
   }
-
-  // we need this to detect the IPv6 number we're advertising...
-  // if (!(sb = avahi_service_browser_new(client, AVAHI_IF_UNSPEC,  AVAHI_PROTO_UNSPEC,
-  // config.regtype, NULL, 0, browse_callback, client))) {
-  //     warn("Failed to create service browser: %s\n", avahi_strerror(avahi_client_errno(client)));
-  //     return -1;
-  // }
 
   if (avahi_threaded_poll_start(tpoll) < 0) {
     warn("couldn't start avahi tpoll thread");
@@ -323,10 +371,91 @@ static void avahi_unregister(void) {
     avahi_threaded_poll_stop(tpoll);
   tpoll = NULL;
 
-  if (name)
-    free(name);
-  name = NULL;
+  if (service_name)
+    free(service_name);
+  service_name = NULL;
+}
+
+int avahi_dacp_monitor(char* dacp_id,uint16_t *port,void** private_pointer) {
+	
+	dacp_browser_struct **pdbs = (dacp_browser_struct **)private_pointer;
+	
+	dacp_browser_struct *dbs = (dacp_browser_struct*)malloc(sizeof(dacp_browser_struct));
+	
+	if (dbs==NULL)
+		die("can not allocate a dacp_browser_struct.");
+
+	dbs->dacp_id=dacp_id;
+	dbs->dacp_port=port;
+	
+
+	// create the threaded poll code
+  int err;
+  if (!(dbs->service_poll = avahi_threaded_poll_new())) {
+    warn("couldn't create avahi threaded service_poll!");
+    if(dbs) {
+    	free((char*)dbs);
+    }
+    return -1;
+  }	
+
+	// create the service client
+  if (!(dbs->service_client = avahi_client_new(avahi_threaded_poll_get(dbs->service_poll), AVAHI_CLIENT_NO_FAIL,
+                                  service_client_callback, (void*)dbs, &err))) {
+    warn("couldn't create avahi service client: %s!", avahi_strerror(err));
+    if(dbs) { //should free the threaded poll code
+    	avahi_threaded_poll_free(dbs->service_poll);
+    	free((char*)dbs);
+    }
+    return -1;
+  }
+
+  /* Create the service browser */
+	if (!(dbs->service_browser = avahi_service_browser_new(dbs->service_client, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC, "_dacp._tcp", NULL, 0, browse_callback, (void *)dbs))) {
+		warn("Failed to create service browser: %s\n", avahi_strerror(avahi_client_errno(dbs->service_client)));
+    if(dbs) { //should free the threaded poll code and the service client
+    	avahi_client_free(dbs->service_client);
+    	avahi_threaded_poll_free(dbs->service_poll);
+    	free((char*)dbs);
+    }
+		return -1;
+	}
+	// start the polling thread
+  if (avahi_threaded_poll_start(dbs->service_poll) < 0) {
+    warn("couldn't start avahi service_poll thread");
+    if(dbs) { //should free the threaded poll code and the service client and the service browser
+    	avahi_service_browser_free(dbs->service_browser);
+    	avahi_client_free(dbs->service_client);
+    	avahi_threaded_poll_free(dbs->service_poll);
+    	free((char*)dbs);
+    }
+    return -1;
+  }
+	*pdbs = dbs;
+  return 0;
+
+}
+
+void avahi_dacp_dont_monitor(void** private_pointer) {
+	dacp_browser_struct **pdbs = (dacp_browser_struct **)private_pointer;
+	
+	// stop and dispose of everything
+	if ((*pdbs)->service_poll)
+		avahi_threaded_poll_stop((*pdbs)->service_poll);
+	if ((*pdbs)->service_browser)
+			avahi_service_browser_free((*pdbs)->service_browser);
+	if ((*pdbs)->service_client)
+			avahi_client_free((*pdbs)->service_client);
+	if ((*pdbs)->service_poll)
+			avahi_threaded_poll_free((*pdbs)->service_poll);
+	free((char*)(*pdbs));
+	*pdbs = NULL;
 }
 
 mdns_backend mdns_avahi = {
-    .name = "avahi", .mdns_register = avahi_register, .mdns_unregister = avahi_unregister};
+    .name = "avahi",
+    .mdns_register = avahi_register,
+    .mdns_unregister = avahi_unregister,
+    .mdns_dacp_monitor = avahi_dacp_monitor,
+    .mdns_dacp_dont_monitor = avahi_dacp_dont_monitor
+};

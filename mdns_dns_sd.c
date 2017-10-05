@@ -24,8 +24,8 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "common.h"
 #include "mdns.h"
+#include "common.h"
 #include <arpa/inet.h>
 #include <dns_sd.h>
 #include <stdlib.h>
@@ -92,4 +92,6 @@ static void mdns_dns_sd_unregister(void) {
 
 mdns_backend mdns_dns_sd = {.name = "dns-sd",
                             .mdns_register = mdns_dns_sd_register,
-                            .mdns_unregister = mdns_dns_sd_unregister};
+                            .mdns_unregister = mdns_dns_sd_unregister,
+                            .mdns_dacp_monitor = NULL,
+                            .mdns_dacp_dont_monitor = NULL};

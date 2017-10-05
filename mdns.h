@@ -1,18 +1,24 @@
 #ifndef _MDNS_H
 #define _MDNS_H
 
+#include <stdint.h>
 #include "config.h"
 
 extern int mdns_pid;
 
 void mdns_unregister(void);
 void mdns_register(void);
+void mdns_dacp_monitor(char* dacp_id,uint16_t *port,void** private_pointer);
+void mdns_dacp_dont_monitor(void** private_pointer);
+
 void mdns_ls_backends(void);
 
 typedef struct {
   char *name;
   int (*mdns_register)(char *apname, int port);
   void (*mdns_unregister)(void);
+  int (*mdns_dacp_monitor)(char* dacp_id,uint16_t *port,void** private_pointer);
+  void (*mdns_dacp_dont_monitor)(void** private_pointer);
 } mdns_backend;
 
 #ifdef CONFIG_METADATA

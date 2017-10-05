@@ -104,6 +104,22 @@ void mdns_unregister(void) {
   }
 }
 
+void mdns_dacp_monitor(char* dacp_id,uint16_t *port,void** private_pointer) {
+  if ((config.mdns) && (config.mdns->mdns_dacp_monitor)) {
+    int error = config.mdns->mdns_dacp_monitor(dacp_id,port,private_pointer);
+    if (error) {
+  		debug(1,"Error starting a DACP monitor.");
+    }
+  } else
+  	debug(1,"Can't start a DACP monitor.");
+}
+
+void mdns_dacp_dont_monitor(void** private_pointer) {
+  if ((config.mdns) && (config.mdns->mdns_dacp_dont_monitor)) {
+    config.mdns->mdns_dacp_dont_monitor(private_pointer);
+  } else
+  	debug(1,"Can't stop a DACP monitor.");
+}
 void mdns_ls_backends(void) {
   mdns_backend **b = NULL;
   printf("Available mDNS backends: \n");

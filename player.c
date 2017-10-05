@@ -1561,6 +1561,9 @@ static void *player_thread_func(void *arg) {
          // as a null operand, so we'll use it like that too
   int sync_error_out_of_bounds =
       0; // number of times in a row that there's been a serious sync error
+  
+  // start an mdns/zeroconf thread to look for DACP messages containing our DACP_ID and getting the port number
+  mdns_dacp_monitor(conn->dacp_id,&conn->dacp_port,&conn->dacp_private);
 
   conn->framesProcessedInThisEpoch = 0;
   conn->framesGeneratedInThisEpoch = 0;
@@ -2166,10 +2169,15 @@ static void *player_thread_func(void *arg) {
            elapsedSec);
   }
 
+	// stop watching for DACP port number stuff
+	mdns_dacp_dont_monitor(&conn->dacp_private); // begin looking out for information about the client as a remote control. Specifically we might need the port number
+
   if (config.output->stop)
     config.output->stop();
   usleep(100000); // allow this time to (?) allow the alsa subsystem to finish cleaning up after
                   // itself. 50 ms seems too short
+
+
   debug(2, "Shut down audio, control and timing threads");
   conn->please_stop = 1;
   pthread_kill(rtp_audio_thread, SIGUSR1);
@@ -2201,6 +2209,10 @@ static void *player_thread_func(void *arg) {
     debug(1, "Error destroying vol_mutex variable.");
 
   debug(1, "Player thread exit on RTSP conversation thread %d.", conn->connection_number);
+	if (conn->dacp_id) {
+		free(conn->dacp_id);
+		conn->dacp_id = NULL;
+	}
   if (outbuf)
     free(outbuf);
   if (silence)

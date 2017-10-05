@@ -593,7 +593,7 @@ static int bind_port(int ip_family, const char *self_ip_address, uint32_t scope_
   return sport;
 }
 
-void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t active_remote,
+void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport,
                int *lsport, int *lcport, int *ltport, rtsp_conn_info *conn) {
 
   // this gets the local and remote ip numbers (and ports used for the TCD stuff)
@@ -604,8 +604,6 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
     die("rtp_setup called with active stream!");
 
   debug(2, "rtp_setup: cport=%d tport=%d.", cport, tport);
-
-  conn->client_active_remote = active_remote;
 
   // print out what we know about the client
   void *client_addr, *self_addr;
@@ -762,11 +760,11 @@ void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
 
 void rtp_request_client_pause(rtsp_conn_info *conn) {
   if (conn->rtp_running) {
-    if (conn->client_active_remote == 0) {
+    if (conn->dacp_active_remote == 0) {
       debug(1, "Can't request a client pause: no valid active remote.");
     } else {
       // debug(1,"Send a client pause request to %s:3689 with active remote
-      // %u.",client_ip_string,client_active_remote);
+      // %u.",client_ip_string,dacp_active_remote);
 
       struct addrinfo hints, *res;
       int sockfd;
@@ -799,7 +797,7 @@ void rtp_request_client_pause(rtsp_conn_info *conn) {
 
       sprintf(message,
               "GET /ctrl-int/1/pause HTTP/1.1\r\nHost: %s:3689\r\nActive-Remote: %u\r\n\r\n",
-              conn->client_ip_string, conn->client_active_remote);
+              conn->client_ip_string, conn->dacp_active_remote);
       // debug(1,"Sending this message: \"%s\".",message);
 
       // Send some data

@@ -59,7 +59,6 @@
 #endif
 
 #include "common.h"
-#include "mdns.h"
 #include "player.h"
 #include "rtp.h"
 #include "rtsp.h"
@@ -696,26 +695,26 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
   debug(3, "Connection %d: SETUP", conn->connection_number);
   int cport, tport;
   int lsport, lcport, ltport;
-  uint32_t active_remote = 0;
 
   char *ar = msg_get_header(req, "Active-Remote");
   if (ar) {
     debug(1, "Active-Remote string seen: \"%s\".", ar);
     // get the active remote
     char *p;
-    active_remote = strtoul(ar, &p, 10);
+    conn->dacp_active_remote = strtoul(ar, &p, 10);
 #ifdef CONFIG_METADATA
     send_metadata('ssnc', 'acre', ar, strlen(ar), req, 1);
 #endif
   }
 
-#ifdef CONFIG_METADATA
   ar = msg_get_header(req, "DACP-ID");
   if (ar) {
     debug(1, "DACP-ID string seen: \"%s\".", ar);
+    conn->dacp_id = strdup(ar);
+#ifdef CONFIG_METADATA
     send_metadata('ssnc', 'daid', ar, strlen(ar), req, 1);
-  }
 #endif
+  }
 
   // This latency-setting mechanism is deprecated and will be removed.
   // If no non-standard latency is chosen, automatic negotiated latency setting
@@ -793,7 +792,7 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
   tport = atoi(p);
 
   //  rtsp_take_player();
-  rtp_setup(&conn->local, &conn->remote, cport, tport, active_remote, &lsport, &lcport, &ltport,
+  rtp_setup(&conn->local, &conn->remote, cport, tport, &lsport, &lcport, &ltport,
             conn);
   if (!lsport)
     goto error;
