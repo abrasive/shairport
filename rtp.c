@@ -593,8 +593,8 @@ static int bind_port(int ip_family, const char *self_ip_address, uint32_t scope_
   return sport;
 }
 
-void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport,
-               int *lsport, int *lcport, int *ltport, rtsp_conn_info *conn) {
+void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, int *lsport, int *lcport,
+               int *ltport, rtsp_conn_info *conn) {
 
   // this gets the local and remote ip numbers (and ports used for the TCD stuff)
   // we use the local stuff to specify the address we are coming from and

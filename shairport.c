@@ -965,12 +965,12 @@ int parse_options(int argc, char **argv) {
   return optind + 1;
 }
 
-#if defined(HAVE_DBUS) || defined (HAVE_MPRIS)
+#if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
 GMainLoop *loop;
 
 pthread_t dbus_thread;
 void *dbus_thread_func(void *arg) {
-  loop = g_main_loop_new(NULL, FALSE); 
+  loop = g_main_loop_new(NULL, FALSE);
   g_main_loop_run(loop);
 }
 #endif
@@ -1497,11 +1497,11 @@ int main(int argc, char **argv) {
 
 #if defined(HAVE_DBUS)
   // Start up DBUS services after initial settings are all made
-  debug(1,"Starting up D-Bus services");
-  pthread_create(&dbus_thread, NULL, &dbus_thread_func, NULL);      
-  #ifdef HAVE_DBUS
-    start_dbus_service();
-  #endif  
+  debug(1, "Starting up D-Bus services");
+  pthread_create(&dbus_thread, NULL, &dbus_thread_func, NULL);
+#ifdef HAVE_DBUS
+  start_dbus_service();
+#endif
 #endif
 
   daemon_log(LOG_INFO, "Successful Startup");

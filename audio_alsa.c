@@ -400,8 +400,6 @@ static int init(int argc, char **argv) {
           debug(1, "Cannot get the dB range from the volume control \"%s\"", alsa_mix_ctrl);
         }
 
-
-
         /*
         debug(1, "Min and max volumes are %d and
         %d.",alsa_mix_minv,alsa_mix_maxv);

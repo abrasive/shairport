@@ -792,8 +792,7 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
   tport = atoi(p);
 
   //  rtsp_take_player();
-  rtp_setup(&conn->local, &conn->remote, cport, tport, &lsport, &lcport, &ltport,
-            conn);
+  rtp_setup(&conn->local, &conn->remote, cport, tport, &lsport, &lcport, &ltport, conn);
   if (!lsport)
     goto error;
   char *q;
@@ -1876,7 +1875,7 @@ void rtsp_listen_loop(void) {
   int *sockfd = NULL;
   int nsock = 0;
   int i, ret;
-  
+
   playing_conn = NULL; // the data structure representing the connection that has the player.
 
   memset(&hints, 0, sizeof(hints));
