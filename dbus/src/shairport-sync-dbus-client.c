@@ -87,26 +87,27 @@ void main(void) {
   g_signal_connect(proxy, "notify::volume", G_CALLBACK(notify_volume_callback), NULL);
 
   g_print("Starting test...\n");
-
   shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), -20.0);
-  sleep(10);
+  sleep(1);
   shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), -10.0);
-  sleep(10);
+  sleep(1);
   shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), 0.0);
-  sleep(10);
-
+  sleep(1);
   shairport_sync_set_loudness_filter_active(SHAIRPORT_SYNC(proxy), FALSE);
-  sleep(15);
+  sleep(1);
   shairport_sync_set_loudness_threshold(SHAIRPORT_SYNC(proxy), -20.0);
+  sleep(1);
   shairport_sync_set_loudness_filter_active(SHAIRPORT_SYNC(proxy), TRUE);
-  sleep(15);
+  sleep(1);
   shairport_sync_set_loudness_filter_active(SHAIRPORT_SYNC(proxy), FALSE);
-  sleep(5);
+  sleep(1);
   shairport_sync_set_loudness_threshold(SHAIRPORT_SYNC(proxy), -10.0);
   shairport_sync_set_loudness_filter_active(SHAIRPORT_SYNC(proxy), TRUE);
-  sleep(15);
+  sleep(1);
   shairport_sync_set_loudness_filter_active(SHAIRPORT_SYNC(proxy), TRUE);
-  sleep(15);
+  sleep(1);
+  shairport_sync_call_vol_up(SHAIRPORT_SYNC(proxy), NULL,NULL,NULL);
+  sleep(5);
   g_print("Finished test...\n");
   g_main_loop_quit(loop);
   pthread_join(dbus_thread, NULL);

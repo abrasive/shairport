@@ -8,7 +8,7 @@
 
 #include "dbus_service.h"
 
-void notify_loudness_filter_active_callback(ShairportSync *skeleton, gpointer user_data) {
+gboolean notify_loudness_filter_active_callback(ShairportSync *skeleton, gpointer user_data) {
   debug(1, "\"notify_loudness_filter_active_callback\" called.");
   if (shairport_sync_get_loudness_filter_active(skeleton)) {
     debug(1, "activating loudness filter");
@@ -17,9 +17,10 @@ void notify_loudness_filter_active_callback(ShairportSync *skeleton, gpointer us
     debug(1, "deactivating loudness filter");
     config.loudness = 0;
   }
+  return TRUE;
 }
 
-void notify_loudness_threshold_callback(ShairportSync *skeleton, gpointer user_data) {
+gboolean notify_loudness_threshold_callback(ShairportSync *skeleton, gpointer user_data) {
   gdouble th = shairport_sync_get_loudness_threshold(skeleton);
   if ((th <= 0.0) && (th >= -100.0)) {
     debug(1, "Setting loudness threshhold to %f.", th);
@@ -27,9 +28,10 @@ void notify_loudness_threshold_callback(ShairportSync *skeleton, gpointer user_d
   } else {
     debug(1, "Invalid loudness threshhold: %f. Ignored.", th);
   }
+  return TRUE;
 }
 
-void notify_volume_callback(ShairportSync *skeleton, gpointer user_data) {
+gboolean notify_volume_callback(ShairportSync *skeleton, gpointer user_data) {
   gdouble vo = shairport_sync_get_volume(skeleton);
   if (((vo <= 0.0) && (vo >= -30.0)) || (vo == -144.0)) {
     debug(1, "Setting volume to %f.", vo);
@@ -40,6 +42,13 @@ void notify_volume_callback(ShairportSync *skeleton, gpointer user_data) {
   } else {
     debug(1, "Invalid volume: %f -- ignored.", vo);
   }
+  return TRUE;
+}
+
+static gboolean on_handle_vol_up(ShairportSync *skeleton, GDBusMethodInvocation *invocation, gpointer user_data) {
+  debug(1,"VolUp");
+  shairport_sync_complete_vol_up(skeleton,invocation);
+  return TRUE;
 }
 
 static void on_name_acquired(GDBusConnection *connection, const gchar *name, gpointer user_data) {
@@ -66,6 +75,7 @@ static void on_name_acquired(GDBusConnection *connection, const gchar *name, gpo
   g_signal_connect(skeleton, "notify::loudness-threshold",
                    G_CALLBACK(notify_loudness_threshold_callback), NULL);
   g_signal_connect(skeleton, "notify::volume", G_CALLBACK(notify_volume_callback), NULL);
+  g_signal_connect(skeleton, "handle-vol-up", G_CALLBACK(on_handle_vol_up), NULL);
 }
 
 int start_dbus_service() {
