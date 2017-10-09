@@ -6,6 +6,8 @@
 #include "../../player.h"
 #include "../../rtsp.h"
 
+#include "../../rtp.h"
+
 #include "dbus_service.h"
 
 gboolean notify_loudness_filter_active_callback(ShairportSync *skeleton, gpointer user_data) {
@@ -47,6 +49,10 @@ gboolean notify_volume_callback(ShairportSync *skeleton, gpointer user_data) {
 
 static gboolean on_handle_vol_up(ShairportSync *skeleton, GDBusMethodInvocation *invocation, gpointer user_data) {
   debug(1,"VolUp");
+    if (playing_conn)
+      rtp_send_client_command(playing_conn,"volumeup");
+    else
+      debug(1, "no thread playing -- VolUp ignored.");
   shairport_sync_complete_vol_up(skeleton,invocation);
   return TRUE;
 }

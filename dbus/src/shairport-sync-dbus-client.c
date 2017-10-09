@@ -87,6 +87,7 @@ void main(void) {
   g_signal_connect(proxy, "notify::volume", G_CALLBACK(notify_volume_callback), NULL);
 
   g_print("Starting test...\n");
+  /*
   shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), -20.0);
   sleep(1);
   shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), -10.0);
@@ -107,6 +108,7 @@ void main(void) {
   sleep(10);
   shairport_sync_set_loudness_filter_active(SHAIRPORT_SYNC(proxy), FALSE);
   sleep(1);
+  */
   shairport_sync_call_vol_up(SHAIRPORT_SYNC(proxy), NULL,NULL,NULL);
   g_print("Finished test...\n");
   g_main_loop_quit(loop);

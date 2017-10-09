@@ -25,4 +25,6 @@ void clear_reference_timestamp(rtsp_conn_info *conn);
 uint64_t static local_to_remote_time_jitters;
 uint64_t static local_to_remote_time_jitters_count;
 
+void rtp_send_client_command(rtsp_conn_info *conn,char * command);
+
 #endif // _RTP_H
