@@ -116,19 +116,6 @@ AC_ARG_WITH(apple-alac, [  --with-apple-alac = include support for the Apple ALA
   fi ])
 AM_CONDITIONAL([USE_APPLE_ALAC], [test "x$HAS_APPLE_ALAC" = "x1"])
 
-# Look for firstconfdir flag
-AC_ARG_WITH(firstconfdir, [ --with-firstconfdir=<pathname> Specify a pathname to a directory where a configuration file will be searched for before looking in sysconfdir.], [
-	AC_MSG_CHECKING(--with-firstconfdir argument)
-	if test "x${with_firstconfdir}" = x -o "x${with_firstconfdir}" = xyes ; then
-		AC_MSG_RESULT(not found)
-		AC_MSG_ERROR(when you use the --with-firstconfdir directive you must specify a pathname to a directory where a configuration file will be searched for before looking in sysconfdir.)
-	fi
-	AC_MSG_RESULT(${with_firstconfdir})
-  HAS_FIRSTCONFDIR=1
-  AC_SUBST(FIRST_CONF_DIR,["${with_firstconfdir}"])
-  AC_DEFINE([USE_FIRSTCONFDIR],1,[Look for a configuration file here before looking in the sysconfdir])], )
-AM_CONDITIONAL([USE_FIRSTCONFDIR], [test "x$HAS_FIRSTCONFDIR" = "x1"])
-
 # Look for piddir flag
 AC_ARG_WITH(piddir, [ --with-piddir=<pathname> Specify a pathname to a directory in which to write the PID file.], [
 	AC_MSG_CHECKING(--with-piddir argument)
@@ -261,15 +248,6 @@ AC_ARG_WITH(pa, [  --with-pa = choose PulseAudio support.], [
     AC_CHECK_LIB([pulse], [pa_stream_peek], , AC_MSG_ERROR(PulseAudio support requires the libpulse-dev library.))
   fi ])
 AM_CONDITIONAL([USE_PA], [test "x$HAS_PA" = "x1"])
-
-# Look for old pulseaudio flag
-AC_ARG_WITH(pulseaudio, [  --with-pulseaudio = choose PulseAudio API support. Note that this backend is deprecated. Use --with-pa for an updated PulseAudio backend!], [
-  AC_MSG_RESULT(>>Including an outdated PulseAudio back end. Note that this backend is deprecated. Use --with-pa for an updated PulseAudio backend!)
-  HAS_PULSE=1
-  AC_DEFINE([CONFIG_PULSE], 1, [Needed by the compiler.])
-  AC_CHECK_LIB([pulse-simple], [pa_simple_new], , AC_MSG_ERROR(PulseAudio support requires the pulse-simple library -- possibly in the libpulse-dev package!))
-  AC_CHECK_LIB([pulse], [pa_stream_peek], , AC_MSG_ERROR(PulseAudio support requires the libpulse-dev library.))], )
-AM_CONDITIONAL([USE_PULSE], [test "x$HAS_PULSE" = "x1"])
 
 # Look for Convolution flag
 AC_ARG_WITH(convolution, [  --with-convolution = choose audio DSP convolution support], [

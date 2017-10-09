@@ -760,16 +760,21 @@ void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
 
 void rtp_request_client_pause(rtsp_conn_info *conn) {
   if (conn->rtp_running) {
-    if (conn->dacp_active_remote == 0) {
+    if (conn->dacp_port == 0) {
       debug(1, "Can't request a client pause: no valid active remote.");
     } else {
-      // debug(1,"Send a client pause request to %s:3689 with active remote
-      // %u.",client_ip_string,dacp_active_remote);
 
       struct addrinfo hints, *res;
       int sockfd;
 
-      char message[1000], server_reply[2000];
+      char message[1000], server_reply[2000], portstring[10];
+      
+      sprintf(portstring,"%u",conn->dacp_port);
+
+      debug(1,
+              "Attempting to send:\nGET /ctrl-int/1/pause HTTP/1.1\r\nHost: %s:%u\r\nActive-Remote: %u\r\n\r\n",
+              conn->client_ip_string, conn->dacp_port, conn->dacp_active_remote);
+
 
       // first, load up address structs with getaddrinfo():
 
@@ -777,7 +782,7 @@ void rtp_request_client_pause(rtsp_conn_info *conn) {
       hints.ai_family = AF_UNSPEC;
       hints.ai_socktype = SOCK_STREAM;
 
-      getaddrinfo(conn->client_ip_string, "3689", &hints, &res);
+      getaddrinfo(conn->client_ip_string, portstring, &hints, &res);
 
       // make a socket:
 
@@ -786,19 +791,19 @@ void rtp_request_client_pause(rtsp_conn_info *conn) {
       if (sockfd == -1) {
         die("Could not create socket");
       }
-      // debug(1,"Socket created");
+      debug(1,"Socket created");
 
       // connect!
 
       if (connect(sockfd, res->ai_addr, res->ai_addrlen) < 0) {
         die("connect failed. Error");
       }
-      // debug(1,"Connect successful");
+      debug(1,"Connect successful");
 
       sprintf(message,
-              "GET /ctrl-int/1/pause HTTP/1.1\r\nHost: %s:3689\r\nActive-Remote: %u\r\n\r\n",
-              conn->client_ip_string, conn->dacp_active_remote);
-      // debug(1,"Sending this message: \"%s\".",message);
+              "GET /ctrl-int/1/pause HTTP/1.1\r\nHost: %s:%u\r\nActive-Remote: %u\r\n\r\n",
+              conn->client_ip_string, conn->dacp_port, conn->dacp_active_remote);
+      debug(1,"Sending this message: \"%s\".",message);
 
       // Send some data
       if (send(sockfd, message, strlen(message), 0) < 0) {

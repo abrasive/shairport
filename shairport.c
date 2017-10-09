@@ -204,9 +204,6 @@ char *get_version_string() {
 #ifdef CONFIG_PA
     strcat(version_string, "-pa");
 #endif
-#ifdef CONFIG_PULSE
-    strcat(version_string, "-pulse");
-#endif
 #ifdef CONFIG_SOUNDIO
     strcat(version_string, "-soundio");
 #endif

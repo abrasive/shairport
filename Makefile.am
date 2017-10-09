@@ -32,11 +32,6 @@ AM_CFLAGS+= \
 	-DPIDDIR=\"$(CUSTOM_PID_DIR)\"
 endif
 
-if USE_FIRSTCONFDIR
-AM_CFLAGS+= \
-	-DFIRSTCONFDIR=\"$(FIRST_CONF_DIR)\"
-endif
-
 if USE_AVAHI
 shairport_sync_SOURCES += mdns_avahi.c
 endif
@@ -71,10 +66,6 @@ endif
 
 if USE_SOUNDIO
 shairport_sync_SOURCES += audio_soundio.c
-endif
-
-if USE_PULSE
-shairport_sync_SOURCES += audio_pulse.c
 endif
 
 if USE_PA
