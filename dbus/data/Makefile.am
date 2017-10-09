@@ -1,7 +1,7 @@
 # Dbus service file
 
 if USE_DBUS
-servicedir = /usr/local/share/dbus-1/services
+servicedir = $(DESTDIR)/usr/local/share/dbus-1/services
 service_in_files = org.gnome.ShairportSync.service.in
 service_DATA = $(service_in_files:.service.in=.service)
 EXTRA_DIST = $(service_in_files)

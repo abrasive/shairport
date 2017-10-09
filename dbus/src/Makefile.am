@@ -21,6 +21,6 @@ shairportsync.c:  org.gnome.ShairportSync.xml
 # Dbus service file
 
 if USE_DBUS
-interfacesdir = /usr/local/share/dbus-1/interfaces
+interfacesdir = $(DESTDIR)/usr/local/share/dbus-1/interfaces
 interfaces_DATA = org.gnome.ShairportSync.xml
 endif
