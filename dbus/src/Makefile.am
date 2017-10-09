@@ -18,3 +18,9 @@ shairportsync.h:  org.gnome.ShairportSync.xml
 shairportsync.c:  org.gnome.ShairportSync.xml
 	gdbus-codegen --interface-prefix org.gnome --generate-c-code shairportsync org.gnome.ShairportSync.xml
 
+# Dbus service file
+
+if USE_DBUS
+interfacesdir = /usr/local/share/dbus-1/interfaces
+interfaces_DATA = org.gnome.ShairportSync.xml
+endif
