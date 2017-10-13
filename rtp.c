@@ -1,6 +1,7 @@
 /*
  * Apple RTP protocol handler. This file is part of Shairport.
  * Copyright (c) James Laird 2013
+ * Copyright (c) Mike Brady 2014 -- 2017
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -758,9 +759,7 @@ void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
   }
 }
 
-
-// this doesn't seem to work for ipv6
-void rtp_send_client_command(rtsp_conn_info *conn,char * command) {
+void rtp_send_client_command(rtsp_conn_info *conn, char *command) {
   if (conn->rtp_running) {
     if (conn->dacp_port == 0) {
       debug(1, "Can't request a client pause: no valid active remote.");
@@ -769,12 +768,18 @@ void rtp_send_client_command(rtsp_conn_info *conn,char * command) {
       struct addrinfo hints, *res;
       int sockfd;
 
-      char message[1000], server_reply[2000], portstring[10];
+      char message[1000], server_reply[2000], portstring[10], server[256];
       memset(&message, 0, sizeof(message));
       memset(&server_reply, 0, sizeof(server_reply));
       memset(&portstring, 0, sizeof(portstring));
-      
-      sprintf(portstring,"%u",conn->dacp_port);
+
+      if (conn->connection_ip_family == AF_INET6) {
+        sprintf(server, "%s%%%u", conn->client_ip_string, conn->self_scope_id);
+      } else {
+        strcpy(server, conn->client_ip_string);
+      }
+
+      sprintf(portstring, "%u", conn->dacp_port);
 
       // first, load up address structs with getaddrinfo():
 
@@ -782,7 +787,7 @@ void rtp_send_client_command(rtsp_conn_info *conn,char * command) {
       hints.ai_family = AF_UNSPEC;
       hints.ai_socktype = SOCK_STREAM;
 
-      getaddrinfo(conn->client_ip_string, portstring, &hints, &res);
+      getaddrinfo(server, portstring, &hints, &res);
 
       // make a socket:
 
@@ -791,20 +796,19 @@ void rtp_send_client_command(rtsp_conn_info *conn,char * command) {
       if (sockfd == -1) {
         debug(1, "Could not create socket");
       } else {
-        debug(1,"Socket created");
-  
+
         // connect!
 
         if (connect(sockfd, res->ai_addr, res->ai_addrlen) < 0) {
-          debug(1,"connect failed. Error");
+          debug(1, "connect failed. Error");
         } else {
-          debug(1,"Connect successful");
 
           sprintf(message,
                   "GET /ctrl-int/1/%s HTTP/1.1\r\nHost: %s:%u\r\nActive-Remote: %u\r\n\r\n",
-                  command,conn->client_ip_string, conn->dacp_port, conn->dacp_active_remote);
+                  command, conn->client_ip_string, conn->dacp_port, conn->dacp_active_remote);
 
-          // Send some data
+          // Send command
+
           if (send(sockfd, message, strlen(message), 0) < 0) {
             debug(1, "Send failed");
           }
@@ -814,16 +818,14 @@ void rtp_send_client_command(rtsp_conn_info *conn,char * command) {
             debug(1, "recv failed");
           }
 
-          // debug(1,"Server replied: \"%s\".",server_reply);
-
           if (strstr(server_reply, "HTTP/1.1 204 No Content") != server_reply)
-            debug(1, "Client pause request failed.");
-          // debug(1,"Client pause request failed: \"%s\".",server_reply);
+            debug(1, "Client request to server failed: \"%s\".", server_reply);
+
           close(sockfd);
         }
       }
-    } 
+    }
   } else {
-      debug(1, "Request to pause non-existent play stream -- ignored.");
+    debug(1, "Request to pause non-existent play stream -- ignored.");
   }
 }
