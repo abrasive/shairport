@@ -4,7 +4,8 @@
     <property name="LoudnessFilterActive" type="b" access="readwrite" />
     <property name="LoudnessThreshold" type="d" access="readwrite" />
     <property name="Volume" type="d" access="readwrite" />
-    <method name="VolUp">
+    <method name="RemoteCommand">
+      <arg name="command" type="s" direction="in" />
     </method>
   </interface>
 </node>

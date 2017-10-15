@@ -109,7 +109,7 @@ void main(void) {
   shairport_sync_set_loudness_filter_active(SHAIRPORT_SYNC(proxy), FALSE);
   sleep(1);
   */
-  shairport_sync_call_vol_up(SHAIRPORT_SYNC(proxy), NULL,NULL,NULL);
+  shairport_sync_call_remote_command(SHAIRPORT_SYNC(proxy), "string",NULL,NULL,NULL);
   g_print("Finished test...\n");
   g_main_loop_quit(loop);
   pthread_join(dbus_thread, NULL);

@@ -759,7 +759,7 @@ void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
   }
 }
 
-void rtp_send_client_command(rtsp_conn_info *conn, char *command) {
+void rtp_send_client_command(rtsp_conn_info *conn, const char *command) {
   if (conn->rtp_running) {
     if (conn->dacp_port == 0) {
       debug(1, "Can't request a client pause: no valid active remote.");
@@ -768,7 +768,7 @@ void rtp_send_client_command(rtsp_conn_info *conn, char *command) {
       struct addrinfo hints, *res;
       int sockfd;
 
-      char message[1000], server_reply[2000], portstring[10], server[256];
+      char message[20000], server_reply[2000], portstring[10], server[256];
       memset(&message, 0, sizeof(message));
       memset(&server_reply, 0, sizeof(server_reply));
       memset(&portstring, 0, sizeof(portstring));
@@ -814,13 +814,23 @@ void rtp_send_client_command(rtsp_conn_info *conn, char *command) {
           }
 
           // Receive a reply from the server
-          if (recv(sockfd, server_reply, 2000, 0) < 0) {
+          ssize_t reply_size = recv(sockfd, server_reply, 2000, 0);
+          if (reply_size < 0) {
             debug(1, "recv failed");
           }
 
-          if (strstr(server_reply, "HTTP/1.1 204 No Content") != server_reply)
-            debug(1, "Client request to server failed: \"%s\".", server_reply);
-
+          if (strstr(server_reply, "HTTP/1.1 204 No Content") != server_reply) {
+            debug(1, "Client request to server failed with %d characters starting with this response:", reply_size,server_reply);
+           int i;
+           
+           for (i=0;i<reply_size;i++)
+            if (server_reply[i] < ' ')
+              debug(1,"%d  %02x", i, server_reply[i]);
+            else
+              debug(1,"%d  %02x  '%c'", i, server_reply[i],server_reply[i]);
+            //sprintf((char *)message + 2 * i, "%02x", server_reply[i]);
+            //debug(1,"Content is \"%s\".",message);
+          }
           close(sockfd);
         }
       }

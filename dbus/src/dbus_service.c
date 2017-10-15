@@ -47,13 +47,13 @@ gboolean notify_volume_callback(ShairportSync *skeleton, gpointer user_data) {
   return TRUE;
 }
 
-static gboolean on_handle_vol_up(ShairportSync *skeleton, GDBusMethodInvocation *invocation, gpointer user_data) {
-  debug(1,"VolUp");
+static gboolean on_handle_remote_command(ShairportSync *skeleton, GDBusMethodInvocation *invocation, const gchar *command, gpointer user_data) {
+  debug(1,"RemoteCommand with command \"%s\".",command);
     if (playing_conn)
-      rtp_send_client_command(playing_conn,"volumeup");
+      rtp_send_client_command(playing_conn,command);
     else
-      debug(1, "no thread playing -- VolUp ignored.");
-  shairport_sync_complete_vol_up(skeleton,invocation);
+      debug(1, "no thread playing -- RemoteCommand ignored.");
+  shairport_sync_complete_remote_command(skeleton,invocation);
   return TRUE;
 }
 
@@ -81,7 +81,7 @@ static void on_name_acquired(GDBusConnection *connection, const gchar *name, gpo
   g_signal_connect(skeleton, "notify::loudness-threshold",
                    G_CALLBACK(notify_loudness_threshold_callback), NULL);
   g_signal_connect(skeleton, "notify::volume", G_CALLBACK(notify_volume_callback), NULL);
-  g_signal_connect(skeleton, "handle-vol-up", G_CALLBACK(on_handle_vol_up), NULL);
+  g_signal_connect(skeleton, "handle-remote-command", G_CALLBACK(on_handle_remote_command), NULL);
 }
 
 int start_dbus_service() {
