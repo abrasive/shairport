@@ -938,6 +938,7 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn, rtsp_message *r
 //    to send commands to the source's remote control (if it has one).
 //		`clip` -- the payload is the IP number of the client, i.e. the sender of audio.
 //		Can be an IPv4 or an IPv6 number.
+//		`dapo` -- the payload is the port number (as text) on the server to which remote control commands should be sent. It is 3689 for iTunes but varies for iOS devices.
 
 //		A special sub-protocol is used for sending large data items over UDP
 //    If the payload exceeded 4 MB, it is chunked using the following format:
@@ -2022,7 +2023,7 @@ void rtsp_listen_loop(void) {
           inet_ntop(AF_INET, &(sa->sin_addr), remote_ip4, INET_ADDRSTRLEN);
           unsigned short int rport = ntohs(sa->sin_port);
 #ifdef CONFIG_METADATA
-          send_ssnc_metadata('clip', strdup(remote_ip4), strlen(remote_ip4), 1);
+          send_ssnc_metadata'clip', strdup(remote_ip4), strlen(remote_ip4), 1);
           send_ssnc_metadata('svip', strdup(ip4), strlen(ip4), 1);
 #endif
           debug(1, "New RTSP connection from %s:%u to self at %s:%u on conversation thread %d.",

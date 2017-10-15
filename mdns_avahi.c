@@ -30,6 +30,7 @@
 
 #include "common.h"
 #include "mdns.h"
+#include "rtsp.h"
 #include <string.h>
 
 #include <avahi-client/client.h>
@@ -85,6 +86,12 @@ static void resolve_callback(AvahiServiceResolver *r, AVAHI_GCC_UNUSED AvahiIfIn
         if (*p != port) {
           debug(1, "Client's DACP port: %u.", port);
           *p = port;
+          #ifdef CONFIG_METADATA
+          char portstring[10];
+          memset(portstring,0,sizeof(portstring));
+          sprintf(portstring, "%u", port);
+          send_ssnc_metadata('dapo', strdup(portstring), strlen(portstring), 0);
+          #endif
         }
       }
     } else {
@@ -108,7 +115,7 @@ static void browse_callback(AvahiServiceBrowser *b, AvahiIfIndex interface, Avah
     avahi_threaded_poll_quit(tpoll);
     break;
   case AVAHI_BROWSER_NEW:
-    // debug(1, "(Browser) NEW: service '%s' of type '%s' in domain '%s'.", name, type, domain);
+    debug(1, "(Browser) NEW: service '%s' of type '%s' in domain '%s'.", name, type, domain);
     /* We ignore the returned resolver object. In the callback
        function we free it. If the server is terminated before
        the callback function is called the server will free
@@ -429,18 +436,21 @@ int avahi_dacp_monitor(char *dacp_id, uint16_t *port, void **private_pointer) {
 
 void avahi_dacp_dont_monitor(void **private_pointer) {
   dacp_browser_struct **pdbs = (dacp_browser_struct **)private_pointer;
-
-  // stop and dispose of everything
-  if ((*pdbs)->service_poll)
-    avahi_threaded_poll_stop((*pdbs)->service_poll);
-  if ((*pdbs)->service_browser)
-    avahi_service_browser_free((*pdbs)->service_browser);
-  if ((*pdbs)->service_client)
-    avahi_client_free((*pdbs)->service_client);
-  if ((*pdbs)->service_poll)
-    avahi_threaded_poll_free((*pdbs)->service_poll);
-  free((char *)(*pdbs));
-  *pdbs = NULL;
+  if (*pdbs) {
+    // stop and dispose of everything
+    if ((*pdbs)->service_poll)
+      avahi_threaded_poll_stop((*pdbs)->service_poll);
+    if ((*pdbs)->service_browser)
+      avahi_service_browser_free((*pdbs)->service_browser);
+    if ((*pdbs)->service_client)
+      avahi_client_free((*pdbs)->service_client);
+    if ((*pdbs)->service_poll)
+      avahi_threaded_poll_free((*pdbs)->service_poll);
+    free((char *)(*pdbs));
+    *pdbs = NULL;
+  } else {
+    debug(1,"DHCP Monitor is not running.");
+  }
 }
 
 mdns_backend mdns_avahi = {.name = "avahi",
