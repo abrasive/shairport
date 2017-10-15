@@ -2023,7 +2023,7 @@ void rtsp_listen_loop(void) {
           inet_ntop(AF_INET, &(sa->sin_addr), remote_ip4, INET_ADDRSTRLEN);
           unsigned short int rport = ntohs(sa->sin_port);
 #ifdef CONFIG_METADATA
-          send_ssnc_metadata'clip', strdup(remote_ip4), strlen(remote_ip4), 1);
+          send_ssnc_metadata('clip', strdup(remote_ip4), strlen(remote_ip4), 1);
           send_ssnc_metadata('svip', strdup(ip4), strlen(ip4), 1);
 #endif
           debug(1, "New RTSP connection from %s:%u to self at %s:%u on conversation thread %d.",
