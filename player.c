@@ -1095,7 +1095,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
     if (do_wait == 0)
       if ((conn->ab_synced != 0) && (conn->ab_read == conn->ab_write)) { // the buffer is empty!
         if (notified_buffer_empty == 0) {
-          debug(3, "Buffers exhausted.");
+          debug(2, "Buffers exhausted.");
           notified_buffer_empty = 1;
         }
         do_wait = 1;
