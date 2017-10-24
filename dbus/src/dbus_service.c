@@ -89,4 +89,5 @@ int start_dbus_service() {
   g_bus_own_name(G_BUS_TYPE_SYSTEM, "org.gnome.ShairportSync", G_BUS_NAME_OWNER_FLAGS_NONE, NULL,
                  on_name_acquired, NULL, NULL, NULL);
   //  G_BUS_TYPE_SESSION or G_BUS_TYPE_SYSTEM
+  return 0; // this is just to quieten a compiler warning
 }

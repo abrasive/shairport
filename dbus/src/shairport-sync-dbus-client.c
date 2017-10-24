@@ -65,9 +65,10 @@ void *dbus_thread_func(void *arg) {
   g_main_loop_run(loop);
 
   //  dbus_service_main(); // let it run inside a thread
+  return NULL; // this is just to quieten a compiler warning.
 }
 
-void main(void) {
+int main(void) {
 
   pthread_create(&dbus_thread, NULL, &dbus_thread_func, NULL);
 
@@ -116,4 +117,6 @@ void main(void) {
   printf("exiting program.\n");
 
   g_object_unref(proxy);
+  
+  return 0;
 }

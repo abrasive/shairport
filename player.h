@@ -2,6 +2,7 @@
 #define _PLAYER_H
 
 #include <arpa/inet.h>
+#include <pthread.h>
 
 #include "config.h"
 
