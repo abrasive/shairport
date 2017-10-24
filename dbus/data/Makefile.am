@@ -8,7 +8,7 @@ EXTRA_DIST = $(service_in_files)
 
 # Rule to make the service file with bindir expanded
 $(service_DATA): $(service_in_files) Makefile
-	@sed -e "s|\@bindir\@|$(bindir)|" $<> $@
+	@sed -e "s|\@bindir\@|$(bindir)|" $? > $@
 
 clean-local:
 	rm -rf $(service_DATA)
