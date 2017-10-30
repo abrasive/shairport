@@ -88,7 +88,7 @@ static int init(int argc, char **argv) {
 
   // Start the mainloop
   assert(pa_threaded_mainloop_start(mainloop) == 0);
-  assert(pa_context_connect(context, NULL, PA_CONTEXT_NOAUTOSPAWN, NULL) == 0);
+  assert(pa_context_connect(context, NULL, 0, NULL) == 0);
 
   // Wait for the context to be ready
   for (;;) {
