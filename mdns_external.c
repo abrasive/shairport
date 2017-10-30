@@ -65,7 +65,7 @@ static int fork_execvp(const char *file, char *const argv[]) {
     // If we reach this point then execve has failed.
     // Write erno's value into the pipe and exit.
     int ignore = write(execpipe[1], &errno, sizeof(errno));
-
+    debug(1,"execve has failed.");
     _exit(-1);
     return 0;           // Just to make the compiler happy.
   } else {              // Parent

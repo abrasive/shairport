@@ -1493,13 +1493,11 @@ int main(int argc, char **argv) {
   metadata_init(); // create the metadata pipe if necessary
 #endif
 
-#if defined(HAVE_DBUS)
+#ifdef  HAVE_DBUS
   // Start up DBUS services after initial settings are all made
   debug(1, "Starting up D-Bus services");
   pthread_create(&dbus_thread, NULL, &dbus_thread_func, NULL);
-#ifdef HAVE_DBUS
   start_dbus_service();
-#endif
 #endif
 
   daemon_log(LOG_INFO, "Successful Startup");
