@@ -10,6 +10,7 @@ Continuing the experiments with D-Bus support, Shairport Sync can now be compile
 
 **Other Stuff**
 * Changed the debug verbosity level of some debug messages.
+* In the `pa` backend, when connecting to a PulseAudio context, don't disable `autospawn`.
 
 Version 3.2d8
 ====
