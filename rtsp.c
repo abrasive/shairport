@@ -268,6 +268,8 @@ static void cleanup_threads(void) {
             conns[i]->connection_number);
       pthread_join(conns[i]->thread, &retval);
       debug(3, "RTSP connection thread %d deleted...", conns[i]->connection_number);
+      if (conns[i] == playing_conn)
+        playing_conn = NULL;
       free(conns[i]);
       nconns--;
       if (nconns)
@@ -546,9 +548,9 @@ static enum rtsp_read_request_response rtsp_read_request(rtsp_conn_info *conn,
       reply = rtsp_read_request_response_error;
       goto shutdown;
     }
-    if (nread == EINTR)
-      continue;
     if (nread < 0) {
+      if (errno == EINTR)
+        continue;
       perror("read failure");
       reply = rtsp_read_request_response_error;
       goto shutdown;
@@ -1395,36 +1397,37 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
   if (pthread_mutex_trylock(&play_lock) == 0) {
     have_the_player = 1;
   } else {
-    if (playing_conn) {
-      debug(1, "RTSP Conversation thread %d already playing when asked by thread %d.",
-            playing_conn->connection_number, conn->connection_number);
-    } else {
-      debug(1, "play_lock locked but no playing_conn.");
-    }
-    if (config.allow_session_interruption == 1) {
+    int should_wait = 0;
+
+    if (! playing_conn)
+      die("Non existent playing_conn with play_lock enabled.");
+    debug(1, "RTSP Conversation thread %d already playing when asked by thread %d.",
+          playing_conn->connection_number, conn->connection_number);
+    if (playing_conn->stop) {
+      debug(1,"Playing connection is already shutting down; waiting for it...");
+      should_wait = 1;
+    } else if (config.allow_session_interruption == 1) {
       // some other thread has the player ... ask it to relinquish the thread
-      if (playing_conn) {
-        debug(1, "ANNOUNCE: playing connection %d being interrupted by connection %d.",
-              playing_conn->connection_number, conn->connection_number);
-        if (playing_conn == conn) {
-          debug(1, "ANNOUNCE asking to stop itself.");
-        } else {
-          playing_conn->stop = 1;
-          memory_barrier();
-          pthread_kill(playing_conn->thread, SIGUSR1);
-          usleep(
-              1000000); // here, it is possible for other connections to come in and nab the player.
-        }
+      debug(1, "ANNOUNCE: playing connection %d being interrupted by connection %d.",
+            playing_conn->connection_number, conn->connection_number);
+      if (playing_conn == conn) {
+        debug(1, "ANNOUNCE asking to stop itself.");
       } else {
-        die("Non existent the_playing_conn with play_lock enabled.");
+        playing_conn->stop = 1;
+        memory_barrier();
+        pthread_kill(playing_conn->thread, SIGUSR1);
+        should_wait = 1;
       }
-      debug(1, "Try to get the player now");
-      // pthread_mutex_lock(&play_lock);
-      if (pthread_mutex_trylock(&play_lock) == 0)
-        have_the_player = 1;
-      else
-        debug(1, "ANNOUNCE failed to get the player");
     }
+
+    if (should_wait) {
+      usleep(1000000); // here, it is possible for other connections to come in and nab the player.
+      debug(1, "Try to get the player now");
+    }
+    if (pthread_mutex_trylock(&play_lock) == 0)
+      have_the_player = 1;
+    else
+      debug(1,"ANNOUNCE failed to get the player");
   }
 
   if (have_the_player) {
