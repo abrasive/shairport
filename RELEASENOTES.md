@@ -8,6 +8,7 @@ Continuing the experiments with D-Bus support, Shairport Sync can now be compile
 **Bug Fix**
 * A bug in the hardware volume control affects output devices that have hardware mixers but that do not allow the volume to be set in dB. One example is the Softvol plugin in ALSA. Shairport Sync fails silently when presented with such a device when hardware volume control is enabled: the volume events have no effect. The bug has been fixed by adding two missing lines of code to the `init()` function in `audio_alsa.c`. Thanks to [Jakub Nabaglo](https://github.com/nbgl) for finding and fixing the bug.
 * A number of bug fixes due to [belboj](https://github.com/belboj). Many thanks for these!
+* Enhancements to the handling of quit requests by threads, thanks(again) to [belboj](https://github.com/belboj)!
 
 **Other Stuff**
 * Changed the debug verbosity level of some debug messages.
