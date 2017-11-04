@@ -33,7 +33,6 @@
 #include <memory.h>
 #include <net/if.h>
 #include <popt.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
@@ -986,6 +985,10 @@ void signal_setup(void) {
   sigdelset(&set, SIGCHLD);
   sigdelset(&set, SIGUSR2);
   pthread_sigmask(SIG_BLOCK, &set, NULL);
+
+  // SIGUSR1 is used to interrupt a thread if blocked in pselect
+  pthread_sigmask(SIG_SETMASK, NULL, &pselect_sigset);
+  sigdelset(&pselect_sigset, SIGUSR1);
 
   // setting this to SIG_IGN would prevent signalling any threads.
   struct sigaction sa;

@@ -4,6 +4,7 @@
 #include <libconfig.h>
 #include <stdint.h>
 #include <sys/socket.h>
+#include <signal.h>
 
 #include "audio.h"
 #include "config.h"
@@ -218,5 +219,7 @@ void command_set_volume(double volume);
 
 void shairport_shutdown();
 // void shairport_startup_complete(void);
+
+extern sigset_t pselect_sigset;
 
 #endif // _COMMON_H

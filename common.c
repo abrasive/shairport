@@ -92,6 +92,8 @@ shairport_cfg config;
 
 int debuglev = 0;
 
+sigset_t pselect_sigset;
+
 int get_requested_connection_state_to_output() { return requested_connection_state_to_output; }
 
 void set_requested_connection_state_to_output(int v) { requested_connection_state_to_output = v; }

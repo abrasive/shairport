@@ -34,7 +34,6 @@
 #include <netinet/in.h>
 #include <poll.h>
 #include <pthread.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -466,7 +465,12 @@ static enum rtsp_read_request_response rtsp_read_request(rtsp_conn_info *conn,
   int msg_size = -1;
 
   while (msg_size < 0) {
-    memory_barrier();
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    FD_SET(conn->fd, &readfds);
+    do {
+      memory_barrier();
+    } while (conn->stop == 0 && pselect(conn->fd + 1, &readfds, NULL, NULL, NULL, &pselect_sigset) <= 0);
     if (conn->stop != 0) {
       debug(3, "RTSP conversation thread %d shutdown requested.", conn->connection_number);
       reply = rtsp_read_request_response_immediate_shutdown_requested;
@@ -539,6 +543,17 @@ static enum rtsp_read_request_response rtsp_read_request(rtsp_conn_info *conn,
 #endif
         warning_message_sent = 1;
       }
+    }
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    FD_SET(conn->fd, &readfds);
+    do {
+      memory_barrier();
+    } while (conn->stop == 0 && pselect(conn->fd + 1, &readfds, NULL, NULL, NULL, &pselect_sigset) <= 0);
+    if (conn->stop != 0) {
+      debug(1, "RTSP shutdown requested.");
+      reply = rtsp_read_request_response_immediate_shutdown_requested;
+      goto shutdown;
     }
     ssize_t read_chunk = msg_size - inbuf;
     if (read_chunk > max_read_chunk)
@@ -1026,6 +1041,7 @@ void metadata_create(void) {
     } else {
       int buffer_size = METADATA_SNDBUF;
       setsockopt(metadata_sock, SOL_SOCKET, SO_SNDBUF, &buffer_size, sizeof(buffer_size));
+      fcntl(fd, F_SETFL, O_NONBLOCK);
       bzero((char *)&metadata_sockaddr, sizeof(metadata_sockaddr));
       metadata_sockaddr.sin_family = AF_INET;
       metadata_sockaddr.sin_addr.s_addr = inet_addr(config.metadata_sockaddr);
@@ -1773,12 +1789,6 @@ authenticate:
 }
 
 static void *rtsp_conversation_thread_func(void *pconn) {
-  // SIGUSR1 is used to interrupt this thread if blocked for read
-  sigset_t set;
-  sigemptyset(&set);
-  sigaddset(&set, SIGUSR1);
-  pthread_sigmask(SIG_UNBLOCK, &set, NULL);
-
   rtsp_conn_info *conn = pconn;
 
   rtp_initialise(conn);
@@ -1821,7 +1831,15 @@ static void *rtsp_conversation_thread_func(void *pconn) {
       }
       debug(3, "RTSP thread %d: RTSP Response:", conn->connection_number);
       debug_print_msg_headers(3, resp);
-      msg_write_response(conn->fd, resp);
+      fd_set writefds;
+      FD_ZERO(&writefds);
+      FD_SET(conn->fd, &writefds);
+      do {
+        memory_barrier();
+      } while (conn->stop == 0 && pselect(conn->fd + 1, NULL, &writefds, NULL, NULL, &pselect_sigset) <= 0);
+      if (conn->stop == 0) {
+        msg_write_response(conn->fd, resp);
+      }
       msg_free(req);
       msg_free(resp);
     } else {
@@ -2063,6 +2081,8 @@ void rtsp_listen_loop(void) {
       //      conn->thread = rtsp_conversation_thread;
       //      conn->stop = 0; // record's memory has been zeroed
       //      conn->authorized = 0; // record's memory has been zeroed
+      fcntl(conn->fd, F_SETFL, O_NONBLOCK);
+
       ret = pthread_create(&conn->thread, NULL, rtsp_conversation_thread_func,
                            conn); // also acts as a memory barrier
       if (ret)
