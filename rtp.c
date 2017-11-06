@@ -798,10 +798,11 @@ void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
   }
 }
 
-void rtp_send_client_command(rtsp_conn_info *conn, const char *command) {
+ssize_t rtp_send_client_command(rtsp_conn_info *conn, const char *command, char *response, size_t max_response_length) {
+  ssize_t reply_size =  -1;
   if (conn->rtp_running) {
     if (conn->dacp_port == 0) {
-      debug(1, "Can't request a client pause: no valid active remote.");
+      debug(1, "Can't send a remote request: no valid active remote.");
     } else {
 
       struct addrinfo hints, *res;
@@ -809,7 +810,10 @@ void rtp_send_client_command(rtsp_conn_info *conn, const char *command) {
 
       char message[20000], server_reply[2000], portstring[10], server[256];
       memset(&message, 0, sizeof(message));
-      memset(&server_reply, 0, sizeof(server_reply));
+      if ((response) && (max_response_length))
+        memset(response, 0, max_response_length);
+      else    
+        memset(&server_reply, 0, sizeof(server_reply));
       memset(&portstring, 0, sizeof(portstring));
 
       if (conn->connection_ip_family == AF_INET6) {
@@ -853,22 +857,12 @@ void rtp_send_client_command(rtsp_conn_info *conn, const char *command) {
           }
 
           // Receive a reply from the server
-          ssize_t reply_size = recv(sockfd, server_reply, 2000, 0);
+           if ((response) && (max_response_length))
+            reply_size = recv(sockfd, response, max_response_length, 0);
+          else
+            reply_size = recv(sockfd, server_reply, sizeof(server_reply), 0);
           if (reply_size < 0) {
             debug(1, "recv failed");
-          }
-
-          if (strstr(server_reply, "HTTP/1.1 204 No Content") != server_reply) {
-            debug(1, "Client request to server failed with %d characters starting with this response:", reply_size,server_reply);
-           int i;
-           
-           for (i=0;i<reply_size;i++)
-            if (server_reply[i] < ' ')
-              debug(1,"%d  %02x", i, server_reply[i]);
-            else
-              debug(1,"%d  %02x  '%c'", i, server_reply[i],server_reply[i]);
-            //sprintf((char *)message + 2 * i, "%02x", server_reply[i]);
-            //debug(1,"Content is \"%s\".",message);
           }
           close(sockfd);
         }
@@ -877,4 +871,5 @@ void rtp_send_client_command(rtsp_conn_info *conn, const char *command) {
   } else {
     debug(1, "Request to pause non-existent play stream -- ignored.");
   }
+  return reply_size;
 }

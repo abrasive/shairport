@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 
 #include "../../config.h"
 
@@ -49,10 +50,34 @@ gboolean notify_volume_callback(ShairportSync *skeleton, gpointer user_data) {
 
 static gboolean on_handle_remote_command(ShairportSync *skeleton, GDBusMethodInvocation *invocation, const gchar *command, gpointer user_data) {
   debug(1,"RemoteCommand with command \"%s\".",command);
-    if (playing_conn)
-      rtp_send_client_command(playing_conn,command);
-    else
+    if (playing_conn) {
+      char server_reply[2000];
+      ssize_t reply_size = rtp_send_client_command(playing_conn,command,server_reply,sizeof(server_reply));
+        if (reply_size>=0) {
+  // not interested in the response.
+  //      if (strstr(server_reply, "HTTP/1.1 204") == server_reply) {
+  //        debug(1,"Client response is No Content");
+  //      } else if (strstr(server_reply, "HTTP/1.1 200 OK") != server_reply) {
+  //        debug("Client response is OK, with content");
+  //      } else {
+
+        if (strstr(server_reply, "HTTP/1.1 204") != server_reply) {
+          debug(1, "Client request to server responded with %d characters starting with this response:", strlen(server_reply));
+          int i;       
+          for (i=0;i<reply_size;i++)
+          if (server_reply[i] < ' ')
+            debug(1,"%d  %02x", i, server_reply[i]);
+          else
+            debug(1,"%d  %02x  '%c'", i, server_reply[i],server_reply[i]);
+          //sprintf((char *)message + 2 * i, "%02x", server_reply[i]);
+          //debug(1,"Content is \"%s\".",message);
+        }
+      } else {
+        debug(1,"Error at rtp_send_client_command");
+      }
+    } else {
       debug(1, "no thread playing -- RemoteCommand ignored.");
+    }
   shairport_sync_complete_remote_command(skeleton,invocation);
   return TRUE;
 }
