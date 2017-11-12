@@ -74,8 +74,8 @@
 
 #ifdef HAVE_DBUS
 #include "dacp.h"
-#include "dbus/src/shairport-sync-dbus-interface.h"
-#include "dbus/src/shairport-sync-dbus-service.h"
+#include "shairport-sync-dbus-interface.h"
+#include "shairport-sync-dbus-service.h"
 #endif
 
 #include "common.h"

@@ -1,6 +1,8 @@
 /INSTALL
 /shairport-sync
 /shairport-sync.exe
+/shairport-sync-dbus-test-client
+
 *.o
 /*~
 *.xml~
@@ -26,12 +28,8 @@ scripts/shairport-sync
 shairport-sync.core
 
 #Some dbus files that are automatically generated
-dbus/data/org.gnome.ShairportSync.service
-dbus/src/shairport-sync-dbus-client
-dbus/src/shairport-sync-dbus-interface.c
-dbus/src/shairport-sync-dbus-interface.h
-dbus/src/shairport-sync-dbus-service.c
-dbus/src/shairport-sync-dbus-service.h
+/org.gnome.ShairportSync.service
+/shairport-sync-dbus-interface.*
 
 # Some eclipse project files
 .cproject

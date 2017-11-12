@@ -1,17 +1,9 @@
 SUBDIRS = man
 
-if USE_DBUS
-  SUBDIRS += dbus/src dbus/data
-else
-if USE_DBUS_CLIENT
-  SUBDIRS += dbus/src dbus/data
-endif
-endif
-
 bin_PROGRAMS = shairport-sync
 
 if USE_DBUS_CLIENT
-noinst_PROGRAMS = dbus/src/shairport-sync-dbus-client
+noinst_PROGRAMS = shairport-sync-dbus-test-client
 endif
 
 shairport_sync_SOURCES = shairport.c rtsp.c mdns.c mdns_external.c common.c rtp.c player.c alac.c audio.c loudness.c
@@ -82,7 +74,46 @@ shairport_sync_SOURCES += mdns_dns_sd.c
 endif
 
 if USE_DBUS
-shairport_sync_SOURCES += dbus/src/shairport-sync-dbus-service.c dbus/src/shairport-sync-dbus-interface.c dacp.c
+shairport_sync_SOURCES += shairport-sync-dbus-service.c shairport-sync-dbus-interface.c dacp.c
+endif
+
+if USE_DBUS_CLIENT
+shairport_sync_dbus_test_client_SOURCES = shairport-sync-dbus-interface.c shairport-sync-dbus-interface.h shairport-sync-dbus-test-client.c
+endif
+
+if USE_DBUS
+BUILT_SOURCES = shairport-sync-dbus-interface.h shairport-sync-dbus-interface.c org.gnome.ShairportSync.service
+# We don't want to install this header
+noinst_HEADERS = $(BUILT_SOURCES)
+
+# Correctly clean the generated headers, but keep the xml description
+CLEANFILES = $(BUILT_SOURCES)
+#EXTRA_DIST = org.gnome.ShairportSync.xml
+
+#Rule to generate the binding headers
+shairport-sync-dbus-interface.h:  org.gnome.ShairportSync.xml
+	gdbus-codegen --interface-prefix org.gnome --generate-c-code shairport-sync-dbus-interface org.gnome.ShairportSync.xml
+
+shairport-sync-dbus-interface.c:  org.gnome.ShairportSync.xml
+	gdbus-codegen --interface-prefix org.gnome --generate-c-code shairport-sync-dbus-interface org.gnome.ShairportSync.xml
+
+# Dbus service file
+
+interfacesdir = $(DESTDIR)/usr/local/share/dbus-1/interfaces
+interfaces_DATA = org.gnome.ShairportSync.xml
+
+servicedir = $(DESTDIR)/usr/local/share/dbus-1/services
+service_in_files = org.gnome.ShairportSync.service.in
+service_DATA = $(service_in_files:.service.in=.service)
+EXTRA_DIST = $(service_in_files) org.gnome.ShairportSync.xml
+
+# Rule to make the service file with bindir expanded
+$(service_DATA): $(service_in_files) Makefile
+	@sed -e "s|\@bindir\@|$(bindir)|" $? > $@
+
+clean-local:
+	rm -rf $(service_DATA)
+
 endif
 
 install-exec-hook:
@@ -91,7 +122,7 @@ if INSTALL_CONFIG_FILES
 	cp scripts/shairport-sync.conf $(DESTDIR)$(sysconfdir)/shairport-sync.conf.sample
 	[ -f $(DESTDIR)$(sysconfdir)/shairport-sync.conf ] || cp scripts/shairport-sync.conf $(DESTDIR)$(sysconfdir)/shairport-sync.conf
 if USE_DBUS
-	cp dbus/config/system-bus-policy/shairport-sync.conf $(DESTDIR)$(sysconfdir)/dbus-1/system.d/shairport-sync.conf
+	cp shairport-sync-dbus-policy.conf $(DESTDIR)$(sysconfdir)/dbus-1/system.d/shairport-sync.conf
 endif
 endif
 if INSTALL_SYSTEMV

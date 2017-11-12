@@ -59,7 +59,7 @@
 #endif
 
 #ifdef HAVE_DBUS
-#include "dbus/src/shairport-sync-dbus-service.h"
+#include "shairport-sync-dbus-service.h"
 #endif
 
 #include "common.h"
