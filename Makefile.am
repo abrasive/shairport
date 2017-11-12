@@ -82,7 +82,7 @@ shairport_sync_SOURCES += mdns_dns_sd.c
 endif
 
 if USE_DBUS
-shairport_sync_SOURCES += dbus/src/dbus_service.c dbus/src/shairportsync.c
+shairport_sync_SOURCES += dbus/src/dbus_service.c dbus/src/shairportsync.c dacp.c
 endif
 
 install-exec-hook:

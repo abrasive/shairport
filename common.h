@@ -2,9 +2,9 @@
 #define _COMMON_H
 
 #include <libconfig.h>
+#include <signal.h>
 #include <stdint.h>
 #include <sys/socket.h>
-#include <signal.h>
 
 #include "audio.h"
 #include "config.h"

@@ -9,6 +9,8 @@
 
 #include "../../rtp.h"
 
+#include "../../dacp.h"
+
 #include "dbus_service.h"
 
 gboolean notify_loudness_filter_active_callback(ShairportSync *skeleton, gpointer user_data) {
@@ -35,50 +37,143 @@ gboolean notify_loudness_threshold_callback(ShairportSync *skeleton, gpointer us
 }
 
 gboolean notify_volume_callback(ShairportSync *skeleton, gpointer user_data) {
-  gdouble vo = shairport_sync_get_volume(skeleton);
-  if (((vo <= 0.0) && (vo >= -30.0)) || (vo == -144.0)) {
-    debug(1, "Setting volume to %f.", vo);
-    if (playing_conn)
-      player_volume_without_notification(vo, playing_conn);
-    else
+  gint vo = shairport_sync_get_volume(skeleton);
+  if ((vo >= 0) && (vo <= 100)) {
+    if (playing_conn) {
+      if (vo !=
+          playing_conn
+              ->dacp_volume) { // this is to stop an infinite loop of setting->checking->setting...
+        // debug(1, "Remote-setting volume to %d.", vo);
+        // get the information we need -- the absolute volume, the speaker list, our ID
+        struct dacp_speaker_stuff speaker_info[50];
+        int32_t overall_volume = dacp_get_client_volume(playing_conn);
+        int speaker_count =
+            dacp_get_speaker_list(playing_conn, (dacp_spkr_stuff *)&speaker_info, 50);
+
+        // get our machine number
+        uint16_t *hn = (uint16_t *)config.hw_addr;
+        uint32_t *ln = (uint32_t *)(config.hw_addr + 2);
+        uint64_t t1 = ntohs(*hn);
+        uint64_t t2 = ntohl(*ln);
+        int64_t machine_number = (t1 << 32) + t2; // this form is useful
+
+        // Let's find our own speaker in the array and pick up its relative volume
+        int i;
+        int32_t relative_volume = 0;
+        int32_t active_speakers = 0;
+        for (i = 0; i < speaker_count; i++) {
+          if (speaker_info[i].speaker_number == machine_number) {
+            // debug(1,"Our speaker number found: %ld.",machine_number);
+            relative_volume = speaker_info[i].volume;
+          }
+          if (speaker_info[i].active == 1) {
+            active_speakers++;
+          }
+        }
+
+        if (active_speakers == 1) {
+          // must be just this speaker
+          dacp_set_include_speaker_volume(playing_conn, machine_number, vo);
+        } else if (active_speakers == 0) {
+          debug(1, "No speakers!");
+        } else {
+          // debug(1, "Speakers: %d, active: %d",speaker_count,active_speakers);
+          if (vo >= overall_volume) {
+            // debug(1,"Multiple speakers active, but desired new volume is highest");
+            dacp_set_include_speaker_volume(playing_conn, machine_number, vo);
+          } else {
+            // the desired volume is less than the current overall volume and there is more than one
+            // speaker
+            // we must find out the highest other speaker volume.
+            // If the desired volume is less than it, we must set the current_overall volume to that
+            // highest volume
+            // and set our volume relative to it.
+            // If the desired volume is greater than the highest current volume, then we can just go
+            // ahead
+            // with dacp_set_include_speaker_volume, setting the new current overall volume to the
+            // desired new level
+            // with the speaker at 100%
+
+            int32_t highest_other_volume = 0;
+            for (i = 0; i < speaker_count; i++) {
+              if ((speaker_info[i].speaker_number != machine_number) &&
+                  (speaker_info[i].active == 1) &&
+                  (speaker_info[i].volume > highest_other_volume)) {
+                highest_other_volume = speaker_info[i].volume;
+              }
+            }
+            highest_other_volume = (highest_other_volume * overall_volume + 50) / 100;
+            if (highest_other_volume <= vo) {
+              // debug(1,"Highest other volume %d is less than or equal to the desired new volume
+              // %d.",highest_other_volume,vo);
+              dacp_set_include_speaker_volume(playing_conn, machine_number, vo);
+            } else {
+              // debug(1,"Highest other volume %d is greater than the desired new volume
+              // %d.",highest_other_volume,vo);
+              // if the present overall volume is higher than the highest other volume at present,
+              // then bring it down to it.
+              if (overall_volume > highest_other_volume) {
+                // debug(1,"Lower overall volume to new highest volume.");
+                dacp_set_include_speaker_volume(
+                    playing_conn, machine_number,
+                    highest_other_volume); // set the overall volume to the highest one
+              }
+              int32_t desired_relative_volume =
+                  (vo * 100 + (highest_other_volume / 2)) / highest_other_volume;
+              // debug(1,"Set our speaker volume relative to the highest volume.");
+              dacp_set_speaker_volume(
+                  playing_conn, machine_number,
+                  desired_relative_volume); // set the overall volume to the highest one
+            }
+          }
+        }
+        //     } else {
+        //       debug(1, "No need to remote-set volume to %d, as it is already set to this
+        //       value.",playing_conn->dacp_volume);
+      }
+    } else
       debug(1, "no thread playing -- ignored.");
   } else {
-    debug(1, "Invalid volume: %f -- ignored.", vo);
+    debug(1, "Invalid volume: %d -- ignored.", vo);
   }
   return TRUE;
 }
 
-static gboolean on_handle_remote_command(ShairportSync *skeleton, GDBusMethodInvocation *invocation, const gchar *command, gpointer user_data) {
-  debug(1,"RemoteCommand with command \"%s\".",command);
-    if (playing_conn) {
-      char server_reply[2000];
-      ssize_t reply_size = rtp_send_client_command(playing_conn,command,server_reply,sizeof(server_reply));
-        if (reply_size>=0) {
-  // not interested in the response.
-  //      if (strstr(server_reply, "HTTP/1.1 204") == server_reply) {
-  //        debug(1,"Client response is No Content");
-  //      } else if (strstr(server_reply, "HTTP/1.1 200 OK") != server_reply) {
-  //        debug("Client response is OK, with content");
-  //      } else {
+static gboolean on_handle_remote_command(ShairportSync *skeleton, GDBusMethodInvocation *invocation,
+                                         const gchar *command, gpointer user_data) {
+  debug(1, "RemoteCommand with command \"%s\".", command);
+  if (playing_conn) {
+    char server_reply[2000];
+    ssize_t reply_size =
+        dacp_send_client_command(playing_conn, command, server_reply, sizeof(server_reply));
+    if (reply_size >= 0) {
+      // not interested in the response.
+      //      if (strstr(server_reply, "HTTP/1.1 204") == server_reply) {
+      //        debug(1,"Client response is No Content");
+      //      } else if (strstr(server_reply, "HTTP/1.1 200 OK") != server_reply) {
+      //        debug("Client response is OK, with content");
+      //      } else {
 
-        if (strstr(server_reply, "HTTP/1.1 204") != server_reply) {
-          debug(1, "Client request to server responded with %d characters starting with this response:", strlen(server_reply));
-          int i;       
-          for (i=0;i<reply_size;i++)
+      if (strstr(server_reply, "HTTP/1.1 204") != server_reply) {
+        debug(1,
+              "Client request to server responded with %d characters starting with this response:",
+              strlen(server_reply));
+        int i;
+        for (i = 0; i < reply_size; i++)
           if (server_reply[i] < ' ')
-            debug(1,"%d  %02x", i, server_reply[i]);
+            debug(1, "%d  %02x", i, server_reply[i]);
           else
-            debug(1,"%d  %02x  '%c'", i, server_reply[i],server_reply[i]);
-          //sprintf((char *)message + 2 * i, "%02x", server_reply[i]);
-          //debug(1,"Content is \"%s\".",message);
-        }
-      } else {
-        debug(1,"Error at rtp_send_client_command");
+            debug(1, "%d  %02x  '%c'", i, server_reply[i], server_reply[i]);
+        // sprintf((char *)message + 2 * i, "%02x", server_reply[i]);
+        // debug(1,"Content is \"%s\".",message);
       }
     } else {
-      debug(1, "no thread playing -- RemoteCommand ignored.");
+      debug(1, "Error at rtp_send_client_command");
     }
-  shairport_sync_complete_remote_command(skeleton,invocation);
+  } else {
+    debug(1, "no thread playing -- RemoteCommand ignored.");
+  }
+  shairport_sync_complete_remote_command(skeleton, invocation);
   return TRUE;
 }
 

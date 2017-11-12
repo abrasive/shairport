@@ -108,6 +108,10 @@ typedef struct {
   AES_KEY aes;
 #endif
 
+#ifdef HAVE_DBUS
+  int32_t dacp_volume;
+#endif
+
   int amountStuffed;
 
   int32_t framesProcessedInThisEpoch;

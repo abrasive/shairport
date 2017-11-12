@@ -27,6 +27,7 @@
 
 #include <arpa/inet.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <math.h>
 #include <memory.h>
 #include <netdb.h>
@@ -37,7 +38,6 @@
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
-#include <fcntl.h>
 
 #include "common.h"
 #include "player.h"
@@ -88,7 +88,8 @@ void *rtp_audio_receiver(void *arg) {
     FD_SET(conn->audio_socket, &readfds);
     do {
       memory_barrier();
-    } while (conn->please_stop == 0 && pselect(conn->audio_socket + 1, &readfds, NULL, NULL, NULL, &pselect_sigset) <= 0);
+    } while (conn->please_stop == 0 &&
+             pselect(conn->audio_socket + 1, &readfds, NULL, NULL, NULL, &pselect_sigset) <= 0);
     if (conn->please_stop != 0) {
       break;
     }
@@ -189,7 +190,8 @@ void *rtp_control_receiver(void *arg) {
     FD_SET(conn->control_socket, &readfds);
     do {
       memory_barrier();
-    } while (conn->please_stop == 0 && pselect(conn->control_socket + 1, &readfds, NULL, NULL, NULL, &pselect_sigset) <= 0);
+    } while (conn->please_stop == 0 &&
+             pselect(conn->control_socket + 1, &readfds, NULL, NULL, NULL, &pselect_sigset) <= 0);
     if (conn->please_stop != 0) {
       break;
     }
@@ -333,7 +335,8 @@ void *rtp_timing_sender(void *arg) {
     FD_SET(conn->timing_socket, &writefds);
     do {
       memory_barrier();
-    } while (conn->timing_sender_stop == 0 && pselect(conn->timing_socket + 1, NULL, &writefds, NULL, NULL, &pselect_sigset) <= 0);
+    } while (conn->timing_sender_stop == 0 &&
+             pselect(conn->timing_socket + 1, NULL, &writefds, NULL, NULL, &pselect_sigset) <= 0);
     if (conn->timing_sender_stop != 0) {
       break;
     }
@@ -378,7 +381,8 @@ void *rtp_timing_receiver(void *arg) {
     FD_SET(conn->timing_socket, &readfds);
     do {
       memory_barrier();
-    } while (conn->please_stop == 0 && pselect(conn->timing_socket + 1, &readfds, NULL, NULL, NULL, &pselect_sigset) <= 0);
+    } while (conn->please_stop == 0 &&
+             pselect(conn->timing_socket + 1, &readfds, NULL, NULL, NULL, &pselect_sigset) <= 0);
     if (conn->please_stop != 0) {
       break;
     }
@@ -796,80 +800,4 @@ void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
     //  request_sent = 1;
     //}
   }
-}
-
-ssize_t rtp_send_client_command(rtsp_conn_info *conn, const char *command, char *response, size_t max_response_length) {
-  ssize_t reply_size =  -1;
-  if (conn->rtp_running) {
-    if (conn->dacp_port == 0) {
-      debug(1, "Can't send a remote request: no valid active remote.");
-    } else {
-
-      struct addrinfo hints, *res;
-      int sockfd;
-
-      char message[20000], server_reply[2000], portstring[10], server[256];
-      memset(&message, 0, sizeof(message));
-      if ((response) && (max_response_length))
-        memset(response, 0, max_response_length);
-      else    
-        memset(&server_reply, 0, sizeof(server_reply));
-      memset(&portstring, 0, sizeof(portstring));
-
-      if (conn->connection_ip_family == AF_INET6) {
-        sprintf(server, "%s%%%u", conn->client_ip_string, conn->self_scope_id);
-      } else {
-        strcpy(server, conn->client_ip_string);
-      }
-
-      sprintf(portstring, "%u", conn->dacp_port);
-
-      // first, load up address structs with getaddrinfo():
-
-      memset(&hints, 0, sizeof(hints));
-      hints.ai_family = AF_UNSPEC;
-      hints.ai_socktype = SOCK_STREAM;
-
-      getaddrinfo(server, portstring, &hints, &res);
-
-      // make a socket:
-
-      sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-
-      if (sockfd == -1) {
-        debug(1, "Could not create socket");
-      } else {
-
-        // connect!
-
-        if (connect(sockfd, res->ai_addr, res->ai_addrlen) < 0) {
-          debug(1, "connect failed. Error");
-        } else {
-
-          sprintf(message,
-                  "GET /ctrl-int/1/%s HTTP/1.1\r\nHost: %s:%u\r\nActive-Remote: %u\r\n\r\n",
-                  command, conn->client_ip_string, conn->dacp_port, conn->dacp_active_remote);
-
-          // Send command
-
-          if (send(sockfd, message, strlen(message), 0) < 0) {
-            debug(1, "Send failed");
-          }
-
-          // Receive a reply from the server
-           if ((response) && (max_response_length))
-            reply_size = recv(sockfd, response, max_response_length, 0);
-          else
-            reply_size = recv(sockfd, server_reply, sizeof(server_reply), 0);
-          if (reply_size < 0) {
-            debug(1, "recv failed");
-          }
-          close(sockfd);
-        }
-      }
-    }
-  } else {
-    debug(1, "Request to pause non-existent play stream -- ignored.");
-  }
-  return reply_size;
 }

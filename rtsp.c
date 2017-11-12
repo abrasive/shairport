@@ -470,7 +470,8 @@ static enum rtsp_read_request_response rtsp_read_request(rtsp_conn_info *conn,
     FD_SET(conn->fd, &readfds);
     do {
       memory_barrier();
-    } while (conn->stop == 0 && pselect(conn->fd + 1, &readfds, NULL, NULL, NULL, &pselect_sigset) <= 0);
+    } while (conn->stop == 0 &&
+             pselect(conn->fd + 1, &readfds, NULL, NULL, NULL, &pselect_sigset) <= 0);
     if (conn->stop != 0) {
       debug(3, "RTSP conversation thread %d shutdown requested.", conn->connection_number);
       reply = rtsp_read_request_response_immediate_shutdown_requested;
@@ -549,7 +550,8 @@ static enum rtsp_read_request_response rtsp_read_request(rtsp_conn_info *conn,
     FD_SET(conn->fd, &readfds);
     do {
       memory_barrier();
-    } while (conn->stop == 0 && pselect(conn->fd + 1, &readfds, NULL, NULL, NULL, &pselect_sigset) <= 0);
+    } while (conn->stop == 0 &&
+             pselect(conn->fd + 1, &readfds, NULL, NULL, NULL, &pselect_sigset) <= 0);
     if (conn->stop != 0) {
       debug(1, "RTSP shutdown requested.");
       reply = rtsp_read_request_response_immediate_shutdown_requested;
@@ -955,7 +957,8 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn, rtsp_message *r
 //    to send commands to the source's remote control (if it has one).
 //		`clip` -- the payload is the IP number of the client, i.e. the sender of audio.
 //		Can be an IPv4 or an IPv6 number.
-//		`dapo` -- the payload is the port number (as text) on the server to which remote control commands should be sent. It is 3689 for iTunes but varies for iOS devices.
+//		`dapo` -- the payload is the port number (as text) on the server to which remote
+//control commands should be sent. It is 3689 for iTunes but varies for iOS devices.
 
 //		A special sub-protocol is used for sending large data items over UDP
 //    If the payload exceeded 4 MB, it is chunked using the following format:
@@ -1415,12 +1418,12 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
   } else {
     int should_wait = 0;
 
-    if (! playing_conn)
+    if (!playing_conn)
       die("Non existent playing_conn with play_lock enabled.");
     debug(1, "RTSP Conversation thread %d already playing when asked by thread %d.",
           playing_conn->connection_number, conn->connection_number);
     if (playing_conn->stop) {
-      debug(1,"Playing connection is already shutting down; waiting for it...");
+      debug(1, "Playing connection is already shutting down; waiting for it...");
       should_wait = 1;
     } else if (config.allow_session_interruption == 1) {
       // some other thread has the player ... ask it to relinquish the thread
@@ -1443,7 +1446,7 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
     if (pthread_mutex_trylock(&play_lock) == 0)
       have_the_player = 1;
     else
-      debug(1,"ANNOUNCE failed to get the player");
+      debug(1, "ANNOUNCE failed to get the player");
   }
 
   if (have_the_player) {
@@ -1836,7 +1839,8 @@ static void *rtsp_conversation_thread_func(void *pconn) {
       FD_SET(conn->fd, &writefds);
       do {
         memory_barrier();
-      } while (conn->stop == 0 && pselect(conn->fd + 1, NULL, &writefds, NULL, NULL, &pselect_sigset) <= 0);
+      } while (conn->stop == 0 &&
+               pselect(conn->fd + 1, NULL, &writefds, NULL, NULL, &pselect_sigset) <= 0);
       if (conn->stop == 0) {
         msg_write_response(conn->fd, resp);
       }

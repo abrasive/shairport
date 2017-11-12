@@ -54,7 +54,7 @@ void notify_loudness_threshold_callback(ShairportSync *proxy, gpointer user_data
 
 void notify_volume_callback(ShairportSync *proxy, gpointer user_data) {
   gdouble th = shairport_sync_get_volume(proxy);
-  printf("Client reports volume set to %.2f dB.\n", th);
+  printf("Client reports volume set to %.2f.\n", th);
 }
 
 pthread_t dbus_thread;
@@ -88,35 +88,45 @@ int main(void) {
   g_signal_connect(proxy, "notify::volume", G_CALLBACK(notify_volume_callback), NULL);
 
   g_print("Starting test...\n");
+
+  shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), 20);
+  sleep(1);
+  shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), 100);
+  sleep(1);
+  shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), 40);
+  sleep(1);
+  shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), 60);
+  sleep(1);
   /*
-  shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), -20.0);
-  sleep(1);
-  shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), -10.0);
-  sleep(1);
-  shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), 0.0);
-  sleep(1);
-  shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), -25.0);
-  sleep(1);
-  shairport_sync_set_loudness_filter_active(SHAIRPORT_SYNC(proxy), TRUE);
-  sleep(10);
-  shairport_sync_set_loudness_threshold(SHAIRPORT_SYNC(proxy), -20.0);
-  sleep(5);
-  shairport_sync_set_loudness_filter_active(SHAIRPORT_SYNC(proxy), FALSE);
-  sleep(5);
-  shairport_sync_set_loudness_filter_active(SHAIRPORT_SYNC(proxy), TRUE);
-  sleep(5);
-  shairport_sync_set_loudness_threshold(SHAIRPORT_SYNC(proxy), -10.0);
-  sleep(10);
-  shairport_sync_set_loudness_filter_active(SHAIRPORT_SYNC(proxy), FALSE);
-  sleep(1);
-  */
-  shairport_sync_call_remote_command(SHAIRPORT_SYNC(proxy), "string",NULL,NULL,NULL);
+    shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), 10);
+    sleep(1);
+    shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), 0);
+    sleep(1);
+    shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), 25);
+    sleep(1);
+    shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), 100);
+    sleep(1);
+    shairport_sync_set_loudness_filter_active(SHAIRPORT_SYNC(proxy), TRUE);
+    sleep(10);
+    shairport_sync_set_loudness_threshold(SHAIRPORT_SYNC(proxy), -20.0);
+    sleep(5);
+    shairport_sync_set_loudness_filter_active(SHAIRPORT_SYNC(proxy), FALSE);
+    sleep(5);
+    shairport_sync_set_loudness_filter_active(SHAIRPORT_SYNC(proxy), TRUE);
+    sleep(5);
+    shairport_sync_set_loudness_threshold(SHAIRPORT_SYNC(proxy), -10.0);
+    sleep(10);
+    shairport_sync_set_loudness_filter_active(SHAIRPORT_SYNC(proxy), FALSE);
+    sleep(1);
+
+    shairport_sync_call_remote_command(SHAIRPORT_SYNC(proxy), "string",NULL,NULL,NULL);
+    */
   g_print("Finished test...\n");
   g_main_loop_quit(loop);
   pthread_join(dbus_thread, NULL);
   printf("exiting program.\n");
 
   g_object_unref(proxy);
-  
+
   return 0;
 }

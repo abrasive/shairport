@@ -73,6 +73,7 @@
 #endif
 
 #ifdef HAVE_DBUS
+#include "dacp.h"
 #include "dbus/src/dbus_service.h"
 #include "dbus/src/shairportsync.h"
 #endif
@@ -2449,8 +2450,42 @@ void player_volume_without_notification(double airplay_volume, rtsp_conn_info *c
 
 void player_volume(double airplay_volume, rtsp_conn_info *conn) {
   command_set_volume(airplay_volume);
+
 #ifdef HAVE_DBUS
-  shairport_sync_set_volume(SHAIRPORT_SYNC(skeleton), airplay_volume);
+  // A volume command has been sent from the client
+  // let's get the master volume from the DACP remote control
+
+  struct dacp_speaker_stuff speaker_info[50];
+  // we need the overall volume and the speakers information to get this device's relative volume to
+  // calculate the real volume
+
+  int32_t overall_volume = dacp_get_client_volume(conn);
+  // debug(1,"DACP Volume: %d.",overall_volume);
+  int speaker_count = dacp_get_speaker_list(conn, (dacp_spkr_stuff *)&speaker_info, 50);
+  // debug(1,"DACP Speaker Count: %d.",speaker_count);
+
+  // get our machine number
+  uint16_t *hn = (uint16_t *)config.hw_addr;
+  uint32_t *ln = (uint32_t *)(config.hw_addr + 2);
+  uint64_t t1 = ntohs(*hn);
+  uint64_t t2 = ntohl(*ln);
+  int64_t machine_number = (t1 << 32) + t2; // this form is useful
+
+  // Let's find our own speaker in the array and pick up its relative volume
+  int i;
+  int32_t relative_volume = 0;
+  for (i = 0; i < speaker_count; i++) {
+    if (speaker_info[i].speaker_number == machine_number) {
+      // debug(1,"Our speaker number found: %ld.",machine_number);
+      relative_volume = speaker_info[i].volume;
+    }
+  }
+  int32_t actual_volume = (overall_volume * relative_volume + 50) / 100;
+  // debug(1,"Overall volume: %d, relative volume: %d%, actual volume:
+  // %d.",overall_volume,relative_volume,actual_volume);
+  // debug(1,"Our actual speaker volume is %d.",actual_volume);
+  conn->dacp_volume = actual_volume; // this is needed to prevent a loop
+  shairport_sync_set_volume(SHAIRPORT_SYNC(skeleton), actual_volume);
 #endif
   player_volume_without_notification(airplay_volume, conn);
 }
