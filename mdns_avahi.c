@@ -86,12 +86,12 @@ static void resolve_callback(AvahiServiceResolver *r, AVAHI_GCC_UNUSED AvahiIfIn
         if (*p != port) {
           debug(1, "Client's DACP port: %u.", port);
           *p = port;
-          #ifdef CONFIG_METADATA
+#ifdef CONFIG_METADATA
           char portstring[20];
-          memset(portstring,0,sizeof(portstring));
+          memset(portstring, 0, sizeof(portstring));
           sprintf(portstring, "%u", port);
           send_ssnc_metadata('dapo', strdup(portstring), strlen(portstring), 0);
-          #endif
+#endif
         }
       }
     } else {
@@ -449,7 +449,7 @@ void avahi_dacp_dont_monitor(void **private_pointer) {
     free((char *)(*pdbs));
     *pdbs = NULL;
   } else {
-    debug(1,"DHCP Monitor is not running.");
+    debug(1, "DHCP Monitor is not running.");
   }
 }
 
