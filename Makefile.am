@@ -2,9 +2,7 @@ SUBDIRS = man
 
 bin_PROGRAMS = shairport-sync
 
-if USE_DBUS_CLIENT
-noinst_PROGRAMS = shairport-sync-dbus-test-client
-endif
+# See below for the flags for the test client program
 
 shairport_sync_SOURCES = shairport.c rtsp.c mdns.c mdns_external.c common.c rtp.c player.c alac.c audio.c loudness.c
 
@@ -75,20 +73,11 @@ endif
 
 if USE_DBUS
 shairport_sync_SOURCES += shairport-sync-dbus-service.c shairport-sync-dbus-interface.c dacp.c
-endif
-
-if USE_DBUS_CLIENT
-shairport_sync_dbus_test_client_SOURCES = shairport-sync-dbus-interface.c shairport-sync-dbus-interface.h shairport-sync-dbus-test-client.c
-endif
-
-if USE_DBUS
-BUILT_SOURCES = shairport-sync-dbus-interface.h shairport-sync-dbus-interface.c org.gnome.ShairportSync.service
+BUILT_SOURCES = shairport-sync-dbus-interface.h shairport-sync-dbus-interface.c 
 # We don't want to install this header
 noinst_HEADERS = $(BUILT_SOURCES)
-
 # Correctly clean the generated headers, but keep the xml description
 CLEANFILES = $(BUILT_SOURCES)
-#EXTRA_DIST = org.gnome.ShairportSync.xml
 
 #Rule to generate the binding headers
 shairport-sync-dbus-interface.h:  org.gnome.ShairportSync.xml
@@ -96,24 +85,12 @@ shairport-sync-dbus-interface.h:  org.gnome.ShairportSync.xml
 
 shairport-sync-dbus-interface.c:  org.gnome.ShairportSync.xml
 	gdbus-codegen --interface-prefix org.gnome --generate-c-code shairport-sync-dbus-interface org.gnome.ShairportSync.xml
+endif
 
-# Dbus service file
-
-interfacesdir = $(DESTDIR)/usr/local/share/dbus-1/interfaces
-interfaces_DATA = org.gnome.ShairportSync.xml
-
-servicedir = $(DESTDIR)/usr/local/share/dbus-1/services
-service_in_files = org.gnome.ShairportSync.service.in
-service_DATA = $(service_in_files:.service.in=.service)
-EXTRA_DIST = $(service_in_files)
-
-# Rule to make the service file with bindir expanded
-$(service_DATA): $(service_in_files) Makefile
-	@sed -e "s|\@bindir\@|$(bindir)|" $< > $@
-
-clean-local:
-	rm -rf $(service_DATA)
-
+if USE_DBUS_CLIENT
+ #Make it, but don't install it anywhere
+noinst_PROGRAMS = shairport-sync-dbus-test-client
+shairport_sync_dbus_test_client_SOURCES = shairport-sync-dbus-interface.c shairport-sync-dbus-interface.h shairport-sync-dbus-test-client.c
 endif
 
 install-exec-hook:
