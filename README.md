@@ -54,7 +54,7 @@ Shairport Sync runs well on the Raspberry Pi on USB and I2S cards. It can drive 
 
 Shairport Sync runs natively on FreeBSD using the `sndio` sound system.
 
-Shairport Sync runs on Ubuntu, OpenWrt, Debian, Arch Linux, Fedora and FreeBSD inside VMWare Fusion on a Mac, but synchronisation in inaccurate — possibly because the sound card is being emulated.
+Shairport Sync runs on Ubuntu, OpenWrt, Debian, Arch Linux, Fedora and FreeBSD inside VMWare Fusion on a Mac, but synchronisation is inaccurate — possibly because the sound card is being emulated.
 
 In addition, Shairport Sync can output to standard output, pipes, `soundio` and `ao` devices using appropriate backends.
 
