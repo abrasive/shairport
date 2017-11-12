@@ -28,8 +28,10 @@ shairport-sync.core
 #Some dbus files that are automatically generated
 dbus/data/org.gnome.ShairportSync.service
 dbus/src/shairport-sync-dbus-client
-dbus/src/shairportsync.c
-dbus/src/shairportsync.h
+dbus/src/shairport-sync-dbus-interface.c
+dbus/src/shairport-sync-dbus-interface.h
+dbus/src/shairport-sync-dbus-service.c
+dbus/src/shairport-sync-dbus-service.h
 
 # Some eclipse project files
 .cproject
