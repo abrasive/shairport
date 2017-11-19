@@ -62,6 +62,11 @@
 #include "shairport-sync-dbus-service.h"
 #endif
 
+#ifdef HAVE_MPRIS
+#include "shairport-sync-mpris-service.h"
+#endif
+
+
 #include "common.h"
 #include "mdns.h"
 #include "rtp.h"
@@ -78,7 +83,6 @@
 #endif
 
 static int shutting_down = 0;
-static char *appName = NULL;
 char configuration_file_path[4096 + 1];
 char actual_configuration_file_path[4096 + 1];
 
@@ -223,6 +227,12 @@ char *get_version_string() {
 #endif
 #ifdef CONFIG_METADATA
     strcat(version_string, "-metadata");
+#endif
+#ifdef HAVE_DBUS
+    strcat(version_string, "-dbus");
+#endif
+#ifdef HAVE_MPRIS
+    strcat(version_string, "-mpris");
 #endif
     strcat(version_string, "-sysconfdir:");
     strcat(version_string, SYSCONFDIR);
@@ -854,6 +864,31 @@ int parse_options(int argc, char **argv) {
             config_error_file(&config_file_stuff), config_error_text(&config_file_stuff));
       }
     }
+#if defined(HAVE_DBUS)
+      /* Get the dbus service sbus setting. */
+      if (config_lookup_string(config.cfg, "general.dbus_service_bus", &str)) {
+        if (strcasecmp(str, "system") == 0)
+          config.dbus_service_bus_type = DBT_system;
+        else if (strcasecmp(str, "session") == 0)
+          config.dbus_service_bus_type = DBT_session;
+        else
+          die("Invalid dbus_service_bus option choice \"%s\". It should be \"system\" (default) or \"session\"");
+      }
+#endif
+
+#if defined(HAVE_MPRIS)
+      /* Get the mpris service sbus setting. */
+      if (config_lookup_string(config.cfg, "general.mpris_service_bus", &str)) {
+        if (strcasecmp(str, "system") == 0)
+          config.mpris_service_bus_type = DBT_system;
+        else if (strcasecmp(str, "session") == 0)
+          config.mpris_service_bus_type = DBT_session;
+        else
+          die("Invalid mpris_service_bus option choice \"%s\". It should be \"system\" (default) or \"session\"");
+      }
+#endif
+
+
     free(config_file_real_path);
   }
 
@@ -1030,8 +1065,11 @@ const char *pid_file_proc(void) {
 }
 
 void exit_function() {
+  debug(1,"exit function called...");
   if (config.cfg)
     config_destroy(config.cfg);
+  if (config.appName)
+    free(config.appName);
   // probably should be freeing malloc'ed memory here, including strdup-created strings...
 }
 
@@ -1044,8 +1082,8 @@ int main(int argc, char **argv) {
   // this is a bit weird, but apparently necessary
   char *basec = strdup(argv[0]);
   char *bname = basename(basec);
-  appName = strdup(bname);
-  if (appName == NULL)
+  config.appName = strdup(bname);
+  if (config.appName == NULL)
     die("can not allocate memory for the app name!");
   free(basec);
 
@@ -1078,7 +1116,7 @@ int main(int argc, char **argv) {
   // strcat(configuration_file_path, "/shairport-sync"); // thinking about adding a special
   // shairport-sync directory
   strcat(configuration_file_path, "/");
-  strcat(configuration_file_path, appName);
+  strcat(configuration_file_path, config.appName);
   strcat(configuration_file_path, ".conf");
   config.configfile = configuration_file_path;
 
@@ -1496,11 +1534,16 @@ int main(int argc, char **argv) {
   metadata_init(); // create the metadata pipe if necessary
 #endif
 
-#ifdef HAVE_DBUS
+#if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
   // Start up DBUS services after initial settings are all made
   debug(1, "Starting up D-Bus services");
   pthread_create(&dbus_thread, NULL, &dbus_thread_func, NULL);
+#ifdef HAVE_DBUS
   start_dbus_service();
+#endif
+#ifdef HAVE_MPRIS
+  start_mpris_service();
+#endif
 #endif
 
   daemon_log(LOG_INFO, "Successful Startup");

@@ -283,6 +283,17 @@ AC_ARG_WITH(dbus-test-client, [  --with-dbus-test-client = compile dbus test cli
   ], )
 AM_CONDITIONAL([USE_DBUS_CLIENT], [test "x$HAS_DBUS_CLIENT" = "x1"])
 
+# Look for mpris flag
+AC_ARG_WITH(mpris, [  --with-mpris = choose mpris support], [
+  AC_MSG_RESULT(>>Including mpris support)
+  HAS_MPRIS=1
+  AC_DEFINE([HAVE_MPRIS], 1, [Needed by the compiler.])
+  PKG_CHECK_MODULES([GIO_UNIX], [gio-unix-2.0 >= 2.30.0],[CFLAGS="${GIO_UNIX_CFLAGS} ${CFLAGS}" LIBS="${GIO_UNIX_LIBS} ${LIBS}"],[AC_MSG_ERROR(dbus messaging support for mpris requires the glib 2.0 library -- libglib2.0-dev suggested!)])
+  ], )
+AM_CONDITIONAL([USE_MPRIS], [test "x$HAS_MPRIS" = "x1"])
+
+AM_CONDITIONAL([USE_DBUS_CORE_AND_DACP], [test "x$HAS_MPRIS" = "x1" -o "x$HAS_DBUS" = "x1"])
+
 if  test "x${with_systemd}" = xyes ; then
   # Find systemd unit dir
   AC_ARG_WITH([systemdsystemunitdir],

@@ -72,7 +72,7 @@ shairport_sync_SOURCES += mdns_dns_sd.c
 endif
 
 if USE_DBUS
-shairport_sync_SOURCES += shairport-sync-dbus-service.c shairport-sync-dbus-interface.c dacp.c
+shairport_sync_SOURCES += shairport-sync-dbus-service.c shairport-sync-dbus-interface.c
 BUILT_SOURCES = shairport-sync-dbus-interface.h shairport-sync-dbus-interface.c 
 # We don't want to install this header
 noinst_HEADERS = $(BUILT_SOURCES)
@@ -85,6 +85,32 @@ shairport-sync-dbus-interface.h:  org.gnome.ShairportSync.xml
 
 shairport-sync-dbus-interface.c:  org.gnome.ShairportSync.xml
 	gdbus-codegen --interface-prefix org.gnome --generate-c-code shairport-sync-dbus-interface org.gnome.ShairportSync.xml
+endif
+
+if USE_DBUS_CORE_AND_DACP
+shairport_sync_SOURCES += dacp.c
+endif
+
+if USE_MPRIS
+shairport_sync_SOURCES += shairport-sync-mpris-service.c shairport-sync-mpris-interface.c shairport-sync-mpris-player-interface.c
+BUILT_SOURCES = shairport-sync-mpris-interface.h shairport-sync-mpris-interface.c shairport-sync-mpris-player-interface.h shairport-sync-mpris-player-interface.c
+# We don't want to install this header
+noinst_HEADERS = $(BUILT_SOURCES)
+# Correctly clean the generated headers, but keep the xml description
+CLEANFILES = $(BUILT_SOURCES)
+
+#Rule to generate the binding headers
+shairport-sync-mpris-interface.h:  org.mpris.MediaPlayer2.xml
+	gdbus-codegen --interface-prefix org.gnome --generate-c-code shairport-sync-mpris-interface org.mpris.MediaPlayer2.xml
+
+shairport-sync-mpris-interface.c:  org.mpris.MediaPlayer2.xml
+	gdbus-codegen --interface-prefix org.gnome --generate-c-code shairport-sync-mpris-interface org.mpris.MediaPlayer2.xml
+
+shairport-sync-mpris-player-interface.h:  org.mpris.MediaPlayer2.Player.xml
+	gdbus-codegen --interface-prefix org.gnome --generate-c-code shairport-sync-mpris-player-interface org.mpris.MediaPlayer2.Player.xml
+
+shairport-sync-mpris-player-interface.c:  org.mpris.MediaPlayer2.Player.xml
+	gdbus-codegen --interface-prefix org.gnome --generate-c-code shairport-sync-mpris-player-interface org.mpris.MediaPlayer2.Player.xml
 endif
 
 if USE_DBUS_CLIENT

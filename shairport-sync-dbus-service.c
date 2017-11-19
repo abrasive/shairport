@@ -177,37 +177,59 @@ static gboolean on_handle_remote_command(ShairportSync *skeleton, GDBusMethodInv
   return TRUE;
 }
 
-static void on_name_acquired(GDBusConnection *connection, const gchar *name, gpointer user_data) {
+static void on_dbus_name_acquired(GDBusConnection *connection, const gchar *name, gpointer user_data) {
 
-  skeleton = shairport_sync_skeleton_new();
+  debug(1,"Well-known interface name \"%s\" acquired for %s.",name,config.appName);
+  shairportSyncSkeleton = shairport_sync_skeleton_new();
 
-  g_dbus_interface_skeleton_export(G_DBUS_INTERFACE_SKELETON(skeleton), connection,
+  g_dbus_interface_skeleton_export(G_DBUS_INTERFACE_SKELETON(shairportSyncSkeleton), connection,
                                    "/org/gnome/ShairportSync", NULL);
 
-  shairport_sync_set_loudness_threshold(SHAIRPORT_SYNC(skeleton),
+  shairport_sync_set_loudness_threshold(SHAIRPORT_SYNC(shairportSyncSkeleton),
                                         config.loudness_reference_volume_db);
   debug(1, "Loudness threshold is %f.", config.loudness_reference_volume_db);
 
   if (config.loudness == 0) {
-    shairport_sync_set_loudness_filter_active(SHAIRPORT_SYNC(skeleton), FALSE);
+    shairport_sync_set_loudness_filter_active(SHAIRPORT_SYNC(shairportSyncSkeleton), FALSE);
     debug(1, "Loudness is off");
   } else {
-    shairport_sync_set_loudness_filter_active(SHAIRPORT_SYNC(skeleton), TRUE);
+    shairport_sync_set_loudness_filter_active(SHAIRPORT_SYNC(shairportSyncSkeleton), TRUE);
     debug(1, "Loudness is on");
   }
 
-  g_signal_connect(skeleton, "notify::loudness-filter-active",
+  g_signal_connect(shairportSyncSkeleton, "notify::loudness-filter-active",
                    G_CALLBACK(notify_loudness_filter_active_callback), NULL);
-  g_signal_connect(skeleton, "notify::loudness-threshold",
+  g_signal_connect(shairportSyncSkeleton, "notify::loudness-threshold",
                    G_CALLBACK(notify_loudness_threshold_callback), NULL);
-  g_signal_connect(skeleton, "notify::volume", G_CALLBACK(notify_volume_callback), NULL);
-  g_signal_connect(skeleton, "handle-remote-command", G_CALLBACK(on_handle_remote_command), NULL);
+  g_signal_connect(shairportSyncSkeleton, "notify::volume", G_CALLBACK(notify_volume_callback), NULL);
+  g_signal_connect(shairportSyncSkeleton, "handle-remote-command", G_CALLBACK(on_handle_remote_command), NULL);
+  debug(1,"Shairport Sync D-BUS service started on interface \"%s\".",name);
+}
+
+static void on_dbus_name_lost_again(GDBusConnection *connection, const gchar *name, gpointer user_data) {
+  warn("Could not acquire an Shairport Sync D-BUS interface.");
+}
+
+static void on_dbus_name_lost(GDBusConnection *connection, const gchar *name, gpointer user_data) {
+  debug(1,"Could not acquire well-known interface name \"%s\" -- will try adding the process number to the end of it.",name);
+  pid_t pid = getpid();
+  char interface_name[256] = "";
+  sprintf(interface_name,"org.gnome.ShairportSync.i%d",pid);
+  GBusType dbus_bus_type = G_BUS_TYPE_SYSTEM;
+  if (config.dbus_service_bus_type==DBT_session)
+    dbus_bus_type = G_BUS_TYPE_SESSION;
+  debug(1,"Looking for well-known interface name \"%s\".",interface_name);
+  g_bus_own_name(dbus_bus_type, interface_name, G_BUS_NAME_OWNER_FLAGS_NONE, NULL,
+                on_dbus_name_acquired, on_dbus_name_lost_again, NULL, NULL);
 }
 
 int start_dbus_service() {
-  skeleton = NULL;
-  g_bus_own_name(G_BUS_TYPE_SYSTEM, "org.gnome.ShairportSync", G_BUS_NAME_OWNER_FLAGS_NONE, NULL,
-                 on_name_acquired, NULL, NULL, NULL);
-  //  G_BUS_TYPE_SESSION or G_BUS_TYPE_SYSTEM
+  shairportSyncSkeleton = NULL;
+  GBusType dbus_bus_type = G_BUS_TYPE_SYSTEM;
+  if (config.dbus_service_bus_type==DBT_session)
+    dbus_bus_type = G_BUS_TYPE_SESSION;
+  debug(1,"Looking for well-known name \"org.gnome.ShairportSync\".");
+  g_bus_own_name(dbus_bus_type, "org.gnome.ShairportSync", G_BUS_NAME_OWNER_FLAGS_NONE, NULL,
+                on_dbus_name_acquired, on_dbus_name_lost, NULL, NULL);
   return 0; // this is just to quieten a compiler warning
 }

@@ -2485,7 +2485,7 @@ void player_volume(double airplay_volume, rtsp_conn_info *conn) {
   // %d.",overall_volume,relative_volume,actual_volume);
   // debug(1,"Our actual speaker volume is %d.",actual_volume);
   conn->dacp_volume = actual_volume; // this is needed to prevent a loop
-  shairport_sync_set_volume(SHAIRPORT_SYNC(skeleton), actual_volume);
+  shairport_sync_set_volume(SHAIRPORT_SYNC(shairportSyncSkeleton), actual_volume);
 #endif
   player_volume_without_notification(airplay_volume, conn);
 }

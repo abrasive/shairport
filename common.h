@@ -33,6 +33,13 @@
 #define SAFAMILY sa_family
 #endif
 
+#if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
+enum dbus_session_type {
+  DBT_system = 0, // use the session bus
+  DBT_session,      // use the system bus
+} dbt_type;
+#endif
+
 enum endian_type {
   SS_LITTLE_ENDIAN = 0,
   SS_PDP_ENDIAN,
@@ -42,7 +49,7 @@ enum endian_type {
 enum stuffing_type {
   ST_basic = 0, // straight deletion or insertion of a frame in a 352-frame packet
   ST_soxr,      // use libsoxr to make a 352 frame packet one frame longer or shorter
-} type;
+} s_type;
 
 enum playback_mode_type {
   ST_stereo = 0,
@@ -73,6 +80,7 @@ enum sps_format_t {
 
 typedef struct {
   config_t *cfg;
+  char *appName; // normally the app is called shairport-syn, but it may be symlinked
   char *password;
   char *service_name; // the name for the shairport service, e.g. "Shairport Sync Version %v running
                       // on host %h"
@@ -158,6 +166,12 @@ typedef struct {
   int loudness;
   float loudness_reference_volume_db;
   int alsa_use_playback_switch_for_mute;
+#if defined(HAVE_DBUS)
+  enum dbus_session_type dbus_service_bus_type;
+#endif
+#if defined(HAVE_MPRIS)
+  enum dbus_session_type mpris_service_bus_type;
+#endif
 
 } shairport_cfg;
 

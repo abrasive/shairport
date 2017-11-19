@@ -4,7 +4,7 @@
 
 #include "shairport-sync-dbus-interface.h"
 
-ShairportSync *skeleton;
+ShairportSync *shairportSyncSkeleton;
 
 int start_dbus_service();
 
