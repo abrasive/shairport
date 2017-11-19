@@ -2,6 +2,7 @@
 /shairport-sync
 /shairport-sync.exe
 /shairport-sync-dbus-test-client
+/shairport-sync-mpris-test-client
 
 *.o
 /*~
@@ -31,6 +32,7 @@ shairport-sync.core
 /org.gnome.ShairportSync.service
 /dbus-interface.*
 /mpris-interface.*
+/mpris-player-interface.*
 
 # Some eclipse project files
 .cproject

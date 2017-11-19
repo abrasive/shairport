@@ -12,14 +12,13 @@
 #include "dacp.h"
 
 #include "mpris-service.h"
-
-static gboolean on_handle_stop(MediaPlayer2Player *skeleton, GDBusMethodInvocation *invocation,
-                                         gpointer user_data) {
-  debug(1, "DBUS Command to Stop");
+int send_simple_dacp_command(const char* command) {
+  int reply = 0;
   if (playing_conn) {
     char server_reply[2000];
+    debug(1,"Sending command \"%s\".",command);
     ssize_t reply_size =
-        dacp_send_client_command(playing_conn, "stop", server_reply, sizeof(server_reply));
+        dacp_send_client_command(playing_conn, command, server_reply, sizeof(server_reply));
     if (reply_size >= 0) {
       // not interested in the response.
       //      if (strstr(server_reply, "HTTP/1.1 204") == server_reply) {
@@ -43,14 +42,42 @@ static gboolean on_handle_stop(MediaPlayer2Player *skeleton, GDBusMethodInvocati
       }
     } else {
       debug(1, "Error at rtp_send_client_command");
+      reply = -1;
     }
   } else {
     debug(1, "no thread playing -- RemoteCommand ignored.");
+    reply = -1;
   }
+  return reply;
+}
+
+static gboolean on_handle_stop(MediaPlayer2Player *skeleton, GDBusMethodInvocation *invocation,
+                                         gpointer user_data) {
+  send_simple_dacp_command("stop");
   media_player2_player_complete_stop(skeleton, invocation);
   return TRUE;
 }
 
+static gboolean on_handle_pause(MediaPlayer2Player *skeleton, GDBusMethodInvocation *invocation,
+                                         gpointer user_data) {
+  send_simple_dacp_command("pause");
+  media_player2_player_complete_pause(skeleton, invocation);
+  return TRUE;
+}
+
+static gboolean on_handle_play_pause(MediaPlayer2Player *skeleton, GDBusMethodInvocation *invocation,
+                                         gpointer user_data) {
+  send_simple_dacp_command("playpause");
+  media_player2_player_complete_play_pause(skeleton, invocation);
+  return TRUE;
+}
+
+static gboolean on_handle_play(MediaPlayer2Player *skeleton, GDBusMethodInvocation *invocation,
+                                         gpointer user_data) {
+  send_simple_dacp_command("play");
+  media_player2_player_complete_play(skeleton, invocation);
+  return TRUE;
+}
 
 static void on_mpris_name_acquired(GDBusConnection *connection, const gchar *name, gpointer user_data) {
 
@@ -87,9 +114,9 @@ const char* empty_string_array[] = {
   media_player2_player_set_can_seek (mprisPlayerPlayerSkeleton, FALSE);
   media_player2_player_set_can_control (mprisPlayerPlayerSkeleton, TRUE); 
   
-//  g_signal_connect(mprisPlayerPlayerSkeleton, "handle-play", G_CALLBACK(on_handle_play), NULL);
-//  g_signal_connect(mprisPlayerPlayerSkeleton, "handle-pause", G_CALLBACK(on_handle_pause), NULL);
-//  g_signal_connect(mprisPlayerPlayerSkeleton, "handle-play-pause", G_CALLBACK(on_handle_play_pause), NULL);
+  g_signal_connect(mprisPlayerPlayerSkeleton, "handle-play", G_CALLBACK(on_handle_play), NULL);
+  g_signal_connect(mprisPlayerPlayerSkeleton, "handle-pause", G_CALLBACK(on_handle_pause), NULL);
+  g_signal_connect(mprisPlayerPlayerSkeleton, "handle-play-pause", G_CALLBACK(on_handle_play_pause), NULL);
   g_signal_connect(mprisPlayerPlayerSkeleton, "handle-stop", G_CALLBACK(on_handle_stop), NULL);
  
   debug(1,"Shairport Sync D-BUS service started on interface \"%s\".",name);
