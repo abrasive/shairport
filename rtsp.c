@@ -958,7 +958,7 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn, rtsp_message *r
 //		`clip` -- the payload is the IP number of the client, i.e. the sender of audio.
 //		Can be an IPv4 or an IPv6 number.
 //		`dapo` -- the payload is the port number (as text) on the server to which remote
-//control commands should be sent. It is 3689 for iTunes but varies for iOS devices.
+// control commands should be sent. It is 3689 for iTunes but varies for iOS devices.
 
 //		A special sub-protocol is used for sending large data items over UDP
 //    If the payload exceeded 4 MB, it is chunked using the following format:

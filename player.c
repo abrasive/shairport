@@ -69,8 +69,8 @@
 #endif
 
 #if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
-#include <glib.h>
 #include "dacp.h"
+#include <glib.h>
 #endif
 
 #ifdef HAVE_DBUS
@@ -80,8 +80,8 @@
 
 #ifdef HAVE_MPRIS
 #include "mpris-interface.h"
-#include "mpris-service.h"
 #include "mpris-player-interface.h"
+#include "mpris-service.h"
 #endif
 
 #include "common.h"
@@ -1045,13 +1045,12 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
                                0); // "resume", but don't wait if the queue is locked
 #endif
 #if defined(HAVE_MPRIS)
-            if ((conn->play_state!=SST_stopped) && (conn->play_state!=SST_playing)) {
-              conn->play_state=SST_playing;
+            if ((conn->play_state != SST_stopped) && (conn->play_state != SST_playing)) {
+              conn->play_state = SST_playing;
               debug(1, "MPRIS Playing");
-              media_player2_player_set_playback_status (mprisPlayerPlayerSkeleton, "Playing");
+              media_player2_player_set_playback_status(mprisPlayerPlayerSkeleton, "Playing");
             }
 #endif
-
           }
         }
       }
@@ -2517,10 +2516,10 @@ void player_flush(int64_t timestamp, rtsp_conn_info *conn) {
   send_ssnc_metadata('pfls', NULL, 0, 1);
 #endif
 #if defined(HAVE_MPRIS)
-  if ((conn->play_state!=SST_stopped) && (conn->play_state!=SST_paused))
-    conn->play_state=SST_paused;
-    debug(1, "MPRIS Paused");
-    media_player2_player_set_playback_status (mprisPlayerPlayerSkeleton, "Paused");
+  if ((conn->play_state != SST_stopped) && (conn->play_state != SST_paused))
+    conn->play_state = SST_paused;
+  debug(1, "MPRIS Paused");
+  media_player2_player_set_playback_status(mprisPlayerPlayerSkeleton, "Paused");
 #endif
 }
 
@@ -2548,10 +2547,10 @@ int player_play(rtsp_conn_info *conn) {
   pthread_create(pt, &tattr, player_thread_func, (void *)conn);
   pthread_attr_destroy(&tattr);
 #if defined(HAVE_MPRIS)
-  if (conn->play_state!=SST_playing)
-  conn->play_state=SST_playing;
+  if (conn->play_state != SST_playing)
+    conn->play_state = SST_playing;
   debug(1, "MPRIS Playing (play)");
-  media_player2_player_set_playback_status (mprisPlayerPlayerSkeleton, "Playing");
+  media_player2_player_set_playback_status(mprisPlayerPlayerSkeleton, "Playing");
 #endif
   return 0;
 }
@@ -2569,10 +2568,10 @@ void player_stop(rtsp_conn_info *conn) {
     free(conn->player_thread);
     conn->player_thread = NULL;
 #if defined(HAVE_MPRIS)
-  if (conn->play_state!=SST_stopped)
-    conn->play_state=SST_stopped;
+    if (conn->play_state != SST_stopped)
+      conn->play_state = SST_stopped;
     debug(1, "MPRIS Stopped");
-    media_player2_player_set_playback_status (mprisPlayerPlayerSkeleton, "Stopped");
+    media_player2_player_set_playback_status(mprisPlayerPlayerSkeleton, "Stopped");
 #endif
 
   } else {

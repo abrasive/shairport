@@ -28,11 +28,10 @@
 #if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
 enum session_status_type {
   SST_stopped = 0, // not playing anything
-  SST_paused,     // paused
+  SST_paused,      // paused
   SST_playing,
 } sst_type;
 #endif
-
 
 typedef struct time_ping_record {
   uint64_t local_to_remote_difference;

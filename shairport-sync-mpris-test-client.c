@@ -55,26 +55,26 @@ int main(void) {
 
   MediaPlayer2 *proxy;
   MediaPlayer2Player *proxy2;
-  
+
   GError *error = NULL;
 
-/*
-  proxy = media_player2_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
-                                                "org.mpris.MediaPlayer2.ShairportSync",
-                                                "/org/mpris/MediaPlayer2", NULL, &error);
-  g_signal_connect(proxy, "g-properties-changed", G_CALLBACK(on_properties_changed), NULL);
-*/
+  /*
+    proxy = media_player2_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
+                                                  "org.mpris.MediaPlayer2.ShairportSync",
+                                                  "/org/mpris/MediaPlayer2", NULL, &error);
+    g_signal_connect(proxy, "g-properties-changed", G_CALLBACK(on_properties_changed), NULL);
+  */
 
   proxy2 = media_player2_player_proxy_new_for_bus_sync(G_BUS_TYPE_SESSION, G_DBUS_PROXY_FLAGS_NONE,
-                                                "org.mpris.MediaPlayer2.ShairportSync",
-                                                "/org/mpris/MediaPlayer2", NULL, &error);
+                                                       "org.mpris.MediaPlayer2.ShairportSync",
+                                                       "/org/mpris/MediaPlayer2", NULL, &error);
   g_signal_connect(proxy2, "g-properties-changed", G_CALLBACK(on_properties_changed), NULL);
-  //sleep(120);
-  //g_main_loop_quit(loop);
+  // sleep(120);
+  // g_main_loop_quit(loop);
   pthread_join(dbus_thread, NULL);
   printf("exiting program.\n");
 
-//  g_object_unref(proxy);
+  //  g_object_unref(proxy);
   g_object_unref(proxy2);
 
   return 0;

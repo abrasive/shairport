@@ -36,7 +36,7 @@
 #if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
 enum dbus_session_type {
   DBT_system = 0, // use the session bus
-  DBT_session,      // use the system bus
+  DBT_session,    // use the system bus
 } dbt_type;
 #endif
 

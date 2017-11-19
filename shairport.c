@@ -66,7 +66,6 @@
 #include "mpris-service.h"
 #endif
 
-
 #include "common.h"
 #include "mdns.h"
 #include "rtp.h"
@@ -865,29 +864,30 @@ int parse_options(int argc, char **argv) {
       }
     }
 #if defined(HAVE_DBUS)
-      /* Get the dbus service sbus setting. */
-      if (config_lookup_string(config.cfg, "general.dbus_service_bus", &str)) {
-        if (strcasecmp(str, "system") == 0)
-          config.dbus_service_bus_type = DBT_system;
-        else if (strcasecmp(str, "session") == 0)
-          config.dbus_service_bus_type = DBT_session;
-        else
-          die("Invalid dbus_service_bus option choice \"%s\". It should be \"system\" (default) or \"session\"");
-      }
+    /* Get the dbus service sbus setting. */
+    if (config_lookup_string(config.cfg, "general.dbus_service_bus", &str)) {
+      if (strcasecmp(str, "system") == 0)
+        config.dbus_service_bus_type = DBT_system;
+      else if (strcasecmp(str, "session") == 0)
+        config.dbus_service_bus_type = DBT_session;
+      else
+        die("Invalid dbus_service_bus option choice \"%s\". It should be \"system\" (default) or "
+            "\"session\"");
+    }
 #endif
 
 #if defined(HAVE_MPRIS)
-      /* Get the mpris service sbus setting. */
-      if (config_lookup_string(config.cfg, "general.mpris_service_bus", &str)) {
-        if (strcasecmp(str, "system") == 0)
-          config.mpris_service_bus_type = DBT_system;
-        else if (strcasecmp(str, "session") == 0)
-          config.mpris_service_bus_type = DBT_session;
-        else
-          die("Invalid mpris_service_bus option choice \"%s\". It should be \"system\" (default) or \"session\"");
-      }
+    /* Get the mpris service sbus setting. */
+    if (config_lookup_string(config.cfg, "general.mpris_service_bus", &str)) {
+      if (strcasecmp(str, "system") == 0)
+        config.mpris_service_bus_type = DBT_system;
+      else if (strcasecmp(str, "session") == 0)
+        config.mpris_service_bus_type = DBT_session;
+      else
+        die("Invalid mpris_service_bus option choice \"%s\". It should be \"system\" (default) or "
+            "\"session\"");
+    }
 #endif
-
 
     free(config_file_real_path);
   }
@@ -1065,7 +1065,7 @@ const char *pid_file_proc(void) {
 }
 
 void exit_function() {
-  debug(1,"exit function called...");
+  debug(1, "exit function called...");
   if (config.cfg)
     config_destroy(config.cfg);
   if (config.appName)
