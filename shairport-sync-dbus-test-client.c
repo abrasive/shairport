@@ -1,5 +1,5 @@
 
-#include "shairport-sync-dbus-interface.h"
+#include "dbus-interface.h"
 #include <stdio.h>
 #include <unistd.h>
 

@@ -2,7 +2,7 @@
 #ifndef DBUS_SERVICE_H
 #define DBUS_SERVICE_H
 
-#include "shairport-sync-dbus-interface.h"
+#include "dbus-interface.h"
 
 ShairportSync *shairportSyncSkeleton;
 

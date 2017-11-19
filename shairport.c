@@ -59,11 +59,11 @@
 #endif
 
 #ifdef HAVE_DBUS
-#include "shairport-sync-dbus-service.h"
+#include "dbus-service.h"
 #endif
 
 #ifdef HAVE_MPRIS
-#include "shairport-sync-mpris-service.h"
+#include "mpris-service.h"
 #endif
 
 

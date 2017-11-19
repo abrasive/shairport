@@ -11,7 +11,7 @@
 
 #include "dacp.h"
 
-#include "shairport-sync-dbus-service.h"
+#include "dbus-service.h"
 
 gboolean notify_loudness_filter_active_callback(ShairportSync *skeleton, gpointer user_data) {
   debug(1, "\"notify_loudness_filter_active_callback\" called.");

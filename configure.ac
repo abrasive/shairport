@@ -292,6 +292,15 @@ AC_ARG_WITH(mpris, [  --with-mpris = choose mpris support], [
   ], )
 AM_CONDITIONAL([USE_MPRIS], [test "x$HAS_MPRIS" = "x1"])
 
+# Look for mpris test client flag
+AC_ARG_WITH(mpris-test-client, [  --with-mpris-test-client = compile mpris test client], [
+  AC_MSG_RESULT(>>Including mpris test client)
+  HAS_MPRIS_CLIENT=1
+  AC_DEFINE([HAVE_MPRIS_CLIENT], 1, [Needed by the compiler.])
+  PKG_CHECK_MODULES([GIO_UNIX], [gio-unix-2.0 >= 2.30.0],[CFLAGS="${GIO_UNIX_CFLAGS} ${CFLAGS}" LIBS="${GIO_UNIX_LIBS} ${LIBS}"],[AC_MSG_ERROR(mpris client support requires the glib 2.0 library -- libglib2.0-dev suggested!)])
+  ], )
+AM_CONDITIONAL([USE_MPRIS_CLIENT], [test "x$HAS_MPRIS_CLIENT" = "x1"])
+
 AM_CONDITIONAL([USE_DBUS_CORE_AND_DACP], [test "x$HAS_MPRIS" = "x1" -o "x$HAS_DBUS" = "x1"])
 
 if  test "x${with_systemd}" = xyes ; then

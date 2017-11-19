@@ -8,8 +8,7 @@
 		<method name='Pause'/>
 		<method name='PlayPause'/>
 		<method name='Stop'/>
-                <method name='StopAfterCurrent'/> <!-- Cantata addition -->
-		<method name='Play'/>
+ 		<method name='Play'/>
 		<method name='Seek'>
 			<arg direction='in' name='Offset' type='x'/>
 		</method>

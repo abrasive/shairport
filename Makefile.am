@@ -72,19 +72,19 @@ shairport_sync_SOURCES += mdns_dns_sd.c
 endif
 
 if USE_DBUS
-shairport_sync_SOURCES += shairport-sync-dbus-service.c shairport-sync-dbus-interface.c
-BUILT_SOURCES = shairport-sync-dbus-interface.h shairport-sync-dbus-interface.c 
+shairport_sync_SOURCES += dbus-service.c dbus-interface.c
+BUILT_SOURCES = dbus-interface.h dbus-interface.c 
 # We don't want to install this header
 noinst_HEADERS = $(BUILT_SOURCES)
 # Correctly clean the generated headers, but keep the xml description
 CLEANFILES = $(BUILT_SOURCES)
 
 #Rule to generate the binding headers
-shairport-sync-dbus-interface.h:  org.gnome.ShairportSync.xml
-	gdbus-codegen --interface-prefix org.gnome --generate-c-code shairport-sync-dbus-interface org.gnome.ShairportSync.xml
+dbus-interface.h:  org.gnome.ShairportSync.xml
+	gdbus-codegen --interface-prefix org.gnome --generate-c-code dbus-interface org.gnome.ShairportSync.xml
 
-shairport-sync-dbus-interface.c:  org.gnome.ShairportSync.xml
-	gdbus-codegen --interface-prefix org.gnome --generate-c-code shairport-sync-dbus-interface org.gnome.ShairportSync.xml
+dbus-interface.c:  org.gnome.ShairportSync.xml
+	gdbus-codegen --interface-prefix org.gnome --generate-c-code dbus-interface org.gnome.ShairportSync.xml
 endif
 
 if USE_DBUS_CORE_AND_DACP
@@ -92,31 +92,37 @@ shairport_sync_SOURCES += dacp.c
 endif
 
 if USE_MPRIS
-shairport_sync_SOURCES += shairport-sync-mpris-service.c shairport-sync-mpris-interface.c shairport-sync-mpris-player-interface.c
-BUILT_SOURCES = shairport-sync-mpris-interface.h shairport-sync-mpris-interface.c shairport-sync-mpris-player-interface.h shairport-sync-mpris-player-interface.c
+shairport_sync_SOURCES += mpris-service.c mpris-interface.c mpris-player-interface.c
+BUILT_SOURCES = mpris-interface.h mpris-interface.c mpris-player-interface.h mpris-player-interface.c
 # We don't want to install this header
 noinst_HEADERS = $(BUILT_SOURCES)
 # Correctly clean the generated headers, but keep the xml description
 CLEANFILES = $(BUILT_SOURCES)
 
 #Rule to generate the binding headers
-shairport-sync-mpris-interface.h:  org.mpris.MediaPlayer2.xml
-	gdbus-codegen --interface-prefix org.gnome --generate-c-code shairport-sync-mpris-interface org.mpris.MediaPlayer2.xml
+mpris-interface.h:  org.mpris.MediaPlayer2.xml
+	gdbus-codegen --interface-prefix org.mpris --generate-c-code mpris-interface org.mpris.MediaPlayer2.xml
 
-shairport-sync-mpris-interface.c:  org.mpris.MediaPlayer2.xml
-	gdbus-codegen --interface-prefix org.gnome --generate-c-code shairport-sync-mpris-interface org.mpris.MediaPlayer2.xml
+mpris-interface.c:  org.mpris.MediaPlayer2.xml
+	gdbus-codegen --interface-prefix org.mpris --generate-c-code mpris-interface org.mpris.MediaPlayer2.xml
 
-shairport-sync-mpris-player-interface.h:  org.mpris.MediaPlayer2.Player.xml
-	gdbus-codegen --interface-prefix org.gnome --generate-c-code shairport-sync-mpris-player-interface org.mpris.MediaPlayer2.Player.xml
+mpris-player-interface.h:  org.mpris.MediaPlayer2.Player.xml
+	gdbus-codegen --interface-prefix org.mpris --generate-c-code mpris-player-interface org.mpris.MediaPlayer2.Player.xml
 
-shairport-sync-mpris-player-interface.c:  org.mpris.MediaPlayer2.Player.xml
-	gdbus-codegen --interface-prefix org.gnome --generate-c-code shairport-sync-mpris-player-interface org.mpris.MediaPlayer2.Player.xml
+mpris-player-interface.c:  org.mpris.MediaPlayer2.Player.xml
+	gdbus-codegen --interface-prefix org.mpris --generate-c-code mpris-player-interface org.mpris.MediaPlayer2.Player.xml
 endif
 
 if USE_DBUS_CLIENT
  #Make it, but don't install it anywhere
 noinst_PROGRAMS = shairport-sync-dbus-test-client
-shairport_sync_dbus_test_client_SOURCES = shairport-sync-dbus-interface.c shairport-sync-dbus-interface.h shairport-sync-dbus-test-client.c
+shairport_sync_dbus_test_client_SOURCES = dbus-interface.c dbus-interface.h shairport-sync-dbus-test-client.c
+endif
+
+if USE_MPRIS_CLIENT
+ #Make it, but don't install it anywhere
+noinst_PROGRAMS = shairport-sync-mpris-test-client
+shairport_sync_mpris_test_client_SOURCES = mpris-interface.c mpris-interface.h mpris-player-interface.c mpris-player-interface.h shairport-sync-mpris-test-client.c
 endif
 
 install-exec-hook:
