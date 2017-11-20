@@ -813,8 +813,17 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
                                         &remote_reference_timestamp_time, conn);
           reference_timestamp *= conn->output_sample_ratio;
           if (conn->first_packet_timestamp == 0) { // if this is the very first packet
-            // debug(1,"First frame seen, time %u, with %d
-            // frames...",curframe->timestamp,seq_diff(ab_read, ab_write));
+                                                   // debug(1,"First frame seen, time %u, with %d
+// frames...",curframe->timestamp,seq_diff(ab_read, ab_write));
+
+// say we have started playing here
+#if defined(HAVE_MPRIS)
+            if ((conn->play_state != SST_stopped) && (conn->play_state != SST_playing)) {
+              conn->play_state = SST_playing;
+              debug(1, "MPRIS Playing");
+              media_player2_player_set_playback_status(mprisPlayerPlayerSkeleton, "Playing");
+            }
+#endif
             if (reference_timestamp) { // if we have a reference time
               // debug(1,"First frame seen with timestamp...");
               conn->first_packet_timestamp =
@@ -1034,7 +1043,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
             }
           }
           if (conn->ab_buffering == 0) {
-            // not the time of the playing of the first frame
+            // note the time of the playing of the first frame
             uint64_t reference_timestamp_time; // don't need this...
             get_reference_timestamp_stuff(&conn->play_segment_reference_frame,
                                           &reference_timestamp_time,
@@ -1043,13 +1052,6 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
 #ifdef CONFIG_METADATA
             send_ssnc_metadata('prsm', NULL, 0,
                                0); // "resume", but don't wait if the queue is locked
-#endif
-#if defined(HAVE_MPRIS)
-            if ((conn->play_state != SST_stopped) && (conn->play_state != SST_playing)) {
-              conn->play_state = SST_playing;
-              debug(1, "MPRIS Playing");
-              media_player2_player_set_playback_status(mprisPlayerPlayerSkeleton, "Playing");
-            }
 #endif
           }
         }
