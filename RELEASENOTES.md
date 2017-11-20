@@ -1,3 +1,7 @@
+**Bug Fix**
+
+* Somewhere in version 3.x, the `softvol` plugin got broken as the volume change is not applied anymore. Turned out for the `softvol` plugin no `volume()` and `parameters()` are defined. Thanks to [Jörg Krause](https://github.com/joerg-krause) for locating and fixing this bug.
+
 Version 3.1.3
 ====
 
