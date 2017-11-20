@@ -51,6 +51,20 @@ int send_simple_dacp_command(const char *command) {
   return reply;
 }
 
+static gboolean on_handle_next(MediaPlayer2Player *skeleton, GDBusMethodInvocation *invocation,
+                               gpointer user_data) {
+  send_simple_dacp_command("nextitem");
+  media_player2_player_complete_next(skeleton, invocation);
+  return TRUE;
+}
+
+static gboolean on_handle_previous(MediaPlayer2Player *skeleton, GDBusMethodInvocation *invocation,
+                               gpointer user_data) {
+  send_simple_dacp_command("previtem");
+  media_player2_player_complete_previous(skeleton, invocation);
+  return TRUE;
+}
+
 static gboolean on_handle_stop(MediaPlayer2Player *skeleton, GDBusMethodInvocation *invocation,
                                gpointer user_data) {
   send_simple_dacp_command("stop");
@@ -106,8 +120,8 @@ static void on_mpris_name_acquired(GDBusConnection *connection, const gchar *nam
   media_player2_player_set_volume(mprisPlayerPlayerSkeleton, 0.5);
   media_player2_player_set_minimum_rate(mprisPlayerPlayerSkeleton, 1.0);
   media_player2_player_set_maximum_rate(mprisPlayerPlayerSkeleton, 1.0);
-  media_player2_player_set_can_go_next(mprisPlayerPlayerSkeleton, FALSE);
-  media_player2_player_set_can_go_previous(mprisPlayerPlayerSkeleton, FALSE);
+  media_player2_player_set_can_go_next(mprisPlayerPlayerSkeleton, TRUE);
+  media_player2_player_set_can_go_previous(mprisPlayerPlayerSkeleton, TRUE);
   media_player2_player_set_can_play(mprisPlayerPlayerSkeleton, TRUE);
   media_player2_player_set_can_pause(mprisPlayerPlayerSkeleton, TRUE);
   media_player2_player_set_can_seek(mprisPlayerPlayerSkeleton, FALSE);
@@ -118,6 +132,8 @@ static void on_mpris_name_acquired(GDBusConnection *connection, const gchar *nam
   g_signal_connect(mprisPlayerPlayerSkeleton, "handle-play-pause", G_CALLBACK(on_handle_play_pause),
                    NULL);
   g_signal_connect(mprisPlayerPlayerSkeleton, "handle-stop", G_CALLBACK(on_handle_stop), NULL);
+  g_signal_connect(mprisPlayerPlayerSkeleton, "handle-next", G_CALLBACK(on_handle_next), NULL);
+  g_signal_connect(mprisPlayerPlayerSkeleton, "handle-previous", G_CALLBACK(on_handle_previous), NULL);
 
   debug(1, "Shairport Sync D-BUS service started on interface \"%s\".", name);
 
