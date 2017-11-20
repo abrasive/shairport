@@ -395,6 +395,8 @@ static int init(int argc, char **argv) {
           debug(1, "Volume control \"%s\" has dB volume from %f to %f.", alsa_mix_ctrl,
                 (1.0 * alsa_mix_mindb) / 100.0, (1.0 * alsa_mix_maxdb) / 100.0);
           has_softvol = 1;
+          audio_alsa.volume = &volume; // insert the volume function now we know it can do dB stuff
+          audio_alsa.parameters = &parameters; // likewise the parameters stuff
         } else {
           debug(1, "Cannot get the dB range from the volume control \"%s\"", alsa_mix_ctrl);
         }
