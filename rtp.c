@@ -780,7 +780,7 @@ void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
 
     char req[8]; // *not* a standard RTCP NACK
     req[0] = 0x80;
-    req[1] = 0x55 | 0x80;                        // Apple 'resend'
+    req[1] = (char)0x55 | (char)0x80;            // Apple 'resend'
     *(unsigned short *)(req + 2) = htons(1);     // our seqnum
     *(unsigned short *)(req + 4) = htons(first); // missed seqnum
     *(unsigned short *)(req + 6) = htons(count); // count
