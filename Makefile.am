@@ -131,7 +131,10 @@ if INSTALL_CONFIG_FILES
 	cp scripts/shairport-sync.conf $(DESTDIR)$(sysconfdir)/shairport-sync.conf.sample
 	[ -f $(DESTDIR)$(sysconfdir)/shairport-sync.conf ] || cp scripts/shairport-sync.conf $(DESTDIR)$(sysconfdir)/shairport-sync.conf
 if USE_DBUS
-	cp shairport-sync-dbus-policy.conf $(DESTDIR)$(sysconfdir)/dbus-1/system.d/shairport-sync.conf
+	cp scripts/shairport-sync-dbus-policy.conf $(DESTDIR)$(sysconfdir)/dbus-1/system.d/shairport-sync-dbus.conf
+endif
+if USE_MPRIS
+	cp scripts/shairport-sync-mpris-policy.conf $(DESTDIR)$(sysconfdir)/dbus-1/system.d/shairport-sync-mpris.conf
 endif
 endif
 if INSTALL_SYSTEMV
