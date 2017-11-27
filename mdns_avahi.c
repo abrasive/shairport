@@ -33,7 +33,9 @@
 #include "common.h"
 #include "mdns.h"
 #include "rtsp.h"
+#ifdef CONFIG_DACP
 #include "dacp.h"
+#endif
 #include <string.h>
 
 #include <avahi-client/client.h>
@@ -89,7 +91,9 @@ static void resolve_callback(AvahiServiceResolver *r, AVAHI_GCC_UNUSED AvahiIfIn
         if (*p != port) {
           debug(1, "Client's DACP port: %u.", port);
           *p = port;
+#ifdef CONFIG_DACP
           set_dacp_port(port);
+#endif
 #ifdef CONFIG_METADATA
           char portstring[20];
           memset(portstring, 0, sizeof(portstring));
@@ -139,7 +143,9 @@ static void browse_callback(AvahiServiceBrowser *b, AvahiIfIndex interface, Avah
         if (*p != 0) {
           debug(1, "Client's DACP status withdrawn.");
           *p = 0;
+#ifdef CONFIG_DACP
           unset_dacp_port();
+#endif
         }
       }
     } else {
