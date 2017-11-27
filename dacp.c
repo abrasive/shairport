@@ -1,6 +1,6 @@
 /*
  * DACP protocol handler. This file is part of Shairport Sync.
- * Copyright (c) Mike Brady
+ * Copyright (c) Mike Brady 2017
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -34,8 +34,51 @@
 #include <memory.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <pthread.h>
 #include <stdlib.h>
+#include <time.h>
 #include <unistd.h>
+
+uint16_t dacp_port;
+pthread_t dacp_monitor_thread;
+
+static pthread_mutex_t dacp_conversation_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t dacp_server_information_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t dacp_server_information_cv = PTHREAD_COND_INITIALIZER;
+
+// this will be running on the thread of its caller, not of the conversation thread...
+void set_dacp_port(
+    uint16_t port) { // tell the DACP conversation thread that the port has been set or changed
+  pthread_mutex_lock(&dacp_server_information_lock);
+  dacp_port = port;
+  pthread_cond_signal(&dacp_server_information_cv);
+  pthread_mutex_unlock(&dacp_server_information_lock);
+}
+
+// this will be running on the thread of its caller, not of the conversation thread...
+void unset_dacp_port() { // tell the DACP conversation thread that that port has gone offline.
+  pthread_mutex_lock(&dacp_server_information_lock);
+  dacp_port = 0;
+  pthread_cond_signal(&dacp_server_information_cv);
+  pthread_mutex_unlock(&dacp_server_information_lock);
+}
+
+void *dacp_monitor_thread_code(void *na) {
+  // wait until we get a valid port number to begin monitoring it
+  while (1) {
+    pthread_mutex_lock(&dacp_server_information_lock);
+    while (dacp_port == 0)
+      pthread_cond_wait(&dacp_server_information_cv, &dacp_server_information_lock);
+    pthread_mutex_unlock(&dacp_server_information_lock);
+    debug(1, "DACP Monitor Thread active now.");
+    sleep(3);
+  }
+  pthread_exit(NULL);
+}
+
+void dacp_monitor_start() {
+  pthread_create(&dacp_monitor_thread, NULL, dacp_monitor_thread_code, NULL);
+}
 
 uint32_t dacp_tlv_crawl(char **p, int32_t *length) {
   char typecode[5];
@@ -52,6 +95,12 @@ uint32_t dacp_tlv_crawl(char **p, int32_t *length) {
 ssize_t dacp_send_client_command(rtsp_conn_info *conn, const char *command, char *response,
                                  size_t max_response_length) {
   ssize_t reply_size = -1;
+  // try to do this transaction on the DACP server, but don't wait for more than 20 ms to be allowed
+  // to do it.
+  struct timespec mutex_wait_time;
+  mutex_wait_time.tv_sec = 0;
+  mutex_wait_time.tv_nsec = 20000000; // 20 ms
+
   if (conn->rtp_running) {
     if (conn->dacp_port == 0) {
       debug(1, "Can't send a remote request: no valid active remote.");
@@ -84,40 +133,50 @@ ssize_t dacp_send_client_command(rtsp_conn_info *conn, const char *command, char
 
       getaddrinfo(server, portstring, &hints, &res);
 
-      // make a socket:
+      // only do this one at a time -- not sure it is necessary, but better safe than sorry
 
-      sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+      int mutex_reply = pthread_mutex_timedlock(&dacp_conversation_lock, &mutex_wait_time);
+      if (mutex_reply == 0) {
 
-      if (sockfd == -1) {
-        debug(1, "Could not create socket");
-      } else {
+        // make a socket:
 
-        // connect!
+        sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 
-        if (connect(sockfd, res->ai_addr, res->ai_addrlen) < 0) {
-          debug(1, "connect failed. Error");
+        if (sockfd == -1) {
+          debug(1, "Could not create socket");
         } else {
 
-          sprintf(message,
-                  "GET /ctrl-int/1/%s HTTP/1.1\r\nHost: %s:%u\r\nActive-Remote: %u\r\n\r\n",
-                  command, conn->client_ip_string, conn->dacp_port, conn->dacp_active_remote);
+          // connect!
 
-          // Send command
+          if (connect(sockfd, res->ai_addr, res->ai_addrlen) < 0) {
+            debug(1, "connect failed. Error");
+          } else {
 
-          if (send(sockfd, message, strlen(message), 0) < 0) {
-            debug(1, "Send failed");
+            sprintf(message,
+                    "GET /ctrl-int/1/%s HTTP/1.1\r\nHost: %s:%u\r\nActive-Remote: %u\r\n\r\n",
+                    command, conn->client_ip_string, conn->dacp_port, conn->dacp_active_remote);
+
+            // Send command
+
+            if (send(sockfd, message, strlen(message), 0) < 0) {
+              debug(1, "Send failed");
+            }
+
+            // Receive a reply from the server
+            if ((response) && (max_response_length))
+              reply_size = recv(sockfd, response, max_response_length, 0);
+            else
+              reply_size = recv(sockfd, server_reply, sizeof(server_reply), 0);
+            if (reply_size < 0) {
+              debug(1, "recv failed");
+            }
+            close(sockfd);
           }
-
-          // Receive a reply from the server
-          if ((response) && (max_response_length))
-            reply_size = recv(sockfd, response, max_response_length, 0);
-          else
-            reply_size = recv(sockfd, server_reply, sizeof(server_reply), 0);
-          if (reply_size < 0) {
-            debug(1, "recv failed");
-          }
-          close(sockfd);
         }
+        pthread_mutex_unlock(&dacp_conversation_lock);
+      } else {
+        debug(1,
+              "Could not acquire a lock on the dacp transmit/receive section. Possible timeout?");
       }
     }
   } else {
