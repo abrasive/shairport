@@ -1579,7 +1579,8 @@ static void *player_thread_func(void *arg) {
 
   // start an mdns/zeroconf thread to look for DACP messages containing our DACP_ID and getting the
   // port number
-  mdns_dacp_monitor(conn->dacp_id, &conn->dacp_port, &conn->dacp_private);
+  //mdns_dacp_monitor(conn->dacp_id, &conn->dacp_port, &conn->dacp_private);
+  mdns_dacp_monitor(conn);
 
   conn->framesProcessedInThisEpoch = 0;
   conn->framesGeneratedInThisEpoch = 0;
@@ -2186,7 +2187,7 @@ static void *player_thread_func(void *arg) {
   }
 
   // stop watching for DACP port number stuff
-  mdns_dacp_dont_monitor(&conn->dacp_private); // begin looking out for information about the client
+  mdns_dacp_dont_monitor(conn); // begin looking out for information about the client
                                                // as a remote control. Specifically we might need
                                                // the port number
 

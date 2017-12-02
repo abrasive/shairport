@@ -104,9 +104,9 @@ void mdns_unregister(void) {
   }
 }
 
-void mdns_dacp_monitor(char *dacp_id, uint16_t *port, void **private_pointer) {
+void mdns_dacp_monitor(rtsp_conn_info *conn) {
   if ((config.mdns) && (config.mdns->mdns_dacp_monitor)) {
-    int error = config.mdns->mdns_dacp_monitor(dacp_id, port, private_pointer);
+    int error = config.mdns->mdns_dacp_monitor(conn);
     if (error) {
       debug(1, "Error starting a DACP monitor.");
     }
@@ -114,9 +114,9 @@ void mdns_dacp_monitor(char *dacp_id, uint16_t *port, void **private_pointer) {
     debug(1, "Can't start a DACP monitor.");
 }
 
-void mdns_dacp_dont_monitor(void **private_pointer) {
+void mdns_dacp_dont_monitor(rtsp_conn_info *conn) {
   if ((config.mdns) && (config.mdns->mdns_dacp_dont_monitor)) {
-    config.mdns->mdns_dacp_dont_monitor(private_pointer);
+    config.mdns->mdns_dacp_dont_monitor(conn);
   } else
     debug(1, "Can't stop a DACP monitor.");
 }

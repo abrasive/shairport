@@ -377,9 +377,7 @@ static void avahi_unregister(void) {
   service_name = NULL;
 }
 
-int avahi_dacp_monitor(char *dacp_id, uint16_t *port, void **private_pointer) {
-
-  dacp_browser_struct **pdbs = (dacp_browser_struct **)private_pointer;
+int avahi_dacp_monitor(rtsp_conn_info *conn) {
 
   dacp_browser_struct *dbs = (dacp_browser_struct *)malloc(sizeof(dacp_browser_struct));
 
@@ -435,24 +433,24 @@ int avahi_dacp_monitor(char *dacp_id, uint16_t *port, void **private_pointer) {
     }
     return -1;
   }
-  *pdbs = dbs;
+  conn->mdns_private_pointer = (void *)dbs;
   return 0;
 }
 
-void avahi_dacp_dont_monitor(void **private_pointer) {
-  dacp_browser_struct **pdbs = (dacp_browser_struct **)private_pointer;
-  if (*pdbs) {
+void avahi_dacp_dont_monitor(rtsp_conn_info *conn) {
+  dacp_browser_struct *dbs = (dacp_browser_struct *)conn->mdns_private_pointer;
+  if (dbs) {
     // stop and dispose of everything
-    if ((*pdbs)->service_poll)
-      avahi_threaded_poll_stop((*pdbs)->service_poll);
-    if ((*pdbs)->service_browser)
-      avahi_service_browser_free((*pdbs)->service_browser);
-    if ((*pdbs)->service_client)
-      avahi_client_free((*pdbs)->service_client);
-    if ((*pdbs)->service_poll)
-      avahi_threaded_poll_free((*pdbs)->service_poll);
-    free((char *)(*pdbs));
-    *pdbs = NULL;
+    if ((dbs)->service_poll)
+      avahi_threaded_poll_stop((dbs)->service_poll);
+    if ((dbs)->service_browser)
+      avahi_service_browser_free((dbs)->service_browser);
+    if ((dbs)->service_client)
+      avahi_client_free((dbs)->service_client);
+    if ((dbs)->service_poll)
+      avahi_threaded_poll_free((dbs)->service_poll);
+    free((char *)(dbs));
+    conn->mdns_private_pointer = NULL;
   } else {
     debug(1, "DHCP Monitor is not running.");
   }
