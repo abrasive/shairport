@@ -5,6 +5,7 @@
 #include <pthread.h>
 
 #include "config.h"
+#include "definitions.h"
 
 #ifdef HAVE_LIBMBEDTLS
 #include <mbedtls/aes.h>
@@ -183,7 +184,7 @@ typedef struct {
   char *dacp_id;               // id of the client -- used to find the port to be used
   uint16_t dacp_port;          // port on the client to send remote control messages to, else zero
   uint32_t dacp_active_remote; // key to send to the remote controller
-  void *dacp_private;          // private storage (just a pointer) for the dacp_port resolver
+  void *mdns_private_pointer;  // private storage (just a pointer) for the dacp_port resolver
 
 } rtsp_conn_info;
 

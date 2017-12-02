@@ -39,44 +39,55 @@
 #include <time.h>
 #include <unistd.h>
 
-uint16_t dacp_port;
+typedef struct  {
+  uint16_t port;
+  short connection_family; // AF_INET6 or AF_INET
+  uint32_t scope_id; // if it's an ipv6 connection, this will be its scope id
+  char ip_string[INET6_ADDRSTRLEN]; // the ip string pointing to the client
+  uint32_t active_remote_id; // send this when you want to send remote control commands
+} dacp_server_record;
+
 pthread_t dacp_monitor_thread;
+dacp_server_record dacp_server;
 
 static pthread_mutex_t dacp_conversation_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t dacp_server_information_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t dacp_server_information_cv = PTHREAD_COND_INITIALIZER;
 
 // this will be running on the thread of its caller, not of the conversation thread...
-void set_dacp_port(
-    uint16_t port) { // tell the DACP conversation thread that the port has been set or changed
+void set_dacp_server_information(rtsp_conn_info* conn) { // tell the DACP conversation thread that the port has been set or changed
   pthread_mutex_lock(&dacp_server_information_lock);
-  dacp_port = port;
-  pthread_cond_signal(&dacp_server_information_cv);
-  pthread_mutex_unlock(&dacp_server_information_lock);
-}
-
-// this will be running on the thread of its caller, not of the conversation thread...
-void unset_dacp_port() { // tell the DACP conversation thread that that port has gone offline.
-  pthread_mutex_lock(&dacp_server_information_lock);
-  dacp_port = 0;
+  
+  dacp_server.port = conn->dacp_port;
+  dacp_server.connection_family = conn->connection_ip_family;
+  dacp_server.scope_id = conn-> self_scope_id;
+  strncpy(dacp_server.ip_string,conn->client_ip_string,INET6_ADDRSTRLEN);
+  dacp_server.active_remote_id = conn->dacp_active_remote;
+  
   pthread_cond_signal(&dacp_server_information_cv);
   pthread_mutex_unlock(&dacp_server_information_lock);
 }
 
 void *dacp_monitor_thread_code(void *na) {
+  int scan_index = 0;
+  debug(1, "DACP monitor thread started.");
   // wait until we get a valid port number to begin monitoring it
   while (1) {
     pthread_mutex_lock(&dacp_server_information_lock);
-    while (dacp_port == 0)
+    while (dacp_server.port == 0) {
+      debug(1,"Wait for a valid DACP port");
       pthread_cond_wait(&dacp_server_information_cv, &dacp_server_information_lock);
+    }
     pthread_mutex_unlock(&dacp_server_information_lock);
-    debug(1, "DACP Monitor Thread active now.");
+    debug(1,"DACP Server ID \"%u\" at \"%s:%u\", scan %d.",dacp_server.active_remote_id,dacp_server.ip_string,dacp_server.port,scan_index++);
     sleep(3);
   }
+  debug(1, "DACP monitor thread exiting.");
   pthread_exit(NULL);
 }
 
 void dacp_monitor_start() {
+  memset(&dacp_server,0,sizeof(dacp_server_record));
   pthread_create(&dacp_monitor_thread, NULL, dacp_monitor_thread_code, NULL);
 }
 

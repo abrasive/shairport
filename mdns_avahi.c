@@ -49,8 +49,6 @@ typedef struct {
   AvahiThreadedPoll *service_poll;
   AvahiClient *service_client;
   AvahiServiceBrowser *service_browser;
-  char *dacp_id;
-  uint16_t *dacp_port;
 } dacp_browser_struct;
 
 // static AvahiServiceBrowser *sb = NULL;
@@ -69,8 +67,9 @@ static void resolve_callback(AvahiServiceResolver *r, AVAHI_GCC_UNUSED AvahiIfIn
                              const char *host_name, const AvahiAddress *address, uint16_t port,
                              AvahiStringList *txt, AvahiLookupResultFlags flags, void *userdata) {
   assert(r);
-
-  dacp_browser_struct *dbs = (dacp_browser_struct *)userdata;
+  
+  rtsp_conn_info *conn = (rtsp_conn_info *)userdata;
+  dacp_browser_struct *dbs = (dacp_browser_struct *)conn->mdns_private_pointer;
 
   /* Called whenever a service has been resolved successfully or timed out */
   switch (event) {
@@ -84,12 +83,13 @@ static void resolve_callback(AvahiServiceResolver *r, AVAHI_GCC_UNUSED AvahiIfIn
     char *dacpid = strstr(name, "iTunes_Ctrl_");
     if (dacpid) {
       dacpid += strlen("iTunes_Ctrl_");
-      if (strcmp(dacpid, dbs->dacp_id) == 0) {
-        uint16_t *p = dbs->dacp_port;
-        if (*p != port) {
+      if (strcmp(dacpid, conn->dacp_id) == 0) {
+        if (conn->dacp_port != port) {
           debug(1, "Client's DACP port: %u.", port);
-          *p = port;
-          set_dacp_port(port);
+          conn->dacp_port = port;
+#if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
+          set_dacp_server_information(conn);
+#endif
 #ifdef CONFIG_METADATA
           char portstring[20];
           memset(portstring, 0, sizeof(portstring));
@@ -109,7 +109,8 @@ static void browse_callback(AvahiServiceBrowser *b, AvahiIfIndex interface, Avah
                             AvahiBrowserEvent event, const char *name, const char *type,
                             const char *domain, AVAHI_GCC_UNUSED AvahiLookupResultFlags flags,
                             void *userdata) {
-  dacp_browser_struct *dbs = (dacp_browser_struct *)userdata;
+  rtsp_conn_info *conn = (rtsp_conn_info *)userdata;
+  dacp_browser_struct *dbs = (dacp_browser_struct *)conn->mdns_private_pointer;
   assert(b);
   /* Called whenever a new services becomes available on the LAN or is removed from the LAN */
   switch (event) {
@@ -134,12 +135,13 @@ static void browse_callback(AvahiServiceBrowser *b, AvahiIfIndex interface, Avah
     char *dacpid = strstr(name, "iTunes_Ctrl_");
     if (dacpid) {
       dacpid += strlen("iTunes_Ctrl_");
-      if (strcmp(dacpid, dbs->dacp_id) == 0) {
-        uint16_t *p = dbs->dacp_port;
-        if (*p != 0) {
+      if (strcmp(dacpid, conn->dacp_id) == 0) {
+        if (conn->dacp_id != 0) {
           debug(1, "Client's DACP status withdrawn.");
-          *p = 0;
-          unset_dacp_port();
+          conn->dacp_id = 0;
+#if defined(HAVE_DBUS) || defined(HAVE_MPRIS)          
+          set_dacp_server_information(conn); // this will have the effect of telling the scanner that the DACP server is no longer working
+#endif
         }
       }
     } else {
@@ -297,7 +299,8 @@ static void client_callback(AvahiClient *c, AvahiClientState state,
 static void service_client_callback(AvahiClient *c, AvahiClientState state, void *userdata) {
   int err;
 
-  dacp_browser_struct *dbs = (dacp_browser_struct *)userdata;
+  rtsp_conn_info *conn = (rtsp_conn_info *)userdata;
+  dacp_browser_struct *dbs = (dacp_browser_struct *)conn->mdns_private_pointer;
 
   switch (state) {
   case AVAHI_CLIENT_S_REGISTERING:
@@ -380,12 +383,12 @@ static void avahi_unregister(void) {
 int avahi_dacp_monitor(rtsp_conn_info *conn) {
 
   dacp_browser_struct *dbs = (dacp_browser_struct *)malloc(sizeof(dacp_browser_struct));
+  
 
   if (dbs == NULL)
     die("can not allocate a dacp_browser_struct.");
-
-  dbs->dacp_id = dacp_id;
-  dbs->dacp_port = port;
+    
+  conn->mdns_private_pointer = (void *)dbs;
 
   // create the threaded poll code
   int err;
@@ -394,25 +397,27 @@ int avahi_dacp_monitor(rtsp_conn_info *conn) {
     if (dbs) {
       free((char *)dbs);
     }
+    conn->mdns_private_pointer = NULL;
     return -1;
   }
 
   // create the service client
   if (!(dbs->service_client =
             avahi_client_new(avahi_threaded_poll_get(dbs->service_poll), AVAHI_CLIENT_NO_FAIL,
-                             service_client_callback, (void *)dbs, &err))) {
+                             service_client_callback, (void *)conn, &err))) {
     warn("couldn't create avahi service client: %s!", avahi_strerror(err));
     if (dbs) { // should free the threaded poll code
       avahi_threaded_poll_free(dbs->service_poll);
       free((char *)dbs);
     }
+    conn->mdns_private_pointer = NULL;
     return -1;
   }
 
   /* Create the service browser */
   if (!(dbs->service_browser =
             avahi_service_browser_new(dbs->service_client, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC,
-                                      "_dacp._tcp", NULL, 0, browse_callback, (void *)dbs))) {
+                                      "_dacp._tcp", NULL, 0, browse_callback, (void *)conn))) {
     warn("Failed to create service browser: %s\n",
          avahi_strerror(avahi_client_errno(dbs->service_client)));
     if (dbs) { // should free the threaded poll code and the service client
@@ -420,6 +425,7 @@ int avahi_dacp_monitor(rtsp_conn_info *conn) {
       avahi_threaded_poll_free(dbs->service_poll);
       free((char *)dbs);
     }
+    conn->mdns_private_pointer = NULL;
     return -1;
   }
   // start the polling thread
@@ -431,9 +437,9 @@ int avahi_dacp_monitor(rtsp_conn_info *conn) {
       avahi_threaded_poll_free(dbs->service_poll);
       free((char *)dbs);
     }
+    conn->mdns_private_pointer = NULL;
     return -1;
   }
-  conn->mdns_private_pointer = (void *)dbs;
   return 0;
 }
 

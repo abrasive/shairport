@@ -8,6 +8,7 @@
 
 #include "audio.h"
 #include "config.h"
+#include "definitions.h"
 #include "mdns.h"
 
 #if defined(__APPLE__) && defined(__MACH__)

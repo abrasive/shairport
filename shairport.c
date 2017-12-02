@@ -58,6 +58,10 @@
 #include <glib.h>
 #endif
 
+#if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
+#include "dacp.h"
+#endif
+
 #ifdef HAVE_DBUS
 #include "dbus-service.h"
 #endif
@@ -1065,7 +1069,7 @@ const char *pid_file_proc(void) {
 }
 
 void exit_function() {
-  debug(1, "exit function called...");
+  // debug(1, "exit function called...");
   if (config.cfg)
     config_destroy(config.cfg);
   if (config.appName)
@@ -1532,6 +1536,11 @@ int main(int argc, char **argv) {
   memcpy(config.hw_addr, ap_md5, sizeof(config.hw_addr));
 #ifdef CONFIG_METADATA
   metadata_init(); // create the metadata pipe if necessary
+#endif
+
+#if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
+  debug(1,"Requesting DACP Monitor");
+  dacp_monitor_start();
 #endif
 
 #if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
