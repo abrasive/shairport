@@ -39,12 +39,12 @@
 #include <time.h>
 #include <unistd.h>
 
-typedef struct  {
+typedef struct {
   uint16_t port;
-  short connection_family; // AF_INET6 or AF_INET
-  uint32_t scope_id; // if it's an ipv6 connection, this will be its scope id
+  short connection_family;          // AF_INET6 or AF_INET
+  uint32_t scope_id;                // if it's an ipv6 connection, this will be its scope id
   char ip_string[INET6_ADDRSTRLEN]; // the ip string pointing to the client
-  uint32_t active_remote_id; // send this when you want to send remote control commands
+  uint32_t active_remote_id;        // send this when you want to send remote control commands
 } dacp_server_record;
 
 pthread_t dacp_monitor_thread;
@@ -54,32 +54,147 @@ static pthread_mutex_t dacp_conversation_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t dacp_server_information_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t dacp_server_information_cv = PTHREAD_COND_INITIALIZER;
 
+ssize_t dacp_send_command(const char *command, char *response, size_t max_response_length) {
+  ssize_t reply_size = -1;
+  // try to do this transaction on the DACP server, but don't wait for more than 20 ms to be allowed
+  // to do it.
+  struct timespec mutex_wait_time;
+  mutex_wait_time.tv_sec = 0;
+  mutex_wait_time.tv_nsec = 20000000; // 20 ms
+
+  struct addrinfo hints, *res;
+  int sockfd;
+
+  char message[20000], server_reply[2000], portstring[10], server[256];
+  memset(&message, 0, sizeof(message));
+  if ((response) && (max_response_length))
+    memset(response, 0, max_response_length);
+  else
+    memset(&server_reply, 0, sizeof(server_reply));
+  memset(&portstring, 0, sizeof(portstring));
+
+  if (dacp_server.connection_family == AF_INET6) {
+    sprintf(server, "%s%%%u", dacp_server.ip_string, dacp_server.scope_id);
+  } else {
+    strcpy(server, dacp_server.ip_string);
+  }
+
+  sprintf(portstring, "%u", dacp_server.port);
+
+  // first, load up address structs with getaddrinfo():
+
+  memset(&hints, 0, sizeof(hints));
+  hints.ai_family = AF_UNSPEC;
+  hints.ai_socktype = SOCK_STREAM;
+
+  // debug(1, "DHCP port string is \"%s:%u\".", dacp_server.ip_string, dacp_server.port);
+
+  getaddrinfo(server, portstring, &hints, &res);
+
+  // only do this one at a time -- not sure it is necessary, but better safe than sorry
+
+  int mutex_reply = pthread_mutex_timedlock(&dacp_conversation_lock, &mutex_wait_time);
+  if (mutex_reply == 0) {
+
+    // make a socket:
+
+    sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+
+    if (sockfd == -1) {
+      debug(1, "Could not create socket");
+    } else {
+
+      // connect!
+
+      if (connect(sockfd, res->ai_addr, res->ai_addrlen) < 0) {
+        debug(1, "connect failed. Error");
+      } else {
+
+        sprintf(message, "GET /ctrl-int/1/%s HTTP/1.1\r\nHost: %s:%u\r\nActive-Remote: %u\r\n\r\n",
+                command, dacp_server.ip_string, dacp_server.port, dacp_server.active_remote_id);
+
+        // Send command
+
+        if (send(sockfd, message, strlen(message), 0) < 0) {
+          debug(1, "Send failed");
+        }
+
+        // Receive a reply from the server
+        if ((response) && (max_response_length))
+          reply_size = recv(sockfd, response, max_response_length, 0);
+        else
+          reply_size = recv(sockfd, server_reply, sizeof(server_reply), 0);
+        if (reply_size < 0) {
+          debug(1, "recv failed");
+        }
+        close(sockfd);
+      }
+    }
+    pthread_mutex_unlock(&dacp_conversation_lock);
+  } else {
+    debug(1, "Could not acquire a lock on the dacp transmit/receive section. Possible timeout?");
+  }
+  return reply_size;
+}
+
+
 // this will be running on the thread of its caller, not of the conversation thread...
-void set_dacp_server_information(rtsp_conn_info* conn) { // tell the DACP conversation thread that the port has been set or changed
+void set_dacp_server_information(rtsp_conn_info *conn) { // tell the DACP conversation thread that
+                                                         // the port has been set or changed
   pthread_mutex_lock(&dacp_server_information_lock);
-  
+
   dacp_server.port = conn->dacp_port;
   dacp_server.connection_family = conn->connection_ip_family;
-  dacp_server.scope_id = conn-> self_scope_id;
-  strncpy(dacp_server.ip_string,conn->client_ip_string,INET6_ADDRSTRLEN);
+  dacp_server.scope_id = conn->self_scope_id;
+  strncpy(dacp_server.ip_string, conn->client_ip_string, INET6_ADDRSTRLEN);
   dacp_server.active_remote_id = conn->dacp_active_remote;
-  
+
   pthread_cond_signal(&dacp_server_information_cv);
   pthread_mutex_unlock(&dacp_server_information_lock);
 }
 
 void *dacp_monitor_thread_code(void *na) {
   int scan_index = 0;
+  char server_reply[2000];
   debug(1, "DACP monitor thread started.");
   // wait until we get a valid port number to begin monitoring it
   while (1) {
     pthread_mutex_lock(&dacp_server_information_lock);
     while (dacp_server.port == 0) {
-      debug(1,"Wait for a valid DACP port");
+      debug(1, "Wait for a valid DACP port");
       pthread_cond_wait(&dacp_server_information_cv, &dacp_server_information_lock);
     }
     pthread_mutex_unlock(&dacp_server_information_lock);
-    debug(1,"DACP Server ID \"%u\" at \"%s:%u\", scan %d.",dacp_server.active_remote_id,dacp_server.ip_string,dacp_server.port,scan_index++);
+    //debug(1, "DACP Server ID \"%u\" at \"%s:%u\", scan %d.", dacp_server.active_remote_id,
+    //      dacp_server.ip_string, dacp_server.port, scan_index++);
+
+    ssize_t reply_size =
+        dacp_send_command("playstatusupdate", server_reply, sizeof(server_reply));
+    if (reply_size >= 0) {
+      // not interested in the response.
+      if (strstr(server_reply, "HTTP/1.1 204") == server_reply) {
+        debug(1,"Client response is No Content");        
+      } else if (strstr(server_reply, "HTTP/1.1 501") == server_reply) {
+        debug(1,"Client response is \"Not Implemented\". DACP Server has disconnnected.");
+        dacp_server.port = 0; // stop scanning until the next time it's used
+/*
+      } else {
+        debug(1,
+              "Client request to server responded with %d characters starting with this response:",
+              strlen(server_reply));
+        int i;
+        for (i = 0; i < reply_size; i++)
+          if (server_reply[i] < ' ')
+            debug(1, "%d  %02x", i, server_reply[i]);
+          else
+            debug(1, "%d  %02x  '%c'", i, server_reply[i], server_reply[i]);
+        // sprintf((char *)message + 2 * i, "%02x", server_reply[i]);
+        // debug(1,"Content is \"%s\".",message);
+*/
+      }
+    } else {
+        debug(1, "Error at rtp_send_client_command");
+    }
     sleep(3);
   }
   debug(1, "DACP monitor thread exiting.");
@@ -87,7 +202,7 @@ void *dacp_monitor_thread_code(void *na) {
 }
 
 void dacp_monitor_start() {
-  memset(&dacp_server,0,sizeof(dacp_server_record));
+  memset(&dacp_server, 0, sizeof(dacp_server_record));
   pthread_create(&dacp_monitor_thread, NULL, dacp_monitor_thread_code, NULL);
 }
 
