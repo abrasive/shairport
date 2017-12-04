@@ -33,7 +33,9 @@
 #include "common.h"
 #include "mdns.h"
 #include "rtsp.h"
+#ifdef CONFIG_DACP
 #include "dacp.h"
+#endif
 #include <string.h>
 
 #include <avahi-client/client.h>
