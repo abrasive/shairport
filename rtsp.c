@@ -702,7 +702,7 @@ static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
 // debug(1,"RTSP Flush Requested: %u.",rtptime);
 #ifdef CONFIG_METADATA
   if (p)
-    send_metadata('ssnc', 'flsr', p, strlen(p), req, 1);
+    send_metadata('ssnc', 'flsr', p+1, strlen(p+1), req, 1);
   else
     send_metadata('ssnc', 'flsr', NULL, 0, NULL, 0);
 #endif
