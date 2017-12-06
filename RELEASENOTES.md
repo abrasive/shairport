@@ -1,3 +1,11 @@
+Version 3.2d15
+====
+**Bug Fix, kind of...**
+* Shairport Sync crashes on Arch Linux with with pulseaudio backend enabled. The cause appears to be a pulseaudio configuration issue, but of course, Shairport Sync shouldn't crash. For the present, the bug fix merely adds an error message before terminating Shairport Sync.
+
+**Enhancements**
+* Still lots of changes and experiments with D-Bus and DACP. As before, please note that the implementation is likely to change greatly or to be removed at any time.
+
 Version 3.2d13
 ====
 **Security Update**
