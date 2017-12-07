@@ -10,7 +10,7 @@ Changes and additions in the development branch make their way eventually to the
 
 Issues Reports
 ----
-Issue reports are welcome, but before you report an issue, please have a look though the existing [issues](issues), both open and closed, and check for hints in the [TROUBLESHOOTING](TROUBLESHOOTING.md) page. It would be great to give some details of the device and version of Linux or FreeBSD in use along with the version of Shairport Sync you are using (use `$ shairport-sync -V` to get this). Then, if possible, some diagnostic information from the log or logfile would be useful.
+Issue reports are welcome, but before you report an issue, please have a look though the existing [issues](https://github.com/mikebrady/shairport-sync/issues), both open and closed, and check for hints in the [TROUBLESHOOTING](TROUBLESHOOTING.md) page. It would be great to give some details of the device and version of Linux or FreeBSD in use along with the version of Shairport Sync you are using (use `$ shairport-sync -V` to get this). Then, if possible, some diagnostic information from the log or logfile would be useful.
 
 In general, a log verbosity of 2 is adequate (`-vv`, or the relevant entry in the configuration file), and it's usually helpful if statistics have been enabled (`--statistics` on the command line, or the relevant entry in the configuration file).
 
