@@ -14,7 +14,7 @@ Issue reports are welcome, but before you report an issue, please have a look th
 
 In general, a log verbosity of 2 is adequate (`-vv`, or the relevant entry in the configuration file), and it's usually helpful if statistics have been enabled (`--statistics` on the command line, or the relevant entry in the configuration file).
 
-If you are pasting in code or a log file, format it as code by preceding it and follow it with a line containg just three backquotes: 
+If you are pasting in code or a log file, format it as code by preceding it and following it with a line containing exactly three backquotes and nothing else ([see here](https://guides.github.com/features/mastering-markdown/) for more on formatting): 
 
 \`\`\`
 ```
