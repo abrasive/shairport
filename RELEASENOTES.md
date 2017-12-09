@@ -1,3 +1,8 @@
+Version 3.2d16
+====
+**Bug Fix**
+* In recent versions of iOS (11.2) and mac OS (10.13.2), when play is resumed after a pause, the volume level is not always restored, and, if software volume control is being used, Shairport Sync plays at full volume. This issue has been addressed by storing the last software volume setting when a play session ends and using it as a default when a new play session begins. 
+
 Version 3.2d15
 ====
 **Bug Fix, kind of...**
