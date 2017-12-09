@@ -1227,16 +1227,16 @@ static int stuff_buffer_basic_32(int32_t *inptr, int length, enum sps_format_t l
 
   pthread_mutex_lock(&conn->vol_mutex);
   for (i = 0; i < stuffsamp; i++) { // the whole frame, if no stuffing
-    process_sample(*inptr++, &l_outptr, l_output_format, conn->fix_volume, dither, conn);
-    process_sample(*inptr++, &l_outptr, l_output_format, conn->fix_volume, dither, conn);
+    process_sample(*inptr++, &l_outptr, l_output_format, config.fix_volume, dither, conn);
+    process_sample(*inptr++, &l_outptr, l_output_format, config.fix_volume, dither, conn);
   };
   if (tstuff) {
     if (tstuff == 1) {
       // debug(3, "+++++++++");
       // interpolate one sample
-      process_sample(mean_32(inptr[-2], inptr[0]), &l_outptr, l_output_format, conn->fix_volume,
+      process_sample(mean_32(inptr[-2], inptr[0]), &l_outptr, l_output_format, config.fix_volume,
                      dither, conn);
-      process_sample(mean_32(inptr[-1], inptr[1]), &l_outptr, l_output_format, conn->fix_volume,
+      process_sample(mean_32(inptr[-1], inptr[1]), &l_outptr, l_output_format, config.fix_volume,
                      dither, conn);
     } else if (stuff == -1) {
       // debug(3, "---------");
@@ -1251,8 +1251,8 @@ static int stuff_buffer_basic_32(int32_t *inptr, int length, enum sps_format_t l
       remainder = remainder + tstuff; // don't run over the correct end of the output buffer
 
     for (i = stuffsamp; i < remainder; i++) {
-      process_sample(*inptr++, &l_outptr, l_output_format, conn->fix_volume, dither, conn);
-      process_sample(*inptr++, &l_outptr, l_output_format, conn->fix_volume, dither, conn);
+      process_sample(*inptr++, &l_outptr, l_output_format, config.fix_volume, dither, conn);
+      process_sample(*inptr++, &l_outptr, l_output_format, config.fix_volume, dither, conn);
     }
   }
   pthread_mutex_unlock(&conn->vol_mutex);
@@ -1329,8 +1329,8 @@ static int stuff_buffer_soxr_32(int32_t *inptr, int32_t *scratchBuffer, int leng
     ip = scratchBuffer;
     char *l_outptr = outptr;
     for (i = 0; i < length + tstuff; i++) {
-      process_sample(*ip++, &l_outptr, l_output_format, conn->fix_volume, dither, conn);
-      process_sample(*ip++, &l_outptr, l_output_format, conn->fix_volume, dither, conn);
+      process_sample(*ip++, &l_outptr, l_output_format, config.fix_volume, dither, conn);
+      process_sample(*ip++, &l_outptr, l_output_format, config.fix_volume, dither, conn);
     };
 
   } else { // the whole frame, if no stuffing
@@ -1341,8 +1341,8 @@ static int stuff_buffer_soxr_32(int32_t *inptr, int32_t *scratchBuffer, int leng
     int i;
 
     for (i = 0; i < length; i++) {
-      process_sample(*ip++, &l_outptr, l_output_format, conn->fix_volume, dither, conn);
-      process_sample(*ip++, &l_outptr, l_output_format, conn->fix_volume, dither, conn);
+      process_sample(*ip++, &l_outptr, l_output_format, config.fix_volume, dither, conn);
+      process_sample(*ip++, &l_outptr, l_output_format, config.fix_volume, dither, conn);
     };
   }
   conn->amountStuffed = tstuff;
@@ -1368,7 +1368,7 @@ static void *player_thread_func(void *arg) {
   conn->ab_synced = 0;
   conn->first_packet_timestamp = 0;
   conn->flush_requested = 0;
-  conn->fix_volume = 0x10000;
+  // conn->fix_volume = 0x10000;
 
   int rc = pthread_mutex_init(&conn->ab_mutex, NULL);
   if (rc)
@@ -1535,7 +1535,7 @@ static void *player_thread_func(void *arg) {
     debug(1, "Dithering will be enabled because the input bit depth is greater than the output bit "
              "depth");
   }
-  if (conn->fix_volume != 0x10000) {
+  if (config.fix_volume != 0x10000) {
     debug(1, "Dithering will be enabled because the output volume is being altered in software");
   }
 
@@ -1649,7 +1649,7 @@ static void *player_thread_func(void *arg) {
           config.output->play(silence, conn->max_frames_per_packet * conn->output_sample_ratio);
         } else {
           int enable_dither = 0;
-          if ((conn->fix_volume != 0x10000) || (conn->input_bit_depth > output_bit_depth) ||
+          if ((config.fix_volume != 0x10000) || (conn->input_bit_depth > output_bit_depth) ||
               (config.playback_mode == ST_mono))
             enable_dither = 1;
 
@@ -1951,7 +1951,7 @@ static void *player_thread_func(void *arg) {
                   // Apply volume and loudness
                   // Volume must be applied here because the loudness filter will increase the
                   // signal level and it would saturate the int32_t otherwise
-                  float gain = conn->fix_volume / 65536.0f;
+                  float gain = config.fix_volume / 65536.0f;
                   float gain_db = 20 * log10(gain);
                   // debug(1, "Applying soft volume dB: %f k: %f", gain_db, gain);
 
@@ -2440,7 +2440,7 @@ void player_volume_without_notification(double airplay_volume, rtsp_conn_info *c
   // %f",software_attenuation,temp_fix_volume,airplay_volume);
 
   pthread_mutex_lock(&conn->vol_mutex);
-  conn->fix_volume = temp_fix_volume;
+  config.fix_volume = temp_fix_volume;
   pthread_mutex_unlock(&conn->vol_mutex);
 
   if (config.loudness)

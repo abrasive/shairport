@@ -440,6 +440,7 @@ int parse_options(int argc, char **argv) {
   config.resyncthreshold = 1.0 * fResyncthreshold / 44100;
   config.tolerance = 1.0 * fTolerance / 44100;
   config.audio_backend_silent_lead_in_time = -1.0; // flag to indicate it has not been set
+  config.fix_volume = 0x01000; // if no volume is ever set and it's a software volume control, default to 1/16 max, i.e. approx 24 dB down
 
   config_setting_t *setting;
   const char *str = 0;
