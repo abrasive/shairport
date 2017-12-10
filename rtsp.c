@@ -765,11 +765,12 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
       else
         debug(2, "iTunes Version Number not found.");
       if (iTunesVersion >= 10) {
-        debug(2, "User-Agent is iTunes 10 or better, (actual version is %d); "
+        debug(1, "User-Agent is iTunes 10 or better, (actual version is %d); "
                  "selecting the iTunes "
                  "latency of %d frames.",
               iTunesVersion, config.iTunesLatency);
         config.latency = config.iTunesLatency;
+        conn->staticLatencyCorrection = 11025;
       }
     } else if (strstr(ua, "AirPlay") == ua) {
       debug(2, "User-Agent is AirPlay; selecting the AirPlay latency of %d frames.",
@@ -780,6 +781,7 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
                "of %d frames.",
             config.ForkedDaapdLatency);
       config.latency = config.ForkedDaapdLatency;
+      conn->staticLatencyCorrection = 11025;
     } else {
       debug(2, "Unrecognised User-Agent. Using latency of %d frames.", config.latency);
     }

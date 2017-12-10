@@ -63,7 +63,7 @@ typedef struct {
 
 typedef struct {
   int connection_number; // for debug ID purposes, nothing else...
-
+  int64_t staticLatencyCorrection; // it seems iTunes needs some offset before it's more or less right. Odd.
 #if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
   enum session_status_type play_state;
 #endif
