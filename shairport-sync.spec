@@ -1,5 +1,5 @@
 Name:           shairport-sync
-Version:        3.1.2
+Version:        3.1.5
 Release:        1%{?dist}
 Summary:        AirTunes emulator. Multi-Room with Audio Synchronisation
 # MIT licensed except for tinysvcmdns under BSD, 
@@ -67,6 +67,9 @@ getent passwd %{name} &> /dev/null || useradd --system -c "%{name} User" \
 %license LICENSES
 
 %changelog
+* Mon Dec 11 2017 Mike Brady <mikebrady@eircom.net> 3.1.5
+- Bug fixes and better compatability with iOS 11.2 and mac OS 10.13.2.
+- Better AirPlay synchronisation.
 * Wed Sep 13 2017 Bill Peck <bpeck@redhat.com> 3.1.2-1
 - New upstream release
 - The default value for the alsa setting mute_using_playback_switch has
