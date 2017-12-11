@@ -1,9 +1,34 @@
+/*
+ * Asynchronous PulseAudio Backend. This file is part of Shairport Sync.
+ * Copyright (c) Mike Brady 2017
+ * All rights reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ */
+
 // Based (distantly, with thanks) on
 // http://stackoverflow.com/questions/29977651/how-can-the-pulseaudio-asynchronous-library-be-used-to-play-raw-pcm-data
 
 #include "audio.h"
 #include "common.h"
-#include <assert.h>
 #include <errno.h>
 #include <pthread.h>
 #include <pulse/pulseaudio.h>
@@ -72,14 +97,15 @@ static int init(int argc, char **argv) {
 
   // Get a mainloop and its context
   mainloop = pa_threaded_mainloop_new();
-  assert(mainloop);
+  if (mainloop==NULL)
+    die("could not create a pa_threaded_mainloop.");
   mainloop_api = pa_threaded_mainloop_get_api(mainloop);
   if (config.pa_application_name)
     context = pa_context_new(mainloop_api, config.pa_application_name);
   else
     context = pa_context_new(mainloop_api, "Shairport Sync");
-  assert(context);
-
+  if (context==NULL)
+    die("could not create a new context for pulseaudio.");
   // Set a callback so we can wait for the context to be ready
   pa_context_set_state_callback(context, &context_state_cb, mainloop);
 
@@ -87,13 +113,17 @@ static int init(int argc, char **argv) {
   pa_threaded_mainloop_lock(mainloop);
 
   // Start the mainloop
-  assert(pa_threaded_mainloop_start(mainloop) == 0);
-  assert(pa_context_connect(context, NULL, PA_CONTEXT_NOAUTOSPAWN, NULL) == 0);
+  if (pa_threaded_mainloop_start(mainloop) != 0)
+    die("could not start the pulseaudio threaded mainloop");
+  if (pa_context_connect(context, NULL, 0, NULL) != 0)
+    die("failed to connect to the pulseaudio context -- the error message is \"%s\".",pa_strerror(pa_context_errno(context)));
+  
 
   // Wait for the context to be ready
   for (;;) {
     pa_context_state_t context_state = pa_context_get_state(context);
-    assert(PA_CONTEXT_IS_GOOD(context_state));
+    if (!PA_CONTEXT_IS_GOOD(context_state))
+      die("pa context is not good -- the error message \"%s\".",pa_strerror(pa_context_errno(context)));
     if (context_state == PA_CONTEXT_READY)
       break;
     pa_threaded_mainloop_wait(mainloop);
@@ -145,12 +175,14 @@ static void start(int sample_rate, int sample_format) {
                  PA_STREAM_AUTO_TIMING_UPDATE | PA_STREAM_ADJUST_LATENCY;
 
   // Connect stream to the default audio output sink
-  assert(pa_stream_connect_playback(stream, NULL, &buffer_attr, stream_flags, NULL, NULL) == 0);
+  if (pa_stream_connect_playback(stream, NULL, &buffer_attr, stream_flags, NULL, NULL) != 0)
+    die("could not connect to the pulseaudio playback stream -- the error message is \"%s\".",pa_strerror(pa_context_errno(context)));
 
   // Wait for the stream to be ready
   for (;;) {
     pa_stream_state_t stream_state = pa_stream_get_state(stream);
-    assert(PA_STREAM_IS_GOOD(stream_state));
+    if(!PA_STREAM_IS_GOOD(stream_state))
+      die("stream state is no longer good while waiting for stream to become ready -- the error message is \"%s\".",pa_strerror(pa_context_errno(context)));
     if (stream_state == PA_STREAM_READY)
       break;
     pa_threaded_mainloop_wait(mainloop);
@@ -326,7 +358,7 @@ void stream_write_cb(pa_stream *stream, size_t requested_bytes, void *userdata) 
       size_t first_portion_to_write = audio_umb - audio_toq;
       if (first_portion_to_write != 0)
         memcpy(buffer, audio_toq, first_portion_to_write);
-      char *new_buffer = buffer + first_portion_to_write;
+      uint8_t *new_buffer = buffer + first_portion_to_write;
       memcpy(new_buffer, audio_lmb, bytes_we_can_transfer - first_portion_to_write);
       pa_stream_write(stream, buffer, bytes_we_can_transfer, NULL, 0LL, PA_SEEK_RELATIVE);
       bytes_transferred += bytes_we_can_transfer;

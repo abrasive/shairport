@@ -1,32 +1,32 @@
 Name:           shairport-sync
-Version:        3.0
-Release:        1
-Summary:        AirTunes emulator. Shairport Sync adds multi-room capability with Audio Synchronisation.
-
-Group:          Applications/Multimedia
-License:        GPL
+Version:        3.1.2
+Release:        1%{?dist}
+Summary:        AirTunes emulator. Multi-Room with Audio Synchronisation
+# MIT licensed except for tinysvcmdns under BSD, 
+# FFTConvolver/ under GPLv3+ and audio_sndio.c 
+# under ISC
+License:        MIT and BSD and GPLv3+ and ISC
 URL:            https://github.com/mikebrady/shairport-sync
-Source0:        https://github.com/mikebrady/%{name}/archive/%{version}.tar.gz#/%{name}-%{version}.tar.gz
+Source0:        https://github.com/mikebrady/%{name}/archive/%{version}/%{name}-%{version}.tar.gz
 
+%{?systemd_requires}
+BuildRequires:  systemd
+BuildRequires:  pkgconfig(libconfig)
+BuildRequires:  pkgconfig(popt)
+BuildRequires:  pkgconfig(openssl)
+BuildRequires:  pkgconfig(libdaemon)
+BuildRequires:  pkgconfig(avahi-core)
+BuildRequires:  pkgconfig(alsa)
+BuildRequires:  pkgconfig(soxr)
 BuildRequires:  autoconf
 BuildRequires:  automake
-BuildRequires:  libconfig-devel
-BuildRequires:  popt-devel
-BuildRequires:  openssl-devel
-BuildRequires:  libdaemon-devel
-BuildRequires:  avahi-devel
-BuildRequires:  alsa-lib-devel
-BuildRequires:  systemd-units
-BuildRequires:  soxr-devel
-Requires:       libpopt-dev
-Requires:       openssl
-Requires:       avahi
-Requires:       libdaemon
-Requires:       alsa-lib
-Requires:       soxr
 
 %description
-Shairport Sync emulates an AirPort Express for the purpose of streaming audio from iTunes, iPods, iPhones, iPads and AppleTVs. Audio played by a Shairport Sync-powered device stays synchronised with the source and hence with similar devices playing the same source. Thus, for example, synchronised multi-room audio is possible without difficulty. (Hence the name Shairport Sync, BTW.)
+Shairport Sync emulates an AirPort Express for the purpose of streaming audio
+ from iTunes, iPods, iPhones, iPads and AppleTVs. Audio played by a Shairport
+ Sync-powered device stays synchronised with the source and hence with similar
+ devices playing the same source. Thus, for example, synchronised multi-room
+ audio is possible without difficulty. (Hence the name Shairport Sync, BTW.)
 
 Shairport Sync does not support AirPlay video or photo streaming.
 
@@ -36,12 +36,12 @@ Shairport Sync does not support AirPlay video or photo streaming.
 %build
 autoreconf -i -f
 %configure --with-avahi --with-alsa --with-ssl=openssl --with-soxr
-make %{?_smp_mflags}
+%make_build
 
 %install
-make install DESTDIR=%{buildroot}
+%make_install
 rm %{buildroot}/etc/shairport-sync.conf.sample
-install -p -m644 -D scripts/shairport-sync.service $RPM_BUILD_ROOT%{_unitdir}/%{name}.service
+install -p -m644 -D scripts/shairport-sync.service %{buildroot}%{_unitdir}/%{name}.service
 
 %pre
 getent group %{name} &>/dev/null || groupadd --system %{name} >/dev/null
@@ -49,14 +49,48 @@ getent passwd %{name} &> /dev/null || useradd --system -c "%{name} User" \
         -d %{_localstatedir}/%{name} -m -g %{name} -s /sbin/nologin \
         -G audio %{name} >/dev/null
 
+%post
+%systemd_post %{name}.service
+
+%preun
+%systemd_preun %{name}.service
+
+%postun
+%systemd_postun_with_restart %{name}.service
+
 %files
-%config /etc/shairport-sync.conf
+%config(noreplace) /etc/shairport-sync.conf
 /usr/bin/shairport-sync
 /usr/share/man/man7/shairport-sync.7.gz
 %{_unitdir}/%{name}.service
-%doc AUTHORS LICENSES README.md
+%doc README.md RELEASENOTES.md TROUBLESHOOTING.md
+%license LICENSES
 
 %changelog
+* Wed Sep 13 2017 Bill Peck <bpeck@redhat.com> 3.1.2-1
+- New upstream release
+- The default value for the alsa setting mute_using_playback_switch has
+  been changed to "no" for compatability with other audio players on the
+  same machine. Because of this you may need to unmute your audio device
+  if you are upgrading from an older release.
+- Fixed bugs that made Shairport Sync drop out or become unavailable when
+  playing YouTube videos, SoundCloud streams etc. from the Mac.
+* Sun Aug 20 2017 Bill Peck <bpeck@redhat.com> 3.1.1-1
+- A bug in the sndio backend has been fixed that caused problems on some
+  versions of Linux.
+- A change has been made to how Shairport Sync responds to a TEARDOWN request,
+  which should make it respond better to sequences of rapid termination and
+  restarting of play sessions. This can happen, for example, playing YouTube
+  videos in Safari or Chrome on a Mac.
+- Choosing soxr interpolation in the configuration file will now cause
+  Shairport Sync to terminate with a message if Shairport Sync has not been
+  compiled with SoX support.
+- Other small changes.
+* Thu Aug 17 2017 Bill Peck <bpeck@redhat.com> 3.1-1
+- new backend offering synchronised PulseAudio support. 
+- new optional loudness and convolution filters
+- improvements in non-synchronised backends
+- enhancements, stability improvements and bug fixes
 * Fri Feb 24 2017 Mike Brady <mikebrady@eircom.net> 2.8.6
 - Many changes including 8- 16- 24- and 32-bit output
 * Fri Oct 21 2016 Mike Brady <mikebrady@eircom.net> 2.8.6

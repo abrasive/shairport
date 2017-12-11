@@ -1,3 +1,20 @@
+Version 3.1.5
+====
+
+**Bug Fixes**
+* In recent versions of iOS (11.2) and mac OS (10.13.2), when play is resumed after a pause, the volume level is not always restored, and, if software volume control is being used, Shairport Sync plays at full volume. This issue has been addressed by storing the last airplay volume setting when a play session ends and using it as a default when a new play session begins.
+* Better AirPlay synchronisation. Older versions of Shairport Sync added an 11,025 frame (0.25 seconds) offset to all the latencies agreed with the sender. This seems now only to be correct for an iTunes and ForkedDaapd sources, but incorrect for AirPlay sources. Accordingly, the offset is only added for iTunes and ForkedDaapd. The result is better sync with videos, e.g, YouTube, etc. while iTunes and ForkedDaapd synchronisation is unaffected.
+* A bug in the hardware volume control affects output devices that have hardware mixers but that do not allow the volume to be set in dB. One example is the Softvol plugin in ALSA. Shairport Sync fails silently when presented with such a device when hardware volume control is enabled: the volume events have no effect. The bug has been fixed by adding two missing lines of code to the `init()` function in `audio_alsa.c`. Thanks to [Jakub Nabaglo](https://github.com/nbgl) for finding and fixing the bug.
+* A number of bug fixes due to [belboj](https://github.com/belboj). Many thanks for these!
+* Enhancements to the handling of quit requests by threads, thanks(again) to [belboj](https://github.com/belboj)!
+
+**Other Stuff**
+* Typo fix! Thanks to [corbinsantin](https://github.com/corbinsantin).
+
+**Enhancement**
+* The metdata output stream can include a `dapo` message carrying the DACP port number to be used when communicating with the DACP remote control. This might be useful because the port number is actually pretty hard to find and requires the use of asynchronous mdns operations. You must be using the Avahi mdns back end.
+
+
 Version 3.1.4
 ====
 
@@ -9,6 +26,7 @@ Thanks and [Chris Boot](https://github.com/bootc) for fixing this bug.
 **Bug Fix**
 
 * Somewhere in version 3.x, the `softvol` plugin got broken as the volume change is not applied anymore. Turned out that, for the `softvol` plugin, no `volume()` and `parameters()` are defined. Thanks to [Jörg Krause](https://github.com/joerg-krause) for locating and fixing this bug.
+
 Version 3.1.3
 ====
 

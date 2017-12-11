@@ -24,11 +24,10 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "common.h"
 #include "mdns.h"
+#include "common.h"
 #include <errno.h>
 #include <fcntl.h>
-#include <signal.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -65,7 +64,7 @@ static int fork_execvp(const char *file, char *const argv[]) {
     // If we reach this point then execve has failed.
     // Write erno's value into the pipe and exit.
     int ignore = write(execpipe[1], &errno, sizeof(errno));
-
+    debug(1, "execve has failed.");
     _exit(-1);
     return 0;           // Just to make the compiler happy.
   } else {              // Parent
@@ -161,8 +160,12 @@ static void kill_mdns_child(void) {
 
 mdns_backend mdns_external_avahi = {.name = "external-avahi",
                                     .mdns_register = mdns_external_avahi_register,
-                                    .mdns_unregister = kill_mdns_child};
+                                    .mdns_unregister = kill_mdns_child,
+                                    .mdns_dacp_monitor = NULL,
+                                    .mdns_dacp_dont_monitor = NULL};
 
 mdns_backend mdns_external_dns_sd = {.name = "external-dns-sd",
                                      .mdns_register = mdns_external_dns_sd_register,
-                                     .mdns_unregister = kill_mdns_child};
+                                     .mdns_unregister = kill_mdns_child,
+                                     .mdns_dacp_monitor = NULL,
+                                     .mdns_dacp_dont_monitor = NULL};

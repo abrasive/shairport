@@ -1,6 +1,9 @@
 /INSTALL
 /shairport-sync
 /shairport-sync.exe
+/shairport-sync-dbus-test-client
+/shairport-sync-mpris-test-client
+
 *.o
 /*~
 *.xml~
@@ -23,6 +26,13 @@ man/Makefile
 man/Makefile.in
 scripts/shairport-sync.service
 scripts/shairport-sync
+shairport-sync.core
+
+#Some dbus files that are automatically generated
+/org.gnome.ShairportSync.service
+/dbus-interface.*
+/mpris-interface.*
+/mpris-player-interface.*
 
 # Some eclipse project files
 .cproject

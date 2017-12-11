@@ -43,11 +43,11 @@ static void play(short buf[], int samples);
 static void stop(void);
 static void flush(void);
 int delay(long *the_delay);
-static void volume(double vol);
-void do_volume(double vol);
 void do_mute(int request);
 
-static void linear_volume(double vol);
+static void volume(double vol);
+void do_volume(double vol);
+
 static void parameters(audio_parameters *info);
 static void mute(int do_mute);
 static double set_volume;
@@ -376,8 +376,7 @@ static int init(int argc, char **argv) {
       } else {
         // use the linear scale and do the db conversion ourselves
         debug(1, "note: the hardware mixer specified -- \"%s\" -- does not have "
-                 "a dB volume scale, so it can't be used. Trying software "
-                 "volume control.",
+                 "a dB volume scale.",
               alsa_mix_ctrl);
 
         if (snd_ctl_open(&ctl, alsa_mix_dev, 0) < 0) {
@@ -937,7 +936,7 @@ void do_volume(double vol) { // caller is assumed to have the alsa_mutex when us
         snd_ctl_elem_value_t *value;
         long raw;
 
-        if (snd_ctl_convert_from_dB(ctl, elem_id, (long)vol, &raw, 0) < 0)
+        if (snd_ctl_convert_from_dB(ctl, elem_id, vol, &raw, 0) < 0)
           debug(1, "Failed converting dB gain to raw volume value for the "
                    "software volume control.");
 

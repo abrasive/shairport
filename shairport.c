@@ -33,7 +33,6 @@
 #include <memory.h>
 #include <net/if.h>
 #include <popt.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
@@ -55,6 +54,22 @@
 #include <openssl/md5.h>
 #endif
 
+#if defined(HAVE_DBUS)
+#include <glib.h>
+#endif
+
+#if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
+#include "dacp.h"
+#endif
+
+#ifdef HAVE_DBUS
+#include "dbus-service.h"
+#endif
+
+#ifdef HAVE_MPRIS
+#include "mpris-service.h"
+#endif
+
 #include "common.h"
 #include "mdns.h"
 #include "rtp.h"
@@ -71,7 +86,6 @@
 #endif
 
 static int shutting_down = 0;
-static char *appName = NULL;
 char configuration_file_path[4096 + 1];
 char actual_configuration_file_path[4096 + 1];
 
@@ -196,9 +210,6 @@ char *get_version_string() {
 #ifdef CONFIG_PA
     strcat(version_string, "-pa");
 #endif
-#ifdef CONFIG_PULSE
-    strcat(version_string, "-pulse");
-#endif
 #ifdef CONFIG_SOUNDIO
     strcat(version_string, "-soundio");
 #endif
@@ -219,6 +230,12 @@ char *get_version_string() {
 #endif
 #ifdef CONFIG_METADATA
     strcat(version_string, "-metadata");
+#endif
+#ifdef HAVE_DBUS
+    strcat(version_string, "-dbus");
+#endif
+#ifdef HAVE_MPRIS
+    strcat(version_string, "-mpris");
 #endif
     strcat(version_string, "-sysconfdir:");
     strcat(version_string, SYSCONFDIR);
@@ -423,7 +440,8 @@ int parse_options(int argc, char **argv) {
   config.resyncthreshold = 1.0 * fResyncthreshold / 44100;
   config.tolerance = 1.0 * fTolerance / 44100;
   config.audio_backend_silent_lead_in_time = -1.0; // flag to indicate it has not been set
-
+  config.airplay_volume = -18.0; // if no volume is ever set, default to initial default value if nothing else comes in first.
+  
   config_setting_t *setting;
   const char *str = 0;
   int value = 0;
@@ -850,6 +868,32 @@ int parse_options(int argc, char **argv) {
             config_error_file(&config_file_stuff), config_error_text(&config_file_stuff));
       }
     }
+#if defined(HAVE_DBUS)
+    /* Get the dbus service sbus setting. */
+    if (config_lookup_string(config.cfg, "general.dbus_service_bus", &str)) {
+      if (strcasecmp(str, "system") == 0)
+        config.dbus_service_bus_type = DBT_system;
+      else if (strcasecmp(str, "session") == 0)
+        config.dbus_service_bus_type = DBT_session;
+      else
+        die("Invalid dbus_service_bus option choice \"%s\". It should be \"system\" (default) or "
+            "\"session\"");
+    }
+#endif
+
+#if defined(HAVE_MPRIS)
+    /* Get the mpris service sbus setting. */
+    if (config_lookup_string(config.cfg, "general.mpris_service_bus", &str)) {
+      if (strcasecmp(str, "system") == 0)
+        config.mpris_service_bus_type = DBT_system;
+      else if (strcasecmp(str, "session") == 0)
+        config.mpris_service_bus_type = DBT_session;
+      else
+        die("Invalid mpris_service_bus option choice \"%s\". It should be \"system\" (default) or "
+            "\"session\"");
+    }
+#endif
+
     free(config_file_real_path);
   }
 
@@ -957,6 +1001,17 @@ int parse_options(int argc, char **argv) {
   return optind + 1;
 }
 
+#if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
+GMainLoop *loop;
+
+pthread_t dbus_thread;
+void *dbus_thread_func(void *arg) {
+  loop = g_main_loop_new(NULL, FALSE);
+  g_main_loop_run(loop);
+  return NULL;
+}
+#endif
+
 void signal_setup(void) {
   // mask off all signals before creating threads.
   // this way we control which thread gets which signals.
@@ -970,6 +1025,10 @@ void signal_setup(void) {
   sigdelset(&set, SIGCHLD);
   sigdelset(&set, SIGUSR2);
   pthread_sigmask(SIG_BLOCK, &set, NULL);
+
+  // SIGUSR1 is used to interrupt a thread if blocked in pselect
+  pthread_sigmask(SIG_SETMASK, NULL, &pselect_sigset);
+  sigdelset(&pselect_sigset, SIGUSR1);
 
   // setting this to SIG_IGN would prevent signalling any threads.
   struct sigaction sa;
@@ -1011,8 +1070,11 @@ const char *pid_file_proc(void) {
 }
 
 void exit_function() {
+  // debug(1, "exit function called...");
   if (config.cfg)
     config_destroy(config.cfg);
+  if (config.appName)
+    free(config.appName);
   // probably should be freeing malloc'ed memory here, including strdup-created strings...
 }
 
@@ -1025,8 +1087,8 @@ int main(int argc, char **argv) {
   // this is a bit weird, but apparently necessary
   char *basec = strdup(argv[0]);
   char *bname = basename(basec);
-  appName = strdup(bname);
-  if (appName == NULL)
+  config.appName = strdup(bname);
+  if (config.appName == NULL)
     die("can not allocate memory for the app name!");
   free(basec);
 
@@ -1059,7 +1121,7 @@ int main(int argc, char **argv) {
   // strcat(configuration_file_path, "/shairport-sync"); // thinking about adding a special
   // shairport-sync directory
   strcat(configuration_file_path, "/");
-  strcat(configuration_file_path, appName);
+  strcat(configuration_file_path, config.appName);
   strcat(configuration_file_path, ".conf");
   config.configfile = configuration_file_path;
 
@@ -1476,6 +1538,24 @@ int main(int argc, char **argv) {
 #ifdef CONFIG_METADATA
   metadata_init(); // create the metadata pipe if necessary
 #endif
+
+#if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
+  debug(1,"Requesting DACP Monitor");
+  dacp_monitor_start();
+#endif
+
+#if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
+  // Start up DBUS services after initial settings are all made
+  debug(1, "Starting up D-Bus services");
+  pthread_create(&dbus_thread, NULL, &dbus_thread_func, NULL);
+#ifdef HAVE_DBUS
+  start_dbus_service();
+#endif
+#ifdef HAVE_MPRIS
+  start_mpris_service();
+#endif
+#endif
+
   daemon_log(LOG_INFO, "Successful Startup");
   rtsp_listen_loop();
 

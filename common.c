@@ -92,6 +92,8 @@ shairport_cfg config;
 
 int debuglev = 0;
 
+sigset_t pselect_sigset;
+
 int get_requested_connection_state_to_output() { return requested_connection_state_to_output; }
 
 void set_requested_connection_state_to_output(int v) { requested_connection_state_to_output = v; }
@@ -101,7 +103,7 @@ void die(const char *format, ...) {
   s[0] = 0;
   va_list args;
   va_start(args, format);
-  vsprintf(s, format, args);
+  vsnprintf(s, sizeof(s), format, args);
   va_end(args);
   daemon_log(LOG_EMERG, "fatal error: %s", s);
   shairport_shutdown();
@@ -113,7 +115,7 @@ void warn(const char *format, ...) {
   s[0] = 0;
   va_list args;
   va_start(args, format);
-  vsprintf(s, format, args);
+  vsnprintf(s, sizeof(s), format, args);
   va_end(args);
   daemon_log(LOG_WARNING, "%s", s);
 }
@@ -125,7 +127,7 @@ void debug(int level, const char *format, ...) {
   s[0] = 0;
   va_list args;
   va_start(args, format);
-  vsprintf(s, format, args);
+  vsnprintf(s, sizeof(s), format, args);
   va_end(args);
   daemon_log(LOG_DEBUG, "%s", s);
 }
@@ -135,7 +137,7 @@ void inform(const char *format, ...) {
   s[0] = 0;
   va_list args;
   va_start(args, format);
-  vsprintf(s, format, args);
+  vsnprintf(s, sizeof(s), format, args);
   va_end(args);
   daemon_log(LOG_INFO, "%s", s);
 }
@@ -723,9 +725,9 @@ uint64_t get_absolute_time_in_fp() {
 ssize_t non_blocking_write(int fd, const void *buf, size_t count) {
   void *ibuf = (void *)buf;
   size_t bytes_remaining = count;
-  int rc = 0;
+  int rc = 1;
   struct pollfd ufds[1];
-  while ((bytes_remaining > 0) && (rc == 0)) {
+  while ((bytes_remaining > 0) && (rc > 0)) {
     // check that we can do some writing
     ufds[0].fd = fd;
     ufds[0].events = POLLOUT;

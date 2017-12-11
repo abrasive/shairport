@@ -35,7 +35,6 @@
 #include <limits.h>
 #include <math.h>
 #include <pthread.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdlib.h>
@@ -67,6 +66,22 @@
 
 #ifdef CONFIG_CONVOLUTION
 #include <FFTConvolver/convolver.h>
+#endif
+
+#if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
+#include "dacp.h"
+#include <glib.h>
+#endif
+
+#ifdef HAVE_DBUS
+#include "dbus-interface.h"
+#include "dbus-service.h"
+#endif
+
+#ifdef HAVE_MPRIS
+#include "mpris-interface.h"
+#include "mpris-player-interface.h"
+#include "mpris-service.h"
 #endif
 
 #include "common.h"
@@ -798,8 +813,17 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
                                         &remote_reference_timestamp_time, conn);
           reference_timestamp *= conn->output_sample_ratio;
           if (conn->first_packet_timestamp == 0) { // if this is the very first packet
-            // debug(1,"First frame seen, time %u, with %d
-            // frames...",curframe->timestamp,seq_diff(ab_read, ab_write));
+                                                   // debug(1,"First frame seen, time %u, with %d
+// frames...",curframe->timestamp,seq_diff(ab_read, ab_write));
+
+// say we have started playing here
+#if defined(HAVE_MPRIS)
+            if ((conn->play_state != SST_stopped) && (conn->play_state != SST_playing)) {
+              conn->play_state = SST_playing;
+              debug(1, "MPRIS Playing");
+              media_player2_player_set_playback_status(mprisPlayerPlayerSkeleton, "Playing");
+            }
+#endif
             if (reference_timestamp) { // if we have a reference time
               // debug(1,"First frame seen with timestamp...");
               conn->first_packet_timestamp =
@@ -1019,7 +1043,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
             }
           }
           if (conn->ab_buffering == 0) {
-            // not the time of the playing of the first frame
+            // note the time of the playing of the first frame
             uint64_t reference_timestamp_time; // don't need this...
             get_reference_timestamp_stuff(&conn->play_segment_reference_frame,
                                           &reference_timestamp_time,
@@ -1086,7 +1110,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
     if (do_wait == 0)
       if ((conn->ab_synced != 0) && (conn->ab_read == conn->ab_write)) { // the buffer is empty!
         if (notified_buffer_empty == 0) {
-          debug(3, "Buffers exhausted.");
+          debug(2, "Buffers exhausted.");
           notified_buffer_empty = 1;
         }
         do_wait = 1;
@@ -1344,7 +1368,7 @@ static void *player_thread_func(void *arg) {
   conn->ab_synced = 0;
   conn->first_packet_timestamp = 0;
   conn->flush_requested = 0;
-  conn->fix_volume = 0x10000;
+  // conn->fix_volume = 0x10000;
 
   int rc = pthread_mutex_init(&conn->ab_mutex, NULL);
   if (rc)
@@ -1472,7 +1496,7 @@ static void *player_thread_func(void *arg) {
   // I think it's useful to keep this prime to prevent it from falling into a pattern with some
   // other process.
 
-  char rnstate[256];
+  static char rnstate[256];
   initstate(time(NULL), rnstate, 256);
 
   signed short *inbuf, *tbuf, *silence;
@@ -1553,6 +1577,11 @@ static void *player_thread_func(void *arg) {
   int sync_error_out_of_bounds =
       0; // number of times in a row that there's been a serious sync error
 
+  // start an mdns/zeroconf thread to look for DACP messages containing our DACP_ID and getting the
+  // port number
+  //mdns_dacp_monitor(conn->dacp_id, &conn->dacp_port, &conn->dacp_private);
+  mdns_dacp_monitor(conn);
+
   conn->framesProcessedInThisEpoch = 0;
   conn->framesGeneratedInThisEpoch = 0;
   conn->correctionsRequestedInThisEpoch = 0;
@@ -1594,6 +1623,11 @@ static void *player_thread_func(void *arg) {
     }
   }
 
+	// set the default volume to whaterver it was before, as stored in the config airplay_volume
+	debug(1,"Set initial volume to %f.",config.airplay_volume);
+	
+	player_volume(config.airplay_volume,conn);
+	
   uint64_t tens_of_seconds = 0;
   while (!conn->player_thread_please_stop) {
     abuf_t *inframe = buffer_get_frame(conn);
@@ -2157,10 +2191,16 @@ static void *player_thread_func(void *arg) {
            elapsedSec);
   }
 
+  // stop watching for DACP port number stuff
+  mdns_dacp_dont_monitor(conn); // begin looking out for information about the client
+                                               // as a remote control. Specifically we might need
+                                               // the port number
+
   if (config.output->stop)
     config.output->stop();
   usleep(100000); // allow this time to (?) allow the alsa subsystem to finish cleaning up after
                   // itself. 50 ms seems too short
+
   debug(2, "Shut down audio, control and timing threads");
   conn->please_stop = 1;
   pthread_kill(rtp_audio_thread, SIGUSR1);
@@ -2192,6 +2232,10 @@ static void *player_thread_func(void *arg) {
     debug(1, "Error destroying vol_mutex variable.");
 
   debug(1, "Player thread exit on RTSP conversation thread %d.", conn->connection_number);
+  if (conn->dacp_id) {
+    free(conn->dacp_id);
+    conn->dacp_id = NULL;
+  }
   if (outbuf)
     free(outbuf);
   if (silence)
@@ -2204,7 +2248,7 @@ static void *player_thread_func(void *arg) {
 }
 
 // takes the volume as specified by the airplay protocol
-void player_volume(double airplay_volume, rtsp_conn_info *conn) {
+void player_volume_without_notification(double airplay_volume, rtsp_conn_info *conn) {
 
   // The volume ranges -144.0 (mute) or -30 -- 0. See
   // http://git.zx2c4.com/Airtunes2/about/#setting-volume
@@ -2235,8 +2279,6 @@ void player_volume(double airplay_volume, rtsp_conn_info *conn) {
   // or 20 times the log of the ratio. Then multiplied by 100 for convenience.
   // Thus, we ask our vol2attn function for an appropriate dB between -96.3 and 0 dB and translate
   // it back to a number.
-
-  command_set_volume(airplay_volume);
 
   int32_t hw_min_db, hw_max_db, hw_range_db, range_to_use, min_db,
       max_db; // hw_range_db is a flag; if 0 means no mixer
@@ -2425,6 +2467,51 @@ void player_volume(double airplay_volume, rtsp_conn_info *conn) {
     send_ssnc_metadata('pvol', dv, strlen(dv), 1);
   }
 #endif
+
+	// here, store the volume for possible use in the future
+	config.airplay_volume = airplay_volume;
+}
+
+void player_volume(double airplay_volume, rtsp_conn_info *conn) {
+  command_set_volume(airplay_volume);
+
+#ifdef HAVE_DBUS
+  // A volume command has been sent from the client
+  // let's get the master volume from the DACP remote control
+
+  struct dacp_speaker_stuff speaker_info[50];
+  // we need the overall volume and the speakers information to get this device's relative volume to
+  // calculate the real volume
+
+  int32_t overall_volume = dacp_get_client_volume(conn);
+  // debug(1,"DACP Volume: %d.",overall_volume);
+  int speaker_count = dacp_get_speaker_list(conn, (dacp_spkr_stuff *)&speaker_info, 50);
+  // debug(1,"DACP Speaker Count: %d.",speaker_count);
+
+  // get our machine number
+  uint16_t *hn = (uint16_t *)config.hw_addr;
+  uint32_t *ln = (uint32_t *)(config.hw_addr + 2);
+  uint64_t t1 = ntohs(*hn);
+  uint64_t t2 = ntohl(*ln);
+  int64_t machine_number = (t1 << 32) + t2; // this form is useful
+
+  // Let's find our own speaker in the array and pick up its relative volume
+  int i;
+  int32_t relative_volume = 0;
+  for (i = 0; i < speaker_count; i++) {
+    if (speaker_info[i].speaker_number == machine_number) {
+      // debug(1,"Our speaker number found: %ld.",machine_number);
+      relative_volume = speaker_info[i].volume;
+    }
+  }
+  int32_t actual_volume = (overall_volume * relative_volume + 50) / 100;
+  // debug(1,"Overall volume: %d, relative volume: %d%, actual volume:
+  // %d.",overall_volume,relative_volume,actual_volume);
+  // debug(1,"Our actual speaker volume is %d.",actual_volume);
+  conn->dacp_volume = actual_volume; // this is needed to prevent a loop
+  shairport_sync_set_volume(SHAIRPORT_SYNC(shairportSyncSkeleton), actual_volume);
+#endif
+  player_volume_without_notification(airplay_volume, conn);
 }
 
 void player_flush(int64_t timestamp, rtsp_conn_info *conn) {
@@ -2438,6 +2525,12 @@ void player_flush(int64_t timestamp, rtsp_conn_info *conn) {
   conn->play_number_after_flush = 0;
 #ifdef CONFIG_METADATA
   send_ssnc_metadata('pfls', NULL, 0, 1);
+#endif
+#if defined(HAVE_MPRIS)
+  if ((conn->play_state != SST_stopped) && (conn->play_state != SST_paused))
+    conn->play_state = SST_paused;
+  debug(1, "MPRIS Paused");
+  media_player2_player_set_playback_status(mprisPlayerPlayerSkeleton, "Paused");
 #endif
 }
 
@@ -2464,6 +2557,12 @@ int player_play(rtsp_conn_info *conn) {
     debug(1, "Error setting stack size for player_thread: %s", strerror(errno));
   pthread_create(pt, &tattr, player_thread_func, (void *)conn);
   pthread_attr_destroy(&tattr);
+#if defined(HAVE_MPRIS)
+  if (conn->play_state != SST_playing)
+    conn->play_state = SST_playing;
+  debug(1, "MPRIS Playing (play)");
+  media_player2_player_set_playback_status(mprisPlayerPlayerSkeleton, "Playing");
+#endif
   return 0;
 }
 
@@ -2479,6 +2578,13 @@ void player_stop(rtsp_conn_info *conn) {
     command_stop();
     free(conn->player_thread);
     conn->player_thread = NULL;
+#if defined(HAVE_MPRIS)
+    if (conn->play_state != SST_stopped)
+      conn->play_state = SST_stopped;
+    debug(1, "MPRIS Stopped");
+    media_player2_player_set_playback_status(mprisPlayerPlayerSkeleton, "Stopped");
+#endif
+
   } else {
     debug(3, "player thread of RTSP conversation %d is already deleted.", conn->connection_number);
   }

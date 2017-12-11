@@ -1,6 +1,7 @@
 /*
  * Apple RTP protocol handler. This file is part of Shairport.
  * Copyright (c) James Laird 2013
+ * Copyright (c) Mike Brady 2014 -- 2017
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -26,12 +27,12 @@
 
 #include <arpa/inet.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <math.h>
 #include <memory.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <pthread.h>
-#include <signal.h>
 #include <stdio.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -41,6 +42,8 @@
 #include "common.h"
 #include "player.h"
 #include "rtp.h"
+
+void memory_barrier();
 
 void rtp_initialise(rtsp_conn_info *conn) {
 
@@ -80,6 +83,16 @@ void *rtp_audio_receiver(void *arg) {
 
   ssize_t nread;
   while (conn->please_stop == 0) {
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    FD_SET(conn->audio_socket, &readfds);
+    do {
+      memory_barrier();
+    } while (conn->please_stop == 0 &&
+             pselect(conn->audio_socket + 1, &readfds, NULL, NULL, NULL, &pselect_sigset) <= 0);
+    if (conn->please_stop != 0) {
+      break;
+    }
     nread = recv(conn->audio_socket, packet, sizeof(packet), 0);
 
     uint64_t local_time_now_fp = get_absolute_time_in_fp();
@@ -94,7 +107,7 @@ void *rtp_audio_receiver(void *arg) {
       stat_mean += stat_delta / stat_n;
       stat_M2 += stat_delta * (time_interval_us - stat_mean);
       if (stat_n % 2500 == 0) {
-        debug(3, "Packet reception interval stats: mean, standard deviation and max for the last "
+        debug(2, "Packet reception interval stats: mean, standard deviation and max for the last "
                  "2,500 packets in microseconds: %10.1f, %10.1f, %10.1f.",
               stat_mean, sqrtf(stat_M2 / (stat_n - 1)), longest_packet_time_interval_us);
         stat_n = 0;
@@ -172,6 +185,16 @@ void *rtp_control_receiver(void *arg) {
   int64_t sync_rtp_timestamp, rtp_timestamp_less_latency;
   ssize_t nread;
   while (conn->please_stop == 0) {
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    FD_SET(conn->control_socket, &readfds);
+    do {
+      memory_barrier();
+    } while (conn->please_stop == 0 &&
+             pselect(conn->control_socket + 1, &readfds, NULL, NULL, NULL, &pselect_sigset) <= 0);
+    if (conn->please_stop != 0) {
+      break;
+    }
     nread = recv(conn->control_socket, packet, sizeof(packet), 0);
     local_time_now = get_absolute_time_in_fp();
     //        clock_gettime(CLOCK_MONOTONIC,&tn);
@@ -204,10 +227,10 @@ void *rtp_control_receiver(void *arg) {
         sync_rtp_timestamp = monotonic_timestamp(ntohl(*((uint32_t *)&packet[16])), conn);
 
         if (config.use_negotiated_latencies) {
-          int64_t la = sync_rtp_timestamp - rtp_timestamp_less_latency + 11025;
+          int64_t la = sync_rtp_timestamp - rtp_timestamp_less_latency + conn->staticLatencyCorrection;
           if (la != config.latency) {
             config.latency = la;
-            // debug(1,"Using negotiated latency of %u frames.",config.latency);
+            debug(1,"Using negotiated latency of %lld frames and a static latency correction of %lld",sync_rtp_timestamp - rtp_timestamp_less_latency,conn->staticLatencyCorrection);
           }
         }
 
@@ -307,6 +330,16 @@ void *rtp_timing_sender(void *arg) {
       msgsize = sizeof(struct sockaddr_in6);
     }
 #endif
+    fd_set writefds;
+    FD_ZERO(&writefds);
+    FD_SET(conn->timing_socket, &writefds);
+    do {
+      memory_barrier();
+    } while (conn->timing_sender_stop == 0 &&
+             pselect(conn->timing_socket + 1, NULL, &writefds, NULL, NULL, &pselect_sigset) <= 0);
+    if (conn->timing_sender_stop != 0) {
+      break;
+    }
     if (sendto(conn->timing_socket, &req, sizeof(req), 0,
                (struct sockaddr *)&conn->rtp_client_timing_socket, msgsize) == -1) {
       perror("Error sendto-ing to timing socket");
@@ -343,6 +376,16 @@ void *rtp_timing_receiver(void *arg) {
   uint64_t first_local_to_remote_time_difference_time;
   uint64_t l2rtd = 0;
   while (conn->please_stop == 0) {
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    FD_SET(conn->timing_socket, &readfds);
+    do {
+      memory_barrier();
+    } while (conn->please_stop == 0 &&
+             pselect(conn->timing_socket + 1, &readfds, NULL, NULL, NULL, &pselect_sigset) <= 0);
+    if (conn->please_stop != 0) {
+      break;
+    }
     nread = recv(conn->timing_socket, packet, sizeof(packet), 0);
     arrival_time = get_absolute_time_in_fp();
     //      clock_gettime(CLOCK_MONOTONIC,&att);
@@ -588,13 +631,14 @@ static int bind_port(int ip_family, const char *self_ip_address, uint32_t scope_
     struct sockaddr_in *sa = (struct sockaddr_in *)&local;
     sport = ntohs(sa->sin_port);
   }
+  fcntl(local_socket, F_SETFL, O_NONBLOCK);
 
   *sock = local_socket;
   return sport;
 }
 
-void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t active_remote,
-               int *lsport, int *lcport, int *ltport, rtsp_conn_info *conn) {
+void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, int *lsport, int *lcport,
+               int *ltport, rtsp_conn_info *conn) {
 
   // this gets the local and remote ip numbers (and ports used for the TCD stuff)
   // we use the local stuff to specify the address we are coming from and
@@ -604,8 +648,6 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, uint32_t
     die("rtp_setup called with active stream!");
 
   debug(2, "rtp_setup: cport=%d tport=%d.", cport, tport);
-
-  conn->client_active_remote = active_remote;
 
   // print out what we know about the client
   void *client_addr, *self_addr;
@@ -738,7 +780,7 @@ void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
 
     char req[8]; // *not* a standard RTCP NACK
     req[0] = 0x80;
-    req[1] = 0x55 | 0x80;                        // Apple 'resend'
+    req[1] = (char)0x55 | (char)0x80;            // Apple 'resend'
     *(unsigned short *)(req + 2) = htons(1);     // our seqnum
     *(unsigned short *)(req + 4) = htons(first); // missed seqnum
     *(unsigned short *)(req + 6) = htons(count); // count
@@ -757,69 +799,5 @@ void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
     debug(2, "rtp_request_resend called without active stream!");
     //  request_sent = 1;
     //}
-  }
-}
-
-void rtp_request_client_pause(rtsp_conn_info *conn) {
-  if (conn->rtp_running) {
-    if (conn->client_active_remote == 0) {
-      debug(1, "Can't request a client pause: no valid active remote.");
-    } else {
-      // debug(1,"Send a client pause request to %s:3689 with active remote
-      // %u.",client_ip_string,client_active_remote);
-
-      struct addrinfo hints, *res;
-      int sockfd;
-
-      char message[1000], server_reply[2000];
-
-      // first, load up address structs with getaddrinfo():
-
-      memset(&hints, 0, sizeof hints);
-      hints.ai_family = AF_UNSPEC;
-      hints.ai_socktype = SOCK_STREAM;
-
-      getaddrinfo(conn->client_ip_string, "3689", &hints, &res);
-
-      // make a socket:
-
-      sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-
-      if (sockfd == -1) {
-        die("Could not create socket");
-      }
-      // debug(1,"Socket created");
-
-      // connect!
-
-      if (connect(sockfd, res->ai_addr, res->ai_addrlen) < 0) {
-        die("connect failed. Error");
-      }
-      // debug(1,"Connect successful");
-
-      sprintf(message,
-              "GET /ctrl-int/1/pause HTTP/1.1\r\nHost: %s:3689\r\nActive-Remote: %u\r\n\r\n",
-              conn->client_ip_string, conn->client_active_remote);
-      // debug(1,"Sending this message: \"%s\".",message);
-
-      // Send some data
-      if (send(sockfd, message, strlen(message), 0) < 0) {
-        debug(1, "Send failed");
-      }
-
-      // Receive a reply from the server
-      if (recv(sockfd, server_reply, 2000, 0) < 0) {
-        debug(1, "recv failed");
-      }
-
-      // debug(1,"Server replied: \"%s\".",server_reply);
-
-      if (strstr(server_reply, "HTTP/1.1 204 No Content") != server_reply)
-        debug(1, "Client pause request failed.");
-      // debug(1,"Client pause request failed: \"%s\".",server_reply);
-      close(sockfd);
-    }
-  } else {
-    debug(1, "Request to pause non-existent play stream -- ignored.");
   }
 }

@@ -2,8 +2,10 @@
 #define _PLAYER_H
 
 #include <arpa/inet.h>
+#include <pthread.h>
 
 #include "config.h"
+#include "definitions.h"
 
 #ifdef HAVE_LIBMBEDTLS
 #include <mbedtls/aes.h>
@@ -23,6 +25,14 @@
 #include "audio.h"
 
 #define time_ping_history 8
+
+#if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
+enum session_status_type {
+  SST_stopped = 0, // not playing anything
+  SST_paused,      // paused
+  SST_playing,
+} sst_type;
+#endif
 
 typedef struct time_ping_record {
   uint64_t local_to_remote_difference;
@@ -53,6 +63,10 @@ typedef struct {
 
 typedef struct {
   int connection_number; // for debug ID purposes, nothing else...
+  int64_t staticLatencyCorrection; // it seems iTunes needs some offset before it's more or less right. Odd.
+#if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
+  enum session_status_type play_state;
+#endif
   int fd;
   int authorized; // set if a password is required and has been supplied
   stream_cfg stream;
@@ -107,6 +121,10 @@ typedef struct {
   AES_KEY aes;
 #endif
 
+#ifdef HAVE_DBUS
+  int32_t dacp_volume;
+#endif
+
   int amountStuffed;
 
   int32_t framesProcessedInThisEpoch;
@@ -159,12 +177,22 @@ typedef struct {
 
   int play_number_after_flush;
 
+  // remote control stuff. The port to which to send commands is not specified, so you have to use
+  // mdns to find it.
+  // at present, only avahi can do this
+
+  char *dacp_id;               // id of the client -- used to find the port to be used
+  uint16_t dacp_port;          // port on the client to send remote control messages to, else zero
+  uint32_t dacp_active_remote; // key to send to the remote controller
+  void *mdns_private_pointer;  // private storage (just a pointer) for the dacp_port resolver
+
 } rtsp_conn_info;
 
 int player_play(rtsp_conn_info *conn);
 void player_stop(rtsp_conn_info *conn);
 
 void player_volume(double f, rtsp_conn_info *conn);
+void player_volume_without_notification(double f, rtsp_conn_info *conn);
 void player_flush(int64_t timestamp, rtsp_conn_info *conn);
 void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len,
                        rtsp_conn_info *conn);

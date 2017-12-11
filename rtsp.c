@@ -34,7 +34,6 @@
 #include <netinet/in.h>
 #include <poll.h>
 #include <pthread.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -59,9 +58,9 @@
 #endif
 
 #include "common.h"
-#include "mdns.h"
 #include "player.h"
 #include "rtp.h"
+#include "rtsp.h"
 
 #ifdef AF_INET6
 #define INETx_ADDRSTRLEN INET6_ADDRSTRLEN
@@ -93,8 +92,6 @@ static pthread_mutex_t reference_counter_lock = PTHREAD_MUTEX_INITIALIZER;
 // static int please_shutdown = 0;
 // static pthread_t playing_thread = 0;
 
-static rtsp_conn_info *playing_conn =
-    NULL; // the data structure representing the connection that has the player.
 static rtsp_conn_info **conns = NULL;
 
 int RTSP_connection_index = 0;
@@ -270,6 +267,8 @@ static void cleanup_threads(void) {
             conns[i]->connection_number);
       pthread_join(conns[i]->thread, &retval);
       debug(3, "RTSP connection thread %d deleted...", conns[i]->connection_number);
+      if (conns[i] == playing_conn)
+        playing_conn = NULL;
       free(conns[i]);
       nconns--;
       if (nconns)
@@ -466,7 +465,13 @@ static enum rtsp_read_request_response rtsp_read_request(rtsp_conn_info *conn,
   int msg_size = -1;
 
   while (msg_size < 0) {
-    memory_barrier();
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    FD_SET(conn->fd, &readfds);
+    do {
+      memory_barrier();
+    } while (conn->stop == 0 &&
+             pselect(conn->fd + 1, &readfds, NULL, NULL, NULL, &pselect_sigset) <= 0);
     if (conn->stop != 0) {
       debug(3, "RTSP conversation thread %d shutdown requested.", conn->connection_number);
       reply = rtsp_read_request_response_immediate_shutdown_requested;
@@ -540,6 +545,18 @@ static enum rtsp_read_request_response rtsp_read_request(rtsp_conn_info *conn,
         warning_message_sent = 1;
       }
     }
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    FD_SET(conn->fd, &readfds);
+    do {
+      memory_barrier();
+    } while (conn->stop == 0 &&
+             pselect(conn->fd + 1, &readfds, NULL, NULL, NULL, &pselect_sigset) <= 0);
+    if (conn->stop != 0) {
+      debug(1, "RTSP shutdown requested.");
+      reply = rtsp_read_request_response_immediate_shutdown_requested;
+      goto shutdown;
+    }
     ssize_t read_chunk = msg_size - inbuf;
     if (read_chunk > max_read_chunk)
       read_chunk = max_read_chunk;
@@ -548,9 +565,9 @@ static enum rtsp_read_request_response rtsp_read_request(rtsp_conn_info *conn,
       reply = rtsp_read_request_response_error;
       goto shutdown;
     }
-    if (nread == EINTR)
-      continue;
     if (nread < 0) {
+      if (errno == EINTR)
+        continue;
       perror("read failure");
       reply = rtsp_read_request_response_error;
       goto shutdown;
@@ -685,7 +702,7 @@ static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
 // debug(1,"RTSP Flush Requested: %u.",rtptime);
 #ifdef CONFIG_METADATA
   if (p)
-    send_metadata('ssnc', 'flsr', p, strlen(p), req, 1);
+    send_metadata('ssnc', 'flsr', p+1, strlen(p+1), req, 1);
   else
     send_metadata('ssnc', 'flsr', NULL, 0, NULL, 0);
 #endif
@@ -697,26 +714,26 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
   debug(3, "Connection %d: SETUP", conn->connection_number);
   int cport, tport;
   int lsport, lcport, ltport;
-  uint32_t active_remote = 0;
 
   char *ar = msg_get_header(req, "Active-Remote");
   if (ar) {
     debug(1, "Active-Remote string seen: \"%s\".", ar);
     // get the active remote
     char *p;
-    active_remote = strtoul(ar, &p, 10);
+    conn->dacp_active_remote = strtoul(ar, &p, 10);
 #ifdef CONFIG_METADATA
     send_metadata('ssnc', 'acre', ar, strlen(ar), req, 1);
 #endif
   }
 
-#ifdef CONFIG_METADATA
   ar = msg_get_header(req, "DACP-ID");
   if (ar) {
     debug(1, "DACP-ID string seen: \"%s\".", ar);
+    conn->dacp_id = strdup(ar);
+#ifdef CONFIG_METADATA
     send_metadata('ssnc', 'daid', ar, strlen(ar), req, 1);
-  }
 #endif
+  }
 
   // This latency-setting mechanism is deprecated and will be removed.
   // If no non-standard latency is chosen, automatic negotiated latency setting
@@ -748,11 +765,12 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
       else
         debug(2, "iTunes Version Number not found.");
       if (iTunesVersion >= 10) {
-        debug(2, "User-Agent is iTunes 10 or better, (actual version is %d); "
+        debug(1, "User-Agent is iTunes 10 or better, (actual version is %d); "
                  "selecting the iTunes "
                  "latency of %d frames.",
               iTunesVersion, config.iTunesLatency);
         config.latency = config.iTunesLatency;
+        conn->staticLatencyCorrection = 11025;
       }
     } else if (strstr(ua, "AirPlay") == ua) {
       debug(2, "User-Agent is AirPlay; selecting the AirPlay latency of %d frames.",
@@ -763,6 +781,7 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
                "of %d frames.",
             config.ForkedDaapdLatency);
       config.latency = config.ForkedDaapdLatency;
+      conn->staticLatencyCorrection = 11025;
     } else {
       debug(2, "Unrecognised User-Agent. Using latency of %d frames.", config.latency);
     }
@@ -794,8 +813,7 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
   tport = atoi(p);
 
   //  rtsp_take_player();
-  rtp_setup(&conn->local, &conn->remote, cport, tport, active_remote, &lsport, &lcport, &ltport,
-            conn);
+  rtp_setup(&conn->local, &conn->remote, cport, tport, &lsport, &lcport, &ltport, conn);
   if (!lsport)
     goto error;
   char *q;
@@ -941,6 +959,8 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn, rtsp_message *r
 //    to send commands to the source's remote control (if it has one).
 //		`clip` -- the payload is the IP number of the client, i.e. the sender of audio.
 //		Can be an IPv4 or an IPv6 number.
+//		`dapo` -- the payload is the port number (as text) on the server to which remote
+// control commands should be sent. It is 3689 for iTunes but varies for iOS devices.
 
 //		A special sub-protocol is used for sending large data items over UDP
 //    If the payload exceeded 4 MB, it is chunked using the following format:
@@ -1026,6 +1046,7 @@ void metadata_create(void) {
     } else {
       int buffer_size = METADATA_SNDBUF;
       setsockopt(metadata_sock, SOL_SOCKET, SO_SNDBUF, &buffer_size, sizeof(buffer_size));
+      fcntl(fd, F_SETFL, O_NONBLOCK);
       bzero((char *)&metadata_sockaddr, sizeof(metadata_sockaddr));
       metadata_sockaddr.sin_family = AF_INET;
       metadata_sockaddr.sin_addr.s_addr = inet_addr(config.metadata_sockaddr);
@@ -1397,36 +1418,37 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
   if (pthread_mutex_trylock(&play_lock) == 0) {
     have_the_player = 1;
   } else {
-    if (playing_conn) {
-      debug(1, "RTSP Conversation thread %d already playing when asked by thread %d.",
-            playing_conn->connection_number, conn->connection_number);
-    } else {
-      debug(1, "play_lock locked but no playing_conn.");
-    }
-    if (config.allow_session_interruption == 1) {
+    int should_wait = 0;
+
+    if (!playing_conn)
+      die("Non existent playing_conn with play_lock enabled.");
+    debug(1, "RTSP Conversation thread %d already playing when asked by thread %d.",
+          playing_conn->connection_number, conn->connection_number);
+    if (playing_conn->stop) {
+      debug(1, "Playing connection is already shutting down; waiting for it...");
+      should_wait = 1;
+    } else if (config.allow_session_interruption == 1) {
       // some other thread has the player ... ask it to relinquish the thread
-      if (playing_conn) {
-        debug(1, "ANNOUNCE: playing connection %d being interrupted by connection %d.",
-              playing_conn->connection_number, conn->connection_number);
-        if (playing_conn == conn) {
-          debug(1, "ANNOUNCE asking to stop itself.");
-        } else {
-          playing_conn->stop = 1;
-          memory_barrier();
-          pthread_kill(playing_conn->thread, SIGUSR1);
-          usleep(
-              1000000); // here, it is possible for other connections to come in and nab the player.
-        }
+      debug(1, "ANNOUNCE: playing connection %d being interrupted by connection %d.",
+            playing_conn->connection_number, conn->connection_number);
+      if (playing_conn == conn) {
+        debug(1, "ANNOUNCE asking to stop itself.");
       } else {
-        die("Non existent the_playing_conn with play_lock enabled.");
+        playing_conn->stop = 1;
+        memory_barrier();
+        pthread_kill(playing_conn->thread, SIGUSR1);
+        should_wait = 1;
       }
-      debug(1, "Try to get the player now");
-      // pthread_mutex_lock(&play_lock);
-      if (pthread_mutex_trylock(&play_lock) == 0)
-        have_the_player = 1;
-      else
-        debug(1, "ANNOUNCE failed to get the player");
     }
+
+    if (should_wait) {
+      usleep(1000000); // here, it is possible for other connections to come in and nab the player.
+      debug(1, "Try to get the player now");
+    }
+    if (pthread_mutex_trylock(&play_lock) == 0)
+      have_the_player = 1;
+    else
+      debug(1, "ANNOUNCE failed to get the player");
   }
 
   if (have_the_player) {
@@ -1772,12 +1794,6 @@ authenticate:
 }
 
 static void *rtsp_conversation_thread_func(void *pconn) {
-  // SIGUSR1 is used to interrupt this thread if blocked for read
-  sigset_t set;
-  sigemptyset(&set);
-  sigaddset(&set, SIGUSR1);
-  pthread_sigmask(SIG_UNBLOCK, &set, NULL);
-
   rtsp_conn_info *conn = pconn;
 
   rtp_initialise(conn);
@@ -1820,7 +1836,16 @@ static void *rtsp_conversation_thread_func(void *pconn) {
       }
       debug(3, "RTSP thread %d: RTSP Response:", conn->connection_number);
       debug_print_msg_headers(3, resp);
-      msg_write_response(conn->fd, resp);
+      fd_set writefds;
+      FD_ZERO(&writefds);
+      FD_SET(conn->fd, &writefds);
+      do {
+        memory_barrier();
+      } while (conn->stop == 0 &&
+               pselect(conn->fd + 1, NULL, &writefds, NULL, NULL, &pselect_sigset) <= 0);
+      if (conn->stop == 0) {
+        msg_write_response(conn->fd, resp);
+      }
       msg_free(req);
       msg_free(resp);
     } else {
@@ -1878,6 +1903,8 @@ void rtsp_listen_loop(void) {
   int *sockfd = NULL;
   int nsock = 0;
   int i, ret;
+
+  playing_conn = NULL; // the data structure representing the connection that has the player.
 
   memset(&hints, 0, sizeof(hints));
   hints.ai_family = AF_UNSPEC;
@@ -2060,6 +2087,8 @@ void rtsp_listen_loop(void) {
       //      conn->thread = rtsp_conversation_thread;
       //      conn->stop = 0; // record's memory has been zeroed
       //      conn->authorized = 0; // record's memory has been zeroed
+      fcntl(conn->fd, F_SETFL, O_NONBLOCK);
+
       ret = pthread_create(&conn->thread, NULL, rtsp_conversation_thread_func,
                            conn); // also acts as a memory barrier
       if (ret)
