@@ -81,7 +81,7 @@ enum sps_format_t {
 
 typedef struct {
   config_t *cfg;
-  int fix_volume;
+  double airplay_volume; // stored here for reloading when necessary
   char *appName; // normally the app is called shairport-syn, but it may be symlinked
   char *password;
   char *service_name; // the name for the shairport service, e.g. "Shairport Sync Version %v running
