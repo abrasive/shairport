@@ -1,6 +1,7 @@
 /*
- * RTSP protocol handler. This file is part of Shairport.
+ * RTSP protocol handler. This file is part of Shairport Sync
  * Copyright (c) James Laird 2013
+ 
  * Modifications associated with audio synchronization, mutithreading and
  * metadata handling copyright (c) Mike Brady 2014-2017
  * All rights reserved.
@@ -370,6 +371,27 @@ static void debug_print_msg_headers(int level, rtsp_message *msg) {
   }
 }
 
+static void debug_print_msg_content(int level, rtsp_message *msg) {
+  if (msg->contentlength) {
+    char *obf = malloc(msg->contentlength*2+1);
+    if (obf) {
+    char *obfp = obf;
+    int obfc;
+    for (obfc=0;obfc<msg->contentlength;obfc++) {
+      sprintf(obfp,"%02X",msg->content[obfc]);
+      obfp+=2;
+    };
+    *obfp=0;
+    debug(level,"Content (hex): \"%s\"",obf);
+    free(obf);
+    } else {
+      debug(level,"Can't allocate space for debug buffer");
+    }
+  } else {
+    debug(level,"No content");
+  }
+}
+
 static void msg_free(rtsp_message *msg) {
 
   if (msg) {
@@ -592,7 +614,7 @@ shutdown:
 }
 
 static void msg_write_response(int fd, rtsp_message *resp) {
-  char pkt[1024];
+  char pkt[2048];
   int pktfree = sizeof(pkt);
   char *p = pkt;
   int i, n;
@@ -608,15 +630,30 @@ static void msg_write_response(int fd, rtsp_message *resp) {
     n = snprintf(p, pktfree, "%s: %s\r\n", resp->name[i], resp->value[i]);
     pktfree -= n;
     p += n;
-    if (pktfree <= 0)
+    if (pktfree <= 1024)
       die("Attempted to write overlong RTSP packet");
   }
 
-  if (pktfree < 3)
-    die("Attempted to write overlong RTSP packet");
+  // Here, if there's content, write the Content-Length header ...
+  
+  if (resp->contentlength) {
+    debug(1, "Responding with content of length %d", resp->contentlength);
+    n = snprintf(p, pktfree, "Content-Length: %d\r\n", resp->contentlength);
+    pktfree -= n;
+    p += n;
+    if (pktfree <= 1024)
+      die("Attempted to write overlong RTSP packet");
+  }
 
-  strcpy(p, "\r\n");
-  int ignore = write(fd, pkt, p - pkt + 2);
+  int ignore = write(fd, pkt, p - pkt);
+  
+  // Here, if there's content, write it
+  if (resp->contentlength) {
+    debug(1, "Content is \"%s\"", resp->content);
+    ignore = write(fd,resp->content,resp->contentlength);
+  }
+  
+  ignore = write(fd,"\r\n",strlen("\r\n"));
 }
 
 static void handle_record(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
@@ -873,7 +910,7 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn, rtsp_message *r
 
     if (!strncmp(cp, "volume: ", 8)) {
       float volume = atof(cp + 8);
-      debug(3, "AirPlay request to set volume to: %f.", volume);
+      debug(2, "AirPlay request to set volume to: %f.", volume);
       player_volume(volume, conn);
     } else
 #ifdef CONFIG_METADATA
@@ -1315,7 +1352,20 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn, rtsp_message *re
 #endif
 
 static void handle_get_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
-  debug(3, "Connection %d: GET_PARAMETER", conn->connection_number);
+  // debug(1, "Connection %d: GET_PARAMETER", conn->connection_number);
+  //debug_print_msg_headers(1,req);
+  //debug_print_msg_content(1,req);
+  
+  if ((req->content) && (req->contentlength==strlen("volume\r\n")) && strstr(req->content,"volume")==req->content) {
+    //debug(1,"Current volume sought");
+    char *p = malloc(128); // will be automatically deallocated with the response is deleted
+    if (p) {
+      resp->content=p;
+      resp->contentlength=sprintf(p, "\r\nvolume: %.6f\r\n", config.airplay_volume);
+    } else {
+      debug(1,"Couldn't allocate space for a response.");
+    }
+  }   
   resp->respcode = 200;
 }
 
