@@ -140,7 +140,7 @@ static void browse_callback(AvahiServiceBrowser *b, AvahiIfIndex interface, Avah
       if (strcmp(dacpid, conn->dacp_id) == 0) {
         if (conn->dacp_id != 0) {
           debug(1, "Client's DACP status withdrawn.");
-          conn->dacp_id = 0;
+          conn->dacp_port = 0;
 #if defined(HAVE_DBUS) || defined(HAVE_MPRIS)          
           set_dacp_server_information(conn); // this will have the effect of telling the scanner that the DACP server is no longer working
 #endif
