@@ -6,7 +6,7 @@ Version 3.2d19
 Version 3.2d18
 ====
 **Bug Fix**
-* This is a more generalised solution than in 3.2d16. In recent versions of iOS (11.2) and mac OS (10.13.2), when play is resumed after a pause, the volume level is not always restored, and, if software volume control is being used, Shairport Sync plays at full volume. This issue has been addressed by storing the last airplay volume setting when a play session ends and using it as a default when a new play session begins.
+* In recent versions of iOS (11.2) and mac OS (10.13.2), when play is resumed after a pause, the volume level is not always restored, and, if software volume control is being used, Shairport Sync plays at full volume. This issue has been addressed by storing the last airplay volume setting when a play session ends and using it as a default when a new play session begins. (This is a more generalised solution than in 3.2d16.)
 * Better AirPlay synchronisation. Older versions of Shairport Sync added an 11,025 frame (0.25 seconds) offset to all the latencies agreed with the sender. This seems now only to be correct for an iTunes and ForkedDaapd sources, but incorrect for AirPlay sources. Accordingly, the offset is only added for iTunes and ForkedDaapd. The result is better sync with videos, e.g, YouTube, etc. while iTunes and ForkedDaapd synchronisation is unaffected.
 
 Version 3.2d16
