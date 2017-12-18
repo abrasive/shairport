@@ -8,6 +8,11 @@ tinysvcmdns.c, tinysvcmdns.h:
     All rights reserved.
     see tinysvcmdns.[ch] for full license text
 
+tinyhttp
+    Copyright 2012 Matthew Endsley
+    All rights reserved
+    see the tinyhttp/LICENSE for full license text
+
 Shairport:
     Copyright (c) 2011-2013 James Laird <jhl@mafipulation.org>
 

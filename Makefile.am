@@ -88,7 +88,7 @@ dbus-interface.c:  org.gnome.ShairportSync.xml
 endif
 
 if USE_DBUS_CORE_AND_DACP
-shairport_sync_SOURCES += dacp.c
+shairport_sync_SOURCES += dacp.c tinyhttp/chunk.c tinyhttp/header.c tinyhttp/http.c 
 endif
 
 if USE_MPRIS

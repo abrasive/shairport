@@ -1579,7 +1579,7 @@ static void *player_thread_func(void *arg) {
 
   // start an mdns/zeroconf thread to look for DACP messages containing our DACP_ID and getting the
   // port number
-  //mdns_dacp_monitor(conn->dacp_id, &conn->dacp_port, &conn->dacp_private);
+  // mdns_dacp_monitor(conn->dacp_id, &conn->dacp_port, &conn->dacp_private);
   mdns_dacp_monitor(conn);
 
   conn->framesProcessedInThisEpoch = 0;
@@ -1623,11 +1623,11 @@ static void *player_thread_func(void *arg) {
     }
   }
 
-	// set the default volume to whaterver it was before, as stored in the config airplay_volume
-	debug(1,"Set initial volume to %f.",config.airplay_volume);
-	
-	player_volume(config.airplay_volume,conn);
-	
+  // set the default volume to whaterver it was before, as stored in the config airplay_volume
+  debug(1, "Set initial volume to %f.", config.airplay_volume);
+
+  player_volume(config.airplay_volume, conn);
+
   uint64_t tens_of_seconds = 0;
   while (!conn->player_thread_please_stop) {
     abuf_t *inframe = buffer_get_frame(conn);
@@ -2193,8 +2193,8 @@ static void *player_thread_func(void *arg) {
 
   // stop watching for DACP port number stuff
   mdns_dacp_dont_monitor(conn); // begin looking out for information about the client
-                                               // as a remote control. Specifically we might need
-                                               // the port number
+                                // as a remote control. Specifically we might need
+                                // the port number
 
   if (config.output->stop)
     config.output->stop();
@@ -2468,8 +2468,8 @@ void player_volume_without_notification(double airplay_volume, rtsp_conn_info *c
   }
 #endif
 
-	// here, store the volume for possible use in the future
-	config.airplay_volume = airplay_volume;
+  // here, store the volume for possible use in the future
+  config.airplay_volume = airplay_volume;
 }
 
 void player_volume(double airplay_volume, rtsp_conn_info *conn) {

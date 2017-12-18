@@ -33,5 +33,4 @@
 #define SAFAMILY sa_family
 #endif
 
-
 #endif // _DEFINITIONS_H

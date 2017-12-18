@@ -69,7 +69,7 @@ static void resolve_callback(AvahiServiceResolver *r, AVAHI_GCC_UNUSED AvahiIfIn
                              const char *host_name, const AvahiAddress *address, uint16_t port,
                              AvahiStringList *txt, AvahiLookupResultFlags flags, void *userdata) {
   assert(r);
-  
+
   rtsp_conn_info *conn = (rtsp_conn_info *)userdata;
   dacp_browser_struct *dbs = (dacp_browser_struct *)conn->mdns_private_pointer;
 
@@ -141,8 +141,9 @@ static void browse_callback(AvahiServiceBrowser *b, AvahiIfIndex interface, Avah
         if (conn->dacp_id != 0) {
           debug(1, "Client's DACP status withdrawn.");
           conn->dacp_port = 0;
-#if defined(HAVE_DBUS) || defined(HAVE_MPRIS)          
-          set_dacp_server_information(conn); // this will have the effect of telling the scanner that the DACP server is no longer working
+#if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
+          set_dacp_server_information(conn); // this will have the effect of telling the scanner
+                                             // that the DACP server is no longer working
 #endif
         }
       }
@@ -385,11 +386,10 @@ static void avahi_unregister(void) {
 int avahi_dacp_monitor(rtsp_conn_info *conn) {
 
   dacp_browser_struct *dbs = (dacp_browser_struct *)malloc(sizeof(dacp_browser_struct));
-  
 
   if (dbs == NULL)
     die("can not allocate a dacp_browser_struct.");
-    
+
   conn->mdns_private_pointer = (void *)dbs;
 
   // create the threaded poll code

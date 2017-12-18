@@ -2,8 +2,8 @@
 #define _MDNS_H
 
 #include "config.h"
-#include <stdint.h>
 #include <player.h>
+#include <stdint.h>
 
 extern int mdns_pid;
 

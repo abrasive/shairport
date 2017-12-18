@@ -12,44 +12,6 @@
 #include "dacp.h"
 
 #include "mpris-service.h"
-int send_simple_dacp_command(const char *command) {
-  int reply = 0;
-  if (playing_conn) {
-    char server_reply[2000];
-    debug(1, "Sending command \"%s\".", command);
-    ssize_t reply_size =
-        dacp_send_client_command(playing_conn, command, server_reply, sizeof(server_reply));
-    if (reply_size >= 0) {
-      // not interested in the response.
-      //      if (strstr(server_reply, "HTTP/1.1 204") == server_reply) {
-      //        debug(1,"Client response is No Content");
-      //      } else if (strstr(server_reply, "HTTP/1.1 200 OK") != server_reply) {
-      //        debug("Client response is OK, with content");
-      //      } else {
-
-      if (strstr(server_reply, "HTTP/1.1 204") != server_reply) {
-        debug(1,
-              "Client request to server responded with %d characters starting with this response:",
-              strlen(server_reply));
-        int i;
-        for (i = 0; i < reply_size; i++)
-          if (server_reply[i] < ' ')
-            debug(1, "%d  %02x", i, server_reply[i]);
-          else
-            debug(1, "%d  %02x  '%c'", i, server_reply[i], server_reply[i]);
-        // sprintf((char *)message + 2 * i, "%02x", server_reply[i]);
-        // debug(1,"Content is \"%s\".",message);
-      }
-    } else {
-      debug(1, "Error at rtp_send_client_command");
-      reply = -1;
-    }
-  } else {
-    debug(1, "no thread playing -- RemoteCommand ignored.");
-    reply = -1;
-  }
-  return reply;
-}
 
 static gboolean on_handle_next(MediaPlayer2Player *skeleton, GDBusMethodInvocation *invocation,
                                gpointer user_data) {
@@ -59,7 +21,7 @@ static gboolean on_handle_next(MediaPlayer2Player *skeleton, GDBusMethodInvocati
 }
 
 static gboolean on_handle_previous(MediaPlayer2Player *skeleton, GDBusMethodInvocation *invocation,
-                               gpointer user_data) {
+                                   gpointer user_data) {
   send_simple_dacp_command("previtem");
   media_player2_player_complete_previous(skeleton, invocation);
   return TRUE;
@@ -133,7 +95,8 @@ static void on_mpris_name_acquired(GDBusConnection *connection, const gchar *nam
                    NULL);
   g_signal_connect(mprisPlayerPlayerSkeleton, "handle-stop", G_CALLBACK(on_handle_stop), NULL);
   g_signal_connect(mprisPlayerPlayerSkeleton, "handle-next", G_CALLBACK(on_handle_next), NULL);
-  g_signal_connect(mprisPlayerPlayerSkeleton, "handle-previous", G_CALLBACK(on_handle_previous), NULL);
+  g_signal_connect(mprisPlayerPlayerSkeleton, "handle-previous", G_CALLBACK(on_handle_previous),
+                   NULL);
 
   debug(1, "Shairport Sync D-BUS service started on interface \"%s\".", name);
 
