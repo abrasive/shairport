@@ -11,7 +11,7 @@ Version 3.2d20
 Version 3.2d19
 ====
 **Enhancement**
-* Add support for [Swinsian](https://swinsian.com), a Mac music player.
+* Add compatibility with [Swinsian](https://swinsian.com), a Mac music player.
 
 Version 3.2d18
 ====
