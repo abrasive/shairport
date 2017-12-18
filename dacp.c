@@ -67,7 +67,7 @@ static void response_body(void *opaque, const char *data, int size) {
 
   ssize_t space_available = response->malloced_size - response->size;
   if (space_available < size) {
-    printf("Getting more space for the response -- need %d bytes but only %d bytes left.\n", size,
+    debug(1,"Getting more space for the response -- need %d bytes but only %ld bytes left.\n", size,
            size - space_available);
     ssize_t size_requested = size - space_available + response->malloced_size + 16384;
     void *t = realloc(response->body, size_requested);
@@ -75,7 +75,7 @@ static void response_body(void *opaque, const char *data, int size) {
     if (t)
       response->body = t;
     else {
-      printf("Can't allocate any more space for parser.\n");
+      debug(1,"Can't allocate any more space for parser.\n");
       exit(-1);
     }
   }
@@ -305,7 +305,7 @@ void *dacp_monitor_thread_code(void *na) {
               printf("    (0x");
               t = sp - item_size;
               for (i = 0; i < item_size; i++) {
-                printf("%02x", *t);
+                printf("%02x", *t&0xff);
                 t++;
               }
               printf(")");
@@ -331,11 +331,11 @@ void *dacp_monitor_thread_code(void *na) {
               t += 4;
               v = (ntohl(*(uint32_t *)(t))) & 0xffffffff;
               s += v;
-              printf("    %llu", s);
+              printf("    %lu", s);
               printf("    (0x");
               t = sp - item_size;
               for (i = 0; i < item_size; i++) {
-                printf("%02x", *t);
+                printf("%02x", *t&0xff);
                 t++;
               }
               printf(")");
@@ -344,7 +344,7 @@ void *dacp_monitor_thread_code(void *na) {
               printf("    0x");
               t = sp - item_size;
               for (i = 0; i < item_size; i++) {
-                printf("%02x", *t);
+                printf("%02x", *t&0xff);
                 t++;
               }
               break;
