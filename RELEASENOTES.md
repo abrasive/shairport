@@ -6,7 +6,7 @@ As before, please note that the implementation is likely to change greatly or be
 Version 3.2d20
 ====
 **Bug Fix**
-* Fix silly seg-fault bug in 3.2d19, activated when a DACP reconrd was withdrawn.
+* Fix silly seg-fault bug in 3.2d19, activated when a DACP record was withdrawn.
 
 Version 3.2d19
 ====
