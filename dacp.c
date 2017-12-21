@@ -117,7 +117,7 @@ int dacp_send_command(const char *command, char **body, size_t *bodysize) {
   response.body = NULL;
   response.malloced_size = 0;
   response.size = 0;
-  response.code = 400; // client error
+  response.code = 400; // 400 is client error
 
   char portstring[10], server[256], message[1024];
   memset(&portstring, 0, sizeof(portstring));
@@ -148,14 +148,16 @@ int dacp_send_command(const char *command, char **body, size_t *bodysize) {
     sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 
     if (sockfd == -1) {
-      debug(1, "Could not create socket");
+      debug(1, "Could not create socket.");
     } else {
 
       // connect!
-
+ 			debug(1, "DACP socket created.");
       if (connect(sockfd, res->ai_addr, res->ai_addrlen) < 0) {
-        debug(1, "connect failed. Error");
+        debug(1, "DACP connect failed.");
+        response.code = 503; // Server code for Service Unavailable
       } else {
+      	debug(1,"DACP connect succeeded.");
 
         sprintf(message, "GET /ctrl-int/1/%s HTTP/1.1\r\nHost: %s:%u\r\nActive-Remote: %u\r\n\r\n",
                 command, dacp_server.ip_string, dacp_server.port, dacp_server.active_remote_id);
@@ -204,9 +206,11 @@ int dacp_send_command(const char *command, char **body, size_t *bodysize) {
           }
 
           http_free(&rt);
-          close(sockfd);
-        }
+          
+      	}
       }
+    	close(sockfd);
+    	debug(1,"DACP socket closed.");	
     }
     pthread_mutex_unlock(&dacp_conversation_lock);
   } else {
