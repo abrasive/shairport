@@ -1,4 +1,4 @@
-Version 3.1.5
+Version 3.1.7
 ====
 
 **Bug Fixes**
@@ -10,6 +10,7 @@ Version 3.1.5
 
 **Other Stuff**
 * Typo fix! Thanks to [corbinsantin](https://github.com/corbinsantin).
+* Stable 3.1.5 and 3.1.6 skipped to synchronise the shairport-sync.spec file contents with the release.
 
 **Enhancement**
 * The metdata output stream can include a `dapo` message carrying the DACP port number to be used when communicating with the DACP remote control. This might be useful because the port number is actually pretty hard to find and requires the use of asynchronous mdns operations. You must be using the Avahi mdns back end.
