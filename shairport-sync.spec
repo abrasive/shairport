@@ -1,5 +1,5 @@
 Name:           shairport-sync
-Version:        3.1.5
+Version:        3.1.7
 Release:        1%{?dist}
 Summary:        AirTunes emulator. Multi-Room with Audio Synchronisation
 # MIT licensed except for tinysvcmdns under BSD, 
