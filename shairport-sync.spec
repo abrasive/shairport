@@ -67,6 +67,8 @@ getent passwd %{name} &> /dev/null || useradd --system -c "%{name} User" \
 %license LICENSES
 
 %changelog
+* Thu Dec 21 2017 Mike Brady <mikebrady@eircom.net> 3.1.6
+- Bug fix for unexpectedly resuming play at full volume from iOS 11.2 and macOS 10.3.2.
 * Mon Dec 11 2017 Mike Brady <mikebrady@eircom.net> 3.1.5
 - Bug fixes and better compatability with iOS 11.2 and mac OS 10.13.2.
 - Better AirPlay synchronisation.
