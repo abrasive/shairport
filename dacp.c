@@ -67,8 +67,8 @@ static void response_body(void *opaque, const char *data, int size) {
 
   ssize_t space_available = response->malloced_size - response->size;
   if (space_available < size) {
-    debug(1,"Getting more space for the response -- need %d bytes but only %ld bytes left.\n", size,
-           size - space_available);
+    // debug(1,"Getting more space for the response -- need %d bytes but only %ld bytes left.\n", size,
+    //       size - space_available);
     ssize_t size_requested = size - space_available + response->malloced_size + 16384;
     void *t = realloc(response->body, size_requested);
     response->malloced_size = size_requested;
@@ -134,9 +134,12 @@ int dacp_send_command(const char *command, char **body, size_t *bodysize) {
   hints.ai_family = AF_UNSPEC;
   hints.ai_socktype = SOCK_STREAM;
 
-  // debug(1, "DHCP port string is \"%s:%u\".", dacp_server.ip_string, dacp_server.port);
+  debug(1, "DHCP port string is \"%s:%s\".", server, portstring);
 
-  getaddrinfo(server, portstring, &hints, &res);
+  int ires = getaddrinfo(server, portstring, &hints, &res);
+  if (ires) {
+    debug(1,"Error %d \"%s\" at getaddrinfo.",ires,gai_strerror(ires)); 
+  } else {
 
   // only do this one at a time -- not sure it is necessary, but better safe than sorry
 
@@ -148,7 +151,7 @@ int dacp_send_command(const char *command, char **body, size_t *bodysize) {
     sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 
     if (sockfd == -1) {
-      debug(1, "Could not create socket.");
+      debug(1, "DACP socket could not be created -- error %d: \"%s\".",errno,strerror(errno));
     } else {
 
       // connect!
@@ -163,7 +166,7 @@ int dacp_send_command(const char *command, char **body, size_t *bodysize) {
                 command, dacp_server.ip_string, dacp_server.port, dacp_server.active_remote_id);
 
         // Send command
-
+        debug(1,"DACP connect message: \"%s\".",message);
         if (send(sockfd, message, strlen(message), 0) != strlen(message)) {
           debug(1, "Send failed");
         } else {
@@ -177,9 +180,11 @@ int dacp_send_command(const char *command, char **body, size_t *bodysize) {
           int needmore = 1;
           int looperror = 0;
           char buffer[1024];
+          memset(buffer,0,sizeof(buffer));
           while (needmore && !looperror) {
             const char *data = buffer;
             int ndata = recv(sockfd, buffer, sizeof(buffer), 0);
+            debug(1,"Received %d bytes: \"%s\".",ndata,buffer);
             if (ndata <= 0) {
               debug(1, "Error receiving data.");
               free(response.body);
@@ -204,18 +209,19 @@ int dacp_send_command(const char *command, char **body, size_t *bodysize) {
             response.malloced_size = 0;
             response.size = 0;
           }
-
+          debug(1,"Size of response body is %d",response.size);
           http_free(&rt);
           
       	}
       }
     	close(sockfd);
-    	debug(1,"DACP socket closed.");	
+    	// debug(1,"DACP socket closed.");	
     }
     pthread_mutex_unlock(&dacp_conversation_lock);
   } else {
     // debug(1, "Could not acquire a lock on the dacp transmit/receive section. Possible timeout?");
     response.code = 408; // not strictly correct
+  }
   }
   *body = response.body;
   *bodysize = response.size;
@@ -263,8 +269,8 @@ void *dacp_monitor_thread_code(void *na) {
       pthread_cond_wait(&dacp_server_information_cv, &dacp_server_information_lock);
     }
     pthread_mutex_unlock(&dacp_server_information_lock);
-    // debug(1, "DACP Server ID \"%u\" at \"%s:%u\", scan %d.", dacp_server.active_remote_id,
-    //      dacp_server.ip_string, dacp_server.port, scan_index++);
+     debug(1, "DACP Server ID \"%u\" at \"%s:%u\", scan %d.", dacp_server.active_remote_id,
+          dacp_server.ip_string, dacp_server.port, scan_index++);
     ssize_t le;
     char *response = NULL;
     int32_t item_size;
@@ -363,7 +369,7 @@ void *dacp_monitor_thread_code(void *na) {
         debug(1, "Can't find any content in playerstatusupdate request");
       }
     } else {
-      if (result != 403)
+      if ((result!=403) && (result != 503) && (result != 501))
         debug(1, "Unexpected response %d to playerstatusupdate request", result);
     }
     if (response) {
