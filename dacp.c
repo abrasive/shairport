@@ -103,7 +103,15 @@ static pthread_cond_t dacp_server_information_cv = PTHREAD_COND_INITIALIZER;
 int dacp_send_command(const char *command, char **body, size_t *bodysize) {
 
   // will malloc space for the body or set it to NULL -- the caller should free it.
-
+  
+  // Using some custom HTTP-like return codes
+  //  498 Bad Address information for the DACP server
+  //  497 Can't establish a socket to the DACP server
+  //  496 Can't connect to the DACP server
+  //  495 Error receiving response
+  //  494 This client is already busy
+  //  493 Client failed to send a message
+  
   // try to do this transaction on the DACP server, but don't wait for more than 20 ms to be allowed
   // to do it.
   struct timespec mutex_wait_time;
@@ -117,7 +125,7 @@ int dacp_send_command(const char *command, char **body, size_t *bodysize) {
   response.body = NULL;
   response.malloced_size = 0;
   response.size = 0;
-  response.code = 400; // 400 is client error
+  response.code = 0;
 
   char portstring[10], server[256], message[1024];
   memset(&portstring, 0, sizeof(portstring));
@@ -138,7 +146,8 @@ int dacp_send_command(const char *command, char **body, size_t *bodysize) {
 
   int ires = getaddrinfo(server, portstring, &hints, &res);
   if (ires) {
-    debug(1,"Error %d \"%s\" at getaddrinfo.",ires,gai_strerror(ires)); 
+    // debug(1,"Error %d \"%s\" at getaddrinfo.",ires,gai_strerror(ires)); 
+    response.code = 498; // Bad Address information for the DACP server
   } else {
 
   // only do this one at a time -- not sure it is necessary, but better safe than sorry
@@ -147,28 +156,30 @@ int dacp_send_command(const char *command, char **body, size_t *bodysize) {
   if (mutex_reply == 0) {
 
     // make a socket:
-
     sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 
     if (sockfd == -1) {
-      debug(1, "DACP socket could not be created -- error %d: \"%s\".",errno,strerror(errno));
+      // debug(1, "DACP socket could not be created -- error %d: \"%s\".",errno,strerror(errno));
+      response.code = 497; // Can't establish a socket to the DACP server
     } else {
 
       // connect!
- 			debug(1, "DACP socket created.");
+ 			// debug(1, "DACP socket created.");
       if (connect(sockfd, res->ai_addr, res->ai_addrlen) < 0) {
-        debug(1, "DACP connect failed.");
-        response.code = 503; // Server code for Service Unavailable
+        // debug(1, "DACP connect failed.");
+        response.code = 496; // Can't connect to the DACP server
       } else {
-      	debug(1,"DACP connect succeeded.");
+      	// debug(1,"DACP connect succeeded.");
 
         sprintf(message, "GET /ctrl-int/1/%s HTTP/1.1\r\nHost: %s:%u\r\nActive-Remote: %u\r\n\r\n",
                 command, dacp_server.ip_string, dacp_server.port, dacp_server.active_remote_id);
 
         // Send command
-        debug(1,"DACP connect message: \"%s\".",message);
+        // debug(1,"DACP connect message: \"%s\".",message);
         if (send(sockfd, message, strlen(message), 0) != strlen(message)) {
-          debug(1, "Send failed");
+          // debug(1, "Send failed");
+          response.code = 493; // Client failed to send a message
+
         } else {
 
           response.body = malloc(2048); // it can resize this if necessary
@@ -184,13 +195,14 @@ int dacp_send_command(const char *command, char **body, size_t *bodysize) {
           while (needmore && !looperror) {
             const char *data = buffer;
             int ndata = recv(sockfd, buffer, sizeof(buffer), 0);
-            debug(1,"Received %d bytes: \"%s\".",ndata,buffer);
+            // debug(1,"Received %d bytes: \"%s\".",ndata,buffer);
             if (ndata <= 0) {
               debug(1, "Error receiving data.");
               free(response.body);
               response.body = NULL;
               response.malloced_size = 0;
               response.size = 0;
+              response.code = 495; // Error receiving response
               looperror = 1;
             }
 
@@ -209,7 +221,7 @@ int dacp_send_command(const char *command, char **body, size_t *bodysize) {
             response.malloced_size = 0;
             response.size = 0;
           }
-          debug(1,"Size of response body is %d",response.size);
+          // debug(1,"Size of response body is %d",response.size);
           http_free(&rt);
           
       	}
@@ -220,7 +232,7 @@ int dacp_send_command(const char *command, char **body, size_t *bodysize) {
     pthread_mutex_unlock(&dacp_conversation_lock);
   } else {
     // debug(1, "Could not acquire a lock on the dacp transmit/receive section. Possible timeout?");
-    response.code = 408; // not strictly correct
+    response.code = 494; // This client is already busy
   }
   }
   *body = response.body;
@@ -369,7 +381,6 @@ void *dacp_monitor_thread_code(void *na) {
         debug(1, "Can't find any content in playerstatusupdate request");
       }
     } else {
-      if ((result!=403) && (result != 503) && (result != 501))
         debug(1, "Unexpected response %d to playerstatusupdate request", result);
     }
     if (response) {
