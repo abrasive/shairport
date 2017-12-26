@@ -60,6 +60,7 @@
 
 #if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
 #include "dacp.h"
+#include "metadata.h"
 #endif
 
 #ifdef HAVE_DBUS
@@ -1538,6 +1539,11 @@ int main(int argc, char **argv) {
   memcpy(config.hw_addr, ap_md5, sizeof(config.hw_addr));
 #ifdef CONFIG_METADATA
   metadata_init(); // create the metadata pipe if necessary
+#endif
+
+#if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
+  debug(1, "Initialising metadata bundle");
+  metadata_bundle_init();
 #endif
 
 #if defined(HAVE_DBUS) || defined(HAVE_MPRIS)

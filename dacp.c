@@ -10,7 +10,6 @@
  * copy, modify, merge, publish, distribute, sublicense, and/or
  * sell copies of the Software, and to permit persons to whom the
  * Software is furnished to do so, subject to the following conditions:
- *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
  *
@@ -23,6 +22,9 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  */
+
+// Information about the four-character codes is from many sources, with thanks, including
+// https://github.com/melloware/dacp-net/blob/master/Melloware.DACP/
 
 #include "dacp.h"
 #include "common.h"
@@ -39,6 +41,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "metadata.h"
 #include "tinyhttp/http.h"
 
 typedef struct {
@@ -67,7 +70,8 @@ static void response_body(void *opaque, const char *data, int size) {
 
   ssize_t space_available = response->malloced_size - response->size;
   if (space_available < size) {
-    // debug(1,"Getting more space for the response -- need %d bytes but only %ld bytes left.\n", size,
+    // debug(1,"Getting more space for the response -- need %d bytes but only %ld bytes left.\n",
+    // size,
     //       size - space_available);
     ssize_t size_requested = size - space_available + response->malloced_size + 16384;
     void *t = realloc(response->body, size_requested);
@@ -75,7 +79,7 @@ static void response_body(void *opaque, const char *data, int size) {
     if (t)
       response->body = t;
     else {
-      debug(1,"Can't allocate any more space for parser.\n");
+      debug(1, "Can't allocate any more space for parser.\n");
       exit(-1);
     }
   }
@@ -103,7 +107,7 @@ static pthread_cond_t dacp_server_information_cv = PTHREAD_COND_INITIALIZER;
 int dacp_send_command(const char *command, char **body, size_t *bodysize) {
 
   // will malloc space for the body or set it to NULL -- the caller should free it.
-  
+
   // Using some custom HTTP-like return codes
   //  498 Bad Address information for the DACP server
   //  497 Can't establish a socket to the DACP server
@@ -111,7 +115,7 @@ int dacp_send_command(const char *command, char **body, size_t *bodysize) {
   //  495 Error receiving response
   //  494 This client is already busy
   //  493 Client failed to send a message
-  
+
   // try to do this transaction on the DACP server, but don't wait for more than 20 ms to be allowed
   // to do it.
   struct timespec mutex_wait_time;
@@ -142,98 +146,99 @@ int dacp_send_command(const char *command, char **body, size_t *bodysize) {
   hints.ai_family = AF_UNSPEC;
   hints.ai_socktype = SOCK_STREAM;
 
-  debug(1, "DHCP port string is \"%s:%s\".", server, portstring);
+  // debug(1, "DHCP port string is \"%s:%s\".", server, portstring);
 
   int ires = getaddrinfo(server, portstring, &hints, &res);
   if (ires) {
-    // debug(1,"Error %d \"%s\" at getaddrinfo.",ires,gai_strerror(ires)); 
+    // debug(1,"Error %d \"%s\" at getaddrinfo.",ires,gai_strerror(ires));
     response.code = 498; // Bad Address information for the DACP server
   } else {
 
-  // only do this one at a time -- not sure it is necessary, but better safe than sorry
+    // only do this one at a time -- not sure it is necessary, but better safe than sorry
 
-  int mutex_reply = pthread_mutex_timedlock(&dacp_conversation_lock, &mutex_wait_time);
-  if (mutex_reply == 0) {
+    int mutex_reply = pthread_mutex_timedlock(&dacp_conversation_lock, &mutex_wait_time);
+    if (mutex_reply == 0) {
 
-    // make a socket:
-    sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+      // make a socket:
+      sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 
-    if (sockfd == -1) {
-      // debug(1, "DACP socket could not be created -- error %d: \"%s\".",errno,strerror(errno));
-      response.code = 497; // Can't establish a socket to the DACP server
-    } else {
-
-      // connect!
- 			// debug(1, "DACP socket created.");
-      if (connect(sockfd, res->ai_addr, res->ai_addrlen) < 0) {
-        // debug(1, "DACP connect failed.");
-        response.code = 496; // Can't connect to the DACP server
+      if (sockfd == -1) {
+        // debug(1, "DACP socket could not be created -- error %d: \"%s\".",errno,strerror(errno));
+        response.code = 497; // Can't establish a socket to the DACP server
       } else {
-      	// debug(1,"DACP connect succeeded.");
 
-        sprintf(message, "GET /ctrl-int/1/%s HTTP/1.1\r\nHost: %s:%u\r\nActive-Remote: %u\r\n\r\n",
-                command, dacp_server.ip_string, dacp_server.port, dacp_server.active_remote_id);
-
-        // Send command
-        // debug(1,"DACP connect message: \"%s\".",message);
-        if (send(sockfd, message, strlen(message), 0) != strlen(message)) {
-          // debug(1, "Send failed");
-          response.code = 493; // Client failed to send a message
-
+        // connect!
+        // debug(1, "DACP socket created.");
+        if (connect(sockfd, res->ai_addr, res->ai_addrlen) < 0) {
+          // debug(1, "DACP connect failed.");
+          response.code = 496; // Can't connect to the DACP server
         } else {
+          // debug(1,"DACP connect succeeded.");
 
-          response.body = malloc(2048); // it can resize this if necessary
-          response.malloced_size = 2048;
+          sprintf(message,
+                  "GET /ctrl-int/1/%s HTTP/1.1\r\nHost: %s:%u\r\nActive-Remote: %u\r\n\r\n",
+                  command, dacp_server.ip_string, dacp_server.port, dacp_server.active_remote_id);
 
-          struct http_roundtripper rt;
-          http_init(&rt, responseFuncs, &response);
+          // Send command
+          // debug(1,"DACP connect message: \"%s\".",message);
+          if (send(sockfd, message, strlen(message), 0) != strlen(message)) {
+            // debug(1, "Send failed");
+            response.code = 493; // Client failed to send a message
 
-          int needmore = 1;
-          int looperror = 0;
-          char buffer[1024];
-          memset(buffer,0,sizeof(buffer));
-          while (needmore && !looperror) {
-            const char *data = buffer;
-            int ndata = recv(sockfd, buffer, sizeof(buffer), 0);
-            // debug(1,"Received %d bytes: \"%s\".",ndata,buffer);
-            if (ndata <= 0) {
-              debug(1, "Error receiving data.");
+          } else {
+
+            response.body = malloc(2048); // it can resize this if necessary
+            response.malloced_size = 2048;
+
+            struct http_roundtripper rt;
+            http_init(&rt, responseFuncs, &response);
+
+            int needmore = 1;
+            int looperror = 0;
+            char buffer[1024];
+            memset(buffer, 0, sizeof(buffer));
+            while (needmore && !looperror) {
+              const char *data = buffer;
+              int ndata = recv(sockfd, buffer, sizeof(buffer), 0);
+              // debug(1,"Received %d bytes: \"%s\".",ndata,buffer);
+              if (ndata <= 0) {
+                debug(1, "Error receiving data.");
+                free(response.body);
+                response.body = NULL;
+                response.malloced_size = 0;
+                response.size = 0;
+                response.code = 495; // Error receiving response
+                looperror = 1;
+              }
+
+              while (needmore && ndata && !looperror) {
+                int read;
+                needmore = http_data(&rt, data, ndata, &read);
+                ndata -= read;
+                data += read;
+              }
+            }
+
+            if (http_iserror(&rt)) {
+              debug(1, "Error parsing data.");
               free(response.body);
               response.body = NULL;
               response.malloced_size = 0;
               response.size = 0;
-              response.code = 495; // Error receiving response
-              looperror = 1;
             }
-
-            while (needmore && ndata && !looperror) {
-              int read;
-              needmore = http_data(&rt, data, ndata, &read);
-              ndata -= read;
-              data += read;
-            }
+            // debug(1,"Size of response body is %d",response.size);
+            http_free(&rt);
           }
-
-          if (http_iserror(&rt)) {
-            debug(1, "Error parsing data.");
-            free(response.body);
-            response.body = NULL;
-            response.malloced_size = 0;
-            response.size = 0;
-          }
-          // debug(1,"Size of response body is %d",response.size);
-          http_free(&rt);
-          
-      	}
+        }
+        close(sockfd);
+        // debug(1,"DACP socket closed.");
       }
-    	close(sockfd);
-    	// debug(1,"DACP socket closed.");	
+      pthread_mutex_unlock(&dacp_conversation_lock);
+    } else {
+      // debug(1, "Could not acquire a lock on the dacp transmit/receive section. Possible
+      // timeout?");
+      response.code = 494; // This client is already busy
     }
-    pthread_mutex_unlock(&dacp_conversation_lock);
-  } else {
-    // debug(1, "Could not acquire a lock on the dacp transmit/receive section. Possible timeout?");
-    response.code = 494; // This client is already busy
-  }
   }
   *body = response.body;
   *bodysize = response.size;
@@ -281,8 +286,9 @@ void *dacp_monitor_thread_code(void *na) {
       pthread_cond_wait(&dacp_server_information_cv, &dacp_server_information_lock);
     }
     pthread_mutex_unlock(&dacp_server_information_lock);
-     debug(1, "DACP Server ID \"%u\" at \"%s:%u\", scan %d.", dacp_server.active_remote_id,
-          dacp_server.ip_string, dacp_server.port, scan_index++);
+    // debug(1, "DACP Server ID \"%u\" at \"%s:%u\", scan %d.", dacp_server.active_remote_id,
+    //      dacp_server.ip_string, dacp_server.port, scan_index);
+    scan_index++;
     ssize_t le;
     char *response = NULL;
     int32_t item_size;
@@ -292,18 +298,21 @@ void *dacp_monitor_thread_code(void *na) {
     int result = dacp_send_command(command, &response, &le);
     if (result == 200) {
       char *sp = response;
-      if (le >= 0) {
+      if (le >= 8) {
+        // here, we know that we are receiving playerstatusupdates, so set a flag
+        metadata.playerstatusupdates_are_received = 1;
         // here start looking for the contents of the status update
         if (dacp_tlv_crawl(&sp, &item_size) == 'cmst') { // status
           sp -= item_size; // drop down into the array -- don't skip over it
           le -= 8;
           char typestring[5];
+          // we need to acquire the metadata data structure and possibly update it
           while (le >= 8) {
             uint32_t type = dacp_tlv_crawl(&sp, &item_size);
 
-            *(uint32_t *)typestring = htonl(type);
-            typestring[4] = 0;
-            printf("\"%s\" %4d", typestring, item_size);
+            //*(uint32_t *)typestring = htonl(type);
+            // typestring[4] = 0;
+            // printf("\"%s\" %4d", typestring, item_size);
 
             le -= item_size + 8;
             char *t;
@@ -312,67 +321,221 @@ void *dacp_monitor_thread_code(void *na) {
             int32_t r;
             uint64_t s, v;
             int i;
-            switch (type) {
 
-            case 'mstt':
-            case 'cant':
-            case 'cast':
-            case 'cmmk':
-            case 'caas':
-            case 'caar':
-            case 'astm':
-              t = sp - item_size;
-              r = ntohl(*(int32_t *)(t));
-              printf("    %d", r);
-              printf("    (0x");
-              t = sp - item_size;
-              for (i = 0; i < item_size; i++) {
-                printf("%02x", *t&0xff);
-                t++;
-              }
-              printf(")");
-              break;
-            case 'cmsr':
+            switch (type) {
+            case 'cmsr': // revision number
               t = sp - item_size;
               revision_number = ntohl(*(int32_t *)(t));
-              printf("    Serial Number: %d", revision_number);
+              // debug(1,"    Serial Number: %d", revision_number);
               break;
-            case 'cann':
-            case 'cana':
-            case 'canl':
-            case 'cang':
+            case 'caps': // play status
               t = sp - item_size;
-              st = strndup(t, item_size);
-              printf("    \"%s\"", st);
-              free(st);
-              break;
-            case 'asai':
-              t = sp - item_size;
-              s = ntohl(*(uint32_t *)(t));
-              s = s << 32;
-              t += 4;
-              v = (ntohl(*(uint32_t *)(t))) & 0xffffffff;
-              s += v;
-              printf("    %lu", s);
-              printf("    (0x");
-              t = sp - item_size;
-              for (i = 0; i < item_size; i++) {
-                printf("%02x", *t&0xff);
-                t++;
+              r = *(unsigned char *)(t);
+              switch (r) {
+              case 2:
+                if (metadata.play_status != PS_STOPPED) {
+                  metadata.play_status = PS_STOPPED;
+                  metadata.play_status_changed = 1;
+                  debug(1, "Play status set to \"stopped\".");
+                  metadata.changed = 1;
+                }
+                break;
+              case 3:
+                if (metadata.play_status != PS_PAUSED) {
+                  metadata.play_status = PS_PAUSED;
+                  metadata.play_status_changed = 1;
+                  debug(1, "Play status set to \"paused\".");
+                  metadata.changed = 1;
+                }
+                break;
+              case 4:
+                if (metadata.play_status != PS_PLAYING) {
+                  metadata.play_status = PS_PLAYING;
+                  metadata.play_status_changed = 1;
+                  debug(1, "Play status set to \"playing\".");
+                  metadata.changed = 1;
+                }
+                break;
+              default:
+                debug(1, "Unrecognised play status %d received.", r);
+                break;
               }
-              printf(")");
               break;
+            case 'cash': // shuffle status
+              t = sp - item_size;
+              r = *(unsigned char *)(t);
+              switch (r) {
+              case 0:
+                if (metadata.shuffle_status != SS_OFF) {
+                  metadata.shuffle_status = SS_OFF;
+                  metadata.shuffle_status_changed = 1;
+                  debug(1, "Shuffle status set to \"off\".");
+                  metadata.changed = 1;
+                }
+                break;
+              case 1:
+                if (metadata.shuffle_status != SS_ON) {
+                  metadata.shuffle_status = SS_ON;
+                  metadata.shuffle_status_changed = 1;
+                  debug(1, "Shuffle status set to \"on\".");
+                  metadata.changed = 1;
+                }
+                break;
+              default:
+                debug(1, "Unrecognised shuffle status %d received.", r);
+                break;
+              }
+              break;
+            case 'carp': // repeat status
+              t = sp - item_size;
+              r = *(unsigned char *)(t);
+              switch (r) {
+              case 0:
+                if (metadata.repeat_status != RS_NONE) {
+                  metadata.repeat_status = RS_NONE;
+                  metadata.repeat_status_changed = 1;
+                  debug(1, "Repeat status set to \"none\".");
+                  metadata.changed = 1;
+                }
+                break;
+              case 1:
+                if (metadata.repeat_status != RS_SINGLE) {
+                  metadata.repeat_status = RS_SINGLE;
+                  metadata.repeat_status_changed = 1;
+                  debug(1, "Repeat status set to \"single\".");
+                  metadata.changed = 1;
+                }
+                break;
+              case 2:
+                if (metadata.repeat_status != RS_ALL) {
+                  metadata.repeat_status = RS_ALL;
+                  metadata.repeat_status_changed = 1;
+                  debug(1, "Repeat status set to \"all\".");
+                  metadata.changed = 1;
+                }
+                break;
+              default:
+                debug(1, "Unrecognised repeat status %d received.", r);
+                break;
+              }
+              break;
+            case 'cann': // track name
+              t = sp - item_size;
+              if ((metadata.track_name == NULL) ||
+                  (strncmp(metadata.track_name, t, item_size) != 0)) {
+                if (metadata.track_name)
+                  free(metadata.track_name);
+                metadata.track_name = strndup(t, item_size);
+                debug(1, "Track name set to: \"%s\"", metadata.track_name);
+                metadata.track_name_changed = 1;
+                metadata.changed = 1;
+              }
+              break;
+            case 'cana': // artist name
+              t = sp - item_size;
+              if ((metadata.artist_name == NULL) ||
+                  (strncmp(metadata.artist_name, t, item_size) != 0)) {
+                if (metadata.artist_name)
+                  free(metadata.artist_name);
+                metadata.artist_name = strndup(t, item_size);
+                debug(1, "Artist name set to: \"%s\"", metadata.artist_name);
+                metadata.artist_name_changed = 1;
+                metadata.changed = 1;
+              }
+              break;
+            case 'canl': // album name
+              t = sp - item_size;
+              if ((metadata.album_name == NULL) ||
+                  (strncmp(metadata.album_name, t, item_size) != 0)) {
+                if (metadata.album_name)
+                  free(metadata.album_name);
+                metadata.album_name = strndup(t, item_size);
+                debug(1, "Album name set to: \"%s\"", metadata.album_name);
+                metadata.album_name_changed = 1;
+                metadata.changed = 1;
+              }
+              break;
+            case 'cang': // genre
+              t = sp - item_size;
+              if ((metadata.genre == NULL) || (strncmp(metadata.genre, t, item_size) != 0)) {
+                if (metadata.genre)
+                  free(metadata.genre);
+                metadata.genre = strndup(t, item_size);
+                debug(1, "Genre set to: \"%s\"", metadata.genre);
+                metadata.genre_changed = 1;
+                metadata.changed = 1;
+              }
+              break;
+            case 'canp': // nowplaying 4 ids: dbid, plid, playlistItem, itemid (from mellowware --
+                         // see reference above)
+              t = sp - item_size;
+              if (memcmp(metadata.item_composite_id, t, sizeof(metadata.item_composite_id)) != 0) {
+                memcpy(metadata.item_composite_id, t, sizeof(metadata.item_composite_id));
+
+                char st[33];
+                char *pt = st;
+                int it;
+                for (it = 0; it < 16; it++) {
+                  sprintf(pt, "%02X", metadata.item_composite_id[it]);
+                  pt += 2;
+                }
+                *pt = 0;
+                debug(1, "Item composite ID set to 0x%s.", st);
+                metadata.item_id_changed = 1;
+                metadata.changed = 1;
+              }
+              break;
+            /*
+                        case 'mstt':
+                        case 'cant':
+                        case 'cast':
+                        case 'cmmk':
+                        case 'caas':
+                        case 'caar':
+                        case 'astm':
+                          t = sp - item_size;
+                          r = ntohl(*(int32_t *)(t));
+                          printf("    %d", r);
+                          printf("    (0x");
+                          t = sp - item_size;
+                          for (i = 0; i < item_size; i++) {
+                            printf("%02x", *t & 0xff);
+                            t++;
+                          }
+                          printf(")");
+                          break;
+                        case 'asai':
+                          t = sp - item_size;
+                          s = ntohl(*(uint32_t *)(t));
+                          s = s << 32;
+                          t += 4;
+                          v = (ntohl(*(uint32_t *)(t))) & 0xffffffff;
+                          s += v;
+                          printf("    %lu", s);
+                          printf("    (0x");
+                          t = sp - item_size;
+                          for (i = 0; i < item_size; i++) {
+                            printf("%02x", *t & 0xff);
+                            t++;
+                          }
+                          printf(")");
+                          break;
+             */
             default:
-              printf("    0x");
-              t = sp - item_size;
-              for (i = 0; i < item_size; i++) {
-                printf("%02x", *t&0xff);
-                t++;
-              }
+              /*
+                printf("    0x");
+                t = sp - item_size;
+                for (i = 0; i < item_size; i++) {
+                  printf("%02x", *t & 0xff);
+                  t++;
+                }
+               */
               break;
             }
-            printf("\n");
+            // printf("\n");
           }
+          // now, if the metadata is changed, send a signal
+
         } else {
           printf("Status Update not found.\n");
         }
@@ -381,6 +544,7 @@ void *dacp_monitor_thread_code(void *na) {
         debug(1, "Can't find any content in playerstatusupdate request");
       }
     } else {
+      if (result != 403)
         debug(1, "Unexpected response %d to playerstatusupdate request", result);
     }
     if (response) {

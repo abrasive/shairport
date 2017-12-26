@@ -231,8 +231,9 @@ void *rtp_control_receiver(void *arg) {
               sync_rtp_timestamp - rtp_timestamp_less_latency + conn->staticLatencyCorrection;
           if (la != config.latency) {
             config.latency = la;
-            //debug(1,
-            //      "Using negotiated latency of %lld frames and a static latency correction of %lld",
+            // debug(1,
+            //      "Using negotiated latency of %lld frames and a static latency correction of
+            //      %lld",
             //      sync_rtp_timestamp - rtp_timestamp_less_latency, conn->staticLatencyCorrection);
           }
         }
