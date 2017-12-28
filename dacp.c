@@ -551,7 +551,27 @@ void *dacp_monitor_thread_code(void *na) {
       free(response);
       response = NULL;
     };
-    sleep(1);
+    strcpy(command,"nowplayingartwork?mw=320&mh=320");
+    debug(1,"Command: \"%s\", result is %d",command, dacp_send_command(command, &response, &le));
+    if (response) {
+      free(response);
+      response = NULL;
+    }
+    /*
+    strcpy(command,"getproperty?properties=dmcp.volume");
+    debug(1,"Command: \"%s\", result is %d",command, dacp_send_command(command, &response, &le));
+    if (response) {
+      free(response);
+      response = NULL;
+    }
+    */
+    strcpy(command,"setproperty?dmcp.volume=100.000000");
+    debug(1,"Command: \"%s\", result is %d",command, dacp_send_command(command, &response, &le));
+    if (response) {
+      free(response);
+      response = NULL;
+    }
+     sleep(2);
   }
   debug(1, "DACP monitor thread exiting.");
   pthread_exit(NULL);
