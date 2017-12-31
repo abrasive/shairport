@@ -1257,6 +1257,7 @@ void *metadata_thread_function(void *ignore) {
     pc_queue_get_item(&metadata_queue, &pack);
     if (config.metadata_enabled)
       metadata_process(pack.type, pack.code, pack.data, pack.length);
+    
     if (pack.carrier)
       msg_free(pack.carrier); // release the message
     else if (pack.data)

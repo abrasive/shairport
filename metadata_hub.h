@@ -53,6 +53,6 @@ typedef struct metadata_bundle {
 
 } metadata_bundle;
 
-struct metadata_bundle metadata;
+struct metadata_bundle metadata_store;
 
-void metadata_bundle_init(void);
+void metadata_hub_init(void);

@@ -1,5 +1,9 @@
 /*
- * Metadata store and access methods.
+ * Metadata hub and access methods.
+ * Basically, if you need to store metadata
+ * (e.g. for use with the dbus interfaces),
+ * then you need a metadata hub,
+ * where everything is stored 
  * This file is part of Shairport Sync.
  * Copyright (c) Mike Brady 2017
  * All rights reserved.
@@ -28,9 +32,9 @@
 #include <string.h>
 
 #include "dacp.h"
-#include "metadata.h"
+#include "metadata_hub.h"
 
-void metadata_bundle_init(void) {
+void metadata_hub_init(void) {
   debug(1, "Metadata bundle initialisation.");
-  memset(&metadata, 0, sizeof(metadata));
+  memset(&metadata_store, 0, sizeof(metadata_store));
 }

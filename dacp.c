@@ -41,7 +41,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "metadata.h"
+#include "metadata_hub.h"
 #include "tinyhttp/http.h"
 
 typedef struct {
@@ -300,7 +300,7 @@ void *dacp_monitor_thread_code(void *na) {
       char *sp = response;
       if (le >= 8) {
         // here, we know that we are receiving playerstatusupdates, so set a flag
-        metadata.playerstatusupdates_are_received = 1;
+        metadata_store.playerstatusupdates_are_received = 1;
         // here start looking for the contents of the status update
         if (dacp_tlv_crawl(&sp, &item_size) == 'cmst') { // status
           sp -= item_size; // drop down into the array -- don't skip over it
@@ -333,27 +333,27 @@ void *dacp_monitor_thread_code(void *na) {
               r = *(unsigned char *)(t);
               switch (r) {
               case 2:
-                if (metadata.play_status != PS_STOPPED) {
-                  metadata.play_status = PS_STOPPED;
-                  metadata.play_status_changed = 1;
+                if (metadata_store.play_status != PS_STOPPED) {
+                  metadata_store.play_status = PS_STOPPED;
+                  metadata_store.play_status_changed = 1;
                   debug(1, "Play status set to \"stopped\".");
-                  metadata.changed = 1;
+                  metadata_store.changed = 1;
                 }
                 break;
               case 3:
-                if (metadata.play_status != PS_PAUSED) {
-                  metadata.play_status = PS_PAUSED;
-                  metadata.play_status_changed = 1;
+                if (metadata_store.play_status != PS_PAUSED) {
+                  metadata_store.play_status = PS_PAUSED;
+                  metadata_store.play_status_changed = 1;
                   debug(1, "Play status set to \"paused\".");
-                  metadata.changed = 1;
+                  metadata_store.changed = 1;
                 }
                 break;
               case 4:
-                if (metadata.play_status != PS_PLAYING) {
-                  metadata.play_status = PS_PLAYING;
-                  metadata.play_status_changed = 1;
+                if (metadata_store.play_status != PS_PLAYING) {
+                  metadata_store.play_status = PS_PLAYING;
+                  metadata_store.play_status_changed = 1;
                   debug(1, "Play status set to \"playing\".");
-                  metadata.changed = 1;
+                  metadata_store.changed = 1;
                 }
                 break;
               default:
@@ -366,19 +366,19 @@ void *dacp_monitor_thread_code(void *na) {
               r = *(unsigned char *)(t);
               switch (r) {
               case 0:
-                if (metadata.shuffle_status != SS_OFF) {
-                  metadata.shuffle_status = SS_OFF;
-                  metadata.shuffle_status_changed = 1;
+                if (metadata_store.shuffle_status != SS_OFF) {
+                  metadata_store.shuffle_status = SS_OFF;
+                  metadata_store.shuffle_status_changed = 1;
                   debug(1, "Shuffle status set to \"off\".");
-                  metadata.changed = 1;
+                  metadata_store.changed = 1;
                 }
                 break;
               case 1:
-                if (metadata.shuffle_status != SS_ON) {
-                  metadata.shuffle_status = SS_ON;
-                  metadata.shuffle_status_changed = 1;
+                if (metadata_store.shuffle_status != SS_ON) {
+                  metadata_store.shuffle_status = SS_ON;
+                  metadata_store.shuffle_status_changed = 1;
                   debug(1, "Shuffle status set to \"on\".");
-                  metadata.changed = 1;
+                  metadata_store.changed = 1;
                 }
                 break;
               default:
@@ -391,27 +391,27 @@ void *dacp_monitor_thread_code(void *na) {
               r = *(unsigned char *)(t);
               switch (r) {
               case 0:
-                if (metadata.repeat_status != RS_NONE) {
-                  metadata.repeat_status = RS_NONE;
-                  metadata.repeat_status_changed = 1;
+                if (metadata_store.repeat_status != RS_NONE) {
+                  metadata_store.repeat_status = RS_NONE;
+                  metadata_store.repeat_status_changed = 1;
                   debug(1, "Repeat status set to \"none\".");
-                  metadata.changed = 1;
+                  metadata_store.changed = 1;
                 }
                 break;
               case 1:
-                if (metadata.repeat_status != RS_SINGLE) {
-                  metadata.repeat_status = RS_SINGLE;
-                  metadata.repeat_status_changed = 1;
+                if (metadata_store.repeat_status != RS_SINGLE) {
+                  metadata_store.repeat_status = RS_SINGLE;
+                  metadata_store.repeat_status_changed = 1;
                   debug(1, "Repeat status set to \"single\".");
-                  metadata.changed = 1;
+                  metadata_store.changed = 1;
                 }
                 break;
               case 2:
-                if (metadata.repeat_status != RS_ALL) {
-                  metadata.repeat_status = RS_ALL;
-                  metadata.repeat_status_changed = 1;
+                if (metadata_store.repeat_status != RS_ALL) {
+                  metadata_store.repeat_status = RS_ALL;
+                  metadata_store.repeat_status_changed = 1;
                   debug(1, "Repeat status set to \"all\".");
-                  metadata.changed = 1;
+                  metadata_store.changed = 1;
                 }
                 break;
               default:
@@ -421,68 +421,68 @@ void *dacp_monitor_thread_code(void *na) {
               break;
             case 'cann': // track name
               t = sp - item_size;
-              if ((metadata.track_name == NULL) ||
-                  (strncmp(metadata.track_name, t, item_size) != 0)) {
-                if (metadata.track_name)
-                  free(metadata.track_name);
-                metadata.track_name = strndup(t, item_size);
-                debug(1, "Track name set to: \"%s\"", metadata.track_name);
-                metadata.track_name_changed = 1;
-                metadata.changed = 1;
+              if ((metadata_store.track_name == NULL) ||
+                  (strncmp(metadata_store.track_name, t, item_size) != 0)) {
+                if (metadata_store.track_name)
+                  free(metadata_store.track_name);
+                metadata_store.track_name = strndup(t, item_size);
+                debug(1, "Track name set to: \"%s\"", metadata_store.track_name);
+                metadata_store.track_name_changed = 1;
+                metadata_store.changed = 1;
               }
               break;
             case 'cana': // artist name
               t = sp - item_size;
-              if ((metadata.artist_name == NULL) ||
-                  (strncmp(metadata.artist_name, t, item_size) != 0)) {
-                if (metadata.artist_name)
-                  free(metadata.artist_name);
-                metadata.artist_name = strndup(t, item_size);
-                debug(1, "Artist name set to: \"%s\"", metadata.artist_name);
-                metadata.artist_name_changed = 1;
-                metadata.changed = 1;
+              if ((metadata_store.artist_name == NULL) ||
+                  (strncmp(metadata_store.artist_name, t, item_size) != 0)) {
+                if (metadata_store.artist_name)
+                  free(metadata_store.artist_name);
+                metadata_store.artist_name = strndup(t, item_size);
+                debug(1, "Artist name set to: \"%s\"", metadata_store.artist_name);
+                metadata_store.artist_name_changed = 1;
+                metadata_store.changed = 1;
               }
               break;
             case 'canl': // album name
               t = sp - item_size;
-              if ((metadata.album_name == NULL) ||
-                  (strncmp(metadata.album_name, t, item_size) != 0)) {
-                if (metadata.album_name)
-                  free(metadata.album_name);
-                metadata.album_name = strndup(t, item_size);
-                debug(1, "Album name set to: \"%s\"", metadata.album_name);
-                metadata.album_name_changed = 1;
-                metadata.changed = 1;
+              if ((metadata_store.album_name == NULL) ||
+                  (strncmp(metadata_store.album_name, t, item_size) != 0)) {
+                if (metadata_store.album_name)
+                  free(metadata_store.album_name);
+                metadata_store.album_name = strndup(t, item_size);
+                debug(1, "Album name set to: \"%s\"", metadata_store.album_name);
+                metadata_store.album_name_changed = 1;
+                metadata_store.changed = 1;
               }
               break;
             case 'cang': // genre
               t = sp - item_size;
-              if ((metadata.genre == NULL) || (strncmp(metadata.genre, t, item_size) != 0)) {
-                if (metadata.genre)
-                  free(metadata.genre);
-                metadata.genre = strndup(t, item_size);
-                debug(1, "Genre set to: \"%s\"", metadata.genre);
-                metadata.genre_changed = 1;
-                metadata.changed = 1;
+              if ((metadata_store.genre == NULL) || (strncmp(metadata_store.genre, t, item_size) != 0)) {
+                if (metadata_store.genre)
+                  free(metadata_store.genre);
+                metadata_store.genre = strndup(t, item_size);
+                debug(1, "Genre set to: \"%s\"", metadata_store.genre);
+                metadata_store.genre_changed = 1;
+                metadata_store.changed = 1;
               }
               break;
             case 'canp': // nowplaying 4 ids: dbid, plid, playlistItem, itemid (from mellowware --
                          // see reference above)
               t = sp - item_size;
-              if (memcmp(metadata.item_composite_id, t, sizeof(metadata.item_composite_id)) != 0) {
-                memcpy(metadata.item_composite_id, t, sizeof(metadata.item_composite_id));
+              if (memcmp(metadata_store.item_composite_id, t, sizeof(metadata_store.item_composite_id)) != 0) {
+                memcpy(metadata_store.item_composite_id, t, sizeof(metadata_store.item_composite_id));
 
                 char st[33];
                 char *pt = st;
                 int it;
                 for (it = 0; it < 16; it++) {
-                  sprintf(pt, "%02X", metadata.item_composite_id[it]);
+                  sprintf(pt, "%02X", metadata_store.item_composite_id[it]);
                   pt += 2;
                 }
                 *pt = 0;
                 debug(1, "Item composite ID set to 0x%s.", st);
-                metadata.item_id_changed = 1;
-                metadata.changed = 1;
+                metadata_store.item_id_changed = 1;
+                metadata_store.changed = 1;
               }
               break;
             /*
@@ -551,26 +551,26 @@ void *dacp_monitor_thread_code(void *na) {
       free(response);
       response = NULL;
     };
+    /*
     strcpy(command,"nowplayingartwork?mw=320&mh=320");
     debug(1,"Command: \"%s\", result is %d",command, dacp_send_command(command, &response, &le));
     if (response) {
       free(response);
       response = NULL;
     }
-    /*
     strcpy(command,"getproperty?properties=dmcp.volume");
     debug(1,"Command: \"%s\", result is %d",command, dacp_send_command(command, &response, &le));
     if (response) {
       free(response);
       response = NULL;
     }
-    */
     strcpy(command,"setproperty?dmcp.volume=100.000000");
     debug(1,"Command: \"%s\", result is %d",command, dacp_send_command(command, &response, &le));
     if (response) {
       free(response);
       response = NULL;
     }
+    */
      sleep(2);
   }
   debug(1, "DACP monitor thread exiting.");

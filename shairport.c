@@ -60,7 +60,7 @@
 
 #if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
 #include "dacp.h"
-#include "metadata.h"
+#include "metadata_hub.h"
 #endif
 
 #ifdef HAVE_DBUS
@@ -1542,8 +1542,8 @@ int main(int argc, char **argv) {
 #endif
 
 #if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
-  debug(1, "Initialising metadata bundle");
-  metadata_bundle_init();
+  debug(1, "Initialising metadata hub");
+  metadata_hub_init();
 #endif
 
 #if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
