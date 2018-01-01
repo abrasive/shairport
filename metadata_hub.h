@@ -3,6 +3,8 @@
 #include "config.h"
 #include <pthread.h>
 
+#define number_of_watchers 2
+
 enum play_status_type {
   PS_PLAYING = 0,
   PS_PAUSED,
@@ -19,6 +21,10 @@ enum repeat_status_type {
   RS_SINGLE,
   RS_ALL,
 } repeat_status_type;
+
+struct metadata_bundle;
+
+typedef void (*metadata_watcher)(struct metadata_bundle *argc, void *userdata);
 
 typedef struct metadata_bundle {
   int changed;                          // normally 0, nonzero if a field has been changed
@@ -48,11 +54,19 @@ typedef struct metadata_bundle {
   uint32_t item_id; // seems to be a track ID -- see itemid in DACP.c
   int item_id_changed;
 
+  uint32_t songtime_in_milliseconds;
+
   unsigned char
       item_composite_id[16]; // seems to be nowplaying 4 ids: dbid, plid, playlistItem, itemid
+
+  metadata_watcher watchers[number_of_watchers]; // functions to call if the metadata is changed.
+  void *watchers_data[number_of_watchers];       // their individual data
 
 } metadata_bundle;
 
 struct metadata_bundle metadata_store;
+
+void add_metadata_watcher(metadata_watcher fn, void *userdata);
+void run_metadata_watchers(void);
 
 void metadata_hub_init(void);

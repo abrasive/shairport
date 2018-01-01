@@ -457,7 +457,8 @@ void *dacp_monitor_thread_code(void *na) {
               break;
             case 'cang': // genre
               t = sp - item_size;
-              if ((metadata_store.genre == NULL) || (strncmp(metadata_store.genre, t, item_size) != 0)) {
+              if ((metadata_store.genre == NULL) ||
+                  (strncmp(metadata_store.genre, t, item_size) != 0)) {
                 if (metadata_store.genre)
                   free(metadata_store.genre);
                 metadata_store.genre = strndup(t, item_size);
@@ -469,8 +470,10 @@ void *dacp_monitor_thread_code(void *na) {
             case 'canp': // nowplaying 4 ids: dbid, plid, playlistItem, itemid (from mellowware --
                          // see reference above)
               t = sp - item_size;
-              if (memcmp(metadata_store.item_composite_id, t, sizeof(metadata_store.item_composite_id)) != 0) {
-                memcpy(metadata_store.item_composite_id, t, sizeof(metadata_store.item_composite_id));
+              if (memcmp(metadata_store.item_composite_id, t,
+                         sizeof(metadata_store.item_composite_id)) != 0) {
+                memcpy(metadata_store.item_composite_id, t,
+                       sizeof(metadata_store.item_composite_id));
 
                 char st[33];
                 char *pt = st;
@@ -485,6 +488,12 @@ void *dacp_monitor_thread_code(void *na) {
                 metadata_store.changed = 1;
               }
               break;
+            case 'astm':
+              t = sp - item_size;
+              r = ntohl(*(int32_t *)(t));
+              metadata_store.songtime_in_milliseconds = ntohl(*(uint32_t *)(t));
+              break;
+
             /*
                         case 'mstt':
                         case 'cant':
@@ -492,7 +501,6 @@ void *dacp_monitor_thread_code(void *na) {
                         case 'cmmk':
                         case 'caas':
                         case 'caar':
-                        case 'astm':
                           t = sp - item_size;
                           r = ntohl(*(int32_t *)(t));
                           printf("    %d", r);
@@ -534,7 +542,9 @@ void *dacp_monitor_thread_code(void *na) {
             }
             // printf("\n");
           }
+
           // now, if the metadata is changed, send a signal
+          run_metadata_watchers();
 
         } else {
           printf("Status Update not found.\n");
@@ -571,7 +581,7 @@ void *dacp_monitor_thread_code(void *na) {
       response = NULL;
     }
     */
-     sleep(2);
+    sleep(2);
   }
   debug(1, "DACP monitor thread exiting.");
   pthread_exit(NULL);

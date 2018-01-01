@@ -3,7 +3,7 @@
  * Basically, if you need to store metadata
  * (e.g. for use with the dbus interfaces),
  * then you need a metadata hub,
- * where everything is stored 
+ * where everything is stored
  * This file is part of Shairport Sync.
  * Copyright (c) Mike Brady 2017
  * All rights reserved.
@@ -37,4 +37,25 @@
 void metadata_hub_init(void) {
   debug(1, "Metadata bundle initialisation.");
   memset(&metadata_store, 0, sizeof(metadata_store));
+}
+
+void add_metadata_watcher(metadata_watcher fn, void *userdata) {
+  int i;
+  for (i = 0; i < number_of_watchers; i++) {
+    if (metadata_store.watchers[i] == NULL) {
+      metadata_store.watchers[i] = fn;
+      metadata_store.watchers_data[i] = userdata;
+      debug(1, "Added a metadata watcher into slot %d", i);
+      break;
+    }
+  }
+}
+
+void run_metadata_watchers(void) {
+  int i;
+  for (i = 0; i < number_of_watchers; i++) {
+    if (metadata_store.watchers[i]) {
+      metadata_store.watchers[i](&metadata_store, metadata_store.watchers_data[i]);
+    }
+  }
 }
