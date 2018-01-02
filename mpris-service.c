@@ -46,7 +46,7 @@ void mpris_metadata_watcher(struct metadata_bundle *argc, void *userdata) {
     pt += 2;
   }
   *pt = 0;
-  debug(1, "Item composite ID set to 0x%s.", st);
+  // debug(1, "Item composite ID set to 0x%s.", st);
 
   char trackidstring[1024];
   sprintf(trackidstring, "/org/gnome/ShairportSync/%s", st);
