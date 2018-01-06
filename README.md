@@ -296,7 +296,7 @@ There are two logically distinct parts to getting Shairport Sync to run properly
 **(1) Starting and Stopping:**
 Starting and stopping Shairport Sync automatically is taken care of differently in different versions of Linux – see the previous section for an example of installing into a `systemd` or a System V based system.
 
-If you are using PulseAudio in the standard "user" mode, you can not start Shairport Sync automatically at boot time – it must be started when the user logs in to a GUI session. Various GUI tools exist to enable you to build a Startup Application. However, there does not appear to be a similar tool for terminating the program when you log out. Also, it the GUI switches to another user, the user's PulseAudio session is disconnected from the output device.
+If you are using PulseAudio in the standard "user" mode, you can not start Shairport Sync automatically at boot time – it must be started when the user logs in to a GUI session. Various GUI tools exist to enable you to build a Startup Application. However, there does not appear to be a similar tool for terminating the program when you log out. Also, if the GUI switches to another user, the user's PulseAudio session is disconnected from the output device.
 
 **(2) Settings:**
 To get the best from Shairport Sync, you’ll need to (a) give Shairport Sync a service name by which it will be seen in iTunes etc. and (b) specify the backend you wish to use - `alsa` for the ALSA backend, or `pa` for the PulseAudio back end. If only one backend is included at compilation, or if the backend is ALSA, there is no need to explicitly specify the backend.
