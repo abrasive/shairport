@@ -819,6 +819,9 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
             config.ForkedDaapdLatency);
       config.latency = config.ForkedDaapdLatency;
       conn->staticLatencyCorrection = 11025;
+    } else if (strstr(ua, "Airfoil") == ua) {
+      debug(2, "User-Agent is Airfoil");
+      conn->staticLatencyCorrection = 11025;
     } else {
       debug(2, "Unrecognised User-Agent. Using latency of %d frames.", config.latency);
     }
@@ -1509,6 +1512,8 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
     char *paesiv = NULL;
     char *prsaaeskey = NULL;
     char *pfmtp = NULL;
+    char *pminlatency = NULL;
+    char *pmaxlatency = NULL;
     char *cp = req->content;
     int cp_left = req->contentlength;
     char *next;
@@ -1525,7 +1530,23 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
       if (!strncmp(cp, "a=rsaaeskey:", 12))
         prsaaeskey = cp + 12;
 
+      if (!strncmp(cp, "a=min-latency:", 14))
+        pminlatency = cp + 14;
+
+      if (!strncmp(cp, "a=max-latency:", 14))
+        pmaxlatency = cp + 14;
+        
       cp = next;
+    }
+    
+    if (pminlatency) {
+      int minl = atoi(pminlatency);
+      debug(1,"Minimum latency %d specified",minl);
+    }
+
+    if (pmaxlatency) {
+      int maxl = atoi(pmaxlatency);
+      debug(1,"Maximum latency %d specified",maxl);
     }
 
     if ((paesiv == NULL) && (prsaaeskey == NULL)) {
