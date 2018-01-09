@@ -5,8 +5,6 @@ Continuing the experiments with D-Bus and related DACP support.
 **Bug Fix**
 * Fix timing error when using Airfoil as a source.
 
-
-
 Version 3.2d21
 ====
 Continuing the experiments with D-Bus and related DACP support. In this revision, [tinyhttp](https://github.com/mendsley/tinyhttp) is now used for sending and retrieving DACP information. Many thanks to [Matthew Endsley](https://github.com/mendsley) for this work on tinyhttp.
