@@ -226,17 +226,27 @@ void *rtp_control_receiver(void *arg) {
         rtp_timestamp_less_latency = monotonic_timestamp(ntohl(*((uint32_t *)&packet[4])), conn);
         sync_rtp_timestamp = monotonic_timestamp(ntohl(*((uint32_t *)&packet[16])), conn);
 
-        if (config.use_negotiated_latencies) {
+        if (config.userSuppliedLatency) {
+          if (config.userSuppliedLatency != config.latency) {
+            debug(1,"Using the user-supplied latency: %lld.",config.userSuppliedLatency);           
+          }
+          config.latency = config.userSuppliedLatency;
+        } else {
           int64_t la =
-              sync_rtp_timestamp - rtp_timestamp_less_latency + conn->staticLatencyCorrection;
+              sync_rtp_timestamp - rtp_timestamp_less_latency + config.fixedLatencyOffset;
+          if ((conn->maximum_latency) && (conn->maximum_latency<la))
+            la = conn->maximum_latency;
+          if ((conn->minimum_latency) && (conn->minimum_latency>la))
+            la = conn->minimum_latency;    
+                  
           if (la != config.latency) {
             config.latency = la;
-            // debug(1,
-            //      "Using negotiated latency of %lld frames and a static latency correction of
-            //      %lld",
-            //      sync_rtp_timestamp - rtp_timestamp_less_latency, conn->staticLatencyCorrection);
+            debug(1,"New latency: %lld, sync latency: %lld, minimum latency: %lld, maximum latency: %lld, fixed offset: %lld.",
+              la,sync_rtp_timestamp - rtp_timestamp_less_latency,conn->minimum_latency,conn->maximum_latency,config.fixedLatencyOffset);
           }
         }
+
+        // need to clarify this.
 
         if (packet[0] & 0x10) {
           // if it's a packet right after a flush or resume

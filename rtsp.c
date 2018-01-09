@@ -3,7 +3,7 @@
  * Copyright (c) James Laird 2013
 
  * Modifications associated with audio synchronization, mutithreading and
- * metadata handling copyright (c) Mike Brady 2014-2017
+ * metadata handling copyright (c) Mike Brady 2014-2018
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -771,70 +771,7 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
     send_metadata('ssnc', 'daid', ar, strlen(ar), req, 1);
 #endif
   }
-
-  // This latency-setting mechanism is deprecated and will be removed.
-  // If no non-standard latency is chosen, automatic negotiated latency setting
-  // is permitted.
-
-  // Select a static latency
-  // if iTunes V10 or later is detected, use the iTunes latency setting
-  // if AirPlay is detected, use the AirPlay latency setting
-  // for everything else, use the general latency setting, if given, or
-  // else use the default latency setting
-
-  config.latency = -1;
-
-  if (config.userSuppliedLatency)
-    config.latency = config.userSuppliedLatency;
-
-  char *ua = msg_get_header(req, "User-Agent");
-  if (ua == 0) {
-    debug(1, "No User-Agent string found in the SETUP message. Using latency "
-             "of %d frames.",
-          config.latency);
-  } else {
-    if (strstr(ua, "iTunes") == ua) {
-      int iTunesVersion = 0;
-      // now check it's version 10 or later
-      char *pp = strchr(ua, '/') + 1;
-      if (pp)
-        iTunesVersion = atoi(pp);
-      else
-        debug(2, "iTunes Version Number not found.");
-      if (iTunesVersion >= 10) {
-        debug(1, "User-Agent is iTunes 10 or better, (actual version is %d); "
-                 "selecting the iTunes "
-                 "latency of %d frames.",
-              iTunesVersion, config.iTunesLatency);
-        config.latency = config.iTunesLatency;
-        conn->staticLatencyCorrection = 11025;
-      }
-    } else if (strstr(ua, "AirPlay") == ua) {
-      debug(2, "User-Agent is AirPlay; selecting the AirPlay latency of %d frames.",
-            config.AirPlayLatency);
-      config.latency = config.AirPlayLatency;
-    } else if (strstr(ua, "forked-daapd") == ua) {
-      debug(2, "User-Agent is forked-daapd; selecting the forked-daapd latency "
-               "of %d frames.",
-            config.ForkedDaapdLatency);
-      config.latency = config.ForkedDaapdLatency;
-      conn->staticLatencyCorrection = 11025;
-    } else if (strstr(ua, "Airfoil") == ua) {
-      debug(2, "User-Agent is Airfoil");
-      conn->staticLatencyCorrection = 11025;
-    } else {
-      debug(2, "Unrecognised User-Agent. Using latency of %d frames.", config.latency);
-    }
-  }
-
-  if (config.latency == -1) {
-    // this means that no static latency was set, so we'll allow it to be set
-    // dynamically
-    config.latency = 88198; // to be sure, to be sure -- make it slighty
-                            // different from the default to ensure we get a
-                            // debug message when set to 88200
-    config.use_negotiated_latencies = 1;
-  }
+  
   char *hdr = msg_get_header(req, "Transport");
   if (!hdr)
     goto error;
@@ -1541,13 +1478,13 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
     }
     
     if (pminlatency) {
-      int minl = atoi(pminlatency);
-      debug(1,"Minimum latency %d specified",minl);
+      conn->minimum_latency = atoi(pminlatency);
+      debug(1,"Minimum latency %d specified",conn->minimum_latency);
     }
 
     if (pmaxlatency) {
-      int maxl = atoi(pmaxlatency);
-      debug(1,"Maximum latency %d specified",maxl);
+      conn->maximum_latency = atoi(pmaxlatency);
+      debug(1,"Maximum latency %d specified",conn->maximum_latency);
     }
 
     if ((paesiv == NULL) && (prsaaeskey == NULL)) {

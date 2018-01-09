@@ -63,8 +63,9 @@ typedef struct {
 
 typedef struct {
   int connection_number;           // for debug ID purposes, nothing else...
-  int64_t staticLatencyCorrection; // it seems iTunes needs some offset before it's more or less
-                                   // right. Odd.
+  int64_t minimum_latency; // set if an a=min-latency: line appears in the ANNOUNCE message; zero otherwise
+  int64_t maximum_latency; // set if an a=max-latency: line appears in the ANNOUNCE message; zero otherwise
+  
 #if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
   enum session_status_type play_state;
 #endif
