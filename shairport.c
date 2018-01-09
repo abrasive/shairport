@@ -58,8 +58,12 @@
 #include <glib.h>
 #endif
 
-#if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
+#if defined(HAVE_DACP_CLIENT)
 #include "dacp.h"
+#endif
+
+
+#if defined(HAVE_METADATA_HUB)
 #include "metadata_hub.h"
 #endif
 
@@ -1541,12 +1545,12 @@ int main(int argc, char **argv) {
   metadata_init(); // create the metadata pipe if necessary
 #endif
 
-#if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
+#ifdef HAVE_METADATA_HUB
   debug(1, "Initialising metadata hub");
   metadata_hub_init();
 #endif
 
-#if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
+#ifdef HAVE_DACP_CLIENT
   debug(1, "Requesting DACP Monitor");
   dacp_monitor_start();
 #endif

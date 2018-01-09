@@ -266,7 +266,7 @@ AC_ARG_WITH(dns_sd, [  --with-dns_sd = choose dns_sd mDNS support], [
 AM_CONDITIONAL([USE_DNS_SD], [test "x$HAS_DNS_SD" = "x1"])
 
 # Look for dbus flag
-AC_ARG_WITH(dbus, [  --with-dbus = choose dbus support], [
+AC_ARG_WITH(dbus, [  --with-dbus-interface = include support for a native Shairport Sync D-Bus interface], [
   AC_MSG_RESULT(>>Including dbus support)
   HAS_DBUS=1
   AC_DEFINE([HAVE_DBUS], 1, [Needed by the compiler.])
@@ -279,14 +279,14 @@ AC_ARG_WITH(dbus-test-client, [  --with-dbus-test-client = compile dbus test cli
   AC_MSG_RESULT(>>Including dbus test client)
   HAS_DBUS_CLIENT=1
   AC_DEFINE([HAVE_DBUS_CLIENT], 1, [Needed by the compiler.])
-  AC_DEFINE([CONFIG_DACP], 1, [Needed by the compiler.])
+#  AC_DEFINE([CONFIG_DACP], 1, [Needed by the compiler.])
   PKG_CHECK_MODULES([GIO_UNIX], [gio-unix-2.0 >= 2.30.0],[CFLAGS="${GIO_UNIX_CFLAGS} ${CFLAGS}" LIBS="${GIO_UNIX_LIBS} ${LIBS}"],[AC_MSG_ERROR(dbus client support requires the glib 2.0 library -- libglib2.0-dev suggested!)])
   ], )
 AM_CONDITIONAL([USE_DBUS_CLIENT], [test "x$HAS_DBUS_CLIENT" = "x1"])
 
 # Look for mpris flag
-AC_ARG_WITH(mpris, [  --with-mpris = choose mpris support], [
-  AC_MSG_RESULT(>>Including mpris support)
+AC_ARG_WITH(mpris, [  --with-mpris-interface = include support for a Shairport Sync D-Bus interface conforming to the MPRIS standard], [
+  AC_MSG_RESULT(>>Including the MPRIS D-Bus Interface)
   HAS_MPRIS=1
   AC_DEFINE([HAVE_MPRIS], 1, [Needed by the compiler.])
   AC_DEFINE([CONFIG_DACP], 1, [Needed by the compiler.])
@@ -303,7 +303,19 @@ AC_ARG_WITH(mpris-test-client, [  --with-mpris-test-client = compile mpris test 
   ], )
 AM_CONDITIONAL([USE_MPRIS_CLIENT], [test "x$HAS_MPRIS_CLIENT" = "x1"])
 
-AM_CONDITIONAL([USE_DBUS_CORE_AND_DACP], [test "x$HAS_MPRIS" = "x1" -o "x$HAS_DBUS" = "x1"])
+#AM_CONDITIONAL([USE_DBUS_CORE_AND_DACP], [test "x$HAS_MPRIS" = "x1" -o "x$HAS_DBUS" = "x1"])
+
+if test "x$HAS_MPRIS" = "x1" -o "x$HAS_DBUS" = "x1" ; then
+  AC_MSG_RESULT(>>Including the metadata hub)
+  HAS_METADATA_HUB=1
+  AC_DEFINE([HAVE_METADATA_HUB], 1, [Needed by the compiler.])
+  AC_MSG_RESULT(>>Including the DACP client)
+  HAS_DACP_CLIENT=1
+  AC_DEFINE([HAVE_DACP_CLIENT], 1, [Needed by the compiler.])
+fi
+AM_CONDITIONAL([USE_METADATA_HUB], [test "x$HAS_METADATA_HUB" = "x1"])
+AM_CONDITIONAL([USE_DACP_CLIENT], [test "x$HAS_DACP_CLIENT" = "x1"])
+
 
 if  test "x${with_systemd}" = xyes ; then
   # Find systemd unit dir

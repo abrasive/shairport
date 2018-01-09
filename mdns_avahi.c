@@ -33,7 +33,7 @@
 #include "common.h"
 #include "mdns.h"
 #include "rtsp.h"
-#ifdef CONFIG_DACP
+#ifdef HAVE_DACP_CLIENT
 #include "dacp.h"
 #endif
 #include <string.h>
@@ -89,7 +89,7 @@ static void resolve_callback(AvahiServiceResolver *r, AVAHI_GCC_UNUSED AvahiIfIn
         if (conn->dacp_port != port) {
           debug(1, "Client's DACP port: %u.", port);
           conn->dacp_port = port;
-#if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
+#ifdef HAVE_DACP_CLIENT
           set_dacp_server_information(conn);
 #endif
 #ifdef CONFIG_METADATA
@@ -141,7 +141,7 @@ static void browse_callback(AvahiServiceBrowser *b, AvahiIfIndex interface, Avah
         if (conn->dacp_id != 0) {
           debug(1, "Client's DACP status withdrawn.");
           conn->dacp_port = 0;
-#if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
+#ifdef HAVE_DACP_CLIENT
           set_dacp_server_information(conn); // this will have the effect of telling the scanner
                                              // that the DACP server is no longer working
 #endif

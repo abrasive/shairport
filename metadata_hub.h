@@ -58,7 +58,12 @@ typedef struct metadata_bundle {
 
   unsigned char
       item_composite_id[16]; // seems to be nowplaying 4 ids: dbid, plid, playlistItem, itemid
-
+  
+  //
+  
+  enum play_status_type player_state; // this is the state of the actual player itself, which can be a bit noisy.
+  
+  
   metadata_watcher watchers[number_of_watchers]; // functions to call if the metadata is changed.
   void *watchers_data[number_of_watchers];       // their individual data
 

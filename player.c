@@ -68,7 +68,11 @@
 #include <FFTConvolver/convolver.h>
 #endif
 
-#if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
+#ifdef HAVE_METADATA_HUB
+#include "metadata_hub.h"
+#endif
+
+#ifdef HAVE_DACP_CLIENT
 #include "dacp.h"
 #include <glib.h>
 #endif
@@ -817,11 +821,12 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
 // frames...",curframe->timestamp,seq_diff(ab_read, ab_write));
 
 // say we have started playing here
-#if defined(HAVE_MPRIS)
+#ifdef HAVE_METADATA_HUB
             if ((conn->play_state != SST_stopped) && (conn->play_state != SST_playing)) {
               conn->play_state = SST_playing;
-              debug(1, "MPRIS Playing");
-              media_player2_player_set_playback_status(mprisPlayerPlayerSkeleton, "Playing");
+              debug(1, "Player State: Playing");
+              metadata_store.player_state = PS_PLAYING;
+//              media_player2_player_set_playback_status(mprisPlayerPlayerSkeleton, "Playing");
             }
 #endif
             if (reference_timestamp) { // if we have a reference time

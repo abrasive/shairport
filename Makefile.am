@@ -87,8 +87,12 @@ dbus-interface.c:  org.gnome.ShairportSync.xml
 	gdbus-codegen --interface-prefix org.gnome --generate-c-code dbus-interface org.gnome.ShairportSync.xml
 endif
 
-if USE_DBUS_CORE_AND_DACP
-shairport_sync_SOURCES += dacp.c metadata_hub.c tinyhttp/chunk.c tinyhttp/header.c tinyhttp/http.c 
+if USE_METADATA_HUB
+shairport_sync_SOURCES += metadata_hub.c 
+endif
+
+if USE_DACP_CLIENT
+shairport_sync_SOURCES += dacp.c tinyhttp/chunk.c tinyhttp/header.c tinyhttp/http.c 
 endif
 
 if USE_MPRIS
