@@ -121,7 +121,6 @@ typedef struct {
   char *mdns_name;
   mdns_backend *mdns;
   int buffer_start_fill;
-  int64_t latency;
   int64_t userSuppliedLatency; // overrides all other latencies -- use with caution
   int64_t fixedLatencyOffset;  // add this to all automatic latencies supplied to get the actual total latency
                                // the total latency will be limited to the min and max-latency values, if supplied

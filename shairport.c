@@ -1108,10 +1108,8 @@ int main(int argc, char **argv) {
   strcat(configuration_file_path, ".conf");
   config.configfile = configuration_file_path;
 
-  config.statistics_requested = 0; // don't print stats in the log
-  config.latency = -1; // -1 means not set. 88200 works well. This is also reset in rtsp.c when play
-                       // is about to start
-  config.userSuppliedLatency = 0; // zero means none supplied
+  //config.statistics_requested = 0; // don't print stats in the log
+  //config.userSuppliedLatency = 0; // zero means none supplied
   config.resyncthreshold = 0.05;  // 50 ms
   config.timeout = 120; // this number of seconds to wait for [more] audio before switching to idle.
   config.tolerance =

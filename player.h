@@ -63,6 +63,7 @@ typedef struct {
 
 typedef struct {
   int connection_number;           // for debug ID purposes, nothing else...
+  int64_t latency; // the actual latency used for this play session
   int64_t minimum_latency; // set if an a=min-latency: line appears in the ANNOUNCE message; zero otherwise
   int64_t maximum_latency; // set if an a=max-latency: line appears in the ANNOUNCE message; zero otherwise
   

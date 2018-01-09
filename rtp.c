@@ -1,7 +1,7 @@
 /*
  * Apple RTP protocol handler. This file is part of Shairport.
  * Copyright (c) James Laird 2013
- * Copyright (c) Mike Brady 2014 -- 2017
+ * Copyright (c) Mike Brady 2014 -- 2018
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -225,12 +225,12 @@ void *rtp_control_receiver(void *arg) {
 
         rtp_timestamp_less_latency = monotonic_timestamp(ntohl(*((uint32_t *)&packet[4])), conn);
         sync_rtp_timestamp = monotonic_timestamp(ntohl(*((uint32_t *)&packet[16])), conn);
-
+        
         if (config.userSuppliedLatency) {
-          if (config.userSuppliedLatency != config.latency) {
+          if (config.userSuppliedLatency != conn->latency) {
             debug(1,"Using the user-supplied latency: %lld.",config.userSuppliedLatency);           
           }
-          config.latency = config.userSuppliedLatency;
+          conn->latency = config.userSuppliedLatency;
         } else {
           int64_t la =
               sync_rtp_timestamp - rtp_timestamp_less_latency + config.fixedLatencyOffset;
@@ -239,8 +239,8 @@ void *rtp_control_receiver(void *arg) {
           if ((conn->minimum_latency) && (conn->minimum_latency>la))
             la = conn->minimum_latency;    
                   
-          if (la != config.latency) {
-            config.latency = la;
+          if (la != conn->latency) {
+            conn->latency = la;
             debug(1,"New latency: %lld, sync latency: %lld, minimum latency: %lld, maximum latency: %lld, fixed offset: %lld.",
               la,sync_rtp_timestamp - rtp_timestamp_less_latency,conn->minimum_latency,conn->maximum_latency,config.fixedLatencyOffset);
           }
@@ -255,6 +255,7 @@ void *rtp_control_receiver(void *arg) {
           // it's as if the first sync after a flush or resume is the timing of the next packet
           // after the one whose RTP is given. Weird.
         }
+
         pthread_mutex_lock(&conn->reference_time_mutex);
         conn->remote_reference_timestamp_time = remote_time_of_sync;
         conn->reference_timestamp_time =

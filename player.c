@@ -862,7 +862,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
               // debug(1, "Output sample ratio is %d", conn->output_sample_ratio);
 
               int64_t delta = (conn->first_packet_timestamp - reference_timestamp) +
-                              config.latency * conn->output_sample_ratio +
+                              conn->latency * conn->output_sample_ratio +
                               (int64_t)(config.audio_backend_latency_offset * config.output_rate);
 
               if (delta >= 0) {
@@ -888,7 +888,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
           if (conn->first_packet_time_to_play != 0) {
             // recalculate conn->first_packet_time_to_play -- the latency might change
             int64_t delta = (conn->first_packet_timestamp - reference_timestamp) +
-                            config.latency * conn->output_sample_ratio +
+                            conn->latency * conn->output_sample_ratio +
                             (int64_t)(config.audio_backend_latency_offset * config.output_rate);
 
             if (delta >= 0) {
@@ -1088,7 +1088,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
         int64_t packet_timestamp = curframe->timestamp; // types okay
         int64_t delta = packet_timestamp - reference_timestamp;
         int64_t offset =
-            config.latency * conn->output_sample_ratio +
+            conn->latency * conn->output_sample_ratio +
             (int64_t)(config.audio_backend_latency_offset * config.output_rate) -
             config.audio_backend_buffer_desired_length *
                 config.output_rate; // all arguments are int32_t, so expression promotion okay
@@ -1463,7 +1463,7 @@ static void *player_thread_func(void *arg) {
   // check that there are enough buffers to accommodate the desired latency and the latency offset
 
   int maximum_latency =
-      config.latency + (int)(config.audio_backend_latency_offset * config.output_rate);
+      conn->latency + (int)(config.audio_backend_latency_offset * config.output_rate);
   if ((maximum_latency + (352 - 1)) / 352 + 10 > BUFFER_FRAMES)
     die("Not enough buffers available for a total latency of %d frames. A maximum of %d 352-frame "
         "packets may be accommodated.",
@@ -1841,7 +1841,7 @@ static void *player_thread_func(void *arg) {
             // if negative, the packet will be early -- the delay is less than expected.
 
             sync_error =
-                delay - (config.latency * conn->output_sample_ratio +
+                delay - (conn->latency * conn->output_sample_ratio +
                          (int64_t)(config.audio_backend_latency_offset *
                                    config.output_rate)); // int64_t from int64_t - int32_t, so okay
 
