@@ -4,7 +4,7 @@
  * All rights reserved.
  *
  * Modifications for audio synchronisation
- * and related work, copyright (c) Mike Brady 2014
+ * and related work, copyright (c) Mike Brady 2014 -- 2018
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -80,12 +80,6 @@
 #ifdef HAVE_DBUS
 #include "dbus-interface.h"
 #include "dbus-service.h"
-#endif
-
-#ifdef HAVE_MPRIS
-#include "mpris-interface.h"
-#include "mpris-player-interface.h"
-#include "mpris-service.h"
 #endif
 
 #include "common.h"
@@ -822,12 +816,10 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
 
 // say we have started playing here
 #ifdef HAVE_METADATA_HUB
-            if ((conn->play_state != SST_stopped) && (conn->play_state != SST_playing)) {
-              conn->play_state = SST_playing;
-              debug(1, "Player State: Playing");
-              metadata_store.player_state = PS_PLAYING;
-//              media_player2_player_set_playback_status(mprisPlayerPlayerSkeleton, "Playing");
-            }
+  if (metadata_store.player_state != PS_PLAYING) {
+    metadata_store.player_state = PS_PLAYING;
+    run_metadata_watchers();
+  }  
 #endif
             if (reference_timestamp) { // if we have a reference time
               // debug(1,"First frame seen with timestamp...");
@@ -2484,43 +2476,10 @@ void player_volume_without_notification(double airplay_volume, rtsp_conn_info *c
 
 void player_volume(double airplay_volume, rtsp_conn_info *conn) {
   command_set_volume(airplay_volume);
-
-#ifdef HAVE_DBUS
-  // A volume command has been sent from the client
-  // let's get the master volume from the DACP remote control
-
-  struct dacp_speaker_stuff speaker_info[50];
-  // we need the overall volume and the speakers information to get this device's relative volume to
-  // calculate the real volume
-
-  int32_t overall_volume = dacp_get_client_volume(conn);
-  // debug(1,"DACP Volume: %d.",overall_volume);
-  int speaker_count = dacp_get_speaker_list(conn, (dacp_spkr_stuff *)&speaker_info, 50);
-  // debug(1,"DACP Speaker Count: %d.",speaker_count);
-
-  // get our machine number
-  uint16_t *hn = (uint16_t *)config.hw_addr;
-  uint32_t *ln = (uint32_t *)(config.hw_addr + 2);
-  uint64_t t1 = ntohs(*hn);
-  uint64_t t2 = ntohl(*ln);
-  int64_t machine_number = (t1 << 32) + t2; // this form is useful
-
-  // Let's find our own speaker in the array and pick up its relative volume
-  int i;
-  int32_t relative_volume = 0;
-  for (i = 0; i < speaker_count; i++) {
-    if (speaker_info[i].speaker_number == machine_number) {
-      // debug(1,"Our speaker number found: %ld.",machine_number);
-      relative_volume = speaker_info[i].volume;
-    }
-  }
-  int32_t actual_volume = (overall_volume * relative_volume + 50) / 100;
-  // debug(1,"Overall volume: %d, relative volume: %d%, actual volume:
-  // %d.",overall_volume,relative_volume,actual_volume);
-  // debug(1,"Our actual speaker volume is %d.",actual_volume);
-  conn->dacp_volume = actual_volume; // this is needed to prevent a loop
-  shairport_sync_set_volume(SHAIRPORT_SYNC(shairportSyncSkeleton), actual_volume);
+#ifdef HAVE_DACP_CLIENT
+  dacp_get_volume();
 #endif
+
   player_volume_without_notification(airplay_volume, conn);
 }
 
@@ -2536,12 +2495,14 @@ void player_flush(int64_t timestamp, rtsp_conn_info *conn) {
 #ifdef CONFIG_METADATA
   send_ssnc_metadata('pfls', NULL, 0, 1);
 #endif
-#if defined(HAVE_MPRIS)
-  if ((conn->play_state != SST_stopped) && (conn->play_state != SST_paused))
-    conn->play_state = SST_paused;
-  debug(1, "MPRIS Paused");
-  media_player2_player_set_playback_status(mprisPlayerPlayerSkeleton, "Paused");
+
+#ifdef HAVE_METADATA_HUB
+  if (metadata_store.player_state != PS_PAUSED) {
+    metadata_store.player_state = PS_PAUSED;
+    run_metadata_watchers();
+  }  
 #endif
+
 }
 
 int player_play(rtsp_conn_info *conn) {
@@ -2567,11 +2528,11 @@ int player_play(rtsp_conn_info *conn) {
     debug(1, "Error setting stack size for player_thread: %s", strerror(errno));
   pthread_create(pt, &tattr, player_thread_func, (void *)conn);
   pthread_attr_destroy(&tattr);
-#if defined(HAVE_MPRIS)
-  if (conn->play_state != SST_playing)
-    conn->play_state = SST_playing;
-  debug(1, "MPRIS Playing (play)");
-  media_player2_player_set_playback_status(mprisPlayerPlayerSkeleton, "Playing");
+#ifdef HAVE_METADATA_HUB
+  if (metadata_store.player_state != PS_PLAYING) {
+    metadata_store.player_state = PS_PLAYING;
+    run_metadata_watchers();
+  }  
 #endif
   return 0;
 }
@@ -2588,13 +2549,12 @@ void player_stop(rtsp_conn_info *conn) {
     command_stop();
     free(conn->player_thread);
     conn->player_thread = NULL;
-#if defined(HAVE_MPRIS)
-    if (conn->play_state != SST_stopped)
-      conn->play_state = SST_stopped;
-    debug(1, "MPRIS Stopped");
-    media_player2_player_set_playback_status(mprisPlayerPlayerSkeleton, "Stopped");
+#ifdef HAVE_METADATA_HUB
+  if (metadata_store.player_state != PS_STOPPED) {
+    metadata_store.player_state = PS_STOPPED;
+    run_metadata_watchers();
+  }  
 #endif
-
   } else {
     debug(3, "player thread of RTSP conversation %d is already deleted.", conn->connection_number);
   }

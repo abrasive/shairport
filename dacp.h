@@ -22,12 +22,13 @@ uint32_t dacp_tlv_crawl(
     char **p,
     int32_t *length); // return the code of the next TLV entity and advance the pointer beyond it.
 
-int32_t dacp_get_client_volume(rtsp_conn_info *conn); // return the overall volume from the client
-int dacp_set_include_speaker_volume(rtsp_conn_info *conn, int64_t machine_number, int32_t vo);
-int dacp_set_speaker_volume(rtsp_conn_info *conn, int64_t machine_number, int32_t vo);
-int dacp_get_speaker_list(rtsp_conn_info *conn, dacp_spkr_stuff *speaker_array,
+int dacp_set_speaker_volume(int64_t machine_number, int32_t vo);
+
+int dacp_get_speaker_list(dacp_spkr_stuff *speaker_array,
                           int max_size_of_array);
 void set_dacp_server_information(rtsp_conn_info *conn); // tell the DACP conversation thread that
                                                         // the dacp server information has been set
                                                         // or changed
 int send_simple_dacp_command(const char *command);
+
+void dacp_get_volume(void); // get the speaker volume information from the DACP source and store it in the metadata_hub

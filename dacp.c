@@ -104,7 +104,7 @@ static pthread_mutex_t dacp_conversation_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t dacp_server_information_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t dacp_server_information_cv = PTHREAD_COND_INITIALIZER;
 
-int dacp_send_command(const char *command, char **body, size_t *bodysize) {
+int dacp_send_command(const char *command, char **body, ssize_t *bodysize) {
 
   // will malloc space for the body or set it to NULL -- the caller should free it.
 
@@ -604,16 +604,35 @@ uint32_t dacp_tlv_crawl(char **p, int32_t *length) {
   return type;
 }
 
-int32_t dacp_get_client_volume(rtsp_conn_info *conn) {
+int32_t dacp_get_client_volume(void) {
   char *server_reply = NULL;
   int32_t overall_volume = -1;
   ssize_t reply_size;
   int response =
       dacp_send_command("getproperty?properties=dmcp.volume", &server_reply, &reply_size);
   if (response == 200) { // if we get an okay
-    uint32_t *np = (uint32_t *)server_reply;
-    overall_volume = ntohl(*np);
-    // debug(1,"Overall Volume is %d.",overall_volume);
+    char *sp = server_reply;
+    int32_t item_size;
+    if (reply_size >= 8) {
+      if (dacp_tlv_crawl(&sp, &item_size) == 'cmgt') {
+        debug(1,"Volume:",item_size);
+        sp -= item_size; // drop down into the array -- don't skip over it
+        reply_size -= 8;
+        while (reply_size >= 8) {
+          uint32_t type = dacp_tlv_crawl(&sp, &item_size);
+          reply_size -= item_size + 8;
+          if (type == 'cmvo') { // drop down into the dictionary -- don't skip over it
+            char *t = sp - item_size;
+            overall_volume = ntohl(*(int32_t *)(t));
+          }
+        }
+      } else {
+        debug(1,"Unexpected payload response from getproperty?properties=dmcp.volume");
+      }
+    } else {
+      debug(1,"Too short a response from getproperty?properties=dmcp.volume");  
+    }
+    debug(1,"Overall Volume is %d.",overall_volume);
     free(server_reply);
   } else {
     debug(1, "Unexpected response %d to dacp volume control request", response);
@@ -621,7 +640,7 @@ int32_t dacp_get_client_volume(rtsp_conn_info *conn) {
   return overall_volume;
 }
 
-int dacp_set_include_speaker_volume(rtsp_conn_info *conn, int64_t machine_number, int32_t vo) {
+int dacp_set_include_speaker_volume(int64_t machine_number, int32_t vo) {
   char message[1000];
   memset(message, 0, sizeof(message));
   sprintf(message, "setproperty?include-speaker-id=%ld&dmcp.volume=%d", machine_number, vo);
@@ -630,7 +649,7 @@ int dacp_set_include_speaker_volume(rtsp_conn_info *conn, int64_t machine_number
   // should return 204
 }
 
-int dacp_set_speaker_volume(rtsp_conn_info *conn, int64_t machine_number, int32_t vo) {
+int dacp_set_speaker_volume(int64_t machine_number, int32_t vo) {
   char message[1000];
   memset(message, 0, sizeof(message));
   sprintf(message, "setproperty?speaker-id=%ld&dmcp.volume=%d", machine_number, vo);
@@ -639,7 +658,7 @@ int dacp_set_speaker_volume(rtsp_conn_info *conn, int64_t machine_number, int32_
   // should return 204
 }
 
-int dacp_get_speaker_list(rtsp_conn_info *conn, dacp_spkr_stuff *speaker_info,
+int dacp_get_speaker_list(dacp_spkr_stuff *speaker_info,
                           int max_size_of_array) {
   char *server_reply = NULL;
   int speaker_index = -1; // will be incremented before use
@@ -746,3 +765,43 @@ int dacp_get_speaker_list(rtsp_conn_info *conn, dacp_spkr_stuff *speaker_info,
   }
   return reply;
 }
+
+void dacp_get_volume(void) {
+  // get the speaker volume information from the DACP source and store it in the metadata_hub
+  // A volume command has been sent from the client
+  // let's get the master volume from the DACP remote control
+  struct dacp_speaker_stuff speaker_info[50];
+  // we need the overall volume and the speakers information to get this device's relative volume to
+  // calculate the real volume
+
+  int32_t overall_volume = dacp_get_client_volume();
+  debug(1,"DACP Volume: %d.",overall_volume);
+  int speaker_count = dacp_get_speaker_list((dacp_spkr_stuff *)&speaker_info, 50);
+  // debug(1,"DACP Speaker Count: %d.",speaker_count);
+
+  // get our machine number
+  uint16_t *hn = (uint16_t *)config.hw_addr;
+  uint32_t *ln = (uint32_t *)(config.hw_addr + 2);
+  uint64_t t1 = ntohs(*hn);
+  uint64_t t2 = ntohl(*ln);
+  int64_t machine_number = (t1 << 32) + t2; // this form is useful
+
+  // Let's find our own speaker in the array and pick up its relative volume
+  int i;
+  int32_t relative_volume = 0;
+  for (i = 0; i < speaker_count; i++) {
+    if (speaker_info[i].speaker_number == machine_number) {
+      // debug(1,"Our speaker number found: %ld.",machine_number);
+      relative_volume = speaker_info[i].volume;
+    }
+  }
+  int32_t actual_volume = (overall_volume * relative_volume + 50) / 100;
+  // debug(1,"Overall volume: %d, relative volume: %d%, actual volume:
+  // %d.",overall_volume,relative_volume,actual_volume);
+  // debug(1,"Our actual speaker volume is %d.",actual_volume);
+  if (metadata_store.speaker_volume != actual_volume) {
+    metadata_store.speaker_volume = actual_volume;
+    run_metadata_watchers();
+  }
+}
+
