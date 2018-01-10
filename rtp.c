@@ -182,7 +182,7 @@ void *rtp_control_receiver(void *arg) {
   uint8_t packet[2048], *pktp;
   struct timespec tn;
   uint64_t remote_time_of_sync, local_time_now, remote_time_now;
-  int64_t sync_rtp_timestamp, rtp_timestamp_less_latency;
+  int64_t sync_rtp_timestamp;
   ssize_t nread;
   while (conn->please_stop == 0) {
     fd_set readfds;
@@ -223,7 +223,6 @@ void *rtp_control_receiver(void *arg) {
 
         // debug(1,"Remote Sync Time: %0llx.",remote_time_of_sync);
 
-        rtp_timestamp_less_latency = monotonic_timestamp(ntohl(*((uint32_t *)&packet[4])), conn);
         sync_rtp_timestamp = monotonic_timestamp(ntohl(*((uint32_t *)&packet[16])), conn);
         
         if (config.userSuppliedLatency) {
@@ -231,7 +230,8 @@ void *rtp_control_receiver(void *arg) {
             debug(1,"Using the user-supplied latency: %lld.",config.userSuppliedLatency);           
           }
           conn->latency = config.userSuppliedLatency;
-        } else {
+        } else if (packet[0] & 0x10) { // only set latency if it's a packet just after a flush or resume
+          int64_t rtp_timestamp_less_latency = monotonic_timestamp(ntohl(*((uint32_t *)&packet[4])), conn);
           int64_t la =
               sync_rtp_timestamp - rtp_timestamp_less_latency + config.fixedLatencyOffset;
           if ((conn->maximum_latency) && (conn->maximum_latency<la))

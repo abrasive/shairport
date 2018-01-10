@@ -1374,6 +1374,11 @@ static void *player_thread_func(void *arg) {
   conn->first_packet_timestamp = 0;
   conn->flush_requested = 0;
   // conn->fix_volume = 0x10000;
+  
+  if (conn->latency==0) {
+    debug(1,"No latency has (yet) been specified. Setting 99225 (2.25 seconds) frames as a default.");
+    conn->latency = 99225;
+  }
 
   int rc = pthread_mutex_init(&conn->ab_mutex, NULL);
   if (rc)
