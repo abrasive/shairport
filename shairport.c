@@ -1488,7 +1488,7 @@ int main(int argc, char **argv) {
 #endif
 #endif
 
-  daemon_log(LOG_INFO, "Successful Startup");
+  // daemon_log(LOG_INFO, "Successful Startup");
   rtsp_listen_loop();
 
   // should not reach this...
