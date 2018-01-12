@@ -78,6 +78,42 @@ You can check UFW config by typing `sudo ufw status` in shell. Please make sure 
 
 Run your song from your remote device. Enjoy !
 
+### Shairport Sync Won't Start Automatically After Reboot
+This refers to slower machines, such as the Raspberry Pi Zero or the original (single core) Raspberry Pi, running a recent Linux that uses `systemd`.
+
+**Problem**
+
+Having compiled Shairport Sync properly using the README guide, and having completed the `make install` step, and having enabled startup on reboot using `$ sudo systemctl enable shairport-sync`, Shairport Sync will start manually upon entering `$sudo systemctl enable shairport-sync`, but it will not start automatically after a reboot.
+
+**Possible Cause**
+
+On lower-powered machines, such as the Raspberry Pi Zero or the original (single core) Raspberry Pi, particularly with a USB sound card, it may be that the sound system is not ready when Shairport Sync is automatically started. The result is that Shairport Sync cannot see the device it needs and shuts down.
+
+**Possible Solution**
+
+A good solution is to delay the automatic startup of Shairport Sync by a few seconds using the `systemd` timer mechanism:
+
+Create a file called `shairport-sync.timer` and place it alongside `shairport-sync.service` in `/lib/systemd/system`. The file should contain the following:
+```
+[Unit]
+Description=Shairport Sync AirPlay receiver
+
+[Timer]                       
+OnBootSec=10s              
+Unit=shairport-sync.service
+
+[Install]    
+WantedBy=multi-user.target  
+```
+You need to disable the `shairport-sync` service because the timer is calling the service, and you need to enable the `shairport-sync` timer:
+
+```
+# systemctl disable shairport-sync
+# systemctl start shairport-sync.timer
+# systemctl enable shairport-sync.timer
+```
+See also #179, with thanks to @maumi and others.
+
 ### Stuttering audio on certain USB DACs (such as the Creative Soundblaster MP3+)
 
 **Problem**
