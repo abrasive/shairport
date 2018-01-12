@@ -114,6 +114,21 @@ You need to disable the `shairport-sync` service because the timer is calling th
 ```
 See also #179, with thanks to @maumi and others.
 
+**Alternative Solution**
+
+- Edit Shairport Sync service file `sudo nano /lib/systemd/system/shairport-sync.service`
+- Update the service section to include the line `ExecStartPre=/bin/sleep 5`
+
+Example:
+
+```
+[Service]
+ExecStartPre=/bin/sleep 5
+ExecStart=/usr/local/bin/shairport-sync
+User=pi
+Group=pi
+```
+
 ### Stuttering audio on certain USB DACs (such as the Creative Soundblaster MP3+)
 
 **Problem**
