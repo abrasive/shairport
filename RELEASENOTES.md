@@ -1,3 +1,11 @@
+Version 3.2d23
+====
+Continuing the experiments with D-Bus and related DACP support.
+
+**Enhancement**
+* Some DACs have a feature that the lowest permissible "attenuation" value that the built-in hardware mixer can be set to is not an attenuation value at all – it is in fact a command to mute the output completely. Shairport Sync has always checked for this feature, basically in order to ignore it when getting the true range of attenuation values offered by the mixer.
+However, with this enhancement, Shairport Sync can actually use this feature to mute the output where appropriate.
+
 Version 3.2d22
 ====
 Continuing the experiments with D-Bus and related DACP support.
