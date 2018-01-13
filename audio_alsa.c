@@ -378,7 +378,7 @@ static int init(int argc, char **argv) {
           debug(1, "Lowest dB value is a mute");
           mixer_volume_setting_gives_mute = 1;
           alsa_mix_mute = SND_CTL_TLV_DB_GAIN_MUTE; // this may not be necessary -- it's always going to be SND_CTL_TLV_DB_GAIN_MUTE, right?
-          debug(1, "Lowest dB value is a mute -- try minimum volume + 1 as lowest true attenuation value");
+          // debug(1, "Try minimum volume + 1 as lowest true attenuation value");
           if (snd_mixer_selem_ask_playback_vol_dB(alsa_mix_elem, alsa_mix_minv + 1,
                                                   &alsa_mix_mindb) != 0)
             debug(1, "Can't get dB value corresponding to a minimum volume + 1.");
@@ -961,14 +961,14 @@ void do_volume(double vol) { // caller is assumed to have the alsa_mutex when us
                    "control.");
       }
     } else {
-      if (volume_based_mute_is_active==0)
+      if (volume_based_mute_is_active==0) {
+        // debug(1,"Set alsa volume.");
         do_snd_mixer_selem_set_playback_dB_all(alsa_mix_elem, vol);
-      else {
+      } else {
         debug(1,"Not setting volume because volume-based mute is active");
       }
     }
     volume_set_request = 0; // any external request that has been made is now satisfied
-    // debug(1,"Alsa volume actually set.");
     close_mixer();
   }
 }
@@ -1031,7 +1031,7 @@ void do_mute(int mute_state_requested) {
         if (config.alsa_use_playback_switch_for_mute == 1)
           snd_mixer_selem_set_playback_switch_all(alsa_mix_elem, 0);
         else {
-          debug(1,"Activating volume-based mute.");
+          // debug(1,"Activating volume-based mute.");
           volume_based_mute_is_active = 1;
           do_snd_mixer_selem_set_playback_dB_all(alsa_mix_elem, alsa_mix_mute);
         }
@@ -1040,7 +1040,7 @@ void do_mute(int mute_state_requested) {
         if (config.alsa_use_playback_switch_for_mute == 1)
           snd_mixer_selem_set_playback_switch_all(alsa_mix_elem, 1);
         else {
-          debug(1,"Deactivating volume-based mute.");
+          // debug(1,"Deactivating volume-based mute.");
           volume_based_mute_is_active = 0;
           do_snd_mixer_selem_set_playback_dB_all(alsa_mix_elem, set_volume);
         }
