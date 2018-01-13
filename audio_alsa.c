@@ -92,9 +92,12 @@ static int has_softvol = 0;
 static int volume_set_request = 0;       // set when an external request is made to set the volume.
 int mute_request_pending = 0;            //  set when an external request is made to mute or unmute.
 int overriding_mute_state_requested = 0; // 1 = mute; 0 = unmute requested
-int mixer_volume_setting_gives_mute = 0; // set when it is discovered that particular mixer volume setting causes a mute.
-long alsa_mix_mute; // setting the volume to this value mutes output, if mixer_volume_setting_gives_mute is true
-int volume_based_mute_is_active = 0; // set when muting is being done by a setting the volume to a magic value
+int mixer_volume_setting_gives_mute =
+    0;              // set when it is discovered that particular mixer volume setting causes a mute.
+long alsa_mix_mute; // setting the volume to this value mutes output, if
+                    // mixer_volume_setting_gives_mute is true
+int volume_based_mute_is_active =
+    0; // set when muting is being done by a setting the volume to a magic value
 
 static snd_pcm_sframes_t (*alsa_pcm_write)(snd_pcm_t *, const void *,
                                            snd_pcm_uframes_t) = snd_pcm_writei;
@@ -152,7 +155,7 @@ void close_mixer() {
   }
 }
 
-void do_snd_mixer_selem_set_playback_dB_all(snd_mixer_elem_t * mix_elem, double vol) {
+void do_snd_mixer_selem_set_playback_dB_all(snd_mixer_elem_t *mix_elem, double vol) {
   if (snd_mixer_selem_set_playback_dB_all(mix_elem, vol, 0) != 0) {
     debug(1, "Can't set playback volume accurately to %f dB.", vol);
     if (snd_mixer_selem_set_playback_dB_all(mix_elem, vol, -1) != 0)
@@ -377,7 +380,8 @@ static int init(int argc, char **argv) {
           // For instance, the Raspberry Pi does this
           debug(1, "Lowest dB value is a mute");
           mixer_volume_setting_gives_mute = 1;
-          alsa_mix_mute = SND_CTL_TLV_DB_GAIN_MUTE; // this may not be necessary -- it's always going to be SND_CTL_TLV_DB_GAIN_MUTE, right?
+          alsa_mix_mute = SND_CTL_TLV_DB_GAIN_MUTE; // this may not be necessary -- it's always
+                                                    // going to be SND_CTL_TLV_DB_GAIN_MUTE, right?
           // debug(1, "Try minimum volume + 1 as lowest true attenuation value");
           if (snd_mixer_selem_ask_playback_vol_dB(alsa_mix_elem, alsa_mix_minv + 1,
                                                   &alsa_mix_mindb) != 0)
@@ -429,7 +433,8 @@ static int init(int argc, char **argv) {
       }
     }
     if ((config.alsa_use_playback_switch_for_mute == 1) &&
-        (snd_mixer_selem_has_playback_switch(alsa_mix_elem)) || mixer_volume_setting_gives_mute) {
+            (snd_mixer_selem_has_playback_switch(alsa_mix_elem)) ||
+        mixer_volume_setting_gives_mute) {
       audio_alsa.mute = &mute; // insert the mute function now we know it can do muting stuff
       // debug(1, "Has mixer and mute ability we will use.");
     } else {
@@ -961,11 +966,11 @@ void do_volume(double vol) { // caller is assumed to have the alsa_mutex when us
                    "control.");
       }
     } else {
-      if (volume_based_mute_is_active==0) {
+      if (volume_based_mute_is_active == 0) {
         // debug(1,"Set alsa volume.");
         do_snd_mixer_selem_set_playback_dB_all(alsa_mix_elem, vol);
       } else {
-        debug(1,"Not setting volume because volume-based mute is active");
+        debug(1, "Not setting volume because volume-based mute is active");
       }
     }
     volume_set_request = 0; // any external request that has been made is now satisfied
@@ -1022,7 +1027,7 @@ void do_mute(int mute_state_requested) {
   // If the hardware isn't there, or we are not allowed to use it, nothing will be done
   // The caller must have the alsa mutex
 
-  if ((config.alsa_use_playback_switch_for_mute == 1) || mixer_volume_setting_gives_mute){
+  if ((config.alsa_use_playback_switch_for_mute == 1) || mixer_volume_setting_gives_mute) {
     if (mute_request_pending == 0)
       local_mute_state_requested = mute_state_requested;
     if (open_mixer()) {

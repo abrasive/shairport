@@ -771,7 +771,7 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
     send_metadata('ssnc', 'daid', ar, strlen(ar), req, 1);
 #endif
   }
-  
+
   char *hdr = msg_get_header(req, "Transport");
   if (!hdr)
     goto error;
@@ -1197,7 +1197,7 @@ void *metadata_thread_function(void *ignore) {
     pc_queue_get_item(&metadata_queue, &pack);
     if (config.metadata_enabled)
       metadata_process(pack.type, pack.code, pack.data, pack.length);
-    
+
     if (pack.carrier)
       msg_free(pack.carrier); // release the message
     else if (pack.data)
@@ -1473,18 +1473,18 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
 
       if (!strncmp(cp, "a=max-latency:", 14))
         pmaxlatency = cp + 14;
-        
+
       cp = next;
     }
-    
+
     if (pminlatency) {
       conn->minimum_latency = atoi(pminlatency);
-      debug(1,"Minimum latency %d specified",conn->minimum_latency);
+      debug(1, "Minimum latency %d specified", conn->minimum_latency);
     }
 
     if (pmaxlatency) {
       conn->maximum_latency = atoi(pmaxlatency);
-      debug(1,"Maximum latency %d specified",conn->maximum_latency);
+      debug(1, "Maximum latency %d specified", conn->maximum_latency);
     }
 
     if ((paesiv == NULL) && (prsaaeskey == NULL)) {

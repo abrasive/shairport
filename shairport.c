@@ -62,7 +62,6 @@
 #include "dacp.h"
 #endif
 
-
 #if defined(HAVE_METADATA_HUB)
 #include "metadata_hub.h"
 #endif
@@ -396,16 +395,19 @@ int parse_options(int argc, char **argv) {
       inform("Warning: the option -R or --reconnectToOutput is deprecated.");
       break;
     case 'A':
-      inform("Warning: the option -A or --AirPlayLatency is deprecated and ignored. This setting is now "
+      inform("Warning: the option -A or --AirPlayLatency is deprecated and ignored. This setting "
+             "is now "
              "automatically received from the AirPlay device.");
       break;
     case 'i':
-      inform("Warning: the option -i or --iTunesLatency is deprecated and ignored. This setting is now "
+      inform("Warning: the option -i or --iTunesLatency is deprecated and ignored. This setting is "
+             "now "
              "automatically received from iTunes");
       break;
     case 'f':
-      inform("Warning: the option --forkedDaapdLatency is deprecated and ignored. This setting is now "
-             "automatically received from forkedDaapd");
+      inform(
+          "Warning: the option --forkedDaapdLatency is deprecated and ignored. This setting is now "
+          "automatically received from forkedDaapd");
       break;
     case 'r':
       inform("Warning: the option -r or --resync is deprecated. Please use the "
@@ -1108,9 +1110,9 @@ int main(int argc, char **argv) {
   strcat(configuration_file_path, ".conf");
   config.configfile = configuration_file_path;
 
-  //config.statistics_requested = 0; // don't print stats in the log
-  //config.userSuppliedLatency = 0; // zero means none supplied
-  config.resyncthreshold = 0.05;  // 50 ms
+  // config.statistics_requested = 0; // don't print stats in the log
+  // config.userSuppliedLatency = 0; // zero means none supplied
+  config.resyncthreshold = 0.05; // 50 ms
   config.timeout = 120; // this number of seconds to wait for [more] audio before switching to idle.
   config.tolerance =
       0.002; // this number of seconds of timing error before attempting to correct it.
@@ -1341,9 +1343,11 @@ int main(int argc, char **argv) {
   }
 
   /* Mess around with the latency options */
-  // Basically, we expect the source to set the latency and add a fixed offset of 11025 frames to it, which sounds right
-  // If this latency is outside the max and min latensies that may be set by the source, clamp it to fit.
-  
+  // Basically, we expect the source to set the latency and add a fixed offset of 11025 frames to
+  // it, which sounds right
+  // If this latency is outside the max and min latensies that may be set by the source, clamp it to
+  // fit.
+
   // If they specify a non-standard latency, we suggest the user to use the
   // audio_backend_latency_offset instead.
 

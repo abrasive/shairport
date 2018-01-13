@@ -816,10 +816,10 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
 
 // say we have started playing here
 #ifdef HAVE_METADATA_HUB
-  if (metadata_store.player_state != PS_PLAYING) {
-    metadata_store.player_state = PS_PLAYING;
-    run_metadata_watchers();
-  }  
+            if (metadata_store.player_state != PS_PLAYING) {
+              metadata_store.player_state = PS_PLAYING;
+              run_metadata_watchers();
+            }
 #endif
             if (reference_timestamp) { // if we have a reference time
               // debug(1,"First frame seen with timestamp...");
@@ -1366,9 +1366,10 @@ static void *player_thread_func(void *arg) {
   conn->first_packet_timestamp = 0;
   conn->flush_requested = 0;
   // conn->fix_volume = 0x10000;
-  
-  if (conn->latency==0) {
-    debug(1,"No latency has (yet) been specified. Setting 99225 (2.25 seconds) frames as a default.");
+
+  if (conn->latency == 0) {
+    debug(1,
+          "No latency has (yet) been specified. Setting 99225 (2.25 seconds) frames as a default.");
     conn->latency = 99225;
   }
 
@@ -2500,9 +2501,8 @@ void player_flush(int64_t timestamp, rtsp_conn_info *conn) {
   if (metadata_store.player_state != PS_PAUSED) {
     metadata_store.player_state = PS_PAUSED;
     run_metadata_watchers();
-  }  
+  }
 #endif
-
 }
 
 int player_play(rtsp_conn_info *conn) {
@@ -2532,7 +2532,7 @@ int player_play(rtsp_conn_info *conn) {
   if (metadata_store.player_state != PS_PLAYING) {
     metadata_store.player_state = PS_PLAYING;
     run_metadata_watchers();
-  }  
+  }
 #endif
   return 0;
 }
@@ -2550,10 +2550,10 @@ void player_stop(rtsp_conn_info *conn) {
     free(conn->player_thread);
     conn->player_thread = NULL;
 #ifdef HAVE_METADATA_HUB
-  if (metadata_store.player_state != PS_STOPPED) {
-    metadata_store.player_state = PS_STOPPED;
-    run_metadata_watchers();
-  }  
+    if (metadata_store.player_state != PS_STOPPED) {
+      metadata_store.player_state = PS_STOPPED;
+      run_metadata_watchers();
+    }
 #endif
   } else {
     debug(3, "player thread of RTSP conversation %d is already deleted.", conn->connection_number);

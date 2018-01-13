@@ -615,7 +615,7 @@ int32_t dacp_get_client_volume(void) {
     int32_t item_size;
     if (reply_size >= 8) {
       if (dacp_tlv_crawl(&sp, &item_size) == 'cmgt') {
-        debug(1,"Volume:",item_size);
+        debug(1, "Volume:", item_size);
         sp -= item_size; // drop down into the array -- don't skip over it
         reply_size -= 8;
         while (reply_size >= 8) {
@@ -627,12 +627,12 @@ int32_t dacp_get_client_volume(void) {
           }
         }
       } else {
-        debug(1,"Unexpected payload response from getproperty?properties=dmcp.volume");
+        debug(1, "Unexpected payload response from getproperty?properties=dmcp.volume");
       }
     } else {
-      debug(1,"Too short a response from getproperty?properties=dmcp.volume");  
+      debug(1, "Too short a response from getproperty?properties=dmcp.volume");
     }
-    debug(1,"Overall Volume is %d.",overall_volume);
+    debug(1, "Overall Volume is %d.", overall_volume);
     free(server_reply);
   } else {
     debug(1, "Unexpected response %d to dacp volume control request", response);
@@ -658,8 +658,7 @@ int dacp_set_speaker_volume(int64_t machine_number, int32_t vo) {
   // should return 204
 }
 
-int dacp_get_speaker_list(dacp_spkr_stuff *speaker_info,
-                          int max_size_of_array) {
+int dacp_get_speaker_list(dacp_spkr_stuff *speaker_info, int max_size_of_array) {
   char *server_reply = NULL;
   int speaker_index = -1; // will be incremented before use
   int reply = -1;         // will bve fixed if there is no problem
@@ -775,7 +774,7 @@ void dacp_get_volume(void) {
   // calculate the real volume
 
   int32_t overall_volume = dacp_get_client_volume();
-  debug(1,"DACP Volume: %d.",overall_volume);
+  debug(1, "DACP Volume: %d.", overall_volume);
   int speaker_count = dacp_get_speaker_list((dacp_spkr_stuff *)&speaker_info, 50);
   // debug(1,"DACP Speaker Count: %d.",speaker_count);
 
@@ -804,4 +803,3 @@ void dacp_get_volume(void) {
     run_metadata_watchers();
   }
 }
-

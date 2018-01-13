@@ -58,14 +58,16 @@ typedef struct metadata_bundle {
 
   unsigned char
       item_composite_id[16]; // seems to be nowplaying 4 ids: dbid, plid, playlistItem, itemid
-  
+
   //
-  
-  enum play_status_type player_state; // this is the state of the actual player itself, which can be a bit noisy.
-  
-  int speaker_volume; // this is the actual speaker volume, allowing for the main volume and the speaker volume control
+
+  enum play_status_type
+      player_state; // this is the state of the actual player itself, which can be a bit noisy.
+
+  int speaker_volume; // this is the actual speaker volume, allowing for the main volume and the
+                      // speaker volume control
   int previous_speaker_volume; // this is needed to prevent a loop
-  
+
   metadata_watcher watchers[number_of_watchers]; // functions to call if the metadata is changed.
   void *watchers_data[number_of_watchers];       // their individual data
 

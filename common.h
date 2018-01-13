@@ -122,8 +122,9 @@ typedef struct {
   mdns_backend *mdns;
   int buffer_start_fill;
   int64_t userSuppliedLatency; // overrides all other latencies -- use with caution
-  int64_t fixedLatencyOffset;  // add this to all automatic latencies supplied to get the actual total latency
-                               // the total latency will be limited to the min and max-latency values, if supplied
+  int64_t fixedLatencyOffset;  // add this to all automatic latencies supplied to get the actual
+                               // total latency
+  // the total latency will be limited to the min and max-latency values, if supplied
   int daemonise;
   int daemonise_store_pid; // don't try to save a PID file
   char *piddir;
