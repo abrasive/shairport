@@ -79,3 +79,4 @@ void add_metadata_watcher(metadata_watcher fn, void *userdata);
 void run_metadata_watchers(void);
 
 void metadata_hub_init(void);
+void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uint32_t length);

@@ -29,6 +29,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include <stdlib.h>
 #include <string.h>
 
 #include "dacp.h"
@@ -58,4 +59,59 @@ void run_metadata_watchers(void) {
       metadata_store.watchers[i](&metadata_store, metadata_store.watchers_data[i]);
     }
   }
+}
+
+void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uint32_t length) {
+  // metadata coming in from the audio source or from Shairport Sync itself passes through here
+  // this has more information about tags, which might be relevant:
+  // https://code.google.com/p/ytrack/wiki/DMAP
+  char *payload;
+  if (length < 2048)
+    payload = strndup(data, length);
+  else
+    payload = NULL;
+  switch (code) {
+  case 'asal':
+    debug(1, "MH Album Name: \"%s\".", payload);
+    break;
+  case 'asar':
+    debug(1, "MH Artist: \"%s\".", payload);
+    break;
+  case 'ascm':
+    debug(1, "MH Comment: \"%s\".", payload);
+    break;
+  case 'asgn':
+    debug(1, "MH Genre: \"%s\".", payload);
+    break;
+  case 'minm':
+    debug(1, "MH Title: \"%s\".", payload);
+    break;
+  case 'ascp':
+    debug(1, "MH Composer: \"%s\".", payload);
+    break;
+  case 'asdt':
+    debug(1, "MH File kind: \"%s\".", payload);
+    break;
+  case 'assn':
+    debug(1, "MH Sort as: \"%s\".", payload);
+    break;
+  case 'PICT':
+    debug(1, "MH Picture received, length %u bytes.", length);
+    break;
+  case 'clip':
+    debug(1, "MH Client's IP: \"%s\".", payload);
+    break;
+  default:
+    if (type == 'ssnc') {
+      char typestring[5];
+      *(uint32_t *)typestring = htonl(type);
+      typestring[4] = 0;
+      char codestring[5];
+      *(uint32_t *)codestring = htonl(code);
+      codestring[4] = 0;
+      debug(1, "MH \"%s\" \"%s\": \"%s\".", typestring, codestring, payload);
+    }
+  }
+  if (payload)
+    free(payload);
 }
