@@ -643,7 +643,7 @@ int32_t dacp_get_client_volume(void) {
 int dacp_set_include_speaker_volume(int64_t machine_number, int32_t vo) {
   char message[1000];
   memset(message, 0, sizeof(message));
-  sprintf(message, "setproperty?include-speaker-id=%ld&dmcp.volume=%d", machine_number, vo);
+  sprintf(message, "setproperty?include-speaker-id=%lld&dmcp.volume=%d", machine_number, vo);
   // debug(1,"sending \"%s\"",message);
   return send_simple_dacp_command(message);
   // should return 204
@@ -652,7 +652,7 @@ int dacp_set_include_speaker_volume(int64_t machine_number, int32_t vo) {
 int dacp_set_speaker_volume(int64_t machine_number, int32_t vo) {
   char message[1000];
   memset(message, 0, sizeof(message));
-  sprintf(message, "setproperty?speaker-id=%ld&dmcp.volume=%d", machine_number, vo);
+  sprintf(message, "setproperty?speaker-id=%lld&dmcp.volume=%d", machine_number, vo);
   // debug(1,"sending \"%s\"",message);
   return send_simple_dacp_command(message);
   // should return 204
