@@ -51,6 +51,21 @@ typedef struct metadata_bundle {
   char *genre; // a malloced string -- if non-zero, free it before replacing it
   int genre_changed;
 
+  char *comment; // a malloced string -- if non-zero, free it before replacing it
+  int comment_changed;
+
+  char *composer; // a malloced string -- if non-zero, free it before replacing it
+  int composer_changed;
+
+  char *file_kind; // a malloced string -- if non-zero, free it before replacing it
+  int file_kind_changed;
+
+  char *sort_as; // a malloced string -- if non-zero, free it before replacing it
+  int sort_as_changed;
+
+  char *client_ip; // a malloced string -- if non-zero, free it before replacing it
+  int client_ip_changed;
+
   uint32_t item_id; // seems to be a track ID -- see itemid in DACP.c
   int item_id_changed;
 

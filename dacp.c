@@ -615,7 +615,6 @@ int32_t dacp_get_client_volume(void) {
     int32_t item_size;
     if (reply_size >= 8) {
       if (dacp_tlv_crawl(&sp, &item_size) == 'cmgt') {
-        debug(1, "Volume:", item_size);
         sp -= item_size; // drop down into the array -- don't skip over it
         reply_size -= 8;
         while (reply_size >= 8) {
@@ -632,7 +631,7 @@ int32_t dacp_get_client_volume(void) {
     } else {
       debug(1, "Too short a response from getproperty?properties=dmcp.volume");
     }
-    debug(1, "Overall Volume is %d.", overall_volume);
+    // debug(1, "Overall Volume is %d.", overall_volume);
     free(server_reply);
   } else {
     debug(1, "Unexpected response %d to dacp volume control request", response);
@@ -709,7 +708,7 @@ int dacp_get_speaker_list(dacp_spkr_stuff *speaker_info, int max_size_of_array) 
               t = sp - item_size;
               r = ntohl(*(int32_t *)(t));
               speaker_info[speaker_index].volume = r;
-              // debug(1,"Volume: \"%d\".",r);
+              // debug(1,"The individual volume of speaker \"%s\" is \"%d\".",speaker_info[speaker_index].name,r);
               break;
             case 'msma':
               t = sp - item_size;
@@ -774,7 +773,7 @@ void dacp_get_volume(void) {
   // calculate the real volume
 
   int32_t overall_volume = dacp_get_client_volume();
-  debug(1, "DACP Volume: %d.", overall_volume);
+  // debug(1, "DACP Volume: %d.", overall_volume);
   int speaker_count = dacp_get_speaker_list((dacp_spkr_stuff *)&speaker_info, 50);
   // debug(1,"DACP Speaker Count: %d.",speaker_count);
 
@@ -795,8 +794,7 @@ void dacp_get_volume(void) {
     }
   }
   int32_t actual_volume = (overall_volume * relative_volume + 50) / 100;
-  // debug(1,"Overall volume: %d, relative volume: %d%, actual volume:
-  // %d.",overall_volume,relative_volume,actual_volume);
+  // debug(1,"Overall volume: %d, relative volume: %d%, actual volume: %d.",overall_volume,relative_volume,actual_volume);
   // debug(1,"Our actual speaker volume is %d.",actual_volume);
   if (metadata_store.speaker_volume != actual_volume) {
     metadata_store.speaker_volume = actual_volume;

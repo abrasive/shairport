@@ -65,53 +65,138 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
   // metadata coming in from the audio source or from Shairport Sync itself passes through here
   // this has more information about tags, which might be relevant:
   // https://code.google.com/p/ytrack/wiki/DMAP
-  char *payload;
-  if (length < 2048)
-    payload = strndup(data, length);
-  else
-    payload = NULL;
   switch (code) {
   case 'asal':
-    debug(1, "MH Album Name: \"%s\".", payload);
+    if ((metadata_store.album_name == NULL) ||
+        (strncmp(metadata_store.album_name, data, length) != 0)) {
+      if (metadata_store.album_name)
+        free(metadata_store.album_name);
+      metadata_store.album_name = strndup(data, length);
+      // debug(1, "MH Album name set to: \"%s\"", metadata_store.album_name);
+      metadata_store.album_name_changed = 1;
+      metadata_store.changed = 1;
+    }
     break;
   case 'asar':
-    debug(1, "MH Artist: \"%s\".", payload);
+    if ((metadata_store.artist_name == NULL) ||
+        (strncmp(metadata_store.artist_name, data, length) != 0)) {
+      if (metadata_store.artist_name)
+        free(metadata_store.artist_name);
+      metadata_store.artist_name = strndup(data, length);
+      // debug(1, "MH Artist name set to: \"%s\"", metadata_store.artist_name);
+      metadata_store.artist_name_changed = 1;
+      metadata_store.changed = 1;
+    }
     break;
   case 'ascm':
-    debug(1, "MH Comment: \"%s\".", payload);
+    if ((metadata_store.comment == NULL) ||
+        (strncmp(metadata_store.comment, data, length) != 0)) {
+      if (metadata_store.comment)
+        free(metadata_store.comment);
+      metadata_store.comment = strndup(data, length);
+      // debug(1, "MH Comment set to: \"%s\"", metadata_store.comment);
+      metadata_store.comment_changed = 1;
+      metadata_store.changed = 1;
+    }
     break;
   case 'asgn':
-    debug(1, "MH Genre: \"%s\".", payload);
+    if ((metadata_store.genre == NULL) ||
+        (strncmp(metadata_store.genre, data, length) != 0)) {
+      if (metadata_store.genre)
+        free(metadata_store.genre);
+      metadata_store.genre = strndup(data, length);
+      // debug(1, "MH Genre set to: \"%s\"", metadata_store.genre);
+      metadata_store.genre_changed = 1;
+      metadata_store.changed = 1;
+    }
     break;
   case 'minm':
-    debug(1, "MH Title: \"%s\".", payload);
+    if ((metadata_store.track_name == NULL) ||
+        (strncmp(metadata_store.track_name, data, length) != 0)) {
+      if (metadata_store.track_name)
+        free(metadata_store.track_name);
+      metadata_store.track_name = strndup(data, length);
+      // debug(1, "MH Track name set to: \"%s\"", metadata_store.track_name);
+      metadata_store.track_name_changed = 1;
+      metadata_store.changed = 1;
+    }
     break;
   case 'ascp':
-    debug(1, "MH Composer: \"%s\".", payload);
+    if ((metadata_store.composer == NULL) ||
+        (strncmp(metadata_store.composer, data, length) != 0)) {
+      if (metadata_store.composer)
+        free(metadata_store.composer);
+      metadata_store.composer = strndup(data, length);
+      // debug(1, "MH Composer set to: \"%s\"", metadata_store.composer);
+      metadata_store.composer_changed = 1;
+      metadata_store.changed = 1;
+    }
     break;
   case 'asdt':
-    debug(1, "MH File kind: \"%s\".", payload);
+    if ((metadata_store.file_kind == NULL) ||
+        (strncmp(metadata_store.file_kind, data, length) != 0)) {
+      if (metadata_store.file_kind)
+        free(metadata_store.file_kind);
+      metadata_store.file_kind = strndup(data, length);
+      // debug(1, "MH File Kind set to: \"%s\"", metadata_store.file_kind);
+      metadata_store.file_kind_changed = 1;
+      metadata_store.changed = 1;
+    }
+    break;
+  case 'asaa':
+    if ((metadata_store.file_kind == NULL) ||
+        (strncmp(metadata_store.file_kind, data, length) != 0)) {
+      if (metadata_store.file_kind)
+        free(metadata_store.file_kind);
+      metadata_store.file_kind = strndup(data, length);
+      // debug(1, "MH File Kind set to: \"%s\"", metadata_store.file_kind);
+      metadata_store.file_kind_changed = 1;
+      metadata_store.changed = 1;
+    }
     break;
   case 'assn':
-    debug(1, "MH Sort as: \"%s\".", payload);
+    if ((metadata_store.sort_as == NULL) ||
+        (strncmp(metadata_store.sort_as, data, length) != 0)) {
+      if (metadata_store.sort_as)
+        free(metadata_store.sort_as);
+      metadata_store.sort_as = strndup(data, length);
+      // debug(1, "MH Sort As set to: \"%s\"", metadata_store.sort_as);
+      metadata_store.sort_as_changed = 1;
+      metadata_store.changed = 1;
+    }
     break;
   case 'PICT':
     debug(1, "MH Picture received, length %u bytes.", length);
     break;
   case 'clip':
-    debug(1, "MH Client's IP: \"%s\".", payload);
+    if ((metadata_store.client_ip == NULL) ||
+        (strncmp(metadata_store.client_ip, data, length) != 0)) {
+      if (metadata_store.client_ip)
+        free(metadata_store.client_ip);
+      metadata_store.client_ip = strndup(data, length);
+      // debug(1, "MH Client IP set to: \"%s\"", metadata_store.client_ip);
+      metadata_store.client_ip_changed = 1;
+      metadata_store.changed = 1;
+    }
     break;
+      
   default:
-    if (type == 'ssnc') {
+    if (type == 'ssnc')
+    {
       char typestring[5];
       *(uint32_t *)typestring = htonl(type);
       typestring[4] = 0;
       char codestring[5];
       *(uint32_t *)codestring = htonl(code);
       codestring[4] = 0;
-      debug(1, "MH \"%s\" \"%s\": \"%s\".", typestring, codestring, payload);
+      char *payload;
+      if (length < 2048)
+        payload = strndup(data, length);
+      else
+        payload = NULL;
+      debug(1, "MH \"%s\" \"%s\" (%d bytes): \"%s\".", typestring, codestring, length, payload);
+      if (payload)
+        free(payload);
     }
   }
-  if (payload)
-    free(payload);
 }
