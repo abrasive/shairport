@@ -708,7 +708,8 @@ int dacp_get_speaker_list(dacp_spkr_stuff *speaker_info, int max_size_of_array) 
               t = sp - item_size;
               r = ntohl(*(int32_t *)(t));
               speaker_info[speaker_index].volume = r;
-              // debug(1,"The individual volume of speaker \"%s\" is \"%d\".",speaker_info[speaker_index].name,r);
+              // debug(1,"The individual volume of speaker \"%s\" is
+              // \"%d\".",speaker_info[speaker_index].name,r);
               break;
             case 'msma':
               t = sp - item_size;
@@ -794,7 +795,8 @@ void dacp_get_volume(void) {
     }
   }
   int32_t actual_volume = (overall_volume * relative_volume + 50) / 100;
-  // debug(1,"Overall volume: %d, relative volume: %d%, actual volume: %d.",overall_volume,relative_volume,actual_volume);
+  // debug(1,"Overall volume: %d, relative volume: %d%, actual volume:
+  // %d.",overall_volume,relative_volume,actual_volume);
   // debug(1,"Our actual speaker volume is %d.",actual_volume);
   if (metadata_store.speaker_volume != actual_volume) {
     metadata_store.speaker_volume = actual_volume;
