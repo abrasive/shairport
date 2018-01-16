@@ -129,7 +129,8 @@ typedef struct {
   int daemonise_store_pid; // don't try to save a PID file
   char *piddir;
   char *computed_piddir; // the actual pid directory to create, if any
-  int logOutputLevel;    // log output level
+
+  int logOutputLevel; // log output level
   int statistics_requested, use_negotiated_latencies;
   enum playback_mode_type playback_mode;
   char *cmd_start, *cmd_stop, *cmd_set_volume;
@@ -172,6 +173,10 @@ typedef struct {
 #endif
 #if defined(HAVE_MPRIS)
   enum dbus_session_type mpris_service_bus_type;
+#endif
+
+#ifdef HAVE_METADATA_HUB
+  char *cover_art_cache_dir;
 #endif
 
 } shairport_cfg;
@@ -231,6 +236,8 @@ config_t config_file_stuff;
 void command_start(void);
 void command_stop(void);
 void command_set_volume(double volume);
+
+int mkpath(const char *path, mode_t mode);
 
 void shairport_shutdown();
 // void shairport_startup_complete(void);
