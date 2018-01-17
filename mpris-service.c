@@ -202,7 +202,10 @@ static void on_mpris_name_lost(GDBusConnection *connection, const gchar *name, g
   GBusType mpris_bus_type = G_BUS_TYPE_SYSTEM;
   if (config.mpris_service_bus_type == DBT_session)
     mpris_bus_type = G_BUS_TYPE_SESSION;
-  debug(1, "Looking for well-known interface name \"%s\".", interface_name);
+  if (mpris_bus_type == G_BUS_TYPE_SYSTEM)
+    debug(1, "Looking for well-known interface name \"%s\" on the system bus.", interface_name);
+  else
+    debug(1, "Looking for well-known interface name \"%s\" on the session bus.", interface_name);
   g_bus_own_name(mpris_bus_type, interface_name, G_BUS_NAME_OWNER_FLAGS_NONE, NULL,
                  on_mpris_name_acquired, on_mpris_name_lost_again, NULL, NULL);
 }
