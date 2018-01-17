@@ -390,7 +390,9 @@ int parse_options(int argc, char **argv) {
   config.airplay_volume = -18.0; // if no volume is ever set, default to initial default value if
                                  // nothing else comes in first.
   config.fixedLatencyOffset = 11025; // this sounds like it works properly.
+#ifdef HAVE_METADATA_HUB
   config.cover_art_cache_dir = "/tmp/shairport-sync/.cache/coverart";
+#endif
 
   config_setting_t *setting;
   const char *str = 0;

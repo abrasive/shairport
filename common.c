@@ -144,22 +144,6 @@ void inform(const char *format, ...) {
   daemon_log(LOG_INFO, "%s", s);
 }
 
-#ifdef HAVE_LIBMBEDTLS
-char *base64_enc(uint8_t *input, int length) {
-  char *buf = NULL;
-  size_t dlen = 0;
-  int rc = mbedtls_base64_encode(NULL, 0, &dlen, input, length);
-  if (rc && (rc != MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL))
-    debug(1, "Error %d getting length of base64 encode.", rc);
-  else {
-    buf = (char *)malloc(dlen);
-    rc = mbedtls_base64_encode((unsigned char *)buf, dlen, &dlen, input, length);
-    if (rc != 0)
-      debug(1, "Error %d encoding base64.", rc);
-  }
-  return buf;
-}
-
 // The following two functions are adapted slightly and with thanks from Jonathan Leffler's sample
 // code at
 // https://stackoverflow.com/questions/675039/how-can-i-create-directory-tree-in-c-linux
@@ -206,6 +190,22 @@ int mkpath(const char *path, mode_t mode) {
     status = do_mkdir(path, mode);
   free(copypath);
   return (status);
+}
+
+#ifdef HAVE_LIBMBEDTLS
+char *base64_enc(uint8_t *input, int length) {
+  char *buf = NULL;
+  size_t dlen = 0;
+  int rc = mbedtls_base64_encode(NULL, 0, &dlen, input, length);
+  if (rc && (rc != MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL))
+    debug(1, "Error %d getting length of base64 encode.", rc);
+  else {
+    buf = (char *)malloc(dlen);
+    rc = mbedtls_base64_encode((unsigned char *)buf, dlen, &dlen, input, length);
+    if (rc != 0)
+      debug(1, "Error %d encoding base64.", rc);
+  }
+  return buf;
 }
 
 uint8_t *base64_dec(char *input, int *outlen) {
