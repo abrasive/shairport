@@ -551,7 +551,7 @@ static enum rtsp_read_request_response rtsp_read_request(rtsp_conn_info *conn,
       get_absolute_time_in_fp() + ((uint64_t)5 << 32); // i.e. five seconds from now
   int warning_message_sent = 0;
 
-  const size_t max_read_chunk = 50000;
+  const size_t max_read_chunk = 1024*1024/16;
   while (inbuf < msg_size) {
 
     // we are going to read the stream in chunks and time how long it takes to
@@ -586,6 +586,7 @@ static enum rtsp_read_request_response rtsp_read_request(rtsp_conn_info *conn,
     ssize_t read_chunk = msg_size - inbuf;
     if (read_chunk > max_read_chunk)
       read_chunk = max_read_chunk;
+    usleep(30000); // wait about 30 milliseconds between reads of up to about 64 kB
     nread = read(conn->fd, buf + inbuf, read_chunk);
     if (!nread) {
       reply = rtsp_read_request_response_error;
