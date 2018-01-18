@@ -481,7 +481,7 @@ fail:
 static enum rtsp_read_request_response rtsp_read_request(rtsp_conn_info *conn,
                                                          rtsp_message **the_packet) {
   enum rtsp_read_request_response reply = rtsp_read_request_response_ok;
-  ssize_t buflen = 512;
+  ssize_t buflen = 4096;
   char *buf = malloc(buflen + 1);
 
   rtsp_message *msg = NULL;
@@ -548,7 +548,7 @@ static enum rtsp_read_request_response rtsp_read_request(rtsp_conn_info *conn,
   }
 
   uint64_t threshold_time =
-      get_absolute_time_in_fp() + ((uint64_t)5 << 32); // i.e. five seconds from now
+      get_absolute_time_in_fp() + ((uint64_t)15 << 32); // i.e. fifteen seconds from now
   int warning_message_sent = 0;
 
   const size_t max_read_chunk = 1024*1024/16;
@@ -586,7 +586,7 @@ static enum rtsp_read_request_response rtsp_read_request(rtsp_conn_info *conn,
     ssize_t read_chunk = msg_size - inbuf;
     if (read_chunk > max_read_chunk)
       read_chunk = max_read_chunk;
-    usleep(30000); // wait about 30 milliseconds between reads of up to about 64 kB
+    usleep(40000); // wait about 40 milliseconds between reads of up to about 64 kB
     nread = read(conn->fd, buf + inbuf, read_chunk);
     if (!nread) {
       reply = rtsp_read_request_response_error;
