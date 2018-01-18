@@ -1156,7 +1156,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
   // packets have arrived... last-chance resend
 
   if (!conn->ab_buffering) {
-    for (i = 16; i < (seq_diff(conn->ab_read, conn->ab_write, conn->ab_read) / 2); i = (i * 2)) {
+    for (i = 64; i < (seq_diff(conn->ab_read, conn->ab_write, conn->ab_read) / 2); i = (i * 2)) {
       seq_t next = seq_sum(conn->ab_read, i);
       abuf = conn->audio_buffer + BUFIDX(next);
       if (!abuf->ready) {
