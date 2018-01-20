@@ -33,7 +33,7 @@ void mpris_metadata_watcher(struct metadata_bundle *argc, void *userdata) {
   media_player2_player_set_loop_status(mprisPlayerPlayerSkeleton, response);
 
   GVariantBuilder *dict_builder, *aa;
-  GVariant *trackname, *albumname, *trackid, *tracklength;
+  GVariant *trackname, *albumname, *trackid, *tracklength, *artUrl;
 
   // Build the Track ID from the 16-byte item_composite_id in hex prefixed by
   // /org/gnome/ShairportSync
@@ -48,6 +48,7 @@ void mpris_metadata_watcher(struct metadata_bundle *argc, void *userdata) {
   *pt = 0;
   // debug(1, "Item composite ID set to 0x%s.", st);
 
+  char artURIstring[1024];
   char trackidstring[1024];
   sprintf(trackidstring, "/org/gnome/ShairportSync/%s", st);
 
@@ -61,7 +62,7 @@ void mpris_metadata_watcher(struct metadata_bundle *argc, void *userdata) {
 
   uint64_t track_length_in_microseconds = argc->songtime_in_milliseconds;
 
-  track_length_in_microseconds *= 1000; // to micorseconds in 64-bit precision
+  track_length_in_microseconds *= 1000; // to microseconds in 64-bit precision
 
   // Make up the track name and album name
   tracklength = g_variant_new("x", track_length_in_microseconds);
@@ -83,12 +84,21 @@ void mpris_metadata_watcher(struct metadata_bundle *argc, void *userdata) {
   /* Build the metadata array */
   // debug(1,"Build metadata");
   dict_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
+  // Make up the artwork URI if we have one
+  if (argc->cover_art_pathname)
+    sprintf(artURIstring, "file://%s", argc->cover_art_pathname);
+  else
+    artURIstring[0] = 0;
+  // sprintf(artURIstring,"");
+  artUrl = g_variant_new("s", artURIstring);
+  g_variant_builder_add(dict_builder, "{sv}", "mpris:artUrl", artUrl);
+  g_variant_builder_add(dict_builder, "{sv}", "mpris:trackid", trackid);
+  g_variant_builder_add(dict_builder, "{sv}", "mpris:length", tracklength);
+
   g_variant_builder_add(dict_builder, "{sv}", "xesam:title", trackname);
   g_variant_builder_add(dict_builder, "{sv}", "xesam:album", albumname);
   g_variant_builder_add(dict_builder, "{sv}", "xesam:artist", artists);
   g_variant_builder_add(dict_builder, "{sv}", "xesam:genre", genres);
-  g_variant_builder_add(dict_builder, "{sv}", "xesam:trackid", trackid);
-  g_variant_builder_add(dict_builder, "{sv}", "xesam:length", tracklength);
   GVariant *dict = g_variant_builder_end(dict_builder);
   g_variant_builder_unref(dict_builder);
 

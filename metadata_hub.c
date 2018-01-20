@@ -32,12 +32,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <dirent.h>
 
 #include "config.h"
 
@@ -83,9 +83,13 @@ void run_metadata_watchers(void) {
   }
 }
 
-void metadata_write_image_file(const char *buf, int len) {
+char *metadata_write_image_file(const char *buf, int len) {
 
-// warning -- this removes all files from the directory apart from this one, if it exists
+  // warning -- this removes all files from the directory apart from this one, if it exists
+  // it will return a path to the image file allocated with malloc.
+  // free it if you don't need it.
+
+  char *path = NULL; // this will be what is returned
 
   uint8_t img_md5[16];
 // uint8_t ap_md5[16];
@@ -131,7 +135,6 @@ void metadata_write_image_file(const char *buf, int len) {
 
   int result = mkpath(config.cover_art_cache_dir, 0700);
   if ((result == 0) || (result == -EEXIST)) {
-    debug(1, "Cover art cache directory okay");
     // see if the file exists by opening it.
     // if it exists, we're done
     char *prefix = "cover-";
@@ -139,60 +142,63 @@ void metadata_write_image_file(const char *buf, int len) {
     size_t pl = strlen(config.cover_art_cache_dir) + 1 + strlen(prefix) + strlen(img_md5_str) + 1 +
                 strlen(ext);
 
-  
-    char *path = malloc(pl + 1);
+    path = malloc(pl + 1);
     snprintf(path, pl + 1, "%s/%s%s.%s", config.cover_art_cache_dir, prefix, img_md5_str, ext);
+
     int cover_fd = open(path, O_WRONLY | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
     if (cover_fd > 0) {
       // write the contents
       if (write(cover_fd, buf, len) < len) {
         warn("Writing cover art file \"%s\" failed!", path);
+        free(path);
+        path = NULL;
       }
       close(cover_fd);
-      free(path);
 
       // now delete all other files, if there are any
       DIR *d;
       struct dirent *dir;
       d = opendir(config.cover_art_cache_dir);
       if (d) {
-        int fnl = strlen(prefix)+strlen(img_md5_str)+1+strlen(ext)+1;
-        
+        int fnl = strlen(prefix) + strlen(img_md5_str) + 1 + strlen(ext) + 1;
+
         char *full_filename = malloc(fnl);
-        if (full_filename==NULL)
+        if (full_filename == NULL)
           die("Can't allocate memory at metadata_write_image_file.");
-        memset(full_filename,0,fnl);
+        memset(full_filename, 0, fnl);
         snprintf(full_filename, fnl, "%s%s.%s", prefix, img_md5_str, ext);
-        debug(1,"Full filename is \"%s\".",full_filename);
         int dir_fd = open(config.cover_art_cache_dir, O_DIRECTORY);
-        if (dir_fd>0) {
+        if (dir_fd > 0) {
           while ((dir = readdir(d)) != NULL) {
             if (dir->d_type == DT_REG) {
-              if(strcmp(full_filename,dir->d_name)!=0) {
-                debug(1,"Deleting file \"%s\".",dir->d_name);
-                if (unlinkat(dir_fd, dir->d_name, 0)!=0) {
-                  debug(1,"Error %d deleting cover art file \"%s\".",errno,dir->d_name);
+              if (strcmp(full_filename, dir->d_name) != 0) {
+                if (unlinkat(dir_fd, dir->d_name, 0) != 0) {
+                  debug(1, "Error %d deleting cover art file \"%s\".", errno, dir->d_name);
                 }
-              }           
+              }
             }
           }
         } else {
-          debug(1,"Can't open the directory for deletion.");
+          debug(1, "Can't open the directory for deletion.");
         }
         free(full_filename);
         closedir(d);
-      }      
+      }
     } else {
-      if (errno == EEXIST)
-        debug(1, "Cover art file \"%s\" already exists!", path);
-      else
+      //      if (errno == EEXIST)
+      //        debug(1, "Cover art file \"%s\" already exists!", path);
+      //      else {
+      if (errno != EEXIST) {
         warn("Could not open file \"%s\" for writing cover art", path);
-      free(path);
+        free(path);
+        path = NULL;
+      }
     }
   } else {
     debug(1, "Couldn't access or create the cover art cache directory \"%s\".",
           config.cover_art_cache_dir);
   }
+  return path;
 }
 
 void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uint32_t length) {
@@ -298,8 +304,11 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
     break;
   case 'PICT':
     debug(1, "MH Picture received, length %u bytes.", length);
-    if (length > 16)
-      metadata_write_image_file(data, length);
+    if (length > 16) {
+      if (metadata_store.cover_art_pathname)
+        free(metadata_store.cover_art_pathname);
+      metadata_store.cover_art_pathname = metadata_write_image_file(data, length);
+    }
     break;
   case 'clip':
     if ((metadata_store.client_ip == NULL) ||

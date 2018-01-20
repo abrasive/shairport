@@ -74,6 +74,8 @@ typedef struct metadata_bundle {
   unsigned char
       item_composite_id[16]; // seems to be nowplaying 4 ids: dbid, plid, playlistItem, itemid
 
+  char *cover_art_pathname; // if non-zero, it will have been assigned with malloc.
+
   //
 
   enum play_status_type
