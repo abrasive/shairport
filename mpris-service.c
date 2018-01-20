@@ -85,13 +85,12 @@ void mpris_metadata_watcher(struct metadata_bundle *argc, void *userdata) {
   // debug(1,"Build metadata");
   dict_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
   // Make up the artwork URI if we have one
-  if (argc->cover_art_pathname)
+  if (argc->cover_art_pathname) {
     sprintf(artURIstring, "file://%s", argc->cover_art_pathname);
-  else
-    artURIstring[0] = 0;
-  // sprintf(artURIstring,"");
-  artUrl = g_variant_new("s", artURIstring);
-  g_variant_builder_add(dict_builder, "{sv}", "mpris:artUrl", artUrl);
+    // sprintf(artURIstring,"");
+    artUrl = g_variant_new("s", artURIstring);
+    g_variant_builder_add(dict_builder, "{sv}", "mpris:artUrl", artUrl);
+  }
   g_variant_builder_add(dict_builder, "{sv}", "mpris:trackid", trackid);
   g_variant_builder_add(dict_builder, "{sv}", "mpris:length", tracklength);
 
