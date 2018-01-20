@@ -361,9 +361,8 @@ void *rtp_timing_sender(void *arg) {
     if (sendto(conn->timing_socket, &req, sizeof(req), 0,
                (struct sockaddr *)&conn->rtp_client_timing_socket, msgsize) == -1) {
       char em[1024];
-      strerror_r(errno,em,sizeof(em));
-      debug(1,"Error %d using send-to to the timing socket: \"%s\".",errno,em);
-
+      strerror_r(errno, em, sizeof(em));
+      debug(1, "Error %d using send-to to the timing socket: \"%s\".", errno, em);
     }
     request_number++;
     if (request_number <= 4)
@@ -814,8 +813,8 @@ void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
     if (sendto(conn->audio_socket, req, sizeof(req), 0,
                (struct sockaddr *)&conn->rtp_client_control_socket, msgsize) == -1) {
       char em[1024];
-      strerror_r(errno,em,sizeof(em));
-      debug(1,"Error %d using send-to to an audio socket: \"%s\".",errno,em);
+      strerror_r(errno, em, sizeof(em));
+      debug(1, "Error %d using send-to to an audio socket: \"%s\".", errno, em);
     }
   } else {
     // if (!request_sent) {
