@@ -93,7 +93,12 @@ typedef struct metadata_bundle {
 struct metadata_bundle metadata_store;
 
 void add_metadata_watcher(metadata_watcher fn, void *userdata);
-void run_metadata_watchers(void);
 
 void metadata_hub_init(void);
 void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uint32_t length);
+
+// these functions lock and unlock the read-write mutex on the metadata hub
+void metadata_hub_modify_prolog(void);
+void metadata_hub_modify_epilog(void);
+void run_metadata_watchers(void);
+
