@@ -368,9 +368,9 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
       debug(1, "MH Metadata stream processing end.");
       break;
     case 'PICT':
-      debug(1, "MH Picture received, length %u bytes.", length);
       if (length > 16) {
       	metadata_hub_modify_prolog();
+      	debug(1, "MH Picture received, length %u bytes.", length);
         if (metadata_store.cover_art_pathname)
           free(metadata_store.cover_art_pathname);
         metadata_store.cover_art_pathname = metadata_write_image_file(data, length);
