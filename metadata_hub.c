@@ -151,8 +151,9 @@ char *metadata_write_image_file(const char *buf, int len) {
     debug(1, "Unidentified image type of cover art -- jpg extension used.");
     ext = jpg;
   }
-
-  int result = mkpath(config.cover_art_cache_dir, 0700);
+	mode_t oldumask = umask(000);
+  int result = mkpath(config.cover_art_cache_dir, 0777);
+  umask(oldumask);
   if ((result == 0) || (result == -EEXIST)) {
     // see if the file exists by opening it.
     // if it exists, we're done
@@ -224,6 +225,10 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
   // metadata coming in from the audio source or from Shairport Sync itself passes through here
   // this has more information about tags, which might be relevant:
   // https://code.google.com/p/ytrack/wiki/DMAP
+  
+  // all the following items of metadata are contained in one metadata packet
+  // they are preseded by an 'ssnc' 'mdst' item and followed by an 'ssnc 'mden' item.
+  
   if (type == 'core') {
     switch (code) {
     case 'asal':
@@ -251,7 +256,7 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
     case 'ascm':
       if ((metadata_store.comment == NULL) ||
           (strncmp(metadata_store.comment, data, length) != 0)) {
-        if (metadata_store.comment)
+        if (metadata_store.comment) 
           free(metadata_store.comment);
         metadata_store.comment = strndup(data, length);
         // debug(1, "MH Comment set to: \"%s\"", metadata_store.comment);
@@ -347,23 +352,53 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
     }
   } else if (type == 'ssnc') {
     switch (code) {
+    
+    // ignore the following
+    case 'pcst':
+    case 'pcen':
+    	break;
+    	
+    
+    case 'mdst':
+      debug(1, "MH Metadata stream processing start.");
+      metadata_hub_modify_prolog();
+      break;
+    case 'mden':
+      metadata_hub_modify_epilog();
+      debug(1, "MH Metadata stream processing end.");
+      break;
     case 'PICT':
       debug(1, "MH Picture received, length %u bytes.", length);
       if (length > 16) {
+      	metadata_hub_modify_prolog();
         if (metadata_store.cover_art_pathname)
           free(metadata_store.cover_art_pathname);
         metadata_store.cover_art_pathname = metadata_write_image_file(data, length);
+      	metadata_hub_modify_epilog();
       }
       break;
     case 'clip':
       if ((metadata_store.client_ip == NULL) ||
           (strncmp(metadata_store.client_ip, data, length) != 0)) {
+        metadata_hub_modify_prolog();
         if (metadata_store.client_ip)
           free(metadata_store.client_ip);
         metadata_store.client_ip = strndup(data, length);
-        // debug(1, "MH Client IP set to: \"%s\"", metadata_store.client_ip);
+        debug(1, "MH Client IP set to: \"%s\"", metadata_store.client_ip);
         metadata_store.client_ip_changed = 1;
         metadata_store.changed = 1;
+        metadata_hub_modify_epilog();
+      }
+      break;
+    case 'svip':
+      if ((metadata_store.server_ip == NULL) ||
+          (strncmp(metadata_store.server_ip, data, length) != 0)) {
+        metadata_hub_modify_prolog();
+        if (metadata_store.server_ip)
+          free(metadata_store.server_ip);
+        metadata_store.server_ip = strndup(data, length);
+        debug(1, "MH Server IP set to: \"%s\"", metadata_store.server_ip);
+        metadata_hub_modify_epilog();
       }
       break;
     default: {

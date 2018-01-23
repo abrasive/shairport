@@ -63,8 +63,10 @@ typedef struct metadata_bundle {
   char *sort_as; // a malloced string -- if non-zero, free it before replacing it
   int sort_as_changed;
 
-  char *client_ip; // a malloced string -- if non-zero, free it before replacing it
+  char *client_ip; // IP number used by the audio source (i.e. the "client")
   int client_ip_changed;
+
+  char *server_ip; // IP number used by Shairport Sync
 
   uint32_t item_id; // seems to be a track ID -- see itemid in DACP.c
   int item_id_changed;

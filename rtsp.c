@@ -1047,10 +1047,14 @@ void metadata_create(void) {
   char *path = malloc(pl + 1);
   snprintf(path, pl + 1, "%s", config.metadata_pipename);
 
-  if (mkfifo(path, 0644) && errno != EEXIST)
+	mode_t oldumask = umask(000);
+
+  if (mkfifo(path, 0666) && errno != EEXIST)
     die("Could not create metadata FIFO %s", path);
 
   free(path);
+  umask(oldumask);
+
 }
 
 void metadata_open(void) {
