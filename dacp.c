@@ -299,10 +299,11 @@ void *dacp_monitor_thread_code(void *na) {
     if (result == 200) {
       char *sp = response;
       if (le >= 8) {
-        // here, we know that we are receiving playerstatusupdates, so set a flag
-        metadata_store.playerstatusupdates_are_received = 1;
         // here start looking for the contents of the status update
         if (dacp_tlv_crawl(&sp, &item_size) == 'cmst') { // status
+					// here, we know that we are receiving playerstatusupdates, so set a flag
+					metadata_hub_modify_prolog();
+					metadata_store.playerstatusupdates_are_received = 1;
           sp -= item_size; // drop down into the array -- don't skip over it
           le -= 8;
           char typestring[5];
@@ -543,13 +544,11 @@ void *dacp_monitor_thread_code(void *na) {
             // printf("\n");
           }
 
-          // now, if the metadata is changed, send a signal
-          run_metadata_watchers();
-
+          // finished possibly writing to the metadata hub
+      		metadata_hub_modify_epilog();
         } else {
           printf("Status Update not found.\n");
         }
-
       } else {
         debug(1, "Can't find any content in playerstatusupdate request");
       }
@@ -798,8 +797,7 @@ void dacp_get_volume(void) {
   // debug(1,"Overall volume: %d, relative volume: %d%, actual volume:
   // %d.",overall_volume,relative_volume,actual_volume);
   // debug(1,"Our actual speaker volume is %d.",actual_volume);
-  if (metadata_store.speaker_volume != actual_volume) {
-    metadata_store.speaker_volume = actual_volume;
-    run_metadata_watchers();
-  }
+  metadata_hub_modify_prolog();
+  metadata_store.speaker_volume = actual_volume;
+  metadata_hub_modify_epilog();
 }

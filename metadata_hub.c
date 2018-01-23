@@ -83,12 +83,6 @@ void metadata_hub_modify_prolog(void) {
 
 }
 
-void metadata_hub_modify_epilog(void) {
-// always run this after changing an entry or a sequence of entries in the metadata_hub
-  debug(1,"unlocking metadata hub for writing");
-  pthread_rwlock_unlock(&metadata_hub_re_lock);
-}
-
 void run_metadata_watchers(void) {
   int i;
   debug(1,"locking metadata hub for reading");
@@ -101,6 +95,14 @@ void run_metadata_watchers(void) {
   debug(1,"unlocking metadata hub for reading");
   pthread_rwlock_unlock(&metadata_hub_re_lock);
 }
+
+void metadata_hub_modify_epilog(void) {
+// always run this after changing an entry or a sequence of entries in the metadata_hub
+  debug(1,"unlocking metadata hub for writing");
+  pthread_rwlock_unlock(&metadata_hub_re_lock);
+  run_metadata_watchers();
+}
+
 
 char *metadata_write_image_file(const char *buf, int len) {
 
