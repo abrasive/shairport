@@ -5,6 +5,7 @@
 #include <signal.h>
 #include <stdint.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 
 #include "audio.h"
 #include "config.h"

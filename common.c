@@ -37,9 +37,6 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
-
-#include <sys/stat.h>
-
 #include "common.h"
 #include <assert.h>
 
