@@ -179,6 +179,7 @@ typedef struct {
 #ifdef HAVE_METADATA_HUB
   char *cover_art_cache_dir;
 #endif
+	int	disable_resend_requests; //set this to stop resend request being made for missing packets
 
 } shairport_cfg;
 

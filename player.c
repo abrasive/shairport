@@ -1159,9 +1159,11 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
       seq_t next = seq_sum(conn->ab_read, i);
       abuf = conn->audio_buffer + BUFIDX(next);
       if (!abuf->ready) {
-        rtp_request_resend(next, 1, conn);
-        // debug(1,"Resend %u.",next);
-        conn->resend_requests++;
+      	if (config.disable_resend_requests==0) {
+					rtp_request_resend(next, 1, conn);
+					// debug(1,"Resend %u.",next);
+					conn->resend_requests++;
+        }
       }
     }
   }

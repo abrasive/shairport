@@ -508,6 +508,7 @@ int parse_options(int argc, char **argv) {
 
       /* Get the statistics setting. */
       if (config_lookup_string(config.cfg, "general.statistics", &str)) {
+      	warn("The \"general\" \"statistics\" setting is deprecated. Please use the \"diagnostics\" \"statistics\" setting instead.");
         if (strcasecmp(str, "no") == 0)
           config.statistics_requested = 0;
         else if (strcasecmp(str, "yes") == 0)
@@ -540,12 +541,47 @@ int parse_options(int argc, char **argv) {
 
       /* Get the verbosity setting. */
       if (config_lookup_int(config.cfg, "general.log_verbosity", &value)) {
+      	warn("The \"general\" \"log_verbosity\" setting is deprecated. Please use the \"diagnostics\" \"log_verbosity\" setting instead.");
         if ((value >= 0) && (value <= 3))
           debuglev = value;
         else
           die("Invalid log verbosity setting option choice \"%d\". It should be between 0 and 3, "
               "inclusive.",
               value);
+      }
+
+      /* Get the verbosity setting. */
+      if (config_lookup_int(config.cfg, "diagnostics.log_verbosity", &value)) {
+        if ((value >= 0) && (value <= 3))
+          debuglev = value;
+        else
+          die("Invalid diagnostics log_verbosity setting option choice \"%d\". It should be between 0 and 3, "
+              "inclusive.",
+              value);
+      }
+
+      /* Get the statistics setting. */
+      if (config_lookup_string(config.cfg, "diagnostics.statistics", &str)) {
+        if (strcasecmp(str, "no") == 0)
+          config.statistics_requested = 0;
+        else if (strcasecmp(str, "yes") == 0)
+          config.statistics_requested = 1;
+        else
+          die("Invalid diagnostics statistics option choice \"%s\". It should be \"yes\" or \"no\"");
+      }
+
+
+      /* Get the disable_resend_requests setting. */
+      if (config_lookup_string(config.cfg, "diagnostics.disable_resend_requests", &str)) {
+        config.disable_resend_requests = 0; // this is for legacy -- only set by -t 0
+        if (strcasecmp(str, "no") == 0)
+          config.disable_resend_requests = 0;
+        else if (strcasecmp(str, "yes") == 0)
+          config.disable_resend_requests = 1;
+        else
+          die("Invalid diagnostic disable_resend_requests option choice \"%s\". It should be "
+              "\"yes\" "
+              "or \"no\"");
       }
 
       /* Get the ignore_volume_control setting. */
@@ -1397,6 +1433,7 @@ int main(int argc, char **argv) {
 #endif
   debug(1, "loudness is %d.", config.loudness);
   debug(1, "loudness reference level is %f", config.loudness_reference_volume_db);
+  debug(1, "disable resend requests is %d -- non-zero means \"yes\"", config.disable_resend_requests);
 
   uint8_t ap_md5[16];
 
