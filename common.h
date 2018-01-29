@@ -61,6 +61,11 @@ enum playback_mode_type {
   ST_right_only,
 } playback_mode_type;
 
+enum volume_control_profile_type {
+  VCP_standard = 0,
+  VCP_flat,
+} volume_control_profile_type;
+
 enum decoders_supported_type {
   decoder_hammerton = 0,
   decoder_apple_alac,
@@ -157,6 +162,7 @@ typedef struct {
   uint32_t volume_range_db; // the range, in dB, from max dB to min dB. Zero means use the mixer's
                             // native range.
   enum sps_format_t output_format;
+  enum volume_control_profile_type volume_control_profile;
   int output_rate;
 
 #ifdef CONFIG_CONVOLUTION
@@ -218,6 +224,10 @@ char *base64_enc(uint8_t *input, int length);
 #define RSA_MODE_AUTH (0)
 #define RSA_MODE_KEY (1)
 uint8_t *rsa_apply(uint8_t *input, int inlen, int *outlen, int mode);
+
+// given a volume (0 to -30) and high and low attenuations in dB*100 (e.g. 0 to -6000 for 0 to -60
+// dB), return an attenuation depending on a linear interpolation along along the range
+double flat_vol2attn(double vol, long max_db, long min_db);
 
 // given a volume (0 to -30) and high and low attenuations in dB*100 (e.g. 0 to -6000 for 0 to -60
 // dB), return an attenuation depending on the transfer function

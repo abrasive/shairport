@@ -2416,8 +2416,12 @@ void player_volume_without_notification(double airplay_volume, rtsp_conn_info *c
       config.output->mute(0); // unmute mute if it's there
     if (config.ignore_volume_control == 1)
       scaled_attenuation = max_db;
-    else
-      scaled_attenuation = vol2attn(airplay_volume, max_db, min_db);
+    else if (config.volume_control_profile == VCP_standard)
+        scaled_attenuation = vol2attn(airplay_volume, max_db, min_db);
+    else if (config.volume_control_profile == VCP_flat)
+        scaled_attenuation = flat_vol2attn(airplay_volume, max_db, min_db); 
+    else debug(1,"Unrecognised volume control profile");
+
     if (hw_range_db) {
       // if there is a hardware mixer
       if (scaled_attenuation <= hw_max_db) {

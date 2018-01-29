@@ -622,6 +622,16 @@ int parse_options(int argc, char **argv) {
               "\"reverse stereo\", \"both left\", \"both right\"");
       }
 
+      /* Get the volume control profile setting -- "standard" or "flat" */
+      if (config_lookup_string(config.cfg, "general.volume_control_profile", &str)) {
+        if (strcasecmp(str, "standard") == 0)
+          config.volume_control_profile = VCP_standard;
+        else if (strcasecmp(str, "flat") == 0)
+          config.volume_control_profile = VCP_flat;
+        else
+          die("Invalid volume_control_profile choice \"%s\". It should be \"standard\" (default) or \"flat\"");
+      }
+
       /* Get the interface to listen on, if specified Default is all interfaces */
       /* we keep the interface name and the index */
 
