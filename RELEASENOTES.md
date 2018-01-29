@@ -1,3 +1,8 @@
+Version 3.2d24
+====
+**New Feature**
+* A new `general` option `volume_control_profile`, for advanced use only, with two options: `"standard"` which uses the standard volume control profile -- this has a higher transfer rate at low volumes and a lower transfer rate at high volumes --  or `"flat"` which uses a uniform transfer profile to linearly scale the output mixer's dB according to the AirPlay volume.
+
 Version 3.2d23
 ====
 Continuing the experiments with D-Bus and related DACP support.
