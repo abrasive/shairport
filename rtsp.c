@@ -80,6 +80,7 @@ enum rtsp_read_request_response {
   rtsp_read_request_response_immediate_shutdown_requested,
   rtsp_read_request_response_bad_packet,
   rtsp_read_request_response_channel_closed,
+  rtsp_read_request_response_read_error,  
   rtsp_read_request_response_error
 };
 
@@ -515,8 +516,8 @@ static enum rtsp_read_request_response rtsp_read_request(rtsp_conn_info *conn,
     if (nread < 0) {
       if (errno == EINTR)
         continue;
-      perror("read failure");
-      reply = rtsp_read_request_response_channel_closed;
+      perror("read error");
+      reply = rtsp_read_request_response_read_error;
       goto shutdown;
     }
     inbuf += nread;
@@ -1824,6 +1825,8 @@ static void *rtsp_conversation_thread_func(void *pconn) {
   char *hdr, *auth_nonce = NULL;
 
   enum rtsp_read_request_response reply;
+  
+  int rtsp_read_request_attempt_count = 5;
 
   while (conn->stop == 0) {
     reply = rtsp_read_request(conn, &req);
@@ -1871,17 +1874,37 @@ static void *rtsp_conversation_thread_func(void *pconn) {
       msg_free(req);
       msg_free(resp);
     } else {
-      if ((reply == rtsp_read_request_response_immediate_shutdown_requested) ||
-          (reply == rtsp_read_request_response_channel_closed)) {
+      int tstop = 0;
+      if (reply == rtsp_read_request_response_immediate_shutdown_requested)
+        tstop = 1;
+      else if ((reply == rtsp_read_request_response_channel_closed) || (reply == rtsp_read_request_response_read_error)) {
+        if (conn->player_thread) {
+          rtsp_read_request_attempt_count--;
+          if (rtsp_read_request_attempt_count==0)
+            tstop = 1;
+          else {
+            if (reply == rtsp_read_request_response_channel_closed)
+              debug(2,"RTSP channel unexpectedly closed -- will try again %d time(s).",rtsp_read_request_attempt_count);
+            if (reply == rtsp_read_request_response_read_error)
+              debug(2,"RTSP channel read error -- will try again %d time(s).",rtsp_read_request_attempt_count);
+            usleep(20000);
+          }
+        } else {
+          tstop = 1;
+        }
+      } else {
+        debug(1, "rtsp_read_request error %d, packet ignored.", (int)reply);
+      }
+      if (tstop) {
         debug(3, "Synchronously terminate playing thread of RTSP conversation thread %d.",
               conn->connection_number);
+        if (conn->player_thread)
+          debug(1,"RTSP Channel unexpectedly closed or erred -- closing the session.");
         player_stop(conn);
         debug(3, "Successful termination of playing thread of RTSP conversation thread %d.",
               conn->connection_number);
         debug(3, "Request termination of RTSP conversation thread %d.", conn->connection_number);
         conn->stop = 1;
-      } else {
-        debug(1, "rtsp_read_request error %d, packet ignored.", (int)reply);
       }
     }
   }
