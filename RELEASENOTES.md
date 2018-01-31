@@ -1,3 +1,8 @@
+Version 3.2d25
+====
+**Enhancement**
+* Shairport Sync will now retry a dropped or faulty connection five times before giving up. If it does give up, it will log an debug message. This might be useful on noisy networks.
+
 Version 3.2d24
 ====
 **New Feature**
