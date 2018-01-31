@@ -122,7 +122,7 @@ void set_alsa_out_dev(char *dev) { alsa_out_dev = dev; }
 
 int open_mixer() {
   if (hardware_mixer) {
-    debug(2, "Open Mixer");
+    debug(3, "Open Mixer");
     int ret = 0;
     snd_mixer_selem_id_alloca(&alsa_mix_sid);
     snd_mixer_selem_id_set_index(alsa_mix_sid, alsa_mix_index);
