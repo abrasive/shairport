@@ -1631,8 +1631,8 @@ static void *player_thread_func(void *arg) {
   debug(1, "Set initial volume to %f.", config.airplay_volume);
 
   player_volume(config.airplay_volume, conn);
-
-  uint64_t tens_of_seconds = 0;
+  int64_t frames_to_drop = 0;
+  
   while (!conn->player_thread_please_stop) {
     abuf_t *inframe = buffer_get_frame(conn);
     if (inframe) {
@@ -1656,6 +1656,11 @@ static void *player_thread_func(void *arg) {
           %lld.",conn->play_number_after_flush,inframe->timestamp,difference);
           */
           config.output->play(silence, conn->max_frames_per_packet * conn->output_sample_ratio);
+        } else if (frames_to_drop) {
+          // debug(2,"%lld frames to drop.",frames_to_drop);
+          frames_to_drop -= inframe->length;
+          if (frames_to_drop<0)
+            frames_to_drop = 0;
         } else {
           int enable_dither = 0;
           if ((conn->fix_volume != 0x10000) || (conn->input_bit_depth > output_bit_depth) ||
@@ -1866,7 +1871,8 @@ static void *player_thread_func(void *arg) {
               size_t filler_length =
                   config.resyncthreshold * config.output_rate; // number of samples
               if ((sync_error > 0) && (sync_error > filler_length)) {
-                // debug(1, "Large positive sync error: %lld. Dropping the frame.", sync_error);
+                debug(1, "Large positive sync error: %lld.", sync_error);
+                frames_to_drop = sync_error/conn->output_sample_ratio;
               } else if ((sync_error < 0) && ((-sync_error) > filler_length)) {
                 // debug(1, "Large negative sync error: %lld. Inserting silence.", sync_error);
                 size_t silence_length = -sync_error;
