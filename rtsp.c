@@ -516,7 +516,9 @@ static enum rtsp_read_request_response rtsp_read_request(rtsp_conn_info *conn,
     if (nread < 0) {
       if (errno == EINTR)
         continue;
-      perror("read error");
+      char errorstring[1024];
+      strerror_r(errno, (char *)errorstring, sizeof(errorstring));
+      debug(1,"rtsp_read_request_response_read_error %d: \"%s\".",errno,(char *)errorstring);
       reply = rtsp_read_request_response_read_error;
       goto shutdown;
     }
@@ -1826,7 +1828,7 @@ static void *rtsp_conversation_thread_func(void *pconn) {
 
   enum rtsp_read_request_response reply;
   
-  int rtsp_read_request_attempt_count = 5;
+  int rtsp_read_request_attempt_count = 1; // 1 means exit immediately
 
   while (conn->stop == 0) {
     reply = rtsp_read_request(conn, &req);
