@@ -136,7 +136,9 @@ typedef struct {
   char *piddir;
   char *computed_piddir; // the actual pid directory to create, if any
 
-  int logOutputLevel; // log output level
+  int logOutputLevel;              // log output level
+  int debugger_show_elapsed_time;  // in the debug message, display the time since startup
+  int debugger_show_relative_time; // in the debug message, display the time since the last one
   int statistics_requested, use_negotiated_latencies;
   enum playback_mode_type playback_mode;
   char *cmd_start, *cmd_stop, *cmd_set_volume;
@@ -185,7 +187,7 @@ typedef struct {
 #ifdef HAVE_METADATA_HUB
   char *cover_art_cache_dir;
 #endif
-	int	disable_resend_requests; //set this to stop resend request being made for missing packets
+  int disable_resend_requests; // set this to stop resend request being made for missing packets
 
 } shairport_cfg;
 
@@ -234,8 +236,10 @@ double flat_vol2attn(double vol, long max_db, long min_db);
 double vol2attn(double vol, long max_db, long min_db);
 
 // return a monolithic (always increasing) time in nanoseconds
-
 uint64_t get_absolute_time_in_fp(void);
+
+// time at startup for debugging timing
+uint64_t fp_time_at_startup, fp_time_at_last_debug_message;
 
 // this is for reading an unsigned 32 bit number, such as an RTP timestamp
 

@@ -816,9 +816,9 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
 
 // say we have started playing here
 #ifdef HAVE_METADATA_HUB
-						metadata_hub_modify_prolog();
+            metadata_hub_modify_prolog();
             metadata_store.player_state = PS_PLAYING;
-						metadata_hub_modify_epilog();
+            metadata_hub_modify_epilog();
 #endif
             if (reference_timestamp) { // if we have a reference time
               // debug(1,"First frame seen with timestamp...");
@@ -1106,7 +1106,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
     if (do_wait == 0)
       if ((conn->ab_synced != 0) && (conn->ab_read == conn->ab_write)) { // the buffer is empty!
         if (notified_buffer_empty == 0) {
-          debug(2, "Buffers exhausted.");
+          debug(3, "Buffers exhausted.");
           notified_buffer_empty = 1;
         }
         do_wait = 1;
@@ -1159,10 +1159,10 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
       seq_t next = seq_sum(conn->ab_read, i);
       abuf = conn->audio_buffer + BUFIDX(next);
       if (!abuf->ready) {
-      	if (config.disable_resend_requests==0) {
-					rtp_request_resend(next, 1, conn);
-					// debug(1,"Resend %u.",next);
-					conn->resend_requests++;
+        if (config.disable_resend_requests == 0) {
+          rtp_request_resend(next, 1, conn);
+          // debug(1,"Resend %u.",next);
+          conn->resend_requests++;
         }
       }
     }
@@ -1632,7 +1632,7 @@ static void *player_thread_func(void *arg) {
 
   player_volume(config.airplay_volume, conn);
   int64_t frames_to_drop = 0;
-  
+
   while (!conn->player_thread_please_stop) {
     abuf_t *inframe = buffer_get_frame(conn);
     if (inframe) {
@@ -1659,7 +1659,7 @@ static void *player_thread_func(void *arg) {
         } else if (frames_to_drop) {
           // debug(2,"%lld frames to drop.",frames_to_drop);
           frames_to_drop -= inframe->length;
-          if (frames_to_drop<0)
+          if (frames_to_drop < 0)
             frames_to_drop = 0;
         } else {
           int enable_dither = 0;
@@ -1872,7 +1872,7 @@ static void *player_thread_func(void *arg) {
                   config.resyncthreshold * config.output_rate; // number of samples
               if ((sync_error > 0) && (sync_error > filler_length)) {
                 debug(1, "Large positive sync error: %lld.", sync_error);
-                frames_to_drop = sync_error/conn->output_sample_ratio;
+                frames_to_drop = sync_error / conn->output_sample_ratio;
               } else if ((sync_error < 0) && ((-sync_error) > filler_length)) {
                 // debug(1, "Large negative sync error: %lld. Inserting silence.", sync_error);
                 size_t silence_length = -sync_error;
@@ -2208,8 +2208,6 @@ static void *player_thread_func(void *arg) {
 
   if (config.output->stop)
     config.output->stop();
-  usleep(100000); // allow this time to (?) allow the alsa subsystem to finish cleaning up after
-                  // itself. 50 ms seems too short
 
   debug(2, "Shut down audio, control and timing threads");
   conn->please_stop = 1;
@@ -2217,13 +2215,16 @@ static void *player_thread_func(void *arg) {
   pthread_kill(rtp_control_thread, SIGUSR1);
   pthread_kill(rtp_timing_thread, SIGUSR1);
   pthread_join(rtp_timing_thread, NULL);
-  debug(3, "timing thread joined");
+  debug(1, "timing thread joined");
   pthread_join(rtp_audio_thread, NULL);
-  debug(3, "audio thread joined");
+  debug(1, "audio thread joined");
   pthread_join(rtp_control_thread, NULL);
-  debug(3, "control thread joined");
+  debug(1, "control thread joined");
   clear_reference_timestamp(conn);
   conn->rtp_running = 0;
+
+  usleep(100000); // allow this time to (?) allow the alsa subsystem to finish cleaning up after
+                  // itself. 50 ms seems too short
 
   free_audio_buffers(conn);
   terminate_decoders(conn);
@@ -2423,10 +2424,11 @@ void player_volume_without_notification(double airplay_volume, rtsp_conn_info *c
     if (config.ignore_volume_control == 1)
       scaled_attenuation = max_db;
     else if (config.volume_control_profile == VCP_standard)
-        scaled_attenuation = vol2attn(airplay_volume, max_db, min_db);
+      scaled_attenuation = vol2attn(airplay_volume, max_db, min_db);
     else if (config.volume_control_profile == VCP_flat)
-        scaled_attenuation = flat_vol2attn(airplay_volume, max_db, min_db); 
-    else debug(1,"Unrecognised volume control profile");
+      scaled_attenuation = flat_vol2attn(airplay_volume, max_db, min_db);
+    else
+      debug(1, "Unrecognised volume control profile");
 
     if (hw_range_db) {
       // if there is a hardware mixer
@@ -2509,9 +2511,9 @@ void player_flush(int64_t timestamp, rtsp_conn_info *conn) {
 #endif
 
 #ifdef HAVE_METADATA_HUB
-		metadata_hub_modify_prolog();
-		metadata_store.player_state = PS_PAUSED;
-		metadata_hub_modify_epilog();
+  metadata_hub_modify_prolog();
+  metadata_store.player_state = PS_PAUSED;
+  metadata_hub_modify_epilog();
 #endif
 }
 
@@ -2539,9 +2541,9 @@ int player_play(rtsp_conn_info *conn) {
   pthread_create(pt, &tattr, player_thread_func, (void *)conn);
   pthread_attr_destroy(&tattr);
 #ifdef HAVE_METADATA_HUB
-	metadata_hub_modify_prolog();
-	metadata_store.player_state = PS_PLAYING;
-	metadata_hub_modify_epilog();
+  metadata_hub_modify_prolog();
+  metadata_store.player_state = PS_PLAYING;
+  metadata_hub_modify_epilog();
 #endif
   return 0;
 }
@@ -2559,9 +2561,9 @@ void player_stop(rtsp_conn_info *conn) {
     free(conn->player_thread);
     conn->player_thread = NULL;
 #ifdef HAVE_METADATA_HUB
-		metadata_hub_modify_prolog();
-		metadata_store.player_state = PS_STOPPED;
-		metadata_hub_modify_epilog();
+    metadata_hub_modify_prolog();
+    metadata_store.player_state = PS_STOPPED;
+    metadata_hub_modify_epilog();
 #endif
   } else {
     debug(3, "player thread of RTSP conversation %d is already deleted.", conn->connection_number);

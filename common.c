@@ -25,6 +25,8 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include "common.h"
+#include <assert.h>
 #include <errno.h>
 #include <memory.h>
 #include <poll.h>
@@ -37,8 +39,6 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
-#include "common.h"
-#include <assert.h>
 
 #ifdef COMPILE_FOR_OSX
 #include <CoreServices/CoreServices.h>
@@ -124,11 +124,25 @@ void debug(int level, const char *format, ...) {
     return;
   char s[1024];
   s[0] = 0;
+  uint64_t time_now = get_absolute_time_in_fp();
+  uint64_t time_since_start = time_now - fp_time_at_startup;
+  uint64_t time_since_last_debug_message = time_now - fp_time_at_last_debug_message;
+  fp_time_at_last_debug_message = time_now;
+  uint64_t divisor = (uint64_t)1 << 32;
+  double tss = 1.0 * time_since_start / divisor;
+  double tsl = 1.0 * time_since_last_debug_message / divisor;
   va_list args;
   va_start(args, format);
   vsnprintf(s, sizeof(s), format, args);
   va_end(args);
-  daemon_log(LOG_DEBUG, "%s", s);
+  if ((config.debugger_show_elapsed_time) && (config.debugger_show_relative_time))
+    daemon_log(LOG_DEBUG, "|% 20.9f|% 20.9f|%s", tss, tsl, s);
+  else if (config.debugger_show_relative_time)
+    daemon_log(LOG_DEBUG, "% 20.9f|%s", tsl, s);
+  else if (config.debugger_show_elapsed_time)
+    daemon_log(LOG_DEBUG, "% 20.9f|%s", tss, s);
+  else
+    daemon_log(LOG_DEBUG, "%s", s);
 }
 
 void inform(const char *format, ...) {
@@ -664,15 +678,15 @@ uint32_t uatoi(const char *nptr) {
   return r;
 }
 
-
 double flat_vol2attn(double vol, long max_db, long min_db) {
   double vol_setting = min_db;
 
   if ((vol <= 0.0) && (vol >= -30.0)) {
-    vol_setting = ((max_db - min_db)*(30.0+vol)/30)+min_db;
-    debug(2,"Linear Volume Setting: %f in range %ld to %ld.",vol_setting,min_db,max_db);
+    vol_setting = ((max_db - min_db) * (30.0 + vol) / 30) + min_db;
+    debug(2, "Linear Volume Setting: %f in range %ld to %ld.", vol_setting, min_db, max_db);
   } else if (vol != -144.0) {
-    debug(1, "Linear volume request value %f is out of range: should be from 0.0 to -30.0 or -144.0.",
+    debug(1,
+          "Linear volume request value %f is out of range: should be from 0.0 to -30.0 or -144.0.",
           vol);
   }
   return vol_setting;
@@ -738,7 +752,8 @@ double vol2attn(double vol, long max_db, long min_db) {
     vol_setting = min_db; // for safety, return the lowest setting...
   }
   // debug(1,"returning an attenuation of %f.",vol_setting);
-  debug(2,"Standard profile Volume Setting for Airplay vol %f: %f in range %ld to %ld.",vol,vol_setting,min_db,max_db);
+  debug(2, "Standard profile Volume Setting for Airplay vol %f: %f in range %ld to %ld.", vol,
+        vol_setting, min_db, max_db);
   return vol_setting;
 }
 

@@ -80,7 +80,7 @@ enum rtsp_read_request_response {
   rtsp_read_request_response_immediate_shutdown_requested,
   rtsp_read_request_response_bad_packet,
   rtsp_read_request_response_channel_closed,
-  rtsp_read_request_response_read_error,  
+  rtsp_read_request_response_read_error,
   rtsp_read_request_response_error
 };
 
@@ -518,7 +518,7 @@ static enum rtsp_read_request_response rtsp_read_request(rtsp_conn_info *conn,
         continue;
       char errorstring[1024];
       strerror_r(errno, (char *)errorstring, sizeof(errorstring));
-      debug(1,"rtsp_read_request_response_read_error %d: \"%s\".",errno,(char *)errorstring);
+      debug(1, "rtsp_read_request_response_read_error %d: \"%s\".", errno, (char *)errorstring);
       reply = rtsp_read_request_response_read_error;
       goto shutdown;
     }
@@ -665,7 +665,10 @@ static void msg_write_response(int fd, rtsp_message *resp) {
 }
 
 static void handle_record(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
-  debug(3, "Connection %d: RECORD", conn->connection_number);
+  debug(2, "Connection %d: RECORD", conn->connection_number);
+
+  player_play(conn); // the thread better be 0
+
   resp->respcode = 200;
   // I think this is for telling the client what the absolute minimum latency
   // actually is,
@@ -696,7 +699,7 @@ static void handle_record(rtsp_conn_info *conn, rtsp_message *req, rtsp_message 
       }
     }
   }
-  usleep(500000);
+  // usleep(500000);
 }
 
 static void handle_options(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
@@ -708,7 +711,7 @@ static void handle_options(rtsp_conn_info *conn, rtsp_message *req, rtsp_message
 }
 
 static void handle_teardown(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
-  debug(3, "Connection %d: TEARDOWN", conn->connection_number);
+  debug(2, "Connection %d: TEARDOWN", conn->connection_number);
   // if (!rtsp_playing())
   //  debug(1, "This RTSP connection thread (%d) doesn't think it's playing, but "
   //           "it's sending a response to teardown anyway",conn->connection_number);
@@ -756,7 +759,7 @@ static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
 }
 
 static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
-  debug(3, "Connection %d: SETUP", conn->connection_number);
+  debug(2, "Connection %d: SETUP", conn->connection_number);
   int cport, tport;
   int lsport, lcport, ltport;
 
@@ -816,8 +819,6 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
     if (q++)
       strcat(hdr, q); // should unsplice the timing port entry
   }
-
-  player_play(conn); // the thread better be 0
 
   char *resphdr = alloca(200);
   *resphdr = 0;
@@ -1050,14 +1051,13 @@ void metadata_create(void) {
   char *path = malloc(pl + 1);
   snprintf(path, pl + 1, "%s", config.metadata_pipename);
 
-	mode_t oldumask = umask(000);
+  mode_t oldumask = umask(000);
 
   if (mkfifo(path, 0666) && errno != EEXIST)
     die("Could not create metadata FIFO %s", path);
 
   free(path);
   umask(oldumask);
-
 }
 
 void metadata_open(void) {
@@ -1418,11 +1418,15 @@ static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_m
 }
 
 static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
-  debug(3, "Connection %d: ANNOUNCE", conn->connection_number);
+  debug(2, "Connection %d: ANNOUNCE", conn->connection_number);
   int have_the_player = 0;
 
   // interrupt session if permitted
   if (pthread_mutex_trylock(&play_lock) == 0) {
+    have_the_player = 1;
+  } else if ((playing_conn) &&
+             (playing_conn->connection_number == conn->connection_number)) { // duplicate ANNOUNCE
+    debug(1, "Duplicate ANNOUNCE, by the look of it!");
     have_the_player = 1;
   } else {
     int should_wait = 0;
@@ -1494,12 +1498,12 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
 
     if (pminlatency) {
       conn->minimum_latency = atoi(pminlatency);
-      debug(1, "Minimum latency %d specified", conn->minimum_latency);
+      debug(3, "Minimum latency %d specified", conn->minimum_latency);
     }
 
     if (pmaxlatency) {
       conn->maximum_latency = atoi(pmaxlatency);
-      debug(1, "Maximum latency %d specified", conn->maximum_latency);
+      debug(3, "Maximum latency %d specified", conn->maximum_latency);
     }
 
     if ((paesiv == NULL) && (prsaaeskey == NULL)) {
@@ -1827,7 +1831,7 @@ static void *rtsp_conversation_thread_func(void *pconn) {
   char *hdr, *auth_nonce = NULL;
 
   enum rtsp_read_request_response reply;
-  
+
   int rtsp_read_request_attempt_count = 1; // 1 means exit immediately
 
   while (conn->stop == 0) {
@@ -1879,16 +1883,19 @@ static void *rtsp_conversation_thread_func(void *pconn) {
       int tstop = 0;
       if (reply == rtsp_read_request_response_immediate_shutdown_requested)
         tstop = 1;
-      else if ((reply == rtsp_read_request_response_channel_closed) || (reply == rtsp_read_request_response_read_error)) {
+      else if ((reply == rtsp_read_request_response_channel_closed) ||
+               (reply == rtsp_read_request_response_read_error)) {
         if (conn->player_thread) {
           rtsp_read_request_attempt_count--;
-          if (rtsp_read_request_attempt_count==0)
+          if (rtsp_read_request_attempt_count == 0)
             tstop = 1;
           else {
             if (reply == rtsp_read_request_response_channel_closed)
-              debug(2,"RTSP channel unexpectedly closed -- will try again %d time(s).",rtsp_read_request_attempt_count);
+              debug(2, "RTSP channel unexpectedly closed -- will try again %d time(s).",
+                    rtsp_read_request_attempt_count);
             if (reply == rtsp_read_request_response_read_error)
-              debug(2,"RTSP channel read error -- will try again %d time(s).",rtsp_read_request_attempt_count);
+              debug(2, "RTSP channel read error -- will try again %d time(s).",
+                    rtsp_read_request_attempt_count);
             usleep(20000);
           }
         } else {
@@ -1901,7 +1908,7 @@ static void *rtsp_conversation_thread_func(void *pconn) {
         debug(3, "Synchronously terminate playing thread of RTSP conversation thread %d.",
               conn->connection_number);
         if (conn->player_thread)
-          debug(1,"RTSP Channel unexpectedly closed or erred -- closing the session.");
+          debug(1, "RTSP Channel unexpectedly closed or erred -- closing the session.");
         player_stop(conn);
         debug(3, "Successful termination of playing thread of RTSP conversation thread %d.",
               conn->connection_number);

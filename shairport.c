@@ -508,7 +508,8 @@ int parse_options(int argc, char **argv) {
 
       /* Get the statistics setting. */
       if (config_lookup_string(config.cfg, "general.statistics", &str)) {
-      	warn("The \"general\" \"statistics\" setting is deprecated. Please use the \"diagnostics\" \"statistics\" setting instead.");
+        warn("The \"general\" \"statistics\" setting is deprecated. Please use the \"diagnostics\" "
+             "\"statistics\" setting instead.");
         if (strcasecmp(str, "no") == 0)
           config.statistics_requested = 0;
         else if (strcasecmp(str, "yes") == 0)
@@ -541,7 +542,8 @@ int parse_options(int argc, char **argv) {
 
       /* Get the verbosity setting. */
       if (config_lookup_int(config.cfg, "general.log_verbosity", &value)) {
-      	warn("The \"general\" \"log_verbosity\" setting is deprecated. Please use the \"diagnostics\" \"log_verbosity\" setting instead.");
+        warn("The \"general\" \"log_verbosity\" setting is deprecated. Please use the "
+             "\"diagnostics\" \"log_verbosity\" setting instead.");
         if ((value >= 0) && (value <= 3))
           debuglev = value;
         else
@@ -555,9 +557,32 @@ int parse_options(int argc, char **argv) {
         if ((value >= 0) && (value <= 3))
           debuglev = value;
         else
-          die("Invalid diagnostics log_verbosity setting option choice \"%d\". It should be between 0 and 3, "
+          die("Invalid diagnostics log_verbosity setting option choice \"%d\". It should be "
+              "between 0 and 3, "
               "inclusive.",
               value);
+      }
+
+      /* Get the show elapsed time in debug messages setting. */
+      if (config_lookup_string(config.cfg, "diagnostics.log_show_time_since_startup", &str)) {
+        if (strcasecmp(str, "no") == 0)
+          config.debugger_show_elapsed_time = 0;
+        else if (strcasecmp(str, "yes") == 0)
+          config.debugger_show_elapsed_time = 1;
+        else
+          die("Invalid diagnostics log_show_time_since_startup option choice \"%s\". It should be "
+              "\"yes\" or \"no\"");
+      }
+
+      /* Get the show relative time in debug messages setting. */
+      if (config_lookup_string(config.cfg, "diagnostics.log_show_time_since_last_message", &str)) {
+        if (strcasecmp(str, "no") == 0)
+          config.debugger_show_relative_time = 0;
+        else if (strcasecmp(str, "yes") == 0)
+          config.debugger_show_relative_time = 1;
+        else
+          die("Invalid diagnostics log_show_time_since_last_message option choice \"%s\". It "
+              "should be \"yes\" or \"no\"");
       }
 
       /* Get the statistics setting. */
@@ -567,9 +592,9 @@ int parse_options(int argc, char **argv) {
         else if (strcasecmp(str, "yes") == 0)
           config.statistics_requested = 1;
         else
-          die("Invalid diagnostics statistics option choice \"%s\". It should be \"yes\" or \"no\"");
+          die("Invalid diagnostics statistics option choice \"%s\". It should be \"yes\" or "
+              "\"no\"");
       }
-
 
       /* Get the disable_resend_requests setting. */
       if (config_lookup_string(config.cfg, "diagnostics.disable_resend_requests", &str)) {
@@ -629,7 +654,8 @@ int parse_options(int argc, char **argv) {
         else if (strcasecmp(str, "flat") == 0)
           config.volume_control_profile = VCP_flat;
         else
-          die("Invalid volume_control_profile choice \"%s\". It should be \"standard\" (default) or \"flat\"");
+          die("Invalid volume_control_profile choice \"%s\". It should be \"standard\" (default) "
+              "or \"flat\"");
       }
 
       /* Get the interface to listen on, if specified Default is all interfaces */
@@ -1065,7 +1091,9 @@ void exit_function() {
 }
 
 int main(int argc, char **argv) {
-
+  fp_time_at_startup = get_absolute_time_in_fp();
+  fp_time_at_last_debug_message = fp_time_at_startup;
+  //  debug(1,"startup");
   daemon_set_verbosity(LOG_DEBUG);
   memset(&config, 0, sizeof(config)); // also clears all strings, BTW
   atexit(exit_function);
@@ -1443,7 +1471,8 @@ int main(int argc, char **argv) {
 #endif
   debug(1, "loudness is %d.", config.loudness);
   debug(1, "loudness reference level is %f", config.loudness_reference_volume_db);
-  debug(1, "disable resend requests is %d -- non-zero means \"yes\"", config.disable_resend_requests);
+  debug(1, "disable resend requests is %d -- non-zero means \"yes\"",
+        config.disable_resend_requests);
 
   uint8_t ap_md5[16];
 

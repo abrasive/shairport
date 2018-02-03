@@ -165,7 +165,7 @@ void *rtp_audio_receiver(void *arg) {
     warn("Audio receiver -- Unknown RTP packet of type 0x%02X length %d.", type, nread);
   }
 
-  debug(3, "Audio receiver -- Server RTP thread interrupted. terminating.");
+  debug(2, "Audio receiver -- Server RTP thread interrupted. terminating.");
   close(conn->audio_socket);
 
   return NULL;
@@ -299,7 +299,7 @@ void *rtp_control_receiver(void *arg) {
             nread);
   }
 
-  debug(3, "Control RTP thread interrupted. terminating.");
+  debug(2, "Control RTP thread interrupted. terminating.");
   close(conn->control_socket);
 
   return NULL;
@@ -365,12 +365,24 @@ void *rtp_timing_sender(void *arg) {
       debug(1, "Error %d using send-to to the timing socket: \"%s\".", errno, em);
     }
     request_number++;
+
+    // this is to deal with the possibility of missing a timing_sender_stop signal.
+    // if the signal came in just before the usleep, then it wouldn't cause the sleep to end.
+    // so, we will wait a maximum time of the wait_interval
+
+    int wait_time;
+    int wait_interval = 20000; // 20 milliseconds
+
     if (request_number <= 4)
-      usleep(500000);
+      wait_time = 500000;
     else
-      sleep(3);
+      wait_time = 3000000;
+    while ((wait_time > 0) && (conn->timing_sender_stop == 0)) {
+      usleep(wait_interval);
+      wait_time -= wait_interval;
+    }
   }
-  debug(3, "rtp_timing_sender thread interrupted. terminating.");
+  debug(2, "rtp_timing_sender thread interrupted. terminating.");
   return NULL;
 }
 
@@ -591,14 +603,14 @@ void *rtp_timing_receiver(void *arg) {
     }
   }
 
-  debug(3, "Timing thread interrupted. terminating.");
+  debug(2, "Timing thread interrupted. terminating.");
   conn->timing_sender_stop = 1;
   void *retval;
   pthread_kill(timer_requester, SIGUSR1);
   debug(3, "Wait for timer requester to exit.");
   pthread_join(timer_requester, &retval);
   debug(3, "Closed and terminated timer requester thread.");
-  debug(3, "Timing RTP thread terminated.");
+  debug(2, "Timing RTP thread terminated.");
   close(conn->timing_socket);
 
   return NULL;
