@@ -2223,7 +2223,7 @@ static void *player_thread_func(void *arg) {
   clear_reference_timestamp(conn);
   conn->rtp_running = 0;
 
-  usleep(100000); // allow this time to (?) allow the alsa subsystem to finish cleaning up after
+  //usleep(100000); // allow this time to (?) allow the alsa subsystem to finish cleaning up after
                   // itself. 50 ms seems too short
 
   free_audio_buffers(conn);
