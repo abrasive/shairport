@@ -4,6 +4,7 @@ Version 3.2d26
 * Ensure the TEARDOWN of a play session is not delayed by a long sleep timer.
 * Ignore duplicate ANNOUNCE packets for the same play session.
 * Move the creation and calling of a player thread from the SETUP handler to the RECORD handler.
+
 **Enhancements**
 * Add optional timing annotations to debug messages -- see the new settings in the diagnostic stanza of the configuration file.
 
