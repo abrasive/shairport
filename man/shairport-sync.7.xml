@@ -275,7 +275,7 @@
     <option>
     <p><opt>run_this_when_volume_is_set=</opt><arg>"/full/path/to/application/and/args"</arg><opt>;</opt></p>
     <optdesc><p>Here you can specify a program and its arguments that will be run when the volume is set or changed. Be careful to include the full path to the application.
-    The application must be marked as executable and, if it is a script, its first line must begin with the standard Shebang <file>#!/bin/...</file> as appropriate.</p>
+    The application must be marked as executable and, if it is a script, its first line must begin with the standard shebang <file>#!/bin/...</file> as appropriate.</p>
     <p>The desired AirPlay volume is appended to the end of the command line - leave a space if you want it treated as an extra argument.
     AirPlay volume goes from 0.0 to -30.0 and -144.0 means "mute".</p></optdesc>
     </option>
@@ -446,12 +446,12 @@
     <option>
     <p><opt>run_this_before_play_begins=</opt><arg>"/path/to/application and args"</arg><opt>;</opt></p>
     <optdesc><p>Here you can specify a program and its arguments that will be run just before a play session begins. Be careful to include the full path to the application.
-    The application must be marked as executable and, if it is a script, its first line must begin with the standard Shebang <file>#!/bin/...</file> as appropriate.</p></optdesc>
+    The application must be marked as executable and, if it is a script, its first line must begin with the standard shebang <file>#!/bin/...</file> as appropriate.</p></optdesc>
     </option>
     <option>
     <p><opt>run_this_after_play_ends=</opt><arg>"/path/to/application and args"</arg><opt>;</opt></p>
     <optdesc><p>Here you can specify a program and its arguments that will be run just after a play session ends. Be careful to include the full path to the application.
-    The application must be marked as executable and, if it is a script, its first line must begin with the standard Shebang <file>#!/bin/...</file> as appropriate.</p></optdesc>
+    The application must be marked as executable and, if it is a script, its first line must begin with the standard shebang <file>#!/bin/...</file> as appropriate.</p></optdesc>
     </option>
     <option>
     <p><opt>wait_for_completion=</opt><arg>"choice"</arg><opt>;</opt></p>
@@ -511,7 +511,7 @@
 		<optdesc><p>
 		Execute <arg>program</arg> when playback is about to begin. Specify the 
 		full path to the program, e.g. <file>/usr/bin/logger</file>.
-		Executable scripts can be used, but they must have the appropriate Shebang
+		Executable scripts can be used, but they must have the appropriate shebang
     (<file>#!/bin/sh</file> in the headline.</p>
 		
 		<p>If you want shairport-sync to wait until the command has
@@ -554,7 +554,7 @@
 		<optdesc><p>
 		Execute <arg>program</arg> when playback has ended. Specify the 
 		full path to the program, e.g. <file>/usr/bin/logger</file>.
-		Executable scripts can be used, but they must have the appropriate Shebang
+		Executable scripts can be used, but they must have the appropriate shebang
     (<file>#!/bin/sh</file> in the headline.</p>
 		<p>If you want shairport-sync to wait until the command has
 		completed before continuing, select the <opt>-w</opt> option as well.

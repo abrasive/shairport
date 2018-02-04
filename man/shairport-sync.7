@@ -299,7 +299,7 @@ The following substitutions are allowed: \fB%h\f1 for the computer's hostname, \
 The default is "%H", which is replaced by the hostname with the first letter capitalised.
 .TP
 \fB-B \f1\fIprogram\f1\fB | --on-start=\f1\fIprogram\f1
-Execute \fIprogram\f1 when playback is about to begin. Specify the full path to the program, e.g. \fI/usr/bin/logger\f1. Executable scripts can be used, but they must have the appropriate Shebang (\fI#!/bin/sh\f1) in the headline.
+Execute \fIprogram\f1 when playback is about to begin. Specify the full path to the program, e.g. \fI/usr/bin/logger\f1. Executable scripts can be used, but they must have the appropriate shebang (\fI#!/bin/sh\f1) in the headline.
 
 If you want shairport-sync to wait until the command has completed before starting to play, select the \fB-w\f1 option as well. 
 .TP
@@ -315,7 +315,7 @@ Please note that this feature is deprecated and will be removed in a future vers
 Instruct shairport-sync to demonise itself. It will write its Process ID (PID) to a file, usually at \fI/var/run/shairport-sync/shairport-sync.pid\f1, which is used by the \fB-k\f1, \fB-D\f1 and \fB-R\f1 options to locate the daemon at a later time. See also the \fB-j\f1 option. 
 .TP
 \fB-E \f1\fIprogram\f1\fB | --on-stop=\f1\fIprogram\f1
-Execute \fIprogram\f1 when playback has ended. Specify the full path to the program, e.g. \fI/usr/bin/logger\f1. Executable scripts can be used, but they must have the appropriate Shebang (\fI#!/bin/sh\f1) in the headline.
+Execute \fIprogram\f1 when playback has ended. Specify the full path to the program, e.g. \fI/usr/bin/logger\f1. Executable scripts can be used, but they must have the appropriate shebang (\fI#!/bin/sh\f1) in the headline.
 
 If you want shairport-sync to wait until the command has completed before continuing, select the \fB-w\f1 option as well. 
 .TP
