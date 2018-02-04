@@ -151,7 +151,7 @@ The purpose of this silent lead-in is to give the backend sufficient time to pre
 If the value chosen is too short for synchronised backends such as the ALSA, sndio or PA backends, then audio will not be synchronised correctly at the start of play. The default is to have a silent lead-in of approximately the same time as the latency set by the client.
 .TP
 \fBrun_this_when_volume_is_set=\f1\fI"/full/path/to/application/and/args"\f1\fB;\f1
-Here you can specify a program and its arguments that will be run when the volume is set or changed. Be careful to include the full path to the application. The application must be marked as executable and, if it is a script, its first line must begin with the standard \fI#!/bin/...\f1 as appropriate.
+Here you can specify a program and its arguments that will be run when the volume is set or changed. Be careful to include the full path to the application. The application must be marked as executable and, if it is a script, its first line must begin with the appropriate shebang \fI#!/bin/...\f1.
 
 The desired AirPlay volume is appended to the end of the command line - leave a space if you want it treated as an extra argument. AirPlay volume goes from 0.0 to -30.0 and -144.0 means "mute".
 .TP
@@ -267,10 +267,10 @@ The maximum packet size for any UDP metadata. This must be between 500 or 65000.
 shairport-sync can run programs just before it starts to play an audio stream and just after it finishes. You specify them using the sessioncontrol group settings run_this_before_play_begins and run_this_after_play_ends.
 .TP
 \fBrun_this_before_play_begins=\f1\fI"/path/to/application and args"\f1\fB;\f1
-Here you can specify a program and its arguments that will be run just before a play session begins. Be careful to include the full path to the application. The application must be marked as executable and, if it is a script, its first line must begin with the standard \fI#!/bin/...\f1 as appropriate.
+Here you can specify a program and its arguments that will be run just before a play session begins. Be careful to include the full path to the application. The application must be marked as executable and, if it is a script, its first line must begin with the appropriate shebang \fI#!/bin/...\f1.
 .TP
 \fBrun_this_after_play_ends=\f1\fI"/path/to/application and args"\f1\fB;\f1
-Here you can specify a program and its arguments that will be run just after a play session ends. Be careful to include the full path to the application. The application must be marked as executable and, if it is a script, its first line must begin with the standard \fI#!/bin/...\f1 as appropriate.
+Here you can specify a program and its arguments that will be run just after a play session ends. Be careful to include the full path to the application. The application must be marked as executable and, if it is a script, its first line must begin with the appropriate shebang \fI#!/bin/...\f1.
 .TP
 \fBwait_for_completion=\f1\fI"choice"\f1\fB;\f1
 Set \fIchoice\f1 to "yes" to make shairport-sync wait until the programs specified in the \fBrun_this_before_play_begins\f1, \fBrun_this_after_play_ends\f1 and \fBrun_this_when_volume_is_set\f1 have completed execution before continuing. The default is "no".
@@ -299,7 +299,7 @@ The following substitutions are allowed: \fB%h\f1 for the computer's hostname, \
 The default is "%H", which is replaced by the hostname with the first letter capitalised.
 .TP
 \fB-B \f1\fIprogram\f1\fB | --on-start=\f1\fIprogram\f1
-Execute \fIprogram\f1 when playback is about to begin. Specify the full path to the program, e.g. \fI/usr/bin/logger\f1. Executable scripts can be used, but they must have \fI#!/bin/sh\f1 (or whatever is appropriate) in the headline.
+Execute \fIprogram\f1 when playback is about to begin. Specify the full path to the program, e.g. \fI/usr/bin/logger\f1. Executable scripts can be used, but they must have the appropriate Shebang (\fI#!/bin/sh\f1) in the headline.
 
 If you want shairport-sync to wait until the command has completed before starting to play, select the \fB-w\f1 option as well. 
 .TP
@@ -315,7 +315,7 @@ Please note that this feature is deprecated and will be removed in a future vers
 Instruct shairport-sync to demonise itself. It will write its Process ID (PID) to a file, usually at \fI/var/run/shairport-sync/shairport-sync.pid\f1, which is used by the \fB-k\f1, \fB-D\f1 and \fB-R\f1 options to locate the daemon at a later time. See also the \fB-j\f1 option. 
 .TP
 \fB-E \f1\fIprogram\f1\fB | --on-stop=\f1\fIprogram\f1
-Execute \fIprogram\f1 when playback has ended. Specify the full path to the program, e.g. \fI/usr/bin/logger\f1. Executable scripts can be used, but they must have \fI#!/bin/sh\f1 (or whatever is appropriate) in the headline.
+Execute \fIprogram\f1 when playback has ended. Specify the full path to the program, e.g. \fI/usr/bin/logger\f1. Executable scripts can be used, but they must have the appropriate Shebang (\fI#!/bin/sh\f1) in the headline.
 
 If you want shairport-sync to wait until the command has completed before continuing, select the \fB-w\f1 option as well. 
 .TP
