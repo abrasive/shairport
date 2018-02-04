@@ -256,7 +256,7 @@
     
     <p><b>run_this_when_volume_is_set=</b><em>&quot;/full/path/to/application/and/args&quot;</em><b>;</b></p>
     <p>Here you can specify a program and its arguments that will be run when the volume is set or changed. Be careful to include the full path to the application.
-    The application must be marked as executable and, if it is a script, its first line must begin with the standard <em>#!/bin/...</em> as appropriate.</p>
+    The application must be marked as executable and, if it is a script, its first line must begin with the appropriate shebang <em>#!/bin/...</em>.</p>
     <p>The desired AirPlay volume is appended to the end of the command line - leave a space if you want it treated as an extra argument.
     AirPlay volume goes from 0.0 to -30.0 and -144.0 means &quot;mute&quot;.</p>
     
@@ -427,12 +427,12 @@
     
     <p><b>run_this_before_play_begins=</b><em>&quot;/path/to/application and args&quot;</em><b>;</b></p>
     <p>Here you can specify a program and its arguments that will be run just before a play session begins. Be careful to include the full path to the application.
-    The application must be marked as executable and, if it is a script, its first line must begin with the standard <em>#!/bin/...</em> as appropriate.</p>
+    The application must be marked as executable and, if it is a script, its first line must begin with the appropriate shebang <em>#!/bin/...</em>.</p>
     
     
     <p><b>run_this_after_play_ends=</b><em>&quot;/path/to/application and args&quot;</em><b>;</b></p>
     <p>Here you can specify a program and its arguments that will be run just after a play session ends. Be careful to include the full path to the application.
-    The application must be marked as executable and, if it is a script, its first line must begin with the standard <em>#!/bin/...</em> as appropriate.</p>
+    The application must be marked as executable and, if it is a script, its first line must begin with the appropriate shebang <em>#!/bin/...</em>.</p>
     
     
     <p><b>wait_for_completion=</b><em>&quot;choice&quot;</em><b>;</b></p>
@@ -496,8 +496,8 @@
 		<p>
 		Execute <em>program</em> when playback is about to begin. Specify the 
 		full path to the program, e.g. <em>/usr/bin/logger</em>.
-		Executable scripts can be used, but they must have <em>#!/bin/sh</em> (or
-		whatever is appropriate) in the headline.</p>
+    Executable scripts can be used, but they must have the appropriate shebang
+    <em>#!/bin/sh</em> in the headline.</p>
 		
 		<p>If you want shairport-sync to wait until the command has
 		completed before starting to play, select the <b>-w</b> option as well.
@@ -539,8 +539,8 @@
 		<p>
 		Execute <em>program</em> when playback has ended. Specify the 
 		full path to the program, e.g. <em>/usr/bin/logger</em>.
-		Executable scripts can be used, but they must have <em>#!/bin/sh</em> (or
-		whatever is appropriate) in the headline.</p>		
+    Executable scripts can be used, but they must have the appropriate shebang
+    <em>#!/bin/sh</em> in the headline.</p>	
 		<p>If you want shairport-sync to wait until the command has
 		completed before continuing, select the <b>-w</b> option as well.
 		</p>
