@@ -555,7 +555,7 @@
 		Execute <arg>program</arg> when playback has ended. Specify the 
 		full path to the program, e.g. <file>/usr/bin/logger</file>.
 		Executable scripts can be used, but they must have the appropriate Shebang
-    (<file>#!/bin/sh</file> in the headline.</p></p>
+    (<file>#!/bin/sh</file> in the headline.</p>
 		<p>If you want shairport-sync to wait until the command has
 		completed before continuing, select the <opt>-w</opt> option as well.
 		</p></optdesc>
