@@ -9,7 +9,7 @@ Version 3.2d26
 * Ensure the TEARDOWN of a play session is not delayed by a long sleep timer.
 * Allow more than one ANNOUNCE packet for the same play session. Honour the settings in the most recent one.
 * Move the creation and calling of a player thread from the SETUP handler to the RECORD handler.
-* When closing an ALSA sound device, don't wait for any audio to be output with `snd_pcm_drain`; instead, just drop all remaining frame using `snd_pcm_drop`.
+* When closing an ALSA sound device, don't wait for any remaining audio to be output with `snd_pcm_drain`; instead, just drop all remaining frame using `snd_pcm_drop`.
 * TEARDOWN should complete in less than 50 ms.
 
 Version 3.2d25
