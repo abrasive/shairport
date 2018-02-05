@@ -5,7 +5,7 @@ Version 3.2d26
 * Ignore duplicate ANNOUNCE packets for the same play session.
 * Move the creation and calling of a player thread from the SETUP handler to the RECORD handler.
 * When closing an ALSA sound device, don't wait for any audio to be output with `snd_pcm_drain`; instead, just drop all remaining frame using `snd_pcm_drop`.
-* TEARDOWN complete in less than 50 ms.
+* TEARDOWN should complete in less than 50 ms.
 
 **Enhancements**
 * Add optional timing annotations to debug messages -- see the new settings in the diagnostic stanza of the configuration file.
