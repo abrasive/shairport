@@ -246,8 +246,9 @@ void usage(char *progname) {
   printf("    -E, --on-stop=PROGRAM   run PROGRAM when playback has ended.\n");
   printf("                            For -B and -E options, specify the full path to the program, "
          "e.g. /usr/bin/logger.\n");
-  printf("                            Executable scripts work, but must have the appropriate shebang "
-         "(#!/bin/sh) in the headline.\n");
+  printf(
+      "                            Executable scripts work, but must have the appropriate shebang "
+      "(#!/bin/sh) in the headline.\n");
   printf(
       "    -w, --wait-cmd          wait until the -B or -E programs finish before continuing.\n");
   printf("    -o, --output=BACKEND    select audio output method.\n");

@@ -888,43 +888,15 @@ static void flush(void) {
   int derr;
   do_mute(1);
   if (alsa_handle) {
-    // debug(1,"Dropping frames for flush...");
-    /*
     if ((derr = snd_pcm_drop(alsa_handle)))
-      debug(1, "Error dropping frames: \"%s\".", snd_strerror(derr));
-    // debug(1,"Dropped frames ok. State is %d.",snd_pcm_state(alsa_handle));
-    if ((derr = snd_pcm_prepare(alsa_handle)))
-      debug(1, "Error preparing after flush: \"%s\".", snd_strerror(derr));
-    // debug(1,"Frames successfully dropped.");
-    */
-
-    /*
-    if (snd_pcm_state(alsa_handle)==SND_PCM_STATE_PREPARED)
-      debug(1,"Flush returns to SND_PCM_STATE_PREPARED state.");
-    if (snd_pcm_state(alsa_handle)==SND_PCM_STATE_RUNNING)
-      debug(1,"Flush returns to SND_PCM_STATE_RUNNING state.");
-    */
-    /*
-    if (!((snd_pcm_state(alsa_handle) == SND_PCM_STATE_PREPARED) ||
-          (snd_pcm_state(alsa_handle) == SND_PCM_STATE_RUNNING)))
-      debug(1, "Flush returning unexpected state -- %d.", snd_pcm_state(alsa_handle));
-    */
-
-    // this is derived from
-    // http://www.alsa-project.org/alsa-doc/alsa-lib/_2test_2latency_8c-example.html#a45
-
-    if ((derr = snd_pcm_nonblock(alsa_handle, 0)))
-      debug(1, "Error %d (\"%s\") unblocking output device.", derr, snd_strerror(derr));
-    if ((derr = snd_pcm_drain(alsa_handle)))
-      debug(1, "Error %d (\"%s\") draining output device.", derr, snd_strerror(derr));
-    if ((derr = snd_pcm_nonblock(alsa_handle, 1)))
-      debug(1, "Error %d (\"%s\") reblocking output device.", derr, snd_strerror(derr));
+      debug(1, "Error %d (\"%s\") draining the output device.", derr, snd_strerror(derr));
 
     if ((derr = snd_pcm_hw_free(alsa_handle)))
-      debug(1, "Error %d (\"%s\") freeing output device hardware.", derr, snd_strerror(derr));
+      debug(1, "Error %d (\"%s\") freeing the output device hardware.", derr, snd_strerror(derr));
 
     // flush also closes the device
-    snd_pcm_close(alsa_handle);
+    if ((derr = snd_pcm_close(alsa_handle)))
+      debug(1, "Error %d (\"%s\") closing the output device.", derr, snd_strerror(derr));
     alsa_handle = NULL;
   }
   pthread_mutex_unlock(&alsa_mutex);
