@@ -679,11 +679,11 @@ uint32_t uatoi(const char *nptr) {
 }
 
 double flat_vol2attn(double vol, long max_db, long min_db) {
-  double vol_setting = min_db;
+  double vol_setting = min_db;  // if all else fails, set this, for safety
 
   if ((vol <= 0.0) && (vol >= -30.0)) {
     vol_setting = ((max_db - min_db) * (30.0 + vol) / 30) + min_db;
-    debug(2, "Linear Volume Setting: %f in range %ld to %ld.", vol_setting, min_db, max_db);
+    // debug(2, "Linear profile Volume Setting: %f in range %ld to %ld.", vol_setting, min_db, max_db);
   } else if (vol != -144.0) {
     debug(1,
           "Linear volume request value %f is out of range: should be from 0.0 to -30.0 or -144.0.",
@@ -752,8 +752,8 @@ double vol2attn(double vol, long max_db, long min_db) {
     vol_setting = min_db; // for safety, return the lowest setting...
   }
   // debug(1,"returning an attenuation of %f.",vol_setting);
-  debug(2, "Standard profile Volume Setting for Airplay vol %f: %f in range %ld to %ld.", vol,
-        vol_setting, min_db, max_db);
+  // debug(2, "Standard profile Volume Setting for Airplay vol %f: %f in range %ld to %ld.", vol,
+  //      vol_setting, min_db, max_db);
   return vol_setting;
 }
 
