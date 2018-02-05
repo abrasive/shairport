@@ -1628,7 +1628,7 @@ static void *player_thread_func(void *arg) {
   }
 
   // set the default volume to whaterver it was before, as stored in the config airplay_volume
-  debug(1, "Set initial volume to %f.", config.airplay_volume);
+  debug(3, "Set initial volume to %f.", config.airplay_volume);
 
   player_volume(config.airplay_volume, conn);
   int64_t frames_to_drop = 0;

@@ -63,7 +63,7 @@ void rtp_terminate(rtsp_conn_info *conn) {
 }
 
 void *rtp_audio_receiver(void *arg) {
-  debug(2, "Audio receiver -- Server RTP thread starting.");
+  debug(3, "Audio receiver -- Server RTP thread starting.");
 
   // we inherit the signal mask (SIGUSR1)
   rtsp_conn_info *conn = (rtsp_conn_info *)arg;
@@ -165,7 +165,7 @@ void *rtp_audio_receiver(void *arg) {
     warn("Audio receiver -- Unknown RTP packet of type 0x%02X length %d.", type, nread);
   }
 
-  debug(2, "Audio receiver -- Server RTP thread interrupted. terminating.");
+  debug(3, "Audio receiver -- Server RTP thread interrupted. terminating.");
   close(conn->audio_socket);
 
   return NULL;
@@ -174,7 +174,7 @@ void *rtp_audio_receiver(void *arg) {
 void *rtp_control_receiver(void *arg) {
   // we inherit the signal mask (SIGUSR1)
 
-  debug(2, "Control receiver -- Server RTP thread starting.");
+  debug(3, "Control receiver -- Server RTP thread starting.");
 
   rtsp_conn_info *conn = (rtsp_conn_info *)arg;
 
@@ -299,14 +299,14 @@ void *rtp_control_receiver(void *arg) {
             nread);
   }
 
-  debug(2, "Control RTP thread interrupted. terminating.");
+  debug(3, "Control RTP thread interrupted. terminating.");
   close(conn->control_socket);
 
   return NULL;
 }
 
 void *rtp_timing_sender(void *arg) {
-  debug(2, "Timing sender thread starting.");
+  debug(3, "Timing sender thread starting.");
   rtsp_conn_info *conn = (rtsp_conn_info *)arg;
   struct timing_request {
     char leader;
@@ -382,12 +382,12 @@ void *rtp_timing_sender(void *arg) {
       wait_time -= wait_interval;
     }
   }
-  debug(2, "rtp_timing_sender thread interrupted. terminating.");
+  debug(3, "rtp_timing_sender thread interrupted. terminating.");
   return NULL;
 }
 
 void *rtp_timing_receiver(void *arg) {
-  debug(2, "Timing receiver -- Server RTP thread starting.");
+  debug(3, "Timing receiver -- Server RTP thread starting.");
   // we inherit the signal mask (SIGUSR1)
   rtsp_conn_info *conn = (rtsp_conn_info *)arg;
 
@@ -603,14 +603,14 @@ void *rtp_timing_receiver(void *arg) {
     }
   }
 
-  debug(2, "Timing thread interrupted. terminating.");
+  debug(3, "Timing thread interrupted. terminating.");
   conn->timing_sender_stop = 1;
   void *retval;
   pthread_kill(timer_requester, SIGUSR1);
   debug(3, "Wait for timer requester to exit.");
   pthread_join(timer_requester, &retval);
   debug(3, "Closed and terminated timer requester thread.");
-  debug(2, "Timing RTP thread terminated.");
+  debug(3, "Timing RTP thread terminated.");
   close(conn->timing_socket);
 
   return NULL;
