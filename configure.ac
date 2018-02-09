@@ -28,7 +28,13 @@ if test "x${with_os}" = xlinux -o "x${with_os}" = xfreebsd ; then
  AC_CHECK_LIB([rt],[clock_gettime], , AC_MSG_ERROR(librt needed))
 fi
 
-AM_CONDITIONAL([BUILD_FOR_FREEBSD], [test "x${with_os}" = xfreebsd ])
+if test "x${with_os}" = xopenbsd ; then
+ AC_CHECK_LIB([c],[clock_gettime], , AC_MSG_ERROR(libc needed))
+fi
+
+ AM_CONDITIONAL([BUILD_FOR_FREEBSD], [test "x${with_os}" = xfreebsd ])
+
+AM_CONDITIONAL([BUILD_FOR_OPENBSD], [test "x${with_os}" = xopenbsd ])
 
 ##### Some build systems are not fully using pkg-config, so we can use the flag ${with_pkg_config} on a case-by-case basis
 ##### to control how to deal with them

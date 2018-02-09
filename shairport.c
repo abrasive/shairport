@@ -2,7 +2,7 @@
  * Shairport, an Apple Airplay receiver
  * Copyright (c) James Laird 2013
  * All rights reserved.
- * Modifications (c) Mike Brady 2014--2017
+ * Modifications (c) Mike Brady 2014--2018
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -31,6 +31,7 @@
 #include <libconfig.h>
 #include <libgen.h>
 #include <memory.h>
+#include <sys/socket.h>
 #include <net/if.h>
 #include <popt.h>
 #include <stdio.h>

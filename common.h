@@ -12,20 +12,6 @@
 #include "definitions.h"
 #include "mdns.h"
 
-#if defined(__APPLE__) && defined(__MACH__)
-/* Apple OSX and iOS (Darwin). ------------------------------ */
-#include <TargetConditionals.h>
-#if TARGET_OS_MAC == 1
-/* OSX */
-#define COMPILE_FOR_OSX 1
-#endif
-#endif
-
-#if defined(__linux__) || defined(__FreeBSD__) || defined(__CYGWIN__)
-/* Linux and FreeBSD */
-#define COMPILE_FOR_LINUX_AND_FREEBSD_AND_CYGWIN 1
-#endif
-
 // struct sockaddr_in6 is bigger than struct sockaddr. derp
 #ifdef AF_INET6
 #define SOCKADDR struct sockaddr_storage

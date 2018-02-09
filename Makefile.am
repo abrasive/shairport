@@ -10,7 +10,11 @@ AM_CFLAGS = -Wno-multichar -DSYSCONFDIR=\"$(sysconfdir)\"
 if BUILD_FOR_FREEBSD
   AM_CPPFLAGS = -I/usr/local/include -Wno-multichar -DSYSCONFDIR=\"$(sysconfdir)\" -O2
 else
+if BUILD_FOR_OPENBSD
+  AM_CPPFLAGS = -I/usr/local/include -Wno-multichar -DSYSCONFDIR=\"$(sysconfdir)\"
+else
   AM_CPPFLAGS = -Wno-multichar -DSYSCONFDIR=\"$(sysconfdir)\"
+endif
 endif
 
 if USE_APPLE_ALAC

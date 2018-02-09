@@ -19,9 +19,8 @@
 #endif
 #endif
 
-#if defined(__linux__) || defined(__FreeBSD__) || defined(__CYGWIN__)
-/* Linux and FreeBSD */
-#define COMPILE_FOR_LINUX_AND_FREEBSD_AND_CYGWIN 1
+#if defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__CYGWIN__)
+#define COMPILE_FOR_LINUX_AND_FREEBSD_AND_CYGWIN_AND_OPENBSD 1
 #endif
 
 // struct sockaddr_in6 is bigger than struct sockaddr. derp
