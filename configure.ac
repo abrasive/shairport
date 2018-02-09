@@ -28,7 +28,14 @@ if test "x${with_os}" = xlinux -o "x${with_os}" = xfreebsd ; then
  AC_CHECK_LIB([rt],[clock_gettime], , AC_MSG_ERROR(librt needed))
 fi
 
+if test "x${with_os}" = xopenbsd ; then
+ AC_CHECK_LIB([c],[clock_gettime], , AC_MSG_ERROR(libc needed))
+fi
+
 AM_CONDITIONAL([BUILD_FOR_FREEBSD], [test "x${with_os}" = xfreebsd ])
+
+AM_CONDITIONAL([BUILD_FOR_OPENBSD], [test "x${with_os}" = xopenbsd ])
+
 
 ##### Some build systems are not fully using pkg-config, so we can use the flag ${with_pkg_config} on a case-by-case basis
 ##### to control how to deal with them
@@ -52,7 +59,8 @@ AC_MSG_RESULT(>>Including libpopt)
 if  test "x${with_pkg_config}" = xyes ; then
   PKG_CHECK_MODULES(
       [POPT], [popt],
-      [LIBS="${POPT_LIBS} ${LIBS}"
+      [CFLAGS="${POPT_CFLAGS} ${CFLAGS}"
+      LIBS="${POPT_LIBS} ${LIBS}"
        AC_DEFINE([HAVE_LIBPOPT],[1],[Define to 1 if you have popt])])
 else
   AC_CHECK_LIB([popt],[poptGetContext], , AC_MSG_ERROR(libpopt needed))

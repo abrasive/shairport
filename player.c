@@ -1124,7 +1124,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
       time_to_wait_for_wakeup_fp *= 4 * 352;      // four full 352-frame packets
       time_to_wait_for_wakeup_fp /= 3;            // four thirds of a packet time
 
-#ifdef COMPILE_FOR_LINUX_AND_FREEBSD_AND_CYGWIN
+#ifdef COMPILE_FOR_LINUX_AND_FREEBSD_AND_CYGWIN_AND_OPENBSD
       uint64_t time_of_wakeup_fp = local_time_now + time_to_wait_for_wakeup_fp;
       uint64_t sec = time_of_wakeup_fp >> 32;
       uint64_t nsec = ((time_of_wakeup_fp & 0xffffffff) * 1000000000) >> 32;
@@ -1380,7 +1380,7 @@ static void *player_thread_func(void *arg) {
   if (rc)
     debug(1, "Error initialising vol_mutex.");
 // set the flowcontrol condition variable to wait on a monotonic clock
-#ifdef COMPILE_FOR_LINUX_AND_FREEBSD_AND_CYGWIN
+#ifdef COMPILE_FOR_LINUX_AND_FREEBSD_AND_CYGWIN_AND_OPENBSD
   pthread_condattr_t attr;
   pthread_condattr_init(&attr);
   pthread_condattr_setclock(&attr, CLOCK_MONOTONIC); // can't do this in OS X, and don't need it.
