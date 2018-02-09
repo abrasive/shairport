@@ -30,9 +30,10 @@ Now, download Shairport Sync from GitHub:
 $ git clone https://github.com/mikebrady/shairport-sync.git
 $ cd shairport-sync
 ```
-Next, configure the build and compile it:
+Next, switch to the `development` branch, configure the build and compile it:
 
 ```
+$ git checkout development
 $ autoreconf -i -f
 $ ./configure  --with-avahi --with-ssl=openssl --with-sndio --with-os=openbsd
 $ make
