@@ -25,6 +25,8 @@ Otherwise – say if you deleted the repository – just pull Shairport Sync fro
 $ git clone https://github.com/mikebrady/shairport-sync.git
 $ cd shairport-sync
 ```
+(If you wish to use the `development` branch, you should enter the command `$ git checkout development` at this point. Everything else is the same.)
+
 Now, while in the `shairport-sync` directory, perform the following commands (note that there is a choice you must make in there):
 ```
 $ autoreconf -fi
