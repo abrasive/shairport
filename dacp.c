@@ -326,7 +326,7 @@ void *dacp_monitor_thread_code(void *na) {
             switch (type) {
             case 'cmsr': // revision number
               t = sp - item_size;
-              revision_number = ntohl(*(int32_t *)(t));
+              revision_number = ntohl(*(uint32_t *)(t));
               // debug(1,"    Serial Number: %d", revision_number);
               break;
             case 'caps': // play status
@@ -491,7 +491,7 @@ void *dacp_monitor_thread_code(void *na) {
               break;
             case 'astm':
               t = sp - item_size;
-              r = ntohl(*(int32_t *)(t));
+              r = ntohl(*(uint32_t *)(t));
               metadata_store.songtime_in_milliseconds = ntohl(*(uint32_t *)(t));
               break;
 
@@ -503,7 +503,7 @@ void *dacp_monitor_thread_code(void *na) {
                         case 'caas':
                         case 'caar':
                           t = sp - item_size;
-                          r = ntohl(*(int32_t *)(t));
+                          r = ntohl(*(uint32_t *)(t));
                           printf("    %d", r);
                           printf("    (0x");
                           t = sp - item_size;
@@ -597,7 +597,7 @@ uint32_t dacp_tlv_crawl(char **p, int32_t *length) {
   typecode[4] = '\0';
   uint32_t type = ntohl(*(uint32_t *)*p);
   *p += 4;
-  *length = ntohl(*(int32_t *)*p);
+  *length = ntohl(*(uint32_t *)*p);
   *p += 4 + *length;
   // debug(1,"Type seen: '%s' of length %d",typecode,*length);
   return type;
@@ -621,7 +621,7 @@ int32_t dacp_get_client_volume(void) {
           reply_size -= item_size + 8;
           if (type == 'cmvo') { // drop down into the dictionary -- don't skip over it
             char *t = sp - item_size;
-            overall_volume = ntohl(*(int32_t *)(t));
+            overall_volume = ntohl(*(uint32_t *)(t));
           }
         }
       } else {
@@ -699,13 +699,13 @@ int dacp_get_speaker_list(dacp_spkr_stuff *speaker_info, int max_size_of_array) 
             /*
                             case 'cads':
                               t = sp-item_size;
-                              r = ntohl(*(int32_t*)(t));
+                              r = ntohl(*(uint32_t*)(t));
                               //debug(1,"CADS: \"%d\".",r);
                               break;
             */
             case 'cmvo':
               t = sp - item_size;
-              r = ntohl(*(int32_t *)(t));
+              r = ntohl(*(uint32_t *)(t));
               speaker_info[speaker_index].volume = r;
               // debug(1,"The individual volume of speaker \"%s\" is
               // \"%d\".",speaker_info[speaker_index].name,r);
