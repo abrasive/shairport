@@ -142,7 +142,6 @@ int64_t monotonic_timestamp(uint32_t timestamp, rtsp_conn_info *conn) {
         conn->timestamp_epoch--;
     }
   }
-  conn->last_timestamp = timestamp;
   return_value = conn->timestamp_epoch;
   return_value <<= 32;
   return_value += timestamp;
@@ -155,6 +154,7 @@ int64_t monotonic_timestamp(uint32_t timestamp, rtsp_conn_info *conn) {
   }
   if (return_value < 0)
     debug(1, "monotonic rtptime is negative!");
+  conn->last_timestamp = timestamp;
   return return_value;
 }
 
@@ -870,8 +870,8 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
               if (local_time_now >= conn->first_packet_time_to_play) {
                 debug(
                     1,
-                    "First packet is late! It should have played before now. Flushing 0.1 seconds");
-                player_flush(conn->first_packet_timestamp + 4410 * conn->output_sample_ratio, conn);
+                    "First packet is late! It should have played before now. Flushing 0.5 seconds");
+                player_flush(conn->first_packet_timestamp + 5 * 4410 * conn->output_sample_ratio, conn);
               }
             }
           }
@@ -1155,7 +1155,11 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
   // packets have arrived... last-chance resend
 
   if (!conn->ab_buffering) {
-    for (i = 64; i < (seq_diff(conn->ab_read, conn->ab_write, conn->ab_read) / 2); i = (i * 2)) {
+    // check at half second intervals
+ //   for (i = 500000/7982 ; i < (seq_diff(conn->ab_read, conn->ab_write, conn->ab_read)); i += 500000/7982) {
+    // check once, after a second has elapsed, assuming 352 frames per packet
+      i = 44100/352;
+      if (i<seq_diff(conn->ab_read, conn->ab_write, conn->ab_read)) {
       seq_t next = seq_sum(conn->ab_read, i);
       abuf = conn->audio_buffer + BUFIDX(next);
       if (!abuf->ready) {
@@ -1420,7 +1424,7 @@ static void *player_thread_func(void *arg) {
 
   conn->timestamp_epoch = 0; // indicate that the next timestamp will be the first one.
   conn->maximum_timestamp_interval =
-      conn->input_rate * 60; // actually there shouldn't be more than about 13v
+      conn->input_rate * 60; // actually there shouldn't be more than about 13 
                              // seconds of a gap between successive rtptimes, at
                              // worst
 
@@ -1429,7 +1433,7 @@ static void *player_thread_func(void *arg) {
   //  debug(1, "Output sample ratio is %d.", conn->output_sample_ratio);
 
   conn->max_frame_size_change =
-      500 * conn->output_sample_ratio; // we add or subtract one frame at the nominal
+      1 * conn->output_sample_ratio; // we add or subtract one frame at the nominal
                                        // rate, multiply it by the frame ratio.
                                        // but, on some occasions, more than one frame could be added
 

@@ -46,7 +46,7 @@
 void memory_barrier();
 
 void rtp_initialise(rtsp_conn_info *conn) {
-
+  conn->rtp_time_of_last_resend_request_error_fp = 0;
   conn->rtp_running = 0;
   // initialise the timer mutex
   int rc = pthread_mutex_init(&conn->reference_time_mutex, NULL);
@@ -131,7 +131,7 @@ void *rtp_audio_receiver(void *arg) {
         pktp += 4;
         plen -= 4;
       }
-      seq_t seqno = ntohs(*(unsigned short *)(pktp + 2));
+      seq_t seqno = ntohs(*(uint16_t *)(pktp + 2));
       // increment last_seqno and see if it's the same as the incoming seqno
 
       if (last_seqno == -1)
@@ -142,7 +142,7 @@ void *rtp_audio_receiver(void *arg) {
         //  debug(3, "RTP: Packets out of sequence: expected: %d, got %d.", last_seqno, seqno);
         last_seqno = seqno; // reset warning...
       }
-      int64_t timestamp = monotonic_timestamp(ntohl(*(unsigned long *)(pktp + 4)), conn);
+      int64_t timestamp = monotonic_timestamp(ntohl(*(uint32_t*)(pktp + 4)), conn);
 
       // if (packet[1]&0x10)
       //	debug(1,"Audio packet Extension bit set.");
@@ -224,6 +224,8 @@ void *rtp_control_receiver(void *arg) {
         // debug(1,"Remote Sync Time: %0llx.",remote_time_of_sync);
 
         sync_rtp_timestamp = monotonic_timestamp(ntohl(*((uint32_t *)&packet[16])), conn);
+        
+        debug(1,"Sync timestamp is %u.",ntohl(*((uint32_t *)&packet[16])));
 
         if (config.userSuppliedLatency) {
           if (config.userSuppliedLatency != conn->latency) {
@@ -232,6 +234,7 @@ void *rtp_control_receiver(void *arg) {
           conn->latency = config.userSuppliedLatency;
         } else if (packet[0] &
                    0x10) { // only set latency if it's a packet just after a flush or resume
+          debug(1,"Set latency");
           int64_t rtp_timestamp_less_latency =
               monotonic_timestamp(ntohl(*((uint32_t *)&packet[4])), conn);
           int64_t la = sync_rtp_timestamp - rtp_timestamp_less_latency + config.fixedLatencyOffset;
@@ -277,12 +280,12 @@ void *rtp_control_receiver(void *arg) {
         debug(1, "Sync packet received before we got a timing packet back.");
       }
     } else if (packet[1] == 0xd6) { // resent audio data in the control path -- whaale only?
-      // debug(1, "Control Port -- Retransmitted Audio Data Packet received.");
+      debug(1, "Control Port -- Retransmitted Audio Data Packet received.");
       pktp = packet + 4;
       plen -= 4;
-      seq_t seqno = ntohs(*(unsigned short *)(pktp + 2));
+      seq_t seqno = ntohs(*(uint16_t*)(pktp + 2));
 
-      int64_t timestamp = monotonic_timestamp(ntohl(*(unsigned long *)(pktp + 4)), conn);
+      int64_t timestamp = monotonic_timestamp(ntohl(*(uint32_t*)(pktp + 4)), conn);
 
       pktp += 12;
       plen -= 12;
@@ -446,8 +449,11 @@ void *rtp_timing_receiver(void *arg) {
       return_time = arrival_time - conn->departure_time;
 
       uint64_t rtus = (return_time * 1000000) >> 32;
+      
 
       if (rtus < 300000) {
+
+        // debug(2,"Synchronisation ping return time is %f milliseconds.",(rtus*1.0)/1000);
 
         // distant_receive_time =
         // ((uint64_t)ntohl(*((uint32_t*)&packet[16])))<<32+ntohl(*((uint32_t*)&packet[20]));
@@ -829,11 +835,18 @@ void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
       msgsize = sizeof(struct sockaddr_in6);
     }
 #endif
-    if (sendto(conn->audio_socket, req, sizeof(req), 0,
-               (struct sockaddr *)&conn->rtp_client_control_socket, msgsize) == -1) {
-      char em[1024];
-      strerror_r(errno, em, sizeof(em));
-      debug(1, "Error %d using send-to to an audio socket: \"%s\".", errno, em);
+    uint64_t time_of_sending_fp = get_absolute_time_in_fp();
+    uint64_t resend_error_backoff_time = (uint64_t)10<<32; // ten seconds
+    if ((conn->rtp_time_of_last_resend_request_error_fp) || ((time_of_sending_fp-conn->rtp_time_of_last_resend_request_error_fp)>resend_error_backoff_time)) {
+      if (sendto(conn->audio_socket, req, sizeof(req), 0,
+                 (struct sockaddr *)&conn->rtp_client_control_socket, msgsize) == -1) {
+        char em[1024];
+        strerror_r(errno, em, sizeof(em));
+        debug(1, "Error %d using send-to to an audio socket: \"%s\". ", errno, em);
+        conn->rtp_time_of_last_resend_request_error_fp = time_of_sending_fp;
+      } else {
+        conn->rtp_time_of_last_resend_request_error_fp=0;
+      }
     }
   } else {
     // if (!request_sent) {
