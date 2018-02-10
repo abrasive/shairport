@@ -1370,7 +1370,7 @@ static void *player_thread_func(void *arg) {
   conn->ab_synced = 0;
   conn->first_packet_timestamp = 0;
   conn->flush_requested = 0;
-  // conn->fix_volume = 0x10000;
+  conn->fix_volume = 0x10000;
 
   if (conn->latency == 0) {
     debug(1,
