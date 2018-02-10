@@ -225,7 +225,7 @@ void *rtp_control_receiver(void *arg) {
 
         sync_rtp_timestamp = monotonic_timestamp(ntohl(*((uint32_t *)&packet[16])), conn);
         
-        debug(1,"Sync timestamp is %u.",ntohl(*((uint32_t *)&packet[16])));
+        // debug(1,"Sync timestamp is %u.",ntohl(*((uint32_t *)&packet[16])));
 
         if (config.userSuppliedLatency) {
           if (config.userSuppliedLatency != conn->latency) {
@@ -234,7 +234,6 @@ void *rtp_control_receiver(void *arg) {
           conn->latency = config.userSuppliedLatency;
         } else if (packet[0] &
                    0x10) { // only set latency if it's a packet just after a flush or resume
-          debug(1,"Set latency");
           int64_t rtp_timestamp_less_latency =
               monotonic_timestamp(ntohl(*((uint32_t *)&packet[4])), conn);
           int64_t la = sync_rtp_timestamp - rtp_timestamp_less_latency + config.fixedLatencyOffset;
@@ -280,7 +279,7 @@ void *rtp_control_receiver(void *arg) {
         debug(1, "Sync packet received before we got a timing packet back.");
       }
     } else if (packet[1] == 0xd6) { // resent audio data in the control path -- whaale only?
-      debug(1, "Control Port -- Retransmitted Audio Data Packet received.");
+      // debug(1, "Control Port -- Retransmitted Audio Data Packet received.");
       pktp = packet + 4;
       plen -= 4;
       seq_t seqno = ntohs(*(uint16_t*)(pktp + 2));

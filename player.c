@@ -498,7 +498,7 @@ void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len,
       abuf_t *abuf = 0;
 
       if (!conn->ab_synced) {
-        debug(2, "syncing to seqno %u.", seqno);
+        debug(3, "syncing to seqno %u.", seqno);
         conn->ab_write = seqno;
         conn->ab_read = seqno;
         conn->ab_synced = 1;
