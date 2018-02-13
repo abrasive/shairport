@@ -51,6 +51,9 @@ else
   AC_CHECK_LIB([daemon],[daemon_fork], , AC_MSG_ERROR(libdaemon needed))
 fi
 
+##### The following check for the pthreads library doesn't put the compiler into the correct pthread mode
+##### so we add the -pthread compilation flag in AMFLAGS in the Makefile.am as well.
+
 AC_CHECK_LIB([pthread],[pthread_create], , AC_MSG_ERROR(pthread library needed))
 AC_CHECK_LIB([m],[exp], , AC_MSG_ERROR(maths library needed))
 
