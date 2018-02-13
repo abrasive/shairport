@@ -528,7 +528,15 @@ void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len,
       } else if (seq_order(conn->ab_read, seqno, conn->ab_read)) { // late but not yet played
         conn->late_packets++;
         abuf = conn->audio_buffer + BUFIDX(seqno);
+        /*
+        if (abuf->ready)
+        	debug(1,"Late apparently duplicate packet received that is %d packets late.",seq_diff(seqno, conn->ab_write, conn->ab_read));
+        else
+	        debug(1,"Late packet received that is %d packets late.",seq_diff(seqno, conn->ab_write, conn->ab_read));
+	      */
       } else { // too late.
+      	
+        // debug(1,"Too late packet received that is %d packets late.",seq_diff(seqno, conn->ab_write, conn->ab_read));
         conn->too_late_packets++;
       }
       // pthread_mutex_unlock(&ab_mutex);
@@ -1155,17 +1163,15 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
   // packets have arrived... last-chance resend
 
   if (!conn->ab_buffering) {
-    // check at half second intervals
- //   for (i = 500000/7982 ; i < (seq_diff(conn->ab_read, conn->ab_write, conn->ab_read)); i += 500000/7982) {
-    // check once, after a second has elapsed, assuming 352 frames per packet
-      i = 44100/352;
+    // check once, after a short period of has elapsed, assuming 352 frames per packet
+      i = ((250*44100)/352)/1000; // approx 250 ms
       if (i<seq_diff(conn->ab_read, conn->ab_write, conn->ab_read)) {
       seq_t next = seq_sum(conn->ab_read, i);
       abuf = conn->audio_buffer + BUFIDX(next);
       if (!abuf->ready) {
         if (config.disable_resend_requests == 0) {
           rtp_request_resend(next, 1, conn);
-          // debug(1,"Resend %u.",next);
+          // debug(1,"Resend request for packet %u.",next);
           conn->resend_requests++;
         }
       }
