@@ -826,7 +826,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
 #ifdef HAVE_METADATA_HUB
             metadata_hub_modify_prolog();
             metadata_store.player_state = PS_PLAYING;
-            metadata_hub_modify_epilog();
+            metadata_hub_modify_epilog(1);
 #endif
             if (reference_timestamp) { // if we have a reference time
               // debug(1,"First frame seen with timestamp...");
@@ -2501,7 +2501,17 @@ void player_volume_without_notification(double airplay_volume, rtsp_conn_info *c
 void player_volume(double airplay_volume, rtsp_conn_info *conn) {
   command_set_volume(airplay_volume);
 #ifdef HAVE_DACP_CLIENT
-  dacp_get_volume();
+  int32_t actual_volume;
+  if (dacp_get_volume(&actual_volume)==200) {
+    metadata_hub_modify_prolog();
+    if (metadata_store.speaker_volume == actual_volume)
+      metadata_hub_modify_epilog(0); // no change
+    else {
+      metadata_store.speaker_volume = actual_volume;
+      metadata_hub_modify_epilog(1); // change      
+    }
+  }
+
 #endif
 
   player_volume_without_notification(airplay_volume, conn);
@@ -2523,7 +2533,7 @@ void player_flush(int64_t timestamp, rtsp_conn_info *conn) {
 #ifdef HAVE_METADATA_HUB
   metadata_hub_modify_prolog();
   metadata_store.player_state = PS_PAUSED;
-  metadata_hub_modify_epilog();
+  metadata_hub_modify_epilog(1);
 #endif
 }
 
@@ -2553,7 +2563,7 @@ int player_play(rtsp_conn_info *conn) {
 #ifdef HAVE_METADATA_HUB
   metadata_hub_modify_prolog();
   metadata_store.player_state = PS_PLAYING;
-  metadata_hub_modify_epilog();
+  metadata_hub_modify_epilog(1);
 #endif
   return 0;
 }
@@ -2573,7 +2583,7 @@ void player_stop(rtsp_conn_info *conn) {
 #ifdef HAVE_METADATA_HUB
     metadata_hub_modify_prolog();
     metadata_store.player_state = PS_STOPPED;
-    metadata_hub_modify_epilog();
+    metadata_hub_modify_epilog(1);
 #endif
   } else {
     debug(3, "player thread of RTSP conversation %d is already deleted.", conn->connection_number);

@@ -45,7 +45,8 @@
 #include "tinyhttp/http.h"
 
 typedef struct {
-  uint16_t port;
+  int scan_enable;                  // set to 1 if if sacanning should be considered
+  uint16_t port;                    // zero if no port discovered
   short connection_family;          // AF_INET6 or AF_INET
   uint32_t scope_id;                // if it's an ipv6 connection, this will be its scope id
   char ip_string[INET6_ADDRSTRLEN]; // the ip string pointing to the client
@@ -268,7 +269,10 @@ void set_dacp_server_information(rtsp_conn_info *conn) { // tell the DACP conver
   dacp_server.scope_id = conn->self_scope_id;
   strncpy(dacp_server.ip_string, conn->client_ip_string, INET6_ADDRSTRLEN);
   dacp_server.active_remote_id = conn->dacp_active_remote;
-
+  if (dacp_server.port)
+    dacp_server.scan_enable=1;
+  else
+    dacp_server.scan_enable=0;
   pthread_cond_signal(&dacp_server_information_cv);
   pthread_mutex_unlock(&dacp_server_information_lock);
 }
@@ -280,285 +284,289 @@ void *dacp_monitor_thread_code(void *na) {
   // wait until we get a valid port number to begin monitoring it
   int32_t revision_number = 1;
   while (1) {
+    int result;
     pthread_mutex_lock(&dacp_server_information_lock);
-    while (dacp_server.port == 0) {
+    while (dacp_server.scan_enable == 0) {
       debug(1, "Wait for a valid DACP port");
       pthread_cond_wait(&dacp_server_information_cv, &dacp_server_information_lock);
+    }
+    scan_index++;
+    result = dacp_get_volume(NULL); // just want the http code
+    if ((result==496) || (result==403)|| (result==501)) {
+      debug(1,"Stopping scan because the response to \"dacp_get_volume(NULL)\" is %d.",result);
+      dacp_server.scan_enable = 0;
     }
     pthread_mutex_unlock(&dacp_server_information_lock);
     // debug(1, "DACP Server ID \"%u\" at \"%s:%u\", scan %d.", dacp_server.active_remote_id,
     //      dacp_server.ip_string, dacp_server.port, scan_index);
-    scan_index++;
-    ssize_t le;
-    char *response = NULL;
-    int32_t item_size;
-    char command[1024] = "";
-    snprintf(command, sizeof(command) - 1, "playstatusupdate?revision-number=%d", revision_number);
-    // debug(1,"Command: \"%s\"",command);
-    int result = dacp_send_command(command, &response, &le);
-    if (result == 200) {
-      char *sp = response;
-      if (le >= 8) {
-        // here start looking for the contents of the status update
-        if (dacp_tlv_crawl(&sp, &item_size) == 'cmst') { // status
-          // here, we know that we are receiving playerstatusupdates, so set a flag
-          metadata_hub_modify_prolog();
-          metadata_store.playerstatusupdates_are_received = 1;
-          sp -= item_size; // drop down into the array -- don't skip over it
-          le -= 8;
-          char typestring[5];
-          // we need to acquire the metadata data structure and possibly update it
-          while (le >= 8) {
-            uint32_t type = dacp_tlv_crawl(&sp, &item_size);
+    if (result==200) {
+      ssize_t le;
+      char *response = NULL;
+      int32_t item_size;
+      char command[1024] = "";
+      snprintf(command, sizeof(command) - 1, "playstatusupdate?revision-number=%d", revision_number);
+      // debug(1,"Command: \"%s\"",command);
+      result = dacp_send_command(command, &response, &le);
+      // debug(1,"Response to \"%s\" is %d.",command,result);
+      if (result == 200) {
+        char *sp = response;
+        if (le >= 8) {
+          // here start looking for the contents of the status update
+          if (dacp_tlv_crawl(&sp, &item_size) == 'cmst') { // status
+            // here, we know that we are receiving playerstatusupdates, so set a flag
+            metadata_hub_modify_prolog();
+            metadata_store.playerstatusupdates_are_received = 1;
+            sp -= item_size; // drop down into the array -- don't skip over it
+            le -= 8;
+            char typestring[5];
+            // we need to acquire the metadata data structure and possibly update it
+            while (le >= 8) {
+              uint32_t type = dacp_tlv_crawl(&sp, &item_size);
+              le -= item_size + 8;
+              char *t;
+              char u;
+              char *st;
+              int32_t r;
+              uint64_t s, v;
+              int i;
 
-            //*(uint32_t *)typestring = htonl(type);
-            // typestring[4] = 0;
-            // printf("\"%s\" %4d", typestring, item_size);
-
-            le -= item_size + 8;
-            char *t;
-            char u;
-            char *st;
-            int32_t r;
-            uint64_t s, v;
-            int i;
-
-            switch (type) {
-            case 'cmsr': // revision number
-              t = sp - item_size;
-              revision_number = ntohl(*(uint32_t *)(t));
-              // debug(1,"    Serial Number: %d", revision_number);
-              break;
-            case 'caps': // play status
-              t = sp - item_size;
-              r = *(unsigned char *)(t);
-              switch (r) {
-              case 2:
-                if (metadata_store.play_status != PS_STOPPED) {
-                  metadata_store.play_status = PS_STOPPED;
-                  metadata_store.play_status_changed = 1;
-                  debug(1, "Play status set to \"stopped\".");
-                  metadata_store.changed = 1;
-                }
-                break;
-              case 3:
-                if (metadata_store.play_status != PS_PAUSED) {
-                  metadata_store.play_status = PS_PAUSED;
-                  metadata_store.play_status_changed = 1;
-                  debug(1, "Play status set to \"paused\".");
-                  metadata_store.changed = 1;
-                }
-                break;
-              case 4:
-                if (metadata_store.play_status != PS_PLAYING) {
-                  metadata_store.play_status = PS_PLAYING;
-                  metadata_store.play_status_changed = 1;
-                  debug(1, "Play status set to \"playing\".");
-                  metadata_store.changed = 1;
-                }
-                break;
-              default:
-                debug(1, "Unrecognised play status %d received.", r);
-                break;
-              }
-              break;
-            case 'cash': // shuffle status
-              t = sp - item_size;
-              r = *(unsigned char *)(t);
-              switch (r) {
-              case 0:
-                if (metadata_store.shuffle_status != SS_OFF) {
-                  metadata_store.shuffle_status = SS_OFF;
-                  metadata_store.shuffle_status_changed = 1;
-                  debug(1, "Shuffle status set to \"off\".");
-                  metadata_store.changed = 1;
-                }
-                break;
-              case 1:
-                if (metadata_store.shuffle_status != SS_ON) {
-                  metadata_store.shuffle_status = SS_ON;
-                  metadata_store.shuffle_status_changed = 1;
-                  debug(1, "Shuffle status set to \"on\".");
-                  metadata_store.changed = 1;
-                }
-                break;
-              default:
-                debug(1, "Unrecognised shuffle status %d received.", r);
-                break;
-              }
-              break;
-            case 'carp': // repeat status
-              t = sp - item_size;
-              r = *(unsigned char *)(t);
-              switch (r) {
-              case 0:
-                if (metadata_store.repeat_status != RS_NONE) {
-                  metadata_store.repeat_status = RS_NONE;
-                  metadata_store.repeat_status_changed = 1;
-                  debug(1, "Repeat status set to \"none\".");
-                  metadata_store.changed = 1;
-                }
-                break;
-              case 1:
-                if (metadata_store.repeat_status != RS_SINGLE) {
-                  metadata_store.repeat_status = RS_SINGLE;
-                  metadata_store.repeat_status_changed = 1;
-                  debug(1, "Repeat status set to \"single\".");
-                  metadata_store.changed = 1;
-                }
-                break;
-              case 2:
-                if (metadata_store.repeat_status != RS_ALL) {
-                  metadata_store.repeat_status = RS_ALL;
-                  metadata_store.repeat_status_changed = 1;
-                  debug(1, "Repeat status set to \"all\".");
-                  metadata_store.changed = 1;
-                }
-                break;
-              default:
-                debug(1, "Unrecognised repeat status %d received.", r);
-                break;
-              }
-              break;
-            case 'cann': // track name
-              t = sp - item_size;
-              if ((metadata_store.track_name == NULL) ||
-                  (strncmp(metadata_store.track_name, t, item_size) != 0)) {
-                if (metadata_store.track_name)
-                  free(metadata_store.track_name);
-                metadata_store.track_name = strndup(t, item_size);
-                debug(1, "Track name set to: \"%s\"", metadata_store.track_name);
-                metadata_store.track_name_changed = 1;
-                metadata_store.changed = 1;
-              }
-              break;
-            case 'cana': // artist name
-              t = sp - item_size;
-              if ((metadata_store.artist_name == NULL) ||
-                  (strncmp(metadata_store.artist_name, t, item_size) != 0)) {
-                if (metadata_store.artist_name)
-                  free(metadata_store.artist_name);
-                metadata_store.artist_name = strndup(t, item_size);
-                debug(1, "Artist name set to: \"%s\"", metadata_store.artist_name);
-                metadata_store.artist_name_changed = 1;
-                metadata_store.changed = 1;
-              }
-              break;
-            case 'canl': // album name
-              t = sp - item_size;
-              if ((metadata_store.album_name == NULL) ||
-                  (strncmp(metadata_store.album_name, t, item_size) != 0)) {
-                if (metadata_store.album_name)
-                  free(metadata_store.album_name);
-                metadata_store.album_name = strndup(t, item_size);
-                debug(1, "Album name set to: \"%s\"", metadata_store.album_name);
-                metadata_store.album_name_changed = 1;
-                metadata_store.changed = 1;
-              }
-              break;
-            case 'cang': // genre
-              t = sp - item_size;
-              if ((metadata_store.genre == NULL) ||
-                  (strncmp(metadata_store.genre, t, item_size) != 0)) {
-                if (metadata_store.genre)
-                  free(metadata_store.genre);
-                metadata_store.genre = strndup(t, item_size);
-                debug(1, "Genre set to: \"%s\"", metadata_store.genre);
-                metadata_store.genre_changed = 1;
-                metadata_store.changed = 1;
-              }
-              break;
-            case 'canp': // nowplaying 4 ids: dbid, plid, playlistItem, itemid (from mellowware --
-                         // see reference above)
-              t = sp - item_size;
-              if (memcmp(metadata_store.item_composite_id, t,
-                         sizeof(metadata_store.item_composite_id)) != 0) {
-                memcpy(metadata_store.item_composite_id, t,
-                       sizeof(metadata_store.item_composite_id));
-
-                char st[33];
-                char *pt = st;
-                int it;
-                for (it = 0; it < 16; it++) {
-                  sprintf(pt, "%02X", metadata_store.item_composite_id[it]);
-                  pt += 2;
-                }
-                *pt = 0;
-                debug(1, "Item composite ID set to 0x%s.", st);
-                metadata_store.item_id_changed = 1;
-                metadata_store.changed = 1;
-              }
-              break;
-            case 'astm':
-              t = sp - item_size;
-              r = ntohl(*(uint32_t *)(t));
-              metadata_store.songtime_in_milliseconds = ntohl(*(uint32_t *)(t));
-              break;
-
-            /*
-                        case 'mstt':
-                        case 'cant':
-                        case 'cast':
-                        case 'cmmk':
-                        case 'caas':
-                        case 'caar':
-                          t = sp - item_size;
-                          r = ntohl(*(uint32_t *)(t));
-                          printf("    %d", r);
-                          printf("    (0x");
-                          t = sp - item_size;
-                          for (i = 0; i < item_size; i++) {
-                            printf("%02x", *t & 0xff);
-                            t++;
-                          }
-                          printf(")");
-                          break;
-                        case 'asai':
-                          t = sp - item_size;
-                          s = ntohl(*(uint32_t *)(t));
-                          s = s << 32;
-                          t += 4;
-                          v = (ntohl(*(uint32_t *)(t))) & 0xffffffff;
-                          s += v;
-                          printf("    %lu", s);
-                          printf("    (0x");
-                          t = sp - item_size;
-                          for (i = 0; i < item_size; i++) {
-                            printf("%02x", *t & 0xff);
-                            t++;
-                          }
-                          printf(")");
-                          break;
-             */
-            default:
-              /*
-                printf("    0x");
+              switch (type) {
+              case 'cmsr': // revision number
                 t = sp - item_size;
-                for (i = 0; i < item_size; i++) {
-                  printf("%02x", *t & 0xff);
-                  t++;
+                revision_number = ntohl(*(uint32_t *)(t));
+                // debug(1,"    Serial Number: %d", revision_number);
+                break;
+              case 'caps': // play status
+                t = sp - item_size;
+                r = *(unsigned char *)(t);
+                switch (r) {
+                case 2:
+                  if (metadata_store.play_status != PS_STOPPED) {
+                    metadata_store.play_status = PS_STOPPED;
+                    metadata_store.play_status_changed = 1;
+                    debug(1, "Play status changed to \"stopped\".");
+                    metadata_store.changed = 1;
+                  }
+                  break;
+                case 3:
+                  if (metadata_store.play_status != PS_PAUSED) {
+                    metadata_store.play_status = PS_PAUSED;
+                    metadata_store.play_status_changed = 1;
+                    debug(1, "Play status changed to \"paused\".");
+                    metadata_store.changed = 1;
+                  }
+                  break;
+                case 4:
+                  if (metadata_store.play_status != PS_PLAYING) {
+                    metadata_store.play_status = PS_PLAYING;
+                    metadata_store.play_status_changed = 1;
+                    debug(1, "Play status changed to \"playing\".");
+                    metadata_store.changed = 1;
+                  }
+                  break;
+                default:
+                  debug(1, "Unrecognised play status %d received.", r);
+                  break;
                 }
-               */
-              break;
-            }
-            // printf("\n");
-          }
+                break;
+              case 'cash': // shuffle status
+                t = sp - item_size;
+                r = *(unsigned char *)(t);
+                switch (r) {
+                case 0:
+                  if (metadata_store.shuffle_status != SS_OFF) {
+                    metadata_store.shuffle_status = SS_OFF;
+                    metadata_store.shuffle_status_changed = 1;
+                    debug(1, "Shuffle status changed to \"off\".");
+                    metadata_store.changed = 1;
+                  }
+                  break;
+                case 1:
+                  if (metadata_store.shuffle_status != SS_ON) {
+                    metadata_store.shuffle_status = SS_ON;
+                    metadata_store.shuffle_status_changed = 1;
+                    debug(1, "Shuffle status changed to \"on\".");
+                    metadata_store.changed = 1;
+                  }
+                  break;
+                default:
+                  debug(1, "Unrecognised shuffle status %d received.", r);
+                  break;
+                }
+                break;
+              case 'carp': // repeat status
+                t = sp - item_size;
+                r = *(unsigned char *)(t);
+                switch (r) {
+                case 0:
+                  if (metadata_store.repeat_status != RS_NONE) {
+                    metadata_store.repeat_status = RS_NONE;
+                    metadata_store.repeat_status_changed = 1;
+                    debug(1, "Repeat status changed to \"none\".");
+                    metadata_store.changed = 1;
+                  }
+                  break;
+                case 1:
+                  if (metadata_store.repeat_status != RS_SINGLE) {
+                    metadata_store.repeat_status = RS_SINGLE;
+                    metadata_store.repeat_status_changed = 1;
+                    debug(1, "Repeat status changed to \"single\".");
+                    metadata_store.changed = 1;
+                  }
+                  break;
+                case 2:
+                  if (metadata_store.repeat_status != RS_ALL) {
+                    metadata_store.repeat_status = RS_ALL;
+                    metadata_store.repeat_status_changed = 1;
+                    debug(1, "Repeat status changed to \"all\".");
+                    metadata_store.changed = 1;
+                  }
+                  break;
+                default:
+                  debug(1, "Unrecognised repeat status %d received.", r);
+                  break;
+                }
+                break;
+              case 'cann': // track name
+                t = sp - item_size;
+                if ((metadata_store.track_name == NULL) ||
+                    (strncmp(metadata_store.track_name, t, item_size) != 0)) {
+                  if (metadata_store.track_name)
+                    free(metadata_store.track_name);
+                  metadata_store.track_name = strndup(t, item_size);
+                  debug(1, "Track name changed to: \"%s\"", metadata_store.track_name);
+                  metadata_store.track_name_changed = 1;
+                  metadata_store.changed = 1;
+                }
+                break;
+              case 'cana': // artist name
+                t = sp - item_size;
+                if ((metadata_store.artist_name == NULL) ||
+                    (strncmp(metadata_store.artist_name, t, item_size) != 0)) {
+                  if (metadata_store.artist_name)
+                    free(metadata_store.artist_name);
+                  metadata_store.artist_name = strndup(t, item_size);
+                  debug(1, "Artist name changed to: \"%s\"", metadata_store.artist_name);
+                  metadata_store.artist_name_changed = 1;
+                  metadata_store.changed = 1;
+                }
+                break;
+              case 'canl': // album name
+                t = sp - item_size;
+                if ((metadata_store.album_name == NULL) ||
+                    (strncmp(metadata_store.album_name, t, item_size) != 0)) {
+                  if (metadata_store.album_name)
+                    free(metadata_store.album_name);
+                  metadata_store.album_name = strndup(t, item_size);
+                  debug(1, "Album name changed to: \"%s\"", metadata_store.album_name);
+                  metadata_store.album_name_changed = 1;
+                  metadata_store.changed = 1;
+                }
+                break;
+              case 'cang': // genre
+                t = sp - item_size;
+                if ((metadata_store.genre == NULL) ||
+                    (strncmp(metadata_store.genre, t, item_size) != 0)) {
+                  if (metadata_store.genre)
+                    free(metadata_store.genre);
+                  metadata_store.genre = strndup(t, item_size);
+                  debug(1, "Genre changed to: \"%s\"", metadata_store.genre);
+                  metadata_store.genre_changed = 1;
+                  metadata_store.changed = 1;
+                }
+                break;
+              case 'canp': // nowplaying 4 ids: dbid, plid, playlistItem, itemid (from mellowware --
+                           // see reference above)
+                t = sp - item_size;
+                if (memcmp(metadata_store.item_composite_id, t,
+                           sizeof(metadata_store.item_composite_id)) != 0) {
+                  memcpy(metadata_store.item_composite_id, t,
+                         sizeof(metadata_store.item_composite_id));
 
-          // finished possibly writing to the metadata hub
-          metadata_hub_modify_epilog();
+                  char st[33];
+                  char *pt = st;
+                  int it;
+                  for (it = 0; it < 16; it++) {
+                    sprintf(pt, "%02X", metadata_store.item_composite_id[it]);
+                    pt += 2;
+                  }
+                  *pt = 0;
+                  // debug(1, "Item composite ID set to 0x%s.", st);
+                  metadata_store.item_id_changed = 1;
+                  metadata_store.changed = 1;
+                }
+                break;
+              case 'astm':
+                t = sp - item_size;
+                r = ntohl(*(uint32_t *)(t));
+                metadata_store.songtime_in_milliseconds = ntohl(*(uint32_t *)(t));
+                break;
+
+              /*
+                          case 'mstt':
+                          case 'cant':
+                          case 'cast':
+                          case 'cmmk':
+                          case 'caas':
+                          case 'caar':
+                            t = sp - item_size;
+                            r = ntohl(*(uint32_t *)(t));
+                            printf("    %d", r);
+                            printf("    (0x");
+                            t = sp - item_size;
+                            for (i = 0; i < item_size; i++) {
+                              printf("%02x", *t & 0xff);
+                              t++;
+                            }
+                            printf(")");
+                            break;
+                          case 'asai':
+                            t = sp - item_size;
+                            s = ntohl(*(uint32_t *)(t));
+                            s = s << 32;
+                            t += 4;
+                            v = (ntohl(*(uint32_t *)(t))) & 0xffffffff;
+                            s += v;
+                            printf("    %lu", s);
+                            printf("    (0x");
+                            t = sp - item_size;
+                            for (i = 0; i < item_size; i++) {
+                              printf("%02x", *t & 0xff);
+                              t++;
+                            }
+                            printf(")");
+                            break;
+               */
+              default:
+                /*
+                  printf("    0x");
+                  t = sp - item_size;
+                  for (i = 0; i < item_size; i++) {
+                    printf("%02x", *t & 0xff);
+                    t++;
+                  }
+                 */
+                break;
+              }
+              // printf("\n");
+            }
+
+            // finished possibly writing to the metadata hub
+            metadata_hub_modify_epilog(1);
+          } else {
+            debug(1,"Status Update not found.\n");
+          }
         } else {
-          printf("Status Update not found.\n");
+          debug(1, "Can't find any content in playerstatusupdate request");
         }
-      } else {
-        debug(1, "Can't find any content in playerstatusupdate request");
-      }
-    } else {
-      if (result != 403)
-        debug(1, "Unexpected response %d to playerstatusupdate request", result);
-    }
-    if (response) {
-      free(response);
-      response = NULL;
+      } /* else {
+        if (result != 403)
+          debug(1, "Unexpected response %d to playerstatusupdate request", result);
+      } */
+      if (response) {
+        free(response);
+        response = NULL;
+      };
     };
     /*
     strcpy(command,"nowplayingartwork?mw=320&mh=320");
@@ -603,7 +611,7 @@ uint32_t dacp_tlv_crawl(char **p, int32_t *length) {
   return type;
 }
 
-int32_t dacp_get_client_volume(void) {
+int dacp_get_client_volume(int32_t *result) {
   char *server_reply = NULL;
   int32_t overall_volume = -1;
   ssize_t reply_size;
@@ -632,16 +640,18 @@ int32_t dacp_get_client_volume(void) {
     }
     // debug(1, "Overall Volume is %d.", overall_volume);
     free(server_reply);
-  } else {
+  } /* else {
     debug(1, "Unexpected response %d to dacp volume control request", response);
-  }
-  return overall_volume;
+  } */
+  if (result)
+    *result=overall_volume;
+  return response;
 }
 
 int dacp_set_include_speaker_volume(int64_t machine_number, int32_t vo) {
   char message[1000];
   memset(message, 0, sizeof(message));
-  sprintf(message, "setproperty?include-speaker-id=%lld&dmcp.volume=%d", machine_number, vo);
+  sprintf(message, "setproperty?include-speaker-id=%ld&dmcp.volume=%d", machine_number, vo);
   // debug(1,"sending \"%s\"",message);
   return send_simple_dacp_command(message);
   // should return 204
@@ -650,16 +660,17 @@ int dacp_set_include_speaker_volume(int64_t machine_number, int32_t vo) {
 int dacp_set_speaker_volume(int64_t machine_number, int32_t vo) {
   char message[1000];
   memset(message, 0, sizeof(message));
-  sprintf(message, "setproperty?speaker-id=%lld&dmcp.volume=%d", machine_number, vo);
+  sprintf(message, "setproperty?speaker-id=%ld&dmcp.volume=%d", machine_number, vo);
   // debug(1,"sending \"%s\"",message);
   return send_simple_dacp_command(message);
   // should return 204
 }
 
-int dacp_get_speaker_list(dacp_spkr_stuff *speaker_info, int max_size_of_array) {
+int dacp_get_speaker_list(dacp_spkr_stuff *speaker_info, int max_size_of_array, int *actual_speaker_count) {
+                              char typestring[5];
   char *server_reply = NULL;
   int speaker_index = -1; // will be incremented before use
-  int reply = -1;         // will bve fixed if there is no problem
+  int speaker_count = -1;         // will be fixed if there is no problem
   ssize_t le;
 
   int response = dacp_send_command("getspeakers", &server_reply, &le);
@@ -679,7 +690,7 @@ int dacp_get_speaker_list(dacp_spkr_stuff *speaker_info, int max_size_of_array) 
             le -= 8;
             speaker_index++;
             if (speaker_index == max_size_of_array)
-              return -1; // too many speakers
+              return 413;// Payload Too Large -- too many speakers
             speaker_info[speaker_index].active = 0;
             speaker_info[speaker_index].speaker_number = 0;
             speaker_info[speaker_index].volume = 0;
@@ -696,19 +707,11 @@ int dacp_get_speaker_list(dacp_spkr_stuff *speaker_info, int max_size_of_array) 
               speaker_info[speaker_index].name = strndup(t, item_size);
               // debug(1," \"%s\"",speaker_info[speaker_index].name);
               break;
-            /*
-                            case 'cads':
-                              t = sp-item_size;
-                              r = ntohl(*(uint32_t*)(t));
-                              //debug(1,"CADS: \"%d\".",r);
-                              break;
-            */
             case 'cmvo':
               t = sp - item_size;
               r = ntohl(*(uint32_t *)(t));
               speaker_info[speaker_index].volume = r;
-              // debug(1,"The individual volume of speaker \"%s\" is
-              // \"%d\".",speaker_info[speaker_index].name,r);
+              // debug(1,"The individual volume of speaker \"%s\" is \"%d\".",speaker_info[speaker_index].name,r);
               break;
             case 'msma':
               t = sp - item_size;
@@ -728,9 +731,16 @@ int dacp_get_speaker_list(dacp_spkr_stuff *speaker_info, int max_size_of_array) 
                             case 'caip':
                             case 'cavd':
                             case 'caiv':
+                            case 'cads':
+                            
+                              *(uint32_t *)typestring = htonl(type);
+                              typestring[4] = 0;
+
+                            
+                            
                               t = sp-item_size;
                               u = *t;
-                              //debug(1,"Value: \"%d\".",u);
+                              debug(1,"Type: '%s' Value: \"%d\".",typestring,u);
                               break;
             */
             default:
@@ -739,7 +749,7 @@ int dacp_get_speaker_list(dacp_spkr_stuff *speaker_info, int max_size_of_array) 
           }
         }
         // debug(1,"Total of %d speakers found. Here are the active ones:",speaker_index+1);
-        reply = speaker_index + 1; // number of speaker entries in the array
+        speaker_count = speaker_index + 1; // number of speaker entries in the array
       } else {
         debug(1, "Speaker array not found.");
       }
@@ -761,10 +771,12 @@ int dacp_get_speaker_list(dacp_spkr_stuff *speaker_info, int max_size_of_array) 
   } else {
     debug(1, "Unexpected response %d to dacp speakers request", response);
   }
-  return reply;
+  if (actual_speaker_count)
+    *actual_speaker_count = speaker_count;
+  return response;
 }
 
-void dacp_get_volume(void) {
+int dacp_get_volume(int32_t *the_actual_volume) {
   // get the speaker volume information from the DACP source and store it in the metadata_hub
   // A volume command has been sent from the client
   // let's get the master volume from the DACP remote control
@@ -772,32 +784,51 @@ void dacp_get_volume(void) {
   // we need the overall volume and the speakers information to get this device's relative volume to
   // calculate the real volume
 
-  int32_t overall_volume = dacp_get_client_volume();
+  int32_t overall_volume = 0;
+  int32_t actual_volume = 0;
+  int http_response = dacp_get_client_volume(&overall_volume);
   // debug(1, "DACP Volume: %d.", overall_volume);
-  int speaker_count = dacp_get_speaker_list((dacp_spkr_stuff *)&speaker_info, 50);
-  // debug(1,"DACP Speaker Count: %d.",speaker_count);
+  if (http_response==200) {
+    int speaker_count = 0;
+    http_response = dacp_get_speaker_list((dacp_spkr_stuff *)&speaker_info, 50,&speaker_count);
+    // debug(1,"DACP Speaker Count: %d.",speaker_count);
+    if (http_response==200) {
+      // get our machine number
+      uint16_t *hn = (uint16_t *)config.hw_addr;
+      uint32_t *ln = (uint32_t *)(config.hw_addr + 2);
+      uint64_t t1 = ntohs(*hn);
+      uint64_t t2 = ntohl(*ln);
+      int64_t machine_number = (t1 << 32) + t2; // this form is useful
 
-  // get our machine number
-  uint16_t *hn = (uint16_t *)config.hw_addr;
-  uint32_t *ln = (uint32_t *)(config.hw_addr + 2);
-  uint64_t t1 = ntohs(*hn);
-  uint64_t t2 = ntohl(*ln);
-  int64_t machine_number = (t1 << 32) + t2; // this form is useful
-
-  // Let's find our own speaker in the array and pick up its relative volume
-  int i;
-  int32_t relative_volume = 0;
-  for (i = 0; i < speaker_count; i++) {
-    if (speaker_info[i].speaker_number == machine_number) {
-      // debug(1,"Our speaker number found: %ld.",machine_number);
-      relative_volume = speaker_info[i].volume;
+      // Let's find our own speaker in the array and pick up its relative volume
+      int i;
+      int32_t relative_volume = 0;
+      for (i = 0; i < speaker_count; i++) {
+        if (speaker_info[i].speaker_number == machine_number) {
+          // debug(1,"Our speaker number found: %ld.",machine_number);
+          relative_volume = speaker_info[i].volume;
+          /*
+          if (speaker_info[i].active)
+            debug(1,"Our speaker is active.");
+          else
+            debug(1,"Our speaker is inactive.");
+          */
+        }
+      }
+      actual_volume = (overall_volume * relative_volume + 50) / 100;
+      // debug(1,"Overall volume: %d, relative volume: %d%, actual volume:
+      // %d.",overall_volume,relative_volume,actual_volume);
+      // debug(1,"Our actual speaker volume is %d.",actual_volume);
+      //metadata_hub_modify_prolog();
+      //metadata_store.speaker_volume = actual_volume;
+      //metadata_hub_modify_epilog(1);
+    } else {
+      debug(1,"Unexpected return code %d from dacp_get_speaker_list.",http_response);
     }
-  }
-  int32_t actual_volume = (overall_volume * relative_volume + 50) / 100;
-  // debug(1,"Overall volume: %d, relative volume: %d%, actual volume:
-  // %d.",overall_volume,relative_volume,actual_volume);
-  // debug(1,"Our actual speaker volume is %d.",actual_volume);
-  metadata_hub_modify_prolog();
-  metadata_store.speaker_volume = actual_volume;
-  metadata_hub_modify_epilog();
+  } /* else {
+    debug(1,"Unexpected return code %d from dacp_get_client_volume.",http_response);
+  } */
+  if (the_actual_volume)
+    *the_actual_volume = actual_volume;
+    return http_response;
 }

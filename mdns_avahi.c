@@ -122,7 +122,7 @@ static void browse_callback(AvahiServiceBrowser *b, AvahiIfIndex interface, Avah
     avahi_threaded_poll_quit(tpoll);
     break;
   case AVAHI_BROWSER_NEW:
-    debug(3, "(Browser) NEW: service '%s' of type '%s' in domain '%s'.", name, type, domain);
+    debug(1, "(Browser) NEW: service '%s' of type '%s' in domain '%s'.", name, type, domain);
     /* We ignore the returned resolver object. In the callback
        function we free it. If the server is terminated before
        the callback function is called the server will free
@@ -133,7 +133,7 @@ static void browse_callback(AvahiServiceBrowser *b, AvahiIfIndex interface, Avah
             avahi_strerror(avahi_client_errno(dbs->service_client)));
     break;
   case AVAHI_BROWSER_REMOVE:
-    debug(3, "(Browser) REMOVE: service '%s' of type '%s' in domain '%s'.", name, type, domain);
+    debug(1, "(Browser) REMOVE: service '%s' of type '%s' in domain '%s'.", name, type, domain);
     char *dacpid = strstr(name, "iTunes_Ctrl_");
     if (dacpid) {
       dacpid += strlen("iTunes_Ctrl_");

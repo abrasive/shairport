@@ -6,9 +6,6 @@
 
 #include "player.h"
 
-static pthread_mutex_t dacp_server_information_lock;
-static pthread_cond_t dacp_server_information_cv;
-
 typedef struct dacp_speaker_stuff {
   int64_t speaker_number;
   int active;
@@ -24,11 +21,11 @@ uint32_t dacp_tlv_crawl(
 
 int dacp_set_speaker_volume(int64_t machine_number, int32_t vo);
 
-int dacp_get_speaker_list(dacp_spkr_stuff *speaker_array, int max_size_of_array);
+int dacp_get_speaker_list(dacp_spkr_stuff *speaker_array, int max_size_of_array, int *actual_speaker_count);
 void set_dacp_server_information(rtsp_conn_info *conn); // tell the DACP conversation thread that
                                                         // the dacp server information has been set
                                                         // or changed
 int send_simple_dacp_command(const char *command);
 
-void dacp_get_volume(void); // get the speaker volume information from the DACP source and store it
+int dacp_get_volume(int32_t *the_actual_volume); // get the speaker volume information from the DACP source and store it
                             // in the metadata_hub

@@ -15,7 +15,7 @@
 #include "mpris-service.h"
 
 void mpris_metadata_watcher(struct metadata_bundle *argc, void *userdata) {
-  debug(1, "MPRIS metadata watcher called");
+  // debug(1, "MPRIS metadata watcher called");
   char response[100];
   switch (argc->repeat_status) {
   case RS_NONE:
@@ -33,74 +33,89 @@ void mpris_metadata_watcher(struct metadata_bundle *argc, void *userdata) {
   media_player2_player_set_loop_status(mprisPlayerPlayerSkeleton, response);
 
   GVariantBuilder *dict_builder, *aa;
-  GVariant *trackname, *albumname, *trackid, *tracklength, *artUrl;
+ 
+   /* Build the metadata array */
+  // debug(1,"Build metadata");
+  dict_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
 
+  // Make up the artwork URI if we have one
+  if (argc->cover_art_pathname) {
+    char artURIstring[1024];
+    sprintf(artURIstring, "file://%s", argc->cover_art_pathname);
+    // sprintf(artURIstring,"");
+    // debug(1,"artURI String: \"%s\".",artURIstring);
+    GVariant *artUrl = g_variant_new("s", artURIstring);
+    g_variant_builder_add(dict_builder, "{sv}", "mpris:artUrl", artUrl);
+  }
+  
+  // Add the TrackID if we have one
   // Build the Track ID from the 16-byte item_composite_id in hex prefixed by
   // /org/gnome/ShairportSync
-
   char st[33];
   char *pt = st;
   int it;
+  int non_zero = 0;
   for (it = 0; it < 16; it++) {
+    if (argc->item_composite_id[it])
+      non_zero = 1;
     sprintf(pt, "%02X", argc->item_composite_id[it]);
     pt += 2;
   }
   *pt = 0;
-  // debug(1, "Item composite ID set to 0x%s.", st);
-
-  char artURIstring[1024];
-  char trackidstring[1024];
-  sprintf(trackidstring, "/org/gnome/ShairportSync/%s", st);
-
-  trackid = g_variant_new("o", trackidstring);
-
-  // Make up the track name and album name
-  trackname = g_variant_new("s", argc->track_name);
-  albumname = g_variant_new("s", argc->album_name);
-
-  // Make up the track length in microseconds as an int64
-
-  uint64_t track_length_in_microseconds = argc->songtime_in_milliseconds;
-
-  track_length_in_microseconds *= 1000; // to microseconds in 64-bit precision
-
-  // Make up the track name and album name
-  tracklength = g_variant_new("x", track_length_in_microseconds);
-
-  /* Build the artists array */
-  // debug(1,"Build artists");
-  aa = g_variant_builder_new(G_VARIANT_TYPE("as"));
-  g_variant_builder_add(aa, "s", argc->artist_name);
-  GVariant *artists = g_variant_builder_end(aa);
-  g_variant_builder_unref(aa);
-
-  /* Build the genre array */
-  // debug(1,"Build genre");
-  aa = g_variant_builder_new(G_VARIANT_TYPE("as"));
-  g_variant_builder_add(aa, "s", argc->genre);
-  GVariant *genres = g_variant_builder_end(aa);
-  g_variant_builder_unref(aa);
-
-  /* Build the metadata array */
-  // debug(1,"Build metadata");
-  dict_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
-  // Make up the artwork URI if we have one
-  if (argc->cover_art_pathname) {
-    sprintf(artURIstring, "file://%s", argc->cover_art_pathname);
-    // sprintf(artURIstring,"");
-    artUrl = g_variant_new("s", artURIstring);
-    g_variant_builder_add(dict_builder, "{sv}", "mpris:artUrl", artUrl);
+  if (non_zero) {
+    // debug(1, "Item composite ID set to 0x%s.", st);
+    char trackidstring[1024];
+    sprintf(trackidstring, "/org/gnome/ShairportSync/%s", st);
+    GVariant* trackid = g_variant_new("o", trackidstring);
+    g_variant_builder_add(dict_builder, "{sv}", "mpris:trackid", trackid);
   }
-  g_variant_builder_add(dict_builder, "{sv}", "mpris:trackid", trackid);
-  g_variant_builder_add(dict_builder, "{sv}", "mpris:length", tracklength);
+  
+  // Add the track length if it's non-zero
+  if (argc->songtime_in_milliseconds) {
+    uint64_t track_length_in_microseconds = argc->songtime_in_milliseconds;
+    track_length_in_microseconds *= 1000; // to microseconds in 64-bit precision
+    // Make up the track name and album name
+    GVariant *tracklength = g_variant_new("x", track_length_in_microseconds);
+    g_variant_builder_add(dict_builder, "{sv}", "mpris:length", tracklength);
+  }
 
-  g_variant_builder_add(dict_builder, "{sv}", "xesam:title", trackname);
-  g_variant_builder_add(dict_builder, "{sv}", "xesam:album", albumname);
-  g_variant_builder_add(dict_builder, "{sv}", "xesam:artist", artists);
-  g_variant_builder_add(dict_builder, "{sv}", "xesam:genre", genres);
+  // Add the track name if there is one
+  if (argc->track_name) {
+    GVariant *trackname = g_variant_new("s", argc->track_name);
+    g_variant_builder_add(dict_builder, "{sv}", "xesam:title", trackname);
+  }
+  
+  // Add the album name if there is one
+   if (argc->album_name) {
+    GVariant *albumname = g_variant_new("s", argc->album_name);
+    g_variant_builder_add(dict_builder, "{sv}", "xesam:album", albumname);
+  }
+  
+  // Add the artists if there are any (actually there will be at most one, but put it in an array)
+  if (argc->artist_name) {
+    /* Build the artists array */
+    // debug(1,"Build artist array");
+    aa = g_variant_builder_new(G_VARIANT_TYPE("as"));
+    g_variant_builder_add(aa, "s", argc->artist_name);
+    GVariant *artists = g_variant_builder_end(aa);
+    g_variant_builder_unref(aa);
+    g_variant_builder_add(dict_builder, "{sv}", "xesam:artist", artists);
+  }
+  
+  // Add the genres if there are any (actually there will be at most one, but put it in an array)
+  if (argc->genre) {
+    // debug(1,"Build genre");
+    aa = g_variant_builder_new(G_VARIANT_TYPE("as"));
+    g_variant_builder_add(aa, "s", argc->genre);
+    GVariant *genres = g_variant_builder_end(aa);
+    g_variant_builder_unref(aa);
+    g_variant_builder_add(dict_builder, "{sv}", "xesam:genre", genres);
+  }
+ 
   GVariant *dict = g_variant_builder_end(dict_builder);
   g_variant_builder_unref(dict_builder);
 
+  // debug(1,"Set metadata");
   media_player2_player_set_metadata(mprisPlayerPlayerSkeleton, dict);
 }
 

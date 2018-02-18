@@ -78,28 +78,29 @@ void add_metadata_watcher(metadata_watcher fn, void *userdata) {
 
 void metadata_hub_modify_prolog(void) {
   // always run this before changing an entry or a sequence of entries in the metadata_hub
-  debug(1, "locking metadata hub for writing");
+  // debug(1, "locking metadata hub for writing");
   pthread_rwlock_wrlock(&metadata_hub_re_lock);
 }
 
 void run_metadata_watchers(void) {
   int i;
-  debug(1, "locking metadata hub for reading");
+  // debug(1, "locking metadata hub for reading");
   pthread_rwlock_rdlock(&metadata_hub_re_lock);
   for (i = 0; i < number_of_watchers; i++) {
     if (metadata_store.watchers[i]) {
       metadata_store.watchers[i](&metadata_store, metadata_store.watchers_data[i]);
     }
   }
-  debug(1, "unlocking metadata hub for reading");
+  // debug(1, "unlocking metadata hub for reading");
   pthread_rwlock_unlock(&metadata_hub_re_lock);
 }
 
-void metadata_hub_modify_epilog(void) {
+void metadata_hub_modify_epilog(int modified) {
   // always run this after changing an entry or a sequence of entries in the metadata_hub
-  debug(1, "unlocking metadata hub for writing");
+  // debug(1, "unlocking metadata hub for writing");
   pthread_rwlock_unlock(&metadata_hub_re_lock);
-  run_metadata_watchers();
+  if (modified)
+    run_metadata_watchers();
 }
 
 char *metadata_write_image_file(const char *buf, int len) {
@@ -359,21 +360,21 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
       break;
 
     case 'mdst':
-      debug(1, "MH Metadata stream processing start.");
+      // debug(1, "MH Metadata stream processing start.");
       metadata_hub_modify_prolog();
       break;
     case 'mden':
-      metadata_hub_modify_epilog();
-      debug(1, "MH Metadata stream processing end.");
+      metadata_hub_modify_epilog(1);
+      // debug(1, "MH Metadata stream processing end.");
       break;
     case 'PICT':
       if (length > 16) {
         metadata_hub_modify_prolog();
-        debug(1, "MH Picture received, length %u bytes.", length);
+        // debug(1, "MH Picture received, length %u bytes.", length);
         if (metadata_store.cover_art_pathname)
           free(metadata_store.cover_art_pathname);
         metadata_store.cover_art_pathname = metadata_write_image_file(data, length);
-        metadata_hub_modify_epilog();
+        metadata_hub_modify_epilog(1);
       }
       break;
     case 'clip':
@@ -383,10 +384,10 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
         if (metadata_store.client_ip)
           free(metadata_store.client_ip);
         metadata_store.client_ip = strndup(data, length);
-        debug(1, "MH Client IP set to: \"%s\"", metadata_store.client_ip);
+        // debug(1, "MH Client IP set to: \"%s\"", metadata_store.client_ip);
         metadata_store.client_ip_changed = 1;
         metadata_store.changed = 1;
-        metadata_hub_modify_epilog();
+        metadata_hub_modify_epilog(1);
       }
       break;
     case 'svip':
@@ -396,8 +397,8 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
         if (metadata_store.server_ip)
           free(metadata_store.server_ip);
         metadata_store.server_ip = strndup(data, length);
-        debug(1, "MH Server IP set to: \"%s\"", metadata_store.server_ip);
-        metadata_hub_modify_epilog();
+        // debug(1, "MH Server IP set to: \"%s\"", metadata_store.server_ip);
+        metadata_hub_modify_epilog(1);
       }
       break;
     default: {
@@ -412,7 +413,7 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
         payload = strndup(data, length);
       else
         payload = NULL;
-      debug(1, "MH \"%s\" \"%s\" (%d bytes): \"%s\".", typestring, codestring, length, payload);
+      // debug(1, "MH \"%s\" \"%s\" (%d bytes): \"%s\".", typestring, codestring, length, payload);
       if (payload)
         free(payload);
     }

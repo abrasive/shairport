@@ -102,4 +102,4 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
 // these functions lock and unlock the read-write mutex on the metadata hub and run the watchers
 // afterwards
 void metadata_hub_modify_prolog(void);
-void metadata_hub_modify_epilog(void);
+void metadata_hub_modify_epilog(int modified); //set to true if modifications occured, 0 otherwise
