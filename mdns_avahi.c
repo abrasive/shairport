@@ -122,7 +122,7 @@ static void browse_callback(AvahiServiceBrowser *b, AvahiIfIndex interface, Avah
     avahi_threaded_poll_quit(tpoll);
     break;
   case AVAHI_BROWSER_NEW:
-    debug(1, "(Browser) NEW: service '%s' of type '%s' in domain '%s'.", name, type, domain);
+    debug(3, "(Browser) NEW: service '%s' of type '%s' in domain '%s'.", name, type, domain);
     /* We ignore the returned resolver object. In the callback
        function we free it. If the server is terminated before
        the callback function is called the server will free
@@ -133,13 +133,13 @@ static void browse_callback(AvahiServiceBrowser *b, AvahiIfIndex interface, Avah
             avahi_strerror(avahi_client_errno(dbs->service_client)));
     break;
   case AVAHI_BROWSER_REMOVE:
-    debug(1, "(Browser) REMOVE: service '%s' of type '%s' in domain '%s'.", name, type, domain);
+    debug(3, "(Browser) REMOVE: service '%s' of type '%s' in domain '%s'.", name, type, domain);
     char *dacpid = strstr(name, "iTunes_Ctrl_");
     if (dacpid) {
       dacpid += strlen("iTunes_Ctrl_");
       if (strcmp(dacpid, conn->dacp_id) == 0) {
         if (conn->dacp_id != 0) {
-          debug(1, "Client's DACP status withdrawn.");
+          debug(3, "Client's DACP status withdrawn.");
           conn->dacp_port = 0;
 #ifdef HAVE_DACP_CLIENT
           set_dacp_server_information(conn); // this will have the effect of telling the scanner
@@ -228,14 +228,14 @@ static void register_service(AvahiClient *c) {
                                           service_name, config.regtype, NULL, NULL, port,
                                           MDNS_RECORD_WITH_METADATA, NULL);
       if (ret == 0)
-        debug(1, "avahi: request to add \"%s\" service with metadata", config.regtype);
+        debug(2, "avahi: request to add \"%s\" service with metadata", config.regtype);
     } else {
 #endif
       ret = avahi_entry_group_add_service(group, selected_interface, AVAHI_PROTO_UNSPEC, 0,
                                           service_name, config.regtype, NULL, NULL, port,
                                           MDNS_RECORD_WITHOUT_METADATA, NULL);
       if (ret == 0)
-        debug(1, "avahi: request to add \"%s\" service without metadata", config.regtype);
+        debug(2, "avahi: request to add \"%s\" service without metadata", config.regtype);
 #ifdef CONFIG_METADATA
     }
 #endif
