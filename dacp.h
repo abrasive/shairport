@@ -27,5 +27,6 @@ void set_dacp_server_information(rtsp_conn_info *conn); // tell the DACP convers
                                                         // or changed
 int send_simple_dacp_command(const char *command);
 
-int dacp_get_volume(int32_t *the_actual_volume); // get the speaker volume information from the DACP source and store it
-                            // in the metadata_hub
+int dacp_set_include_speaker_volume(int64_t machine_number, int32_t vo);
+int dacp_get_client_volume(int32_t *result);
+int dacp_get_volume(int32_t *the_actual_volume); // get the speaker volume information from the DACP source

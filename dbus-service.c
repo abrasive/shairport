@@ -46,9 +46,10 @@ gboolean notify_volume_callback(ShairportSync *skeleton, gpointer user_data) {
         // debug(1, "Remote-setting volume to %d.", vo);
         // get the information we need -- the absolute volume, the speaker list, our ID
         struct dacp_speaker_stuff speaker_info[50];
-        int32_t overall_volume = dacp_get_client_volume(playing_conn);
-        int speaker_count =
-            dacp_get_speaker_list(playing_conn, (dacp_spkr_stuff *)&speaker_info, 50);
+        int32_t overall_volume;
+        int http_response = dacp_get_client_volume(&overall_volume);
+        int speaker_count;
+        http_response = dacp_get_speaker_list((dacp_spkr_stuff *)&speaker_info, 50, &speaker_count);
 
         // get our machine number
         uint16_t *hn = (uint16_t *)config.hw_addr;
@@ -73,14 +74,14 @@ gboolean notify_volume_callback(ShairportSync *skeleton, gpointer user_data) {
 
         if (active_speakers == 1) {
           // must be just this speaker
-          dacp_set_include_speaker_volume(playing_conn, machine_number, vo);
+          dacp_set_include_speaker_volume(machine_number, vo);
         } else if (active_speakers == 0) {
           debug(1, "No speakers!");
         } else {
           // debug(1, "Speakers: %d, active: %d",speaker_count,active_speakers);
           if (vo >= overall_volume) {
             // debug(1,"Multiple speakers active, but desired new volume is highest");
-            dacp_set_include_speaker_volume(playing_conn, machine_number, vo);
+            dacp_set_include_speaker_volume(machine_number, vo);
           } else {
             // the desired volume is less than the current overall volume and there is more than one
             // speaker
@@ -106,7 +107,7 @@ gboolean notify_volume_callback(ShairportSync *skeleton, gpointer user_data) {
             if (highest_other_volume <= vo) {
               // debug(1,"Highest other volume %d is less than or equal to the desired new volume
               // %d.",highest_other_volume,vo);
-              dacp_set_include_speaker_volume(playing_conn, machine_number, vo);
+              dacp_set_include_speaker_volume(machine_number, vo);
             } else {
               // debug(1,"Highest other volume %d is greater than the desired new volume
               // %d.",highest_other_volume,vo);
@@ -115,14 +116,14 @@ gboolean notify_volume_callback(ShairportSync *skeleton, gpointer user_data) {
               if (overall_volume > highest_other_volume) {
                 // debug(1,"Lower overall volume to new highest volume.");
                 dacp_set_include_speaker_volume(
-                    playing_conn, machine_number,
+                    machine_number,
                     highest_other_volume); // set the overall volume to the highest one
               }
               int32_t desired_relative_volume =
                   (vo * 100 + (highest_other_volume / 2)) / highest_other_volume;
               // debug(1,"Set our speaker volume relative to the highest volume.");
               dacp_set_speaker_volume(
-                  playing_conn, machine_number,
+                  machine_number,
                   desired_relative_volume); // set the overall volume to the highest one
             }
           }
@@ -142,7 +143,7 @@ gboolean notify_volume_callback(ShairportSync *skeleton, gpointer user_data) {
 static gboolean on_handle_remote_command(ShairportSync *skeleton, GDBusMethodInvocation *invocation,
                                          const gchar *command, gpointer user_data) {
   debug(1, "RemoteCommand with command \"%s\".", command);
-  send_simple_dacp_command(const char *command);
+  send_simple_dacp_command((const char *)command);
   shairport_sync_complete_remote_command(skeleton, invocation);
   return TRUE;
 }
