@@ -1,3 +1,12 @@
+Version 3.2d28
+====
+Continuing the experiments with D-Bus and related DACP support. In this revision, an attempt is made to control the amount of scanning the system does to maintain up-to-date information about a DACP source. As before, please note that the implementation is likely to change greatly or be removed at any time.
+
+**Enhancements**
+* Barebones support added for OpenBSD compilation.
+* Only ask for missing packets to be resent once, and if any error occurs making the request, stop for 10 seconds.
+* Include the `-pthread` flag -- including the pthread library with `-lpthread` isn't always enough.
+
 Version 3.2d26
 ====
 
