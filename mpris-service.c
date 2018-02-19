@@ -166,7 +166,7 @@ static void on_mpris_name_acquired(GDBusConnection *connection, const gchar *nam
 
   const char *empty_string_array[] = {NULL};
 
-  debug(1, "MPRIS well-known interface name \"%s\" acquired for %s.", name, config.appName);
+  // debug(1, "MPRIS well-known interface name \"%s\" acquired on the %s bus.", name, (config.mpris_service_bus_type == DBT_session) ? "session" : "system");
   mprisPlayerSkeleton = media_player2_skeleton_new();
   mprisPlayerPlayerSkeleton = media_player2_player_skeleton_new();
 
@@ -206,30 +206,25 @@ static void on_mpris_name_acquired(GDBusConnection *connection, const gchar *nam
 
   add_metadata_watcher(mpris_metadata_watcher, NULL);
 
-  debug(1, "Shairport Sync D-BUS service started on interface \"%s\".", name);
-
-  debug(1, "MPRIS service started on interface \"%s\".", name);
+  debug(1, "MPRIS service started at \"%s\" on the %s bus.", name, (config.mpris_service_bus_type == DBT_session) ? "session" : "system");
 }
 
 static void on_mpris_name_lost_again(GDBusConnection *connection, const gchar *name,
                                      gpointer user_data) {
-  warn("Could not acquire an MPRIS interface.");
+  warn("Could not acquire an MPRIS interface named \"%s\" on the %s bus.",name,(config.mpris_service_bus_type == DBT_session) ? "session" : "system");
 }
 
 static void on_mpris_name_lost(GDBusConnection *connection, const gchar *name, gpointer user_data) {
-  debug(1, "Could not acquire well-known interface name \"%s\" -- will try adding the process "
-           "number to the end of it.",
-        name);
+  //debug(1, "Could not acquire MPRIS interface \"%s\" on the %s bus -- will try adding the process "
+  //         "number to the end of it.",
+  //      name,(mpris_bus_type==G_BUS_TYPE_SESSION) ? "session" : "system");
   pid_t pid = getpid();
   char interface_name[256] = "";
   sprintf(interface_name, "org.mpris.MediaPlayer2.ShairportSync.i%d", pid);
   GBusType mpris_bus_type = G_BUS_TYPE_SYSTEM;
   if (config.mpris_service_bus_type == DBT_session)
     mpris_bus_type = G_BUS_TYPE_SESSION;
-  if (mpris_bus_type == G_BUS_TYPE_SYSTEM)
-    debug(1, "Looking for well-known interface name \"%s\" on the system bus.", interface_name);
-  else
-    debug(1, "Looking for well-known interface name \"%s\" on the session bus.", interface_name);
+  // debug(1, "Looking for an MPRIS interface \"%s\" on the %s bus.",interface_name, (mpris_bus_type==G_BUS_TYPE_SESSION) ? "session" : "system");
   g_bus_own_name(mpris_bus_type, interface_name, G_BUS_NAME_OWNER_FLAGS_NONE, NULL,
                  on_mpris_name_acquired, on_mpris_name_lost_again, NULL, NULL);
 }
@@ -240,7 +235,7 @@ int start_mpris_service() {
   GBusType mpris_bus_type = G_BUS_TYPE_SYSTEM;
   if (config.mpris_service_bus_type == DBT_session)
     mpris_bus_type = G_BUS_TYPE_SESSION;
-  debug(1, "Looking for well-known name \"org.mpris.MediaPlayer2.ShairportSync\".");
+  // debug(1, "Looking for an MPRIS interface \"org.mpris.MediaPlayer2.ShairportSync\" on the %s bus.",(mpris_bus_type==G_BUS_TYPE_SESSION) ? "session" : "system");
   g_bus_own_name(mpris_bus_type, "org.mpris.MediaPlayer2.ShairportSync",
                  G_BUS_NAME_OWNER_FLAGS_NONE, NULL, on_mpris_name_acquired, on_mpris_name_lost,
                  NULL, NULL);
