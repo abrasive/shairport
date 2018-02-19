@@ -59,8 +59,15 @@
 
 pthread_rwlock_t metadata_hub_re_lock = PTHREAD_RWLOCK_INITIALIZER;
 
+void release_char_string(char **str) {
+  if (*str) {
+    free(*str);
+    *str=NULL;
+  }
+}
+
 void metadata_hub_init(void) {
-  debug(1, "Metadata bundle initialisation.");
+  // debug(1, "Metadata bundle initialisation.");
   memset(&metadata_store, 0, sizeof(metadata_store));
 }
 
@@ -70,7 +77,7 @@ void add_metadata_watcher(metadata_watcher fn, void *userdata) {
     if (metadata_store.watchers[i] == NULL) {
       metadata_store.watchers[i] = fn;
       metadata_store.watchers_data[i] = userdata;
-      debug(1, "Added a metadata watcher into slot %d", i);
+      // debug(1, "Added a metadata watcher into slot %d", i);
       break;
     }
   }
@@ -80,6 +87,25 @@ void metadata_hub_modify_prolog(void) {
   // always run this before changing an entry or a sequence of entries in the metadata_hub
   // debug(1, "locking metadata hub for writing");
   pthread_rwlock_wrlock(&metadata_hub_re_lock);
+}
+
+void metadata_hub_release_track_artwork(void) {
+  debug(1,"release track artwork");
+  release_char_string(&metadata_store.cover_art_pathname);
+}
+
+void metadata_hub_reset_track_metadata(void) {
+  debug(1,"release track metadata");
+  release_char_string(&metadata_store.track_name);
+  release_char_string(&metadata_store.artist_name);
+  release_char_string(&metadata_store.album_name);
+  release_char_string(&metadata_store.genre);
+  release_char_string(&metadata_store.comment);
+  release_char_string(&metadata_store.composer);
+  release_char_string(&metadata_store.file_kind);
+  release_char_string(&metadata_store.sort_as);
+  metadata_store.item_id = 0;
+  metadata_store.songtime_in_milliseconds = 0;
 }
 
 void run_metadata_watchers(void) {
@@ -100,7 +126,6 @@ void metadata_hub_modify_epilog(int modified) {
   // debug(1, "unlocking metadata hub for writing");
   pthread_rwlock_unlock(&metadata_hub_re_lock);
   if (modified) {
-    debug(1,"Update metadata.");
     run_metadata_watchers();
   }
 }
@@ -240,7 +265,7 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
         if (metadata_store.album_name)
           free(metadata_store.album_name);
         metadata_store.album_name = strndup(data, length);
-        // debug(1, "MH Album name set to: \"%s\"", metadata_store.album_name);
+        debug(1, "MH Album name set to: \"%s\"", metadata_store.album_name);
         metadata_store.album_name_changed = 1;
         metadata_store.changed = 1;
       }
@@ -251,7 +276,7 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
         if (metadata_store.artist_name)
           free(metadata_store.artist_name);
         metadata_store.artist_name = strndup(data, length);
-        // debug(1, "MH Artist name set to: \"%s\"", metadata_store.artist_name);
+        debug(1, "MH Artist name set to: \"%s\"", metadata_store.artist_name);
         metadata_store.artist_name_changed = 1;
         metadata_store.changed = 1;
       }
@@ -262,7 +287,7 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
         if (metadata_store.comment)
           free(metadata_store.comment);
         metadata_store.comment = strndup(data, length);
-        // debug(1, "MH Comment set to: \"%s\"", metadata_store.comment);
+        debug(1, "MH Comment set to: \"%s\"", metadata_store.comment);
         metadata_store.comment_changed = 1;
         metadata_store.changed = 1;
       }
@@ -272,7 +297,7 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
         if (metadata_store.genre)
           free(metadata_store.genre);
         metadata_store.genre = strndup(data, length);
-        // debug(1, "MH Genre set to: \"%s\"", metadata_store.genre);
+        debug(1, "MH Genre set to: \"%s\"", metadata_store.genre);
         metadata_store.genre_changed = 1;
         metadata_store.changed = 1;
       }
@@ -283,7 +308,7 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
         if (metadata_store.track_name)
           free(metadata_store.track_name);
         metadata_store.track_name = strndup(data, length);
-        // debug(1, "MH Track name set to: \"%s\"", metadata_store.track_name);
+        debug(1, "MH Track name set to: \"%s\"", metadata_store.track_name);
         metadata_store.track_name_changed = 1;
         metadata_store.changed = 1;
       }
@@ -294,7 +319,7 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
         if (metadata_store.composer)
           free(metadata_store.composer);
         metadata_store.composer = strndup(data, length);
-        // debug(1, "MH Composer set to: \"%s\"", metadata_store.composer);
+        debug(1, "MH Composer set to: \"%s\"", metadata_store.composer);
         metadata_store.composer_changed = 1;
         metadata_store.changed = 1;
       }
@@ -305,7 +330,7 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
         if (metadata_store.file_kind)
           free(metadata_store.file_kind);
         metadata_store.file_kind = strndup(data, length);
-        // debug(1, "MH File Kind set to: \"%s\"", metadata_store.file_kind);
+        debug(1, "MH File Kind set to: \"%s\"", metadata_store.file_kind);
         metadata_store.file_kind_changed = 1;
         metadata_store.changed = 1;
       }
@@ -316,7 +341,7 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
         if (metadata_store.file_kind)
           free(metadata_store.file_kind);
         metadata_store.file_kind = strndup(data, length);
-        // debug(1, "MH File Kind set to: \"%s\"", metadata_store.file_kind);
+        debug(1, "MH File Kind set to: \"%s\"", metadata_store.file_kind);
         metadata_store.file_kind_changed = 1;
         metadata_store.changed = 1;
       }
@@ -327,7 +352,7 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
         if (metadata_store.sort_as)
           free(metadata_store.sort_as);
         metadata_store.sort_as = strndup(data, length);
-        // debug(1, "MH Sort As set to: \"%s\"", metadata_store.sort_as);
+        debug(1, "MH Sort As set to: \"%s\"", metadata_store.sort_as);
         metadata_store.sort_as_changed = 1;
         metadata_store.changed = 1;
       }
@@ -362,17 +387,17 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
       break;
 
     case 'mdst':
-      // debug(1, "MH Metadata stream processing start.");
+      debug(1, "MH Metadata stream processing start.");
       metadata_hub_modify_prolog();
       break;
     case 'mden':
       metadata_hub_modify_epilog(1);
-      // debug(1, "MH Metadata stream processing end.");
+      debug(1, "MH Metadata stream processing end.");
       break;
     case 'PICT':
       if (length > 16) {
         metadata_hub_modify_prolog();
-        // debug(1, "MH Picture received, length %u bytes.", length);
+        debug(1, "MH Picture received, length %u bytes.", length);
         if (metadata_store.cover_art_pathname)
           free(metadata_store.cover_art_pathname);
         metadata_store.cover_art_pathname = metadata_write_image_file(data, length);

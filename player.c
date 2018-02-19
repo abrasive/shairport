@@ -2581,8 +2581,11 @@ void player_stop(rtsp_conn_info *conn) {
     free(conn->player_thread);
     conn->player_thread = NULL;
 #ifdef HAVE_METADATA_HUB
-    metadata_hub_modify_prolog();
+     metadata_hub_modify_prolog();
     metadata_store.player_state = PS_STOPPED;
+    debug(1,"player_stop release track metadata and artwork");
+    metadata_hub_reset_track_metadata();
+    metadata_hub_release_track_artwork();
     metadata_hub_modify_epilog(1);
 #endif
   } else {

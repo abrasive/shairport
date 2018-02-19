@@ -29,6 +29,8 @@ typedef void (*metadata_watcher)(struct metadata_bundle *argc, void *userdata);
 typedef struct metadata_bundle {
   int changed;                          // normally 0, nonzero if a field has been changed
   int playerstatusupdates_are_received; // false if it's "traditional" metadata
+  
+  int player_thread_active; // true if there is a player threrad; false otherwise
 
   enum play_status_type play_status;
   int play_status_changed;
@@ -98,6 +100,8 @@ void add_metadata_watcher(metadata_watcher fn, void *userdata);
 
 void metadata_hub_init(void);
 void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uint32_t length);
+void metadata_hub_reset_track_metadata(void);
+void metadata_hub_release_track_artwork(void);
 
 // these functions lock and unlock the read-write mutex on the metadata hub and run the watchers
 // afterwards

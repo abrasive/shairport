@@ -280,20 +280,20 @@ void set_dacp_server_information(rtsp_conn_info *conn) { // tell the DACP conver
 void *dacp_monitor_thread_code(void *na) {
   int scan_index = 0;
   char server_reply[10000];
-  debug(1, "DACP monitor thread started.");
+  // debug(1, "DACP monitor thread started.");
   // wait until we get a valid port number to begin monitoring it
   int32_t revision_number = 1;
   while (1) {
     int result;
     pthread_mutex_lock(&dacp_server_information_lock);
     while (dacp_server.scan_enable == 0) {
-      debug(1, "Wait for a valid DACP port");
+      // debug(1, "Wait for a valid DACP port");
       pthread_cond_wait(&dacp_server_information_cv, &dacp_server_information_lock);
     }
     scan_index++;
     result = dacp_get_volume(NULL); // just want the http code
     if ((result==496) || (result==403)|| (result==501)) {
-      debug(1,"Stopping scan because the response to \"dacp_get_volume(NULL)\" is %d.",result);
+      // debug(1,"Stopping scan because the response to \"dacp_get_volume(NULL)\" is %d.",result);
       dacp_server.scan_enable = 0;
     }
     pthread_mutex_unlock(&dacp_server_information_lock);
@@ -308,13 +308,16 @@ void *dacp_monitor_thread_code(void *na) {
       // debug(1,"Command: \"%s\"",command);
       result = dacp_send_command(command, &response, &le);
       // debug(1,"Response to \"%s\" is %d.",command,result);
-      if (result == 200) {
+//      if (result == 200) {
+      if (0) {
         char *sp = response;
         if (le >= 8) {
           // here start looking for the contents of the status update
           if (dacp_tlv_crawl(&sp, &item_size) == 'cmst') { // status
             // here, we know that we are receiving playerstatusupdates, so set a flag
             metadata_hub_modify_prolog();
+            debug(1,"playstatusupdate release track metadata");
+            metadata_hub_reset_track_metadata();
             metadata_store.playerstatusupdates_are_received = 1;
             sp -= item_size; // drop down into the array -- don't skip over it
             le -= 8;
