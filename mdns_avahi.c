@@ -206,7 +206,7 @@ static void egroup_callback(AvahiEntryGroup *g, AvahiEntryGroupState state,
 }
 
 static void register_service(AvahiClient *c) {
-  debug(1, "avahi: register_service.");
+  // debug(1, "avahi: register_service.");
   if (!group)
     group = avahi_entry_group_new(c, egroup_callback, NULL);
   if (!group)
@@ -349,7 +349,7 @@ static void service_client_callback(AvahiClient *c, AvahiClientState state, void
 }
 
 static int avahi_register(char *srvname, int srvport) {
-  debug(1, "avahi: avahi_register.");
+  // debug(1, "avahi: avahi_register.");
   service_name = strdup(srvname);
   port = srvport;
 
