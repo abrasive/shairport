@@ -1504,18 +1504,18 @@ int main(int argc, char **argv) {
 #endif
 
 #ifdef HAVE_METADATA_HUB
-  debug(1, "Initialising metadata hub");
+  // debug(1, "Initialising metadata hub");
   metadata_hub_init();
 #endif
 
 #ifdef HAVE_DACP_CLIENT
-  debug(1, "Requesting DACP Monitor");
+  // debug(1, "Requesting DACP Monitor");
   dacp_monitor_start();
 #endif
 
 #if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
   // Start up DBUS services after initial settings are all made
-  debug(1, "Starting up D-Bus services");
+  // debug(1, "Starting up D-Bus services");
   pthread_create(&dbus_thread, NULL, &dbus_thread_func, NULL);
 #ifdef HAVE_DBUS
   start_dbus_service();
