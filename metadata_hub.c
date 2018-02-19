@@ -389,6 +389,8 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
     case 'mdst':
       debug(1, "MH Metadata stream processing start.");
       metadata_hub_modify_prolog();
+      metadata_hub_reset_track_metadata();
+      metadata_hub_release_track_artwork();
       break;
     case 'mden':
       metadata_hub_modify_epilog(1);
