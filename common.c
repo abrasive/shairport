@@ -100,11 +100,26 @@ void set_requested_connection_state_to_output(int v) { requested_connection_stat
 void die(const char *format, ...) {
   char s[1024];
   s[0] = 0;
+  uint64_t time_now = get_absolute_time_in_fp();
+  uint64_t time_since_start = time_now - fp_time_at_startup;
+  uint64_t time_since_last_debug_message = time_now - fp_time_at_last_debug_message;
+  fp_time_at_last_debug_message = time_now;
+  uint64_t divisor = (uint64_t)1 << 32;
+  double tss = 1.0 * time_since_start / divisor;
+  double tsl = 1.0 * time_since_last_debug_message / divisor;
   va_list args;
   va_start(args, format);
   vsnprintf(s, sizeof(s), format, args);
   va_end(args);
-  daemon_log(LOG_EMERG, "fatal error: %s", s);
+
+  if ((debuglev) && (config.debugger_show_elapsed_time) && (config.debugger_show_relative_time))
+    daemon_log(LOG_EMERG, "|% 20.9f|% 20.9f|*fatal error: %s", tss, tsl, s);
+  else if  ((debuglev) && (config.debugger_show_relative_time))
+    daemon_log(LOG_EMERG, "% 20.9f|*fatal error: %s", tsl, s);
+  else if  ((debuglev) && (config.debugger_show_elapsed_time))
+    daemon_log(LOG_EMERG, "% 20.9f|*fatal error: %s", tss, s);
+  else
+    daemon_log(LOG_EMERG, "fatal error: %s", s);
   shairport_shutdown();
   exit(1);
 }
@@ -112,11 +127,26 @@ void die(const char *format, ...) {
 void warn(const char *format, ...) {
   char s[1024];
   s[0] = 0;
+  uint64_t time_now = get_absolute_time_in_fp();
+  uint64_t time_since_start = time_now - fp_time_at_startup;
+  uint64_t time_since_last_debug_message = time_now - fp_time_at_last_debug_message;
+  fp_time_at_last_debug_message = time_now;
+  uint64_t divisor = (uint64_t)1 << 32;
+  double tss = 1.0 * time_since_start / divisor;
+  double tsl = 1.0 * time_since_last_debug_message / divisor;
   va_list args;
   va_start(args, format);
   vsnprintf(s, sizeof(s), format, args);
   va_end(args);
-  daemon_log(LOG_WARNING, "%s", s);
+  
+  if ((debuglev) && (config.debugger_show_elapsed_time) && (config.debugger_show_relative_time))
+    daemon_log(LOG_WARNING, "|% 20.9f|% 20.9f|*warning: %s", tss, tsl, s);
+  else if  ((debuglev) && (config.debugger_show_relative_time))
+    daemon_log(LOG_WARNING, "% 20.9f|*warning: %s", tsl, s);
+  else if  ((debuglev) && (config.debugger_show_elapsed_time))
+    daemon_log(LOG_WARNING, "% 20.9f|*warning: %s", tss, s);
+  else
+    daemon_log(LOG_WARNING, "%s", s);
 }
 
 void debug(int level, const char *format, ...) {
