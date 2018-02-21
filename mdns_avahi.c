@@ -87,7 +87,7 @@ static void resolve_callback(AvahiServiceResolver *r, AVAHI_GCC_UNUSED AvahiIfIn
       dacpid += strlen("iTunes_Ctrl_");
       if (strcmp(dacpid, conn->dacp_id) == 0) {
         if (conn->dacp_port != port) {
-          debug(1, "Client's DACP port: %u.", port);
+          debug(2, "Client's DACP port: %u.", port);
           conn->dacp_port = port;
 #ifdef HAVE_DACP_CLIENT
           set_dacp_server_information(conn);

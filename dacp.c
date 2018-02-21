@@ -249,7 +249,7 @@ int dacp_send_command(const char *command, char **body, ssize_t *bodysize) {
 int send_simple_dacp_command(const char *command) {
   int reply = 0;
   char *server_reply = NULL;
-  debug(1, "Sending command \"%s\".", command);
+  debug(2, "Sending command \"%s\".", command);
   ssize_t reply_size = 0;
   reply = dacp_send_command(command, &server_reply, &reply_size);
   if (server_reply) {
@@ -591,7 +591,7 @@ void *dacp_monitor_thread_code(void *na) {
       response = NULL;
     }
     */
-    sleep(2);
+    sleep(5); // check every five seconds
   }
   debug(1, "DACP monitor thread exiting.");
   pthread_exit(NULL);
