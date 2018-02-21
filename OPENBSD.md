@@ -2,7 +2,7 @@ Shairport Sync on OpenBSD using `sndio`
 ----
 This is an initial note about installing Shairport Sync on OpenBSD. Shairport Sync compiles and runs natively on OpenBSD using the `sndio` back end.
 
-Unlike FreeBSD, it seems that OpenBSD does not use the directory `/usr/local/etc` as a system configuration directory (`sysconfdir`) but follows the same practice as Linux in using `/etc` as the default `sysconfdir`.
+Unlike FreeBSD, it seems that OpenBSD does not use the directory `/usr/local/etc` as a system configuration directory ("`sysconfdir`") but follows the same practice as Linux in using `/etc` as the default `sysconfdir`.
 
 General
 ----
@@ -16,7 +16,7 @@ Next, although it may not be necessary, [update the packages](https://unix.stack
 ```
 Install the Avahi subsystem ([search](https://www.openbsd.org/faq/faq15.html) using, for example, `# pkg_info -Q avahi`). 
 ```
-# pkg_add avahi-0.7p0
+# pkg_add avahi
 ```
 A number of libraries will be installed to support Avahi, including the D-Bus system.
 Enable the D-Bus and Avahi subsystems to [start automatically](http://openbsd-archive.7691.n7.nabble.com/starting-avahi-the-proper-way-td311612.html):
