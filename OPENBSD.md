@@ -1,4 +1,4 @@
-Shairport Sync on OpenBSD using `sndio`
+Shairport Sync on OpenBSD
 ----
 This is an initial note about installing Shairport Sync on OpenBSD. Shairport Sync compiles and runs natively on OpenBSD using the `sndio` back end.
 
