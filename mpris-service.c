@@ -17,6 +17,7 @@
 void mpris_metadata_watcher(struct metadata_bundle *argc, void *userdata) {
   // debug(1, "MPRIS metadata watcher called");
   char response[100];
+
   switch (argc->repeat_status) {
   case RS_NONE:
     strcpy(response, "None");
@@ -31,6 +32,21 @@ void mpris_metadata_watcher(struct metadata_bundle *argc, void *userdata) {
 
   // debug(1,"Set loop status to \"%s\"",response);
   media_player2_player_set_loop_status(mprisPlayerPlayerSkeleton, response);
+ 
+  switch (argc->player_state) {
+  case PS_STOPPED:
+    strcpy(response, "Stopped");
+    break;
+  case PS_PAUSED:
+    strcpy(response, "Paused");
+    break;
+  case PS_PLAYING:
+    strcpy(response, "Playing");
+    break;
+  }
+
+  // debug(1,"From player_state, set playback status to \"%s\"",response);
+  media_player2_player_set_playback_status(mprisPlayerPlayerSkeleton, response); 
 
   GVariantBuilder *dict_builder, *aa;
  
@@ -63,30 +79,39 @@ void mpris_metadata_watcher(struct metadata_bundle *argc, void *userdata) {
   }
   *pt = 0;
   if (non_zero) {
-    // debug(1, "Item composite ID set to 0x%s.", st);
+    //debug(1, "Set ID using composite ID: \"0x%s\".", st);
     char trackidstring[1024];
     sprintf(trackidstring, "/org/gnome/ShairportSync/%s", st);
     GVariant* trackid = g_variant_new("o", trackidstring);
     g_variant_builder_add(dict_builder, "{sv}", "mpris:trackid", trackid);
+  } else if (argc->item_id) {
+    char trackidstring[128];
+    //debug(1, "Set ID using mper ID: \"%u\".",argc->item_id);
+   sprintf(trackidstring, "/org/gnome/ShairportSync/mper_%u", argc->item_id);
+    GVariant* trackid = g_variant_new("o", trackidstring);
+    g_variant_builder_add(dict_builder, "{sv}", "mpris:trackid", trackid);  
   }
   
   // Add the track length if it's non-zero
   if (argc->songtime_in_milliseconds) {
-    uint64_t track_length_in_microseconds = argc->songtime_in_milliseconds;
-    track_length_in_microseconds *= 1000; // to microseconds in 64-bit precision
+   uint64_t track_length_in_microseconds = argc->songtime_in_milliseconds;
+   track_length_in_microseconds *= 1000; // to microseconds in 64-bit precision
     // Make up the track name and album name
-    GVariant *tracklength = g_variant_new("x", track_length_in_microseconds);
-    g_variant_builder_add(dict_builder, "{sv}", "mpris:length", tracklength);
+   //debug(1, "Set tracklength to %lu.", track_length_in_microseconds);
+   GVariant *tracklength = g_variant_new("x", track_length_in_microseconds);
+   g_variant_builder_add(dict_builder, "{sv}", "mpris:length", tracklength);
   }
 
   // Add the track name if there is one
   if (argc->track_name) {
+    // debug(1, "Track name set to \"%s\".", argc->track_name);
     GVariant *trackname = g_variant_new("s", argc->track_name);
     g_variant_builder_add(dict_builder, "{sv}", "xesam:title", trackname);
   }
   
   // Add the album name if there is one
    if (argc->album_name) {
+    // debug(1, "Album name set to \"%s\".", argc->album_name);
     GVariant *albumname = g_variant_new("s", argc->album_name);
     g_variant_builder_add(dict_builder, "{sv}", "xesam:album", albumname);
   }

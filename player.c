@@ -1057,6 +1057,12 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
             send_ssnc_metadata('prsm', NULL, 0,
                                0); // "resume", but don't wait if the queue is locked
 #endif
+#ifdef HAVE_METADATA_HUB
+            metadata_hub_modify_prolog();
+            metadata_store.player_state = PS_PLAYING;
+            metadata_hub_modify_epilog(1);
+#endif
+
           }
         }
       }
