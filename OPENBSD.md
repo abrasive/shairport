@@ -2,6 +2,8 @@ Shairport Sync on OpenBSD using `sndio`
 ----
 This is an initial note about installing Shairport Sync on OpenBSD. Shairport Sync compiles and runs natively on OpenBSD using the `sndio` back end.
 
+Unlike FreeBSD, it seems that OpenBSD does not use the directory `/usr/local/etc` as a system configuration directory (`sysconfdir`) but follows the same practice as Linux in using `/etc` as the default `sysconfdir`.
+
 General
 ----
 This build was done on a default build of `OpenBSD 6.2 GENERIC.MP#134 amd64`. Following [this guide](https://www.openbsd.org/faq/faq15.html), `/etc/installurl` was created with the contents:
@@ -27,7 +29,7 @@ Building
 
 Install the following packages (e.g. using `pkg_add` in superuser mode) that are needed for Shairport Sync to be downloaded and built successfully:
 ```
-git autoconf automake automake popt libconfig
+autoconf automake automake popt libconfig git
 ```
 Add the relevant shell variable definitions for Autoconf and Automake -- they could be placed in the user's `.profile` file to be automatically executed at login:
 ```
@@ -43,8 +45,16 @@ Next, switch to the `development` branch, configure the build and compile it:
 ```
 $ git checkout development
 $ autoreconf -i -f
-$ ./configure  --with-avahi --with-ssl=openssl --with-sndio --with-os=openbsd
+$ ./configure --sysconfdir=/etc --with-avahi --with-ssl=openssl --with-sndio --with-os=openbsd
 $ make
+```
+The application is called `shairport-sync`. Check that it's running correctly by executing the following command:
+```
+$ ./shairport-sync -V`
+```
+This will execute the application and it will return its version information and terminate, for example:
+```
+3.2-OpenSSL-Avahi-sndio-sysconfdir:/etc
 ```
 There is no make install yet -- you're on your own.
 
