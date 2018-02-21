@@ -50,7 +50,7 @@ $ make
 ```
 The application is called `shairport-sync`. Check that it's running correctly by executing the following command:
 ```
-$ ./shairport-sync -V`
+$ ./shairport-sync -V
 ```
 This will execute the application and it will return its version information and terminate, for example:
 ```
