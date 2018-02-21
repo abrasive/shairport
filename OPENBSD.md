@@ -29,7 +29,7 @@ Building
 
 Install the following packages (e.g. using `pkg_add` in superuser mode) needed to download and build Shairport Sync:
 ```
-autoconf automake automake popt libconfig git
+autoconf automake popt libconfig git
 ```
 Add the relevant shell variable definitions for Autoconf and Automake -- they could be placed in the user's `.profile` file to be automatically executed at login:
 ```
