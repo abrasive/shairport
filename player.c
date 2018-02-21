@@ -2231,11 +2231,11 @@ static void *player_thread_func(void *arg) {
   pthread_kill(rtp_control_thread, SIGUSR1);
   pthread_kill(rtp_timing_thread, SIGUSR1);
   pthread_join(rtp_timing_thread, NULL);
-  debug(1, "timing thread joined");
+  debug(2, "timing thread joined");
   pthread_join(rtp_audio_thread, NULL);
-  debug(1, "audio thread joined");
+  debug(2, "audio thread joined");
   pthread_join(rtp_control_thread, NULL);
-  debug(1, "control thread joined");
+  debug(2, "control thread joined");
   clear_reference_timestamp(conn);
   conn->rtp_running = 0;
 
@@ -2258,7 +2258,7 @@ static void *player_thread_func(void *arg) {
   if (rc)
     debug(1, "Error destroying vol_mutex variable.");
 
-  debug(1, "Player thread exit on RTSP conversation thread %d.", conn->connection_number);
+  debug(2, "Player thread exit on RTSP conversation thread %d.", conn->connection_number);
   if (conn->dacp_id) {
     free(conn->dacp_id);
     conn->dacp_id = NULL;
@@ -2589,7 +2589,7 @@ void player_stop(rtsp_conn_info *conn) {
 #ifdef HAVE_METADATA_HUB
      metadata_hub_modify_prolog();
     metadata_store.player_state = PS_STOPPED;
-    debug(1,"player_stop release track metadata and artwork");
+    // debug(1,"player_stop release track metadata and artwork");
     metadata_hub_reset_track_metadata();
     metadata_hub_release_track_artwork();
     metadata_hub_modify_epilog(1);
