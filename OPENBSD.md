@@ -10,7 +10,7 @@ This build was done on a default build of `OpenBSD 6.2 GENERIC.MP#134 amd64`. Fo
 ```
 https://ftp.openbsd.org/pub/OpenBSD
 ```
-Next, although it may not be necessary, [update the packages](https://unix.stackexchange.com/questions/23579/how-to-apply-updates-on-openbsd-netbsd-and-freebsd).
+Next, although it may not always be necessary, [update the packages](https://unix.stackexchange.com/questions/23579/how-to-apply-updates-on-openbsd-netbsd-and-freebsd).
 ```
 # pkg_add -Uu
 ```
@@ -27,7 +27,7 @@ Enable the D-Bus and Avahi subsystems to [start automatically](http://openbsd-ar
 Building
 ----
 
-Install the following packages (e.g. using `pkg_add` in superuser mode) that are needed for Shairport Sync to be downloaded and built successfully:
+Install the following packages (e.g. using `pkg_add` in superuser mode) needed to download and build Shairport Sync:
 ```
 autoconf automake automake popt libconfig git
 ```
