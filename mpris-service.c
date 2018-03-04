@@ -142,6 +142,9 @@ void mpris_metadata_watcher(struct metadata_bundle *argc, void *userdata) {
 
   // debug(1,"Set metadata");
   media_player2_player_set_metadata(mprisPlayerPlayerSkeleton, dict);
+  
+  media_player2_player_set_volume(mprisPlayerPlayerSkeleton, metadata_store.speaker_volume);
+
 }
 
 static gboolean on_handle_next(MediaPlayer2Player *skeleton, GDBusMethodInvocation *invocation,
