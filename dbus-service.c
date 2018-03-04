@@ -11,7 +11,14 @@
 
 #include "dacp.h"
 
+#include "metadata_hub.h"
 #include "dbus-service.h"
+
+void dbus_metadata_watcher(struct metadata_bundle *argc, void *userdata) {
+   // debug(1, "DBUS metadata watcher called");
+   shairport_sync_set_volume(shairportSyncSkeleton, metadata_store.speaker_volume);
+}
+
 
 gboolean notify_loudness_filter_active_callback(ShairportSync *skeleton, gpointer user_data) {
   debug(1, "\"notify_loudness_filter_active_callback\" called.");
@@ -177,6 +184,9 @@ static void on_dbus_name_acquired(GDBusConnection *connection, const gchar *name
                    NULL);
   g_signal_connect(shairportSyncSkeleton, "handle-remote-command",
                    G_CALLBACK(on_handle_remote_command), NULL);
+                   
+  add_metadata_watcher(dbus_metadata_watcher, NULL);
+  
   debug(1, "Shairport Sync native D-Bus service started at \"%s\" on the %s bus.", name, (config.dbus_service_bus_type == DBT_session) ? "session" : "system");
 }
 
