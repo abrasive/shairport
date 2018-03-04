@@ -192,8 +192,7 @@ char *metadata_write_image_file(const char *buf, int len) {
 
     path = malloc(pl + 1);
     snprintf(path, pl + 1, "%s/%s%s.%s", config.cover_art_cache_dir, prefix, img_md5_str, ext);
-
-    int cover_fd = open(path, O_WRONLY | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
+    int cover_fd = open(path, O_WRONLY | O_CREAT | O_EXCL, S_IRWXU | S_IRGRP | S_IROTH);
     if (cover_fd > 0) {
       // write the contents
       if (write(cover_fd, buf, len) < len) {
