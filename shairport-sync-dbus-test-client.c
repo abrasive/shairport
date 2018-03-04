@@ -1,7 +1,8 @@
-
-#include "dbus-interface.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
+#include <popt.h>
+#include "dbus-interface.h"
 
 GMainLoop *loop;
 
@@ -68,14 +69,53 @@ void *dbus_thread_func(void *arg) {
   return NULL; // this is just to quieten a compiler warning.
 }
 
-int main(void) {
+int main(int argc, char *argv[]) {
+
+  GBusType gbus_type_selected = G_BUS_TYPE_SYSTEM; // set default
+  // get the options --system or --session for system bus or session bus
+   char    c;            /* used for argument parsing */
+   poptContext optCon;   /* context for parsing command-line options */
+
+   struct poptOption optionsTable[] = {
+            { "system", '\0', POPT_ARG_VAL, &gbus_type_selected, G_BUS_TYPE_SYSTEM,
+                "Listen on the D-Bus system bus -- pick this option or the \'--session\' option, but not both. This is the default if no option is chosen.", NULL },
+            { "session", '\0', POPT_ARG_VAL, &gbus_type_selected, G_BUS_TYPE_SESSION,
+                "Listen on the D-Bus session bus -- pick this option or the \'--system\' option, but not both.", NULL },
+           POPT_AUTOHELP
+            { NULL, 0, 0, NULL, 0 }
+   };
+
+   optCon = poptGetContext(NULL, argc, (const char **)argv, optionsTable, 0);
+   poptSetOtherOptionHelp(optCon, "[--system | --session]");
+   
+  if (argc > 2) {
+    poptPrintHelp(optCon, stderr, 0);
+    exit(1);
+  }
+
+
+   /* Now do options processing */
+   while ((c = poptGetNextOpt(optCon)) >= 0) {
+   }
+
+   if (c < -1) {
+      /* an error occurred during option processing */
+      fprintf(stderr, "%s: %s\n", 
+              poptBadOption(optCon, POPT_BADOPTION_NOALIAS),
+              poptStrerror(c));
+      return 1;
+   }
+   
+  poptFreeContext(optCon);
+  
+  printf( "Listening on the D-Bus %s bus.\n", (gbus_type_selected == G_BUS_TYPE_SYSTEM) ? "system" : "session");
 
   pthread_create(&dbus_thread, NULL, &dbus_thread_func, NULL);
 
   ShairportSync *proxy;
   GError *error = NULL;
 
-  proxy = shairport_sync_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
+  proxy = shairport_sync_proxy_new_for_bus_sync(gbus_type_selected, G_DBUS_PROXY_FLAGS_NONE,
                                                 "org.gnome.ShairportSync",
                                                 "/org/gnome/ShairportSync", NULL, &error);
 
@@ -90,13 +130,13 @@ int main(void) {
   g_print("Starting test...\n");
 
   shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), 20);
-  sleep(1);
+  sleep(5);
   shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), 100);
-  sleep(1);
+  sleep(5);
   shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), 40);
-  sleep(1);
+  sleep(5);
   shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), 60);
-  sleep(1);
+  // sleep(1);
   /*
     shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), 10);
     sleep(1);
@@ -121,8 +161,8 @@ int main(void) {
 
     shairport_sync_call_remote_command(SHAIRPORT_SYNC(proxy), "string",NULL,NULL,NULL);
     */
-  g_print("Finished test...\n");
-  g_main_loop_quit(loop);
+  g_print("Finished test. Waiting for property changes...\n");
+ // g_main_loop_quit(loop);
   pthread_join(dbus_thread, NULL);
   printf("exiting program.\n");
 
