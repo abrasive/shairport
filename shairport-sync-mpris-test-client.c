@@ -1,8 +1,9 @@
-
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <popt.h>
 #include "mpris-interface.h"
 #include "mpris-player-interface.h"
-#include <stdio.h>
-#include <unistd.h>
 
 GMainLoop *loop;
 
@@ -44,38 +45,64 @@ void *dbus_thread_func(void *arg) {
   loop = g_main_loop_new(NULL, FALSE);
 
   g_main_loop_run(loop);
-
-  //  dbus_service_main(); // let it run inside a thread
   return NULL; // this is just to quieten a compiler warning.
 }
 
-int main(void) {
+int main(int argc, char *argv[]) {
+  GBusType gbus_type_selected = G_BUS_TYPE_SYSTEM; // set default
+  // get the options --system or --session for system bus or session bus
+   char    c;            /* used for argument parsing */
+   poptContext optCon;   /* context for parsing command-line options */
+
+   struct poptOption optionsTable[] = {
+            { "system", '\0', POPT_ARG_VAL, &gbus_type_selected, G_BUS_TYPE_SYSTEM,
+                "Listen on the D-Bus system bus -- pick this option or the \'--session\' option, but not both. This is the default if no option is chosen.", NULL },
+            { "session", '\0', POPT_ARG_VAL, &gbus_type_selected, G_BUS_TYPE_SESSION,
+                "Listen on the D-Bus session bus -- pick this option or the \'--system\' option, but not both.", NULL },
+           POPT_AUTOHELP
+            { NULL, 0, 0, NULL, 0 }
+   };
+
+   optCon = poptGetContext(NULL, argc, (const char **)argv, optionsTable, 0);
+   poptSetOtherOptionHelp(optCon, "[--system | --session]");
+   
+  if (argc > 2) {
+    poptPrintHelp(optCon, stderr, 0);
+    exit(1);
+  }
+
+
+   /* Now do options processing */
+   while ((c = poptGetNextOpt(optCon)) >= 0) {
+   }
+
+   if (c < -1) {
+      /* an error occurred during option processing */
+      fprintf(stderr, "%s: %s\n", 
+              poptBadOption(optCon, POPT_BADOPTION_NOALIAS),
+              poptStrerror(c));
+      return 1;
+   }
+   
+  poptFreeContext(optCon);
+  
+  printf( "Listening on the D-Bus %s bus...\n", (gbus_type_selected == G_BUS_TYPE_SYSTEM) ? "system" : "session");
 
   pthread_create(&dbus_thread, NULL, &dbus_thread_func, NULL);
 
-  MediaPlayer2 *proxy;
-  MediaPlayer2Player *proxy2;
+  MediaPlayer2Player *proxy;
 
-  GError *error = NULL;
-
-  /*
-    proxy = media_player2_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
-                                                  "org.mpris.MediaPlayer2.ShairportSync",
-                                                  "/org/mpris/MediaPlayer2", NULL, &error);
-    g_signal_connect(proxy, "g-properties-changed", G_CALLBACK(on_properties_changed), NULL);
-  */
-
-  proxy2 = media_player2_player_proxy_new_for_bus_sync(G_BUS_TYPE_SESSION, G_DBUS_PROXY_FLAGS_NONE,
+  GError *error = NULL;  
+ 
+  proxy = media_player2_player_proxy_new_for_bus_sync(gbus_type_selected, G_DBUS_PROXY_FLAGS_NONE,
                                                        "org.mpris.MediaPlayer2.ShairportSync",
                                                        "/org/mpris/MediaPlayer2", NULL, &error);
-  g_signal_connect(proxy2, "g-properties-changed", G_CALLBACK(on_properties_changed), NULL);
-  // sleep(120);
+  g_signal_connect(proxy, "g-properties-changed", G_CALLBACK(on_properties_changed), NULL);
   // g_main_loop_quit(loop);
   pthread_join(dbus_thread, NULL);
   printf("exiting program.\n");
 
-  //  g_object_unref(proxy);
-  g_object_unref(proxy2);
+  g_object_unref(proxy);
 
   return 0;
 }
