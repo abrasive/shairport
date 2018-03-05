@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
 
   GBusType gbus_type_selected = G_BUS_TYPE_SYSTEM; // set default
   // get the options --system or --session for system bus or session bus
-   char    c;            /* used for argument parsing */
+   signed char c;            /* used for argument parsing */
    poptContext optCon;   /* context for parsing command-line options */
 
    struct poptOption optionsTable[] = {
