@@ -87,10 +87,7 @@ noinst_HEADERS += $(BUILT_SOURCES)
 # Correctly clean the generated headers, but keep the xml description
 CLEANFILES += $(BUILT_SOURCES)
 
-# Rule to generate the binding headers
-# See https://stackoverflow.com/questions/2973445/gnu-makefile-rule-generating-a-few-targets-from-a-single-source-file
-# for information about generating the two files from one invocation of gdbus-codegen
-dbus-interface%h dbus-interface%c:  org.gnome.ShairportSync.xml
+dbus-interface.h dbus-interface.c:  org.gnome.ShairportSync.xml
 	gdbus-codegen --interface-prefix org.gnome --generate-c-code dbus-interface org.gnome.ShairportSync.xml
 endif
 
@@ -110,13 +107,10 @@ noinst_HEADERS += $(BUILT_SOURCES)
 # Correctly clean the generated headers, but keep the xml description
 CLEANFILES += $(BUILT_SOURCES)
 
-# Rule to generate the binding headers
-# See https://stackoverflow.com/questions/2973445/gnu-makefile-rule-generating-a-few-targets-from-a-single-source-file
-# for information about generating the two files from one invocation of gdbus-codegen
-mpris-interface%h mpris-interface%c:  org.mpris.MediaPlayer2.xml
+mpris-interface.h mpris-interface.c:  org.mpris.MediaPlayer2.xml
 	gdbus-codegen --interface-prefix org.mpris --generate-c-code mpris-interface org.mpris.MediaPlayer2.xml
 
-mpris-player-interface%h mpris-player-interface%c:  org.mpris.MediaPlayer2.Player.xml
+mpris-player-interface.h mpris-player-interface.c:  org.mpris.MediaPlayer2.Player.xml
 	gdbus-codegen --interface-prefix org.mpris --generate-c-code mpris-player-interface org.mpris.MediaPlayer2.Player.xml
 endif
 
