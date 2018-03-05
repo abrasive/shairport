@@ -75,13 +75,17 @@ if USE_DNS_SD
 shairport_sync_SOURCES += mdns_dns_sd.c
 endif
 
+BUILT_SOURCES =
+noinst_HEADERS =
+CLEANFILES =
+
 if USE_DBUS
 shairport_sync_SOURCES += dbus-service.c dbus-interface.c
-BUILT_SOURCES = dbus-interface.h dbus-interface.c 
+BUILT_SOURCES += dbus-interface.h dbus-interface.c 
 # We don't want to install this header
-noinst_HEADERS = $(BUILT_SOURCES)
+noinst_HEADERS += $(BUILT_SOURCES)
 # Correctly clean the generated headers, but keep the xml description
-CLEANFILES = $(BUILT_SOURCES)
+CLEANFILES += $(BUILT_SOURCES)
 
 # Rule to generate the binding headers
 # See https://stackoverflow.com/questions/2973445/gnu-makefile-rule-generating-a-few-targets-from-a-single-source-file
@@ -100,11 +104,11 @@ endif
 
 if USE_MPRIS
 shairport_sync_SOURCES += mpris-service.c mpris-interface.c mpris-player-interface.c
-BUILT_SOURCES = mpris-interface.h mpris-interface.c mpris-player-interface.h mpris-player-interface.c
+BUILT_SOURCES += mpris-interface.h mpris-interface.c mpris-player-interface.h mpris-player-interface.c
 # We don't want to install this header
-noinst_HEADERS = $(BUILT_SOURCES)
+noinst_HEADERS += $(BUILT_SOURCES)
 # Correctly clean the generated headers, but keep the xml description
-CLEANFILES = $(BUILT_SOURCES)
+CLEANFILES += $(BUILT_SOURCES)
 
 # Rule to generate the binding headers
 # See https://stackoverflow.com/questions/2973445/gnu-makefile-rule-generating-a-few-targets-from-a-single-source-file
