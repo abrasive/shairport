@@ -114,15 +114,17 @@ mpris-player-interface.h mpris-player-interface.c:  org.mpris.MediaPlayer2.Playe
 	gdbus-codegen --interface-prefix org.mpris --generate-c-code mpris-player-interface org.mpris.MediaPlayer2.Player.xml
 endif
 
+noinst_PROGRAMS =
+
 if USE_DBUS_CLIENT
  #Make it, but don't install it anywhere
-noinst_PROGRAMS = shairport-sync-dbus-test-client
+noinst_PROGRAMS += shairport-sync-dbus-test-client
 shairport_sync_dbus_test_client_SOURCES = dbus-interface.c dbus-interface.h shairport-sync-dbus-test-client.c
 endif
 
 if USE_MPRIS_CLIENT
  #Make it, but don't install it anywhere
-noinst_PROGRAMS = shairport-sync-mpris-test-client
+noinst_PROGRAMS += shairport-sync-mpris-test-client
 shairport_sync_mpris_test_client_SOURCES = mpris-interface.c mpris-interface.h mpris-player-interface.c mpris-player-interface.h shairport-sync-mpris-test-client.c
 endif
 
