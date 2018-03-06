@@ -44,13 +44,14 @@ gboolean notify_loudness_threshold_callback(ShairportSync *skeleton, gpointer us
 }
 
 gboolean notify_volume_callback(ShairportSync *skeleton, gpointer user_data) {
-  gint vo = shairport_sync_get_volume(skeleton);
+  gint gvo = shairport_sync_get_volume(skeleton);
+  int32_t vo = gvo;
   if ((vo >= 0) && (vo <= 100)) {
     if (playing_conn) {
       if (vo !=
           playing_conn
               ->dacp_volume) { // this is to stop an infinite loop of setting->checking->setting...
-        // debug(1, "Remote-setting volume to %d.", vo);
+        debug(1, "Remote-setting volume to %d.", vo);
         // get the information we need -- the absolute volume, the speaker list, our ID
         struct dacp_speaker_stuff speaker_info[50];
         int32_t overall_volume;
@@ -67,12 +68,10 @@ gboolean notify_volume_callback(ShairportSync *skeleton, gpointer user_data) {
 
         // Let's find our own speaker in the array and pick up its relative volume
         int i;
-        int32_t relative_volume = 0;
         int32_t active_speakers = 0;
         for (i = 0; i < speaker_count; i++) {
           if (speaker_info[i].speaker_number == machine_number) {
-            // debug(1,"Our speaker number found: %ld.",machine_number);
-            relative_volume = speaker_info[i].volume;
+            debug(1,"Our speaker number found: %ld with relative volume.",machine_number,speaker_info[i].volume);
           }
           if (speaker_info[i].active == 1) {
             active_speakers++;
@@ -81,13 +80,14 @@ gboolean notify_volume_callback(ShairportSync *skeleton, gpointer user_data) {
 
         if (active_speakers == 1) {
           // must be just this speaker
+          debug(1, "Remote-setting volume to %d on just one speaker.", vo);
           dacp_set_include_speaker_volume(machine_number, vo);
         } else if (active_speakers == 0) {
           debug(1, "No speakers!");
         } else {
-          // debug(1, "Speakers: %d, active: %d",speaker_count,active_speakers);
+          debug(1, "Speakers: %d, active: %d",speaker_count,active_speakers);
           if (vo >= overall_volume) {
-            // debug(1,"Multiple speakers active, but desired new volume is highest");
+            debug(1,"Multiple speakers active, but desired new volume is highest");
             dacp_set_include_speaker_volume(machine_number, vo);
           } else {
             // the desired volume is less than the current overall volume and there is more than one
@@ -112,32 +112,29 @@ gboolean notify_volume_callback(ShairportSync *skeleton, gpointer user_data) {
             }
             highest_other_volume = (highest_other_volume * overall_volume + 50) / 100;
             if (highest_other_volume <= vo) {
-              // debug(1,"Highest other volume %d is less than or equal to the desired new volume
-              // %d.",highest_other_volume,vo);
+              debug(1,"Highest other volume %d is less than or equal to the desired new volume %d.",highest_other_volume,vo);
               dacp_set_include_speaker_volume(machine_number, vo);
             } else {
-              // debug(1,"Highest other volume %d is greater than the desired new volume
-              // %d.",highest_other_volume,vo);
+              debug(1,"Highest other volume %d is greater than the desired new volume %d.",highest_other_volume,vo);
               // if the present overall volume is higher than the highest other volume at present,
               // then bring it down to it.
               if (overall_volume > highest_other_volume) {
-                // debug(1,"Lower overall volume to new highest volume.");
+                debug(1,"Lower overall volume to new highest volume.");
                 dacp_set_include_speaker_volume(
                     machine_number,
                     highest_other_volume); // set the overall volume to the highest one
               }
               int32_t desired_relative_volume =
                   (vo * 100 + (highest_other_volume / 2)) / highest_other_volume;
-              // debug(1,"Set our speaker volume relative to the highest volume.");
+              debug(1,"Set our speaker volume relative to the highest volume.");
               dacp_set_speaker_volume(
                   machine_number,
                   desired_relative_volume); // set the overall volume to the highest one
             }
           }
         }
-        //     } else {
-        //       debug(1, "No need to remote-set volume to %d, as it is already set to this
-        //       value.",playing_conn->dacp_volume);
+           } else {
+              debug(1, "No need to remote-set volume to %d, as it is already set to this value.",playing_conn->dacp_volume);
       }
     } else
       debug(1, "no thread playing -- ignored.");

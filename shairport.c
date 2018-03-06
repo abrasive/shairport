@@ -288,7 +288,7 @@ int parse_options(int argc, char **argv) {
   char *raw_service_name = NULL; /* Used to pick up the service name before possibly expanding it */
   char *stuffing = NULL;         /* used for picking up the stuffing option */
   signed char c;                 /* used for argument parsing */
-  int i = 0;                     /* used for tracking options */
+  // int i = 0;                     /* used for tracking options */
   int fResyncthreshold = (int)(config.resyncthreshold * 44100);
   int fTolerance = (int)(config.tolerance * 44100);
   poptContext optCon; /* context for parsing command-line options */
@@ -396,7 +396,7 @@ int parse_options(int argc, char **argv) {
   config.cover_art_cache_dir = "/tmp/shairport-sync/.cache/coverart";
 #endif
 
-  config_setting_t *setting;
+  // config_setting_t *setting;
   const char *str = 0;
   int value = 0;
   double dvalue = 0.0;
