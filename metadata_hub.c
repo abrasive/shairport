@@ -151,14 +151,14 @@ char *metadata_write_image_file(const char *buf, int len) {
 #ifdef HAVE_LIBMBEDTLS
   mbedtls_md5_context tctx;
   mbedtls_md5_starts(&tctx);
-  mbedtls_md5_update(&tctx, buf, len);
+  mbedtls_md5_update(&tctx, (const unsigned char *)buf, len);
   mbedtls_md5_finish(&tctx, img_md5);
 #endif
 
 #ifdef HAVE_LIBPOLARSSL
   md5_context tctx;
   md5_starts(&tctx);
-  md5_update(&tctx, buf, len);
+  md5_update(&tctx, (const unsigned char *)buf, len);
   md5_finish(&tctx, img_md5);
 #endif
 

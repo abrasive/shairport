@@ -20,7 +20,7 @@ static int min_int(int a, int b) { return (a < b) ? a : b; }
 static void write_callback(struct SoundIoOutStream *outstream, int frame_count_min,
                            int frame_count_max) {
   struct SoundIoChannelArea *areas;
-  int frame_count;
+  // int frame_count;
   int err;
 
   char *read_ptr = soundio_ring_buffer_read_ptr(ring_buffer);
@@ -168,7 +168,7 @@ static void start(int sample_rate, int sample_format) {
 }
 
 static void play(short buf[], int samples) {
-  int err;
+  // int err;
   int free_bytes = soundio_ring_buffer_free_count(ring_buffer);
   int written_bytes = 0;
   int write_bytes = 0;

@@ -1600,7 +1600,7 @@ struct mdns_service *mdnsd_register_svc(struct mdnsd *svr, const char *instance_
                                         const char *txt[]) {
   struct rr_entry *txt_e = NULL, *srv_e = NULL, *ptr_e = NULL, *bptr_e = NULL;
   uint8_t *target;
-  uint8_t *inst_nlabel, *type_nlabel, *nlabel;
+  uint8_t *inst_nlabel, *type_nlabel, *nlabel = NULL;
   struct mdns_service *service = malloc(sizeof(struct mdns_service));
   if (service)
     memset(service, 0, sizeof(struct mdns_service));
@@ -1655,7 +1655,8 @@ struct mdns_service *mdnsd_register_svc(struct mdnsd *svr, const char *instance_
   pthread_mutex_unlock(&svr->data_lock);
 
   // don't free type_nlabel - it's with the PTR record
-  free(nlabel);
+  if (nlabel)
+    free(nlabel);
   free(inst_nlabel);
 
   // notify server
