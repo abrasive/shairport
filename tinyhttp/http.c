@@ -48,7 +48,7 @@ static void grow_scratch(struct http_roundtripper* rt, int size)
     if (nsize < size)
         nsize = size;
 
-	rt->scratch = (char*)rt->funcs.realloc_scratch(rt->opaque, rt->scratch, nsize);
+	  rt->scratch = (char*)rt->funcs.realloc_scratch(rt->opaque, rt->scratch, nsize);
     rt->nscratch = nsize;
 }
 

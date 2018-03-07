@@ -716,7 +716,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
   // struct timespec tn;
   abuf_t *abuf = 0;
   int i;
-  abuf_t *curframe;
+  abuf_t *curframe = 0;
   int notified_buffer_empty = 0; // diagnostic only
 
   pthread_mutex_lock(&conn->ab_mutex);
