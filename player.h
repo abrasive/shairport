@@ -131,7 +131,6 @@ typedef struct {
   int rtp_running;
   uint64_t rtp_time_of_last_resend_request_error_fp;
 
-
   char client_ip_string[INET6_ADDRSTRLEN]; // the ip string pointing to the client
   char self_ip_string[INET6_ADDRSTRLEN];   // the ip string being used by this program -- it
                                            // could be one of many, so we need to know it

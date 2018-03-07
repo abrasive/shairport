@@ -32,6 +32,7 @@
 
 #include <arpa/inet.h>
 #include <errno.h>
+#include <inttypes.h>
 #include <math.h>
 #include <memory.h>
 #include <netdb.h>
@@ -40,7 +41,6 @@
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
-#include <inttypes.h>
 
 #include "metadata_hub.h"
 #include "tinyhttp/http.h"
@@ -271,9 +271,9 @@ void set_dacp_server_information(rtsp_conn_info *conn) { // tell the DACP conver
   strncpy(dacp_server.ip_string, conn->client_ip_string, INET6_ADDRSTRLEN);
   dacp_server.active_remote_id = conn->dacp_active_remote;
   if (dacp_server.port)
-    dacp_server.scan_enable=1;
+    dacp_server.scan_enable = 1;
   else
-    dacp_server.scan_enable=0;
+    dacp_server.scan_enable = 0;
   pthread_cond_signal(&dacp_server_information_cv);
   pthread_mutex_unlock(&dacp_server_information_lock);
 }
@@ -293,23 +293,24 @@ void *dacp_monitor_thread_code(void *na) {
     }
     scan_index++;
     result = dacp_get_volume(NULL); // just want the http code
-    if ((result==496) || (result==403)|| (result==501)) {
+    if ((result == 496) || (result == 403) || (result == 501)) {
       // debug(1,"Stopping scan because the response to \"dacp_get_volume(NULL)\" is %d.",result);
       dacp_server.scan_enable = 0;
     }
     pthread_mutex_unlock(&dacp_server_information_lock);
     // debug(1, "DACP Server ID \"%u\" at \"%s:%u\", scan %d.", dacp_server.active_remote_id,
     //      dacp_server.ip_string, dacp_server.port, scan_index);
-    if (result==200) {
+    if (result == 200) {
       ssize_t le;
       char *response = NULL;
       int32_t item_size;
       char command[1024] = "";
-      snprintf(command, sizeof(command) - 1, "playstatusupdate?revision-number=%d", revision_number);
+      snprintf(command, sizeof(command) - 1, "playstatusupdate?revision-number=%d",
+               revision_number);
       // debug(1,"Command: \"%s\"",command);
       result = dacp_send_command(command, &response, &le);
       // debug(1,"Response to \"%s\" is %d.",command,result);
-//      if (result == 200) {
+      //      if (result == 200) {
       if (0) {
         char *sp = response;
         if (le >= 8) {
@@ -317,7 +318,7 @@ void *dacp_monitor_thread_code(void *na) {
           if (dacp_tlv_crawl(&sp, &item_size) == 'cmst') { // status
             // here, we know that we are receiving playerstatusupdates, so set a flag
             metadata_hub_modify_prolog();
-            debug(1,"playstatusupdate release track metadata");
+            debug(1, "playstatusupdate release track metadata");
             metadata_hub_reset_track_metadata();
             metadata_store.playerstatusupdates_are_received = 1;
             sp -= item_size; // drop down into the array -- don't skip over it
@@ -558,7 +559,7 @@ void *dacp_monitor_thread_code(void *na) {
             // finished possibly writing to the metadata hub
             metadata_hub_modify_epilog(1);
           } else {
-            debug(1,"Status Update not found.\n");
+            debug(1, "Status Update not found.\n");
           }
         } else {
           debug(1, "Can't find any content in playerstatusupdate request");
@@ -649,18 +650,19 @@ int dacp_get_client_volume(int32_t *result) {
     debug(1, "Unexpected response %d to dacp volume control request", response);
   } */
   if (result) {
-    *result=overall_volume;
+    *result = overall_volume;
     // debug(1,"dacp_get_client_volume returns: %" PRId32 ".",overall_volume);
   }
   return response;
 }
 
 int dacp_set_include_speaker_volume(int64_t machine_number, int32_t vo) {
-  debug(1,"dacp_set_include_speaker_volume to %" PRId32 ".",vo);
+  debug(1, "dacp_set_include_speaker_volume to %" PRId32 ".", vo);
   char message[1000];
   memset(message, 0, sizeof(message));
-  sprintf(message, "setproperty?include-speaker-id=%" PRId64 "&dmcp.volume=%" PRId32 "", machine_number, vo);
-  debug(1,"sending \"%s\"",message);
+  sprintf(message, "setproperty?include-speaker-id=%" PRId64 "&dmcp.volume=%" PRId32 "",
+          machine_number, vo);
+  debug(1, "sending \"%s\"", message);
   return send_simple_dacp_command(message);
   // should return 204
 }
@@ -668,17 +670,19 @@ int dacp_set_include_speaker_volume(int64_t machine_number, int32_t vo) {
 int dacp_set_speaker_volume(int64_t machine_number, int32_t vo) {
   char message[1000];
   memset(message, 0, sizeof(message));
-  sprintf(message, "setproperty?speaker-id=%" PRId64 "&dmcp.volume=%" PRId32 "", machine_number, vo);
-  debug(1,"sending \"%s\"",message);
+  sprintf(message, "setproperty?speaker-id=%" PRId64 "&dmcp.volume=%" PRId32 "", machine_number,
+          vo);
+  debug(1, "sending \"%s\"", message);
   return send_simple_dacp_command(message);
   // should return 204
 }
 
-int dacp_get_speaker_list(dacp_spkr_stuff *speaker_info, int max_size_of_array, int *actual_speaker_count) {
+int dacp_get_speaker_list(dacp_spkr_stuff *speaker_info, int max_size_of_array,
+                          int *actual_speaker_count) {
   // char typestring[5];
   char *server_reply = NULL;
   int speaker_index = -1; // will be incremented before use
-  int speaker_count = -1;         // will be fixed if there is no problem
+  int speaker_count = -1; // will be fixed if there is no problem
   ssize_t le;
 
   int response = dacp_send_command("getspeakers", &server_reply, &le);
@@ -698,7 +702,7 @@ int dacp_get_speaker_list(dacp_spkr_stuff *speaker_info, int max_size_of_array, 
             le -= 8;
             speaker_index++;
             if (speaker_index == max_size_of_array)
-              return 413;// Payload Too Large -- too many speakers
+              return 413; // Payload Too Large -- too many speakers
             speaker_info[speaker_index].active = 0;
             speaker_info[speaker_index].speaker_number = 0;
             speaker_info[speaker_index].volume = 0;
@@ -719,7 +723,8 @@ int dacp_get_speaker_list(dacp_spkr_stuff *speaker_info, int max_size_of_array, 
               t = sp - item_size;
               r = ntohl(*(uint32_t *)(t));
               speaker_info[speaker_index].volume = r;
-              // debug(1,"The individual volume of speaker \"%s\" is \"%d\".",speaker_info[speaker_index].name,r);
+              // debug(1,"The individual volume of speaker \"%s\" is
+              // \"%d\".",speaker_info[speaker_index].name,r);
               break;
             case 'msma':
               t = sp - item_size;
@@ -740,12 +745,12 @@ int dacp_get_speaker_list(dacp_spkr_stuff *speaker_info, int max_size_of_array, 
                             case 'cavd':
                             case 'caiv':
                             case 'cads':
-                            
+
                               *(uint32_t *)typestring = htonl(type);
                               typestring[4] = 0;
 
-                            
-                            
+
+
                               t = sp-item_size;
                               u = *t;
                               debug(1,"Type: '%s' Value: \"%d\".",typestring,u);
@@ -795,11 +800,11 @@ int dacp_get_volume(int32_t *the_actual_volume) {
   int32_t overall_volume = 0;
   int32_t actual_volume = 0;
   int http_response = dacp_get_client_volume(&overall_volume);
-  if (http_response==200) {
+  if (http_response == 200) {
     // debug(1,"Overall volume is: %u.",overall_volume);
     int speaker_count = 0;
-    http_response = dacp_get_speaker_list((dacp_spkr_stuff *)&speaker_info, 50,&speaker_count);
-    if (http_response==200) {
+    http_response = dacp_get_speaker_list((dacp_spkr_stuff *)&speaker_info, 50, &speaker_count);
+    if (http_response == 200) {
       // get our machine number
       uint16_t *hn = (uint16_t *)config.hw_addr;
       uint32_t *ln = (uint32_t *)(config.hw_addr + 2);
@@ -815,7 +820,7 @@ int dacp_get_volume(int32_t *the_actual_volume) {
           relative_volume = speaker_info[i].volume;
           /*
           debug(1,"Our speaker was found with a relative volume of: %u.",relative_volume);
-          
+
           if (speaker_info[i].active)
             debug(1,"Our speaker is active.");
           else
@@ -824,17 +829,18 @@ int dacp_get_volume(int32_t *the_actual_volume) {
         }
       }
       actual_volume = (overall_volume * relative_volume + 50) / 100;
-      // debug(1,"Overall volume: %d, relative volume: %d%, actual volume: %d.",overall_volume,relative_volume,actual_volume);
+      // debug(1,"Overall volume: %d, relative volume: %d%, actual volume:
+      // %d.",overall_volume,relative_volume,actual_volume);
       // debug(1,"Our actual speaker volume is %d.",actual_volume);
-      //metadata_hub_modify_prolog();
-      //metadata_store.speaker_volume = actual_volume;
-      //metadata_hub_modify_epilog(1);
+      // metadata_hub_modify_prolog();
+      // metadata_store.speaker_volume = actual_volume;
+      // metadata_hub_modify_epilog(1);
     } else {
-      debug(1,"Unexpected return code %d from dacp_get_speaker_list.",http_response);
+      debug(1, "Unexpected return code %d from dacp_get_speaker_list.", http_response);
     }
-  }  else {
-    debug(1,"Unexpected return code %d from dacp_get_client_volume.",http_response);
-  } 
+  } else {
+    debug(1, "Unexpected return code %d from dacp_get_client_volume.", http_response);
+  }
   if (the_actual_volume) {
     // debug(1,"dacp_get_volume returns %d.",actual_volume);
     *the_actual_volume = actual_volume;

@@ -218,8 +218,8 @@ static inline int seq_order(seq_t a, seq_t b, seq_t base) {
 }
 
 static inline seq_t seq_sum(seq_t a, seq_t b) {
-//  uint32_t p = a & 0xffff;
-//  uint32_t q = b & 0x0ffff;
+  //  uint32_t p = a & 0xffff;
+  //  uint32_t q = b & 0x0ffff;
   uint32_t r = (a + b) & 0xffff;
   return r;
 }
@@ -530,13 +530,16 @@ void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len,
         abuf = conn->audio_buffer + BUFIDX(seqno);
         /*
         if (abuf->ready)
-        	debug(1,"Late apparently duplicate packet received that is %d packets late.",seq_diff(seqno, conn->ab_write, conn->ab_read));
+                debug(1,"Late apparently duplicate packet received that is %d packets
+        late.",seq_diff(seqno, conn->ab_write, conn->ab_read));
         else
-	        debug(1,"Late packet received that is %d packets late.",seq_diff(seqno, conn->ab_write, conn->ab_read));
-	      */
+                debug(1,"Late packet received that is %d packets late.",seq_diff(seqno,
+        conn->ab_write, conn->ab_read));
+              */
       } else { // too late.
-      	
-        // debug(1,"Too late packet received that is %d packets late.",seq_diff(seqno, conn->ab_write, conn->ab_read));
+
+        // debug(1,"Too late packet received that is %d packets late.",seq_diff(seqno,
+        // conn->ab_write, conn->ab_read));
         conn->too_late_packets++;
       }
       // pthread_mutex_unlock(&ab_mutex);
@@ -811,8 +814,9 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
         notified_buffer_empty = 0; // at least one buffer now -- diagnostic only.
         if (conn->ab_buffering) {  // if we are getting packets but not yet forwarding them to the
                                    // player
-          int have_sent_prefiller_silence = 0; // set true when we have sent some silent frames to the
-                                           // DAC
+          int have_sent_prefiller_silence =
+              0; // set true when we have sent some silent frames to the
+                 // DAC
           int64_t reference_timestamp;
           uint64_t reference_timestamp_time, remote_reference_timestamp_time;
           get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time,
@@ -879,7 +883,8 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
                 debug(
                     1,
                     "First packet is late! It should have played before now. Flushing 0.5 seconds");
-                player_flush(conn->first_packet_timestamp + 5 * 4410 * conn->output_sample_ratio, conn);
+                player_flush(conn->first_packet_timestamp + 5 * 4410 * conn->output_sample_ratio,
+                             conn);
               }
             }
           }
@@ -1062,7 +1067,6 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
             metadata_store.player_state = PS_PLAYING;
             metadata_hub_modify_epilog(1);
 #endif
-
           }
         }
       }
@@ -1170,8 +1174,8 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
 
   if (!conn->ab_buffering) {
     // check once, after a short period of has elapsed, assuming 352 frames per packet
-      i = ((250*44100)/352)/1000; // approx 250 ms
-      if (i<seq_diff(conn->ab_read, conn->ab_write, conn->ab_read)) {
+    i = ((250 * 44100) / 352) / 1000; // approx 250 ms
+    if (i < seq_diff(conn->ab_read, conn->ab_write, conn->ab_read)) {
       seq_t next = seq_sum(conn->ab_read, i);
       abuf = conn->audio_buffer + BUFIDX(next);
       if (!abuf->ready) {
@@ -1436,7 +1440,7 @@ static void *player_thread_func(void *arg) {
 
   conn->timestamp_epoch = 0; // indicate that the next timestamp will be the first one.
   conn->maximum_timestamp_interval =
-      conn->input_rate * 60; // actually there shouldn't be more than about 13 
+      conn->input_rate * 60; // actually there shouldn't be more than about 13
                              // seconds of a gap between successive rtptimes, at
                              // worst
 
@@ -1446,8 +1450,8 @@ static void *player_thread_func(void *arg) {
 
   conn->max_frame_size_change =
       1 * conn->output_sample_ratio; // we add or subtract one frame at the nominal
-                                       // rate, multiply it by the frame ratio.
-                                       // but, on some occasions, more than one frame could be added
+                                     // rate, multiply it by the frame ratio.
+                                     // but, on some occasions, more than one frame could be added
 
   switch (config.output_format) {
   case SPS_FORMAT_S24_3LE:
@@ -2508,13 +2512,13 @@ void player_volume(double airplay_volume, rtsp_conn_info *conn) {
   command_set_volume(airplay_volume);
 #ifdef HAVE_DACP_CLIENT
   int32_t actual_volume;
-  if (dacp_get_volume(&actual_volume)==200) {
+  if (dacp_get_volume(&actual_volume) == 200) {
     metadata_hub_modify_prolog();
     if (metadata_store.speaker_volume == actual_volume)
       metadata_hub_modify_epilog(0); // no change
     else {
       metadata_store.speaker_volume = actual_volume;
-      metadata_hub_modify_epilog(1); // change      
+      metadata_hub_modify_epilog(1); // change
     }
   }
 
@@ -2587,7 +2591,7 @@ void player_stop(rtsp_conn_info *conn) {
     free(conn->player_thread);
     conn->player_thread = NULL;
 #ifdef HAVE_METADATA_HUB
-     metadata_hub_modify_prolog();
+    metadata_hub_modify_prolog();
     metadata_store.player_state = PS_STOPPED;
     // debug(1,"player_stop release track metadata and artwork");
     metadata_hub_reset_track_metadata();

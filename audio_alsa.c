@@ -434,7 +434,7 @@ static int init(int argc, char **argv) {
       }
     }
     if (((config.alsa_use_playback_switch_for_mute == 1) &&
-            (snd_mixer_selem_has_playback_switch(alsa_mix_elem))) ||
+         (snd_mixer_selem_has_playback_switch(alsa_mix_elem))) ||
         mixer_volume_setting_gives_mute) {
       audio_alsa.mute = &mute; // insert the mute function now we know it can do muting stuff
       // debug(1, "Has mixer and mute ability we will use.");
@@ -462,11 +462,11 @@ int open_alsa_device(void) {
   const snd_pcm_uframes_t minimal_buffer_headroom =
       352 * 2; // we accept this much headroom in the hardware buffer, but we'll
                // accept less
-/*
-  const snd_pcm_uframes_t requested_buffer_headroom =
-      minimal_buffer_headroom + 2048; // we ask for this much headroom in the
-                                      // hardware buffer, but we'll accept less
-*/
+               /*
+                 const snd_pcm_uframes_t requested_buffer_headroom =
+                     minimal_buffer_headroom + 2048; // we ask for this much headroom in the
+                                                     // hardware buffer, but we'll accept less
+               */
 
   int ret, dir = 0;
   unsigned int my_sample_rate = desired_sample_rate;
@@ -654,11 +654,11 @@ int open_alsa_device(void) {
   if (alsa_characteristics_already_listed == 0) {
     alsa_characteristics_already_listed = 1;
     int log_level = 2; // the level at which debug information should be output
-//    int rc;
+                       //    int rc;
     snd_pcm_access_t access_type;
     snd_pcm_format_t format_type;
     snd_pcm_subformat_t subformat_type;
-//    unsigned int val, val2;
+    //    unsigned int val, val2;
     unsigned int uval, uval2;
     int sval;
     int dir;
@@ -852,7 +852,7 @@ static void play(short buf[], int samples) {
   }
   if (ret == 0) {
     pthread_mutex_lock(&alsa_mutex);
-//    snd_pcm_sframes_t current_delay = 0;
+    //    snd_pcm_sframes_t current_delay = 0;
     int err;
     if (snd_pcm_state(alsa_handle) == SND_PCM_STATE_XRUN) {
       if ((err = snd_pcm_prepare(alsa_handle))) {

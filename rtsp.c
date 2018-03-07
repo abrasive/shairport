@@ -657,17 +657,17 @@ static void msg_write_response(int fd, rtsp_message *resp) {
   }
 
   if (write(fd, pkt, p - pkt) != p - pkt)
-    debug(1,"Error writing an RTSP packet -- requested bytes not fully written.");
+    debug(1, "Error writing an RTSP packet -- requested bytes not fully written.");
 
   // Here, if there's content, write it
   if (resp->contentlength) {
     debug(1, "Content is \"%s\"", resp->content);
     if (write(fd, resp->content, resp->contentlength) != resp->contentlength)
-      debug(1,"Error writing RTSP content -- requested bytes not fully written.");
+      debug(1, "Error writing RTSP content -- requested bytes not fully written.");
   }
 
   if (write(fd, "\r\n", strlen("\r\n")) != strlen("\r\n"))
-    debug(1,"Error terminating RTSP content.");
+    debug(1, "Error terminating RTSP content.");
 }
 
 static void handle_record(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
@@ -867,7 +867,7 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn, rtsp_message *r
 
     if (!strncmp(cp, "volume: ", 8)) {
       float volume = atof(cp + 8);
-      //debug(2, "AirPlay request to set volume to: %f.", volume);
+      // debug(2, "AirPlay request to set volume to: %f.", volume);
       player_volume(volume, conn);
     } else
 #ifdef CONFIG_METADATA
@@ -1679,9 +1679,9 @@ static char *make_nonce(void) {
   int fd = open("/dev/random", O_RDONLY);
   if (fd < 0)
     die("could not open /dev/random!");
-  // int ignore = 
+  // int ignore =
   if (read(fd, random, sizeof(random)) != sizeof(random))
-    debug(1,"Error reading /dev/random");
+    debug(1, "Error reading /dev/random");
   close(fd);
   return base64_enc(random, 8);
 }

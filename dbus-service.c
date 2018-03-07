@@ -11,14 +11,13 @@
 
 #include "dacp.h"
 
-#include "metadata_hub.h"
 #include "dbus-service.h"
+#include "metadata_hub.h"
 
 void dbus_metadata_watcher(struct metadata_bundle *argc, void *userdata) {
-   // debug(1, "DBUS metadata watcher called");
-   shairport_sync_set_volume(shairportSyncSkeleton, metadata_store.speaker_volume);
+  // debug(1, "DBUS metadata watcher called");
+  shairport_sync_set_volume(shairportSyncSkeleton, metadata_store.speaker_volume);
 }
-
 
 gboolean notify_loudness_filter_active_callback(ShairportSync *skeleton, gpointer user_data) {
   debug(1, "\"notify_loudness_filter_active_callback\" called.");
@@ -71,7 +70,8 @@ gboolean notify_volume_callback(ShairportSync *skeleton, gpointer user_data) {
         int32_t active_speakers = 0;
         for (i = 0; i < speaker_count; i++) {
           if (speaker_info[i].speaker_number == machine_number) {
-            debug(1,"Our speaker number found: %ld with relative volume.",machine_number,speaker_info[i].volume);
+            debug(1, "Our speaker number found: %ld with relative volume.", machine_number,
+                  speaker_info[i].volume);
           }
           if (speaker_info[i].active == 1) {
             active_speakers++;
@@ -85,9 +85,9 @@ gboolean notify_volume_callback(ShairportSync *skeleton, gpointer user_data) {
         } else if (active_speakers == 0) {
           debug(1, "No speakers!");
         } else {
-          debug(1, "Speakers: %d, active: %d",speaker_count,active_speakers);
+          debug(1, "Speakers: %d, active: %d", speaker_count, active_speakers);
           if (vo >= overall_volume) {
-            debug(1,"Multiple speakers active, but desired new volume is highest");
+            debug(1, "Multiple speakers active, but desired new volume is highest");
             dacp_set_include_speaker_volume(machine_number, vo);
           } else {
             // the desired volume is less than the current overall volume and there is more than one
@@ -112,29 +112,33 @@ gboolean notify_volume_callback(ShairportSync *skeleton, gpointer user_data) {
             }
             highest_other_volume = (highest_other_volume * overall_volume + 50) / 100;
             if (highest_other_volume <= vo) {
-              debug(1,"Highest other volume %d is less than or equal to the desired new volume %d.",highest_other_volume,vo);
+              debug(1,
+                    "Highest other volume %d is less than or equal to the desired new volume %d.",
+                    highest_other_volume, vo);
               dacp_set_include_speaker_volume(machine_number, vo);
             } else {
-              debug(1,"Highest other volume %d is greater than the desired new volume %d.",highest_other_volume,vo);
+              debug(1, "Highest other volume %d is greater than the desired new volume %d.",
+                    highest_other_volume, vo);
               // if the present overall volume is higher than the highest other volume at present,
               // then bring it down to it.
               if (overall_volume > highest_other_volume) {
-                debug(1,"Lower overall volume to new highest volume.");
+                debug(1, "Lower overall volume to new highest volume.");
                 dacp_set_include_speaker_volume(
                     machine_number,
                     highest_other_volume); // set the overall volume to the highest one
               }
               int32_t desired_relative_volume =
                   (vo * 100 + (highest_other_volume / 2)) / highest_other_volume;
-              debug(1,"Set our speaker volume relative to the highest volume.");
+              debug(1, "Set our speaker volume relative to the highest volume.");
               dacp_set_speaker_volume(
                   machine_number,
                   desired_relative_volume); // set the overall volume to the highest one
             }
           }
         }
-           } else {
-              debug(1, "No need to remote-set volume to %d, as it is already set to this value.",playing_conn->dacp_volume);
+      } else {
+        debug(1, "No need to remote-set volume to %d, as it is already set to this value.",
+              playing_conn->dacp_volume);
       }
     } else
       debug(1, "no thread playing -- ignored.");
@@ -155,7 +159,8 @@ static gboolean on_handle_remote_command(ShairportSync *skeleton, GDBusMethodInv
 static void on_dbus_name_acquired(GDBusConnection *connection, const gchar *name,
                                   gpointer user_data) {
 
-  // debug(1, "Shairport Sync native D-Bus interface \"%s\" acquired on the %s bus.", name, (config.dbus_service_bus_type == DBT_session) ? "session" : "system");
+  // debug(1, "Shairport Sync native D-Bus interface \"%s\" acquired on the %s bus.", name,
+  // (config.dbus_service_bus_type == DBT_session) ? "session" : "system");
   shairportSyncSkeleton = shairport_sync_skeleton_new();
 
   g_dbus_interface_skeleton_export(G_DBUS_INTERFACE_SKELETON(shairportSyncSkeleton), connection,
@@ -181,19 +186,22 @@ static void on_dbus_name_acquired(GDBusConnection *connection, const gchar *name
                    NULL);
   g_signal_connect(shairportSyncSkeleton, "handle-remote-command",
                    G_CALLBACK(on_handle_remote_command), NULL);
-                   
+
   add_metadata_watcher(dbus_metadata_watcher, NULL);
-  
-  debug(1, "Shairport Sync native D-Bus service started at \"%s\" on the %s bus.", name, (config.dbus_service_bus_type == DBT_session) ? "session" : "system");
+
+  debug(1, "Shairport Sync native D-Bus service started at \"%s\" on the %s bus.", name,
+        (config.dbus_service_bus_type == DBT_session) ? "session" : "system");
 }
 
 static void on_dbus_name_lost_again(GDBusConnection *connection, const gchar *name,
                                     gpointer user_data) {
-  warn("Could not acquire a Shairport Sync native D-Bus interface \"%s\" on the %s bus.", name, (config.dbus_service_bus_type == DBT_session) ? "session" : "system");
+  warn("Could not acquire a Shairport Sync native D-Bus interface \"%s\" on the %s bus.", name,
+       (config.dbus_service_bus_type == DBT_session) ? "session" : "system");
 }
 
 static void on_dbus_name_lost(GDBusConnection *connection, const gchar *name, gpointer user_data) {
-  //debug(1, "Could not acquire a Shairport Sync native D-Bus interface \"%s\" on the %s bus -- will try adding the process "
+  // debug(1, "Could not acquire a Shairport Sync native D-Bus interface \"%s\" on the %s bus --
+  // will try adding the process "
   //         "number to the end of it.",
   //      name, (config.dbus_service_bus_type == DBT_session) ? "session" : "system");
   pid_t pid = getpid();
@@ -202,7 +210,8 @@ static void on_dbus_name_lost(GDBusConnection *connection, const gchar *name, gp
   GBusType dbus_bus_type = G_BUS_TYPE_SYSTEM;
   if (config.dbus_service_bus_type == DBT_session)
     dbus_bus_type = G_BUS_TYPE_SESSION;
-  //debug(1, "Looking for a Shairport Sync native D-Bus interface \"%s\" on the %s bus.", interface_name,(config.dbus_service_bus_type == DBT_session) ? "session" : "system");
+  // debug(1, "Looking for a Shairport Sync native D-Bus interface \"%s\" on the %s bus.",
+  // interface_name,(config.dbus_service_bus_type == DBT_session) ? "session" : "system");
   g_bus_own_name(dbus_bus_type, interface_name, G_BUS_NAME_OWNER_FLAGS_NONE, NULL,
                  on_dbus_name_acquired, on_dbus_name_lost_again, NULL, NULL);
 }
@@ -212,7 +221,8 @@ int start_dbus_service() {
   GBusType dbus_bus_type = G_BUS_TYPE_SYSTEM;
   if (config.dbus_service_bus_type == DBT_session)
     dbus_bus_type = G_BUS_TYPE_SESSION;
- // debug(1, "Looking for a Shairport Sync native D-Bus interface \"org.gnome.ShairportSync\" on the %s bus.",(config.dbus_service_bus_type == DBT_session) ? "session" : "system");
+  // debug(1, "Looking for a Shairport Sync native D-Bus interface \"org.gnome.ShairportSync\" on
+  // the %s bus.",(config.dbus_service_bus_type == DBT_session) ? "session" : "system");
   g_bus_own_name(dbus_bus_type, "org.gnome.ShairportSync", G_BUS_NAME_OWNER_FLAGS_NONE, NULL,
                  on_dbus_name_acquired, on_dbus_name_lost, NULL, NULL);
   return 0; // this is just to quieten a compiler warning

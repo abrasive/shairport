@@ -82,9 +82,9 @@ static void stop(void) {
 
 static int init(int argc, char **argv) {
   debug(1, "pipe init");
-//  const char *str;
-//  int value;
-//  double dvalue;
+  //  const char *str;
+  //  int value;
+  //  double dvalue;
 
   // set up default values first
 

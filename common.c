@@ -114,9 +114,9 @@ void die(const char *format, ...) {
 
   if ((debuglev) && (config.debugger_show_elapsed_time) && (config.debugger_show_relative_time))
     daemon_log(LOG_EMERG, "|% 20.9f|% 20.9f|*fatal error: %s", tss, tsl, s);
-  else if  ((debuglev) && (config.debugger_show_relative_time))
+  else if ((debuglev) && (config.debugger_show_relative_time))
     daemon_log(LOG_EMERG, "% 20.9f|*fatal error: %s", tsl, s);
-  else if  ((debuglev) && (config.debugger_show_elapsed_time))
+  else if ((debuglev) && (config.debugger_show_elapsed_time))
     daemon_log(LOG_EMERG, "% 20.9f|*fatal error: %s", tss, s);
   else
     daemon_log(LOG_EMERG, "fatal error: %s", s);
@@ -138,12 +138,12 @@ void warn(const char *format, ...) {
   va_start(args, format);
   vsnprintf(s, sizeof(s), format, args);
   va_end(args);
-  
+
   if ((debuglev) && (config.debugger_show_elapsed_time) && (config.debugger_show_relative_time))
     daemon_log(LOG_WARNING, "|% 20.9f|% 20.9f|*warning: %s", tss, tsl, s);
-  else if  ((debuglev) && (config.debugger_show_relative_time))
+  else if ((debuglev) && (config.debugger_show_relative_time))
     daemon_log(LOG_WARNING, "% 20.9f|*warning: %s", tsl, s);
-  else if  ((debuglev) && (config.debugger_show_elapsed_time))
+  else if ((debuglev) && (config.debugger_show_elapsed_time))
     daemon_log(LOG_WARNING, "% 20.9f|*warning: %s", tss, s);
   else
     daemon_log(LOG_WARNING, "%s", s);
@@ -709,11 +709,12 @@ uint32_t uatoi(const char *nptr) {
 }
 
 double flat_vol2attn(double vol, long max_db, long min_db) {
-  double vol_setting = min_db;  // if all else fails, set this, for safety
+  double vol_setting = min_db; // if all else fails, set this, for safety
 
   if ((vol <= 0.0) && (vol >= -30.0)) {
     vol_setting = ((max_db - min_db) * (30.0 + vol) / 30) + min_db;
-    // debug(2, "Linear profile Volume Setting: %f in range %ld to %ld.", vol_setting, min_db, max_db);
+    // debug(2, "Linear profile Volume Setting: %f in range %ld to %ld.", vol_setting, min_db,
+    // max_db);
   } else if (vol != -144.0) {
     debug(1,
           "Linear volume request value %f is out of range: should be from 0.0 to -30.0 or -144.0.",
@@ -969,9 +970,9 @@ uint64_t ranarray64u() { return (ranarrayval()); }
 
 int64_t ranarray64i() { return (ranarrayval() >> 1); }
 
-uint32_t nctohl(const uint8_t * p) {  // read 4 characters from the p and do ntohl on them
+uint32_t nctohl(const uint8_t *p) { // read 4 characters from the p and do ntohl on them
   // this is to avoid possible aliasing violations
   uint32_t holder;
-  memcpy(&holder,p,sizeof(holder));
+  memcpy(&holder, p, sizeof(holder));
   return ntohl(holder);
 }

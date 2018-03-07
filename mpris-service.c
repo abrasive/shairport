@@ -32,7 +32,7 @@ void mpris_metadata_watcher(struct metadata_bundle *argc, void *userdata) {
 
   // debug(1,"Set loop status to \"%s\"",response);
   media_player2_player_set_loop_status(mprisPlayerPlayerSkeleton, response);
- 
+
   switch (argc->player_state) {
   case PS_STOPPED:
     strcpy(response, "Stopped");
@@ -46,11 +46,11 @@ void mpris_metadata_watcher(struct metadata_bundle *argc, void *userdata) {
   }
 
   // debug(1,"From player_state, set playback status to \"%s\"",response);
-  media_player2_player_set_playback_status(mprisPlayerPlayerSkeleton, response); 
+  media_player2_player_set_playback_status(mprisPlayerPlayerSkeleton, response);
 
   GVariantBuilder *dict_builder, *aa;
- 
-   /* Build the metadata array */
+
+  /* Build the metadata array */
   // debug(1,"Build metadata");
   dict_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
 
@@ -63,7 +63,7 @@ void mpris_metadata_watcher(struct metadata_bundle *argc, void *userdata) {
     GVariant *artUrl = g_variant_new("s", artURIstring);
     g_variant_builder_add(dict_builder, "{sv}", "mpris:artUrl", artUrl);
   }
-  
+
   // Add the TrackID if we have one
   // Build the Track ID from the 16-byte item_composite_id in hex prefixed by
   // /org/gnome/ShairportSync
@@ -79,27 +79,27 @@ void mpris_metadata_watcher(struct metadata_bundle *argc, void *userdata) {
   }
   *pt = 0;
   if (non_zero) {
-    //debug(1, "Set ID using composite ID: \"0x%s\".", st);
+    // debug(1, "Set ID using composite ID: \"0x%s\".", st);
     char trackidstring[1024];
     sprintf(trackidstring, "/org/gnome/ShairportSync/%s", st);
-    GVariant* trackid = g_variant_new("o", trackidstring);
+    GVariant *trackid = g_variant_new("o", trackidstring);
     g_variant_builder_add(dict_builder, "{sv}", "mpris:trackid", trackid);
   } else if (argc->item_id) {
     char trackidstring[128];
-    //debug(1, "Set ID using mper ID: \"%u\".",argc->item_id);
-   sprintf(trackidstring, "/org/gnome/ShairportSync/mper_%u", argc->item_id);
-    GVariant* trackid = g_variant_new("o", trackidstring);
-    g_variant_builder_add(dict_builder, "{sv}", "mpris:trackid", trackid);  
+    // debug(1, "Set ID using mper ID: \"%u\".",argc->item_id);
+    sprintf(trackidstring, "/org/gnome/ShairportSync/mper_%u", argc->item_id);
+    GVariant *trackid = g_variant_new("o", trackidstring);
+    g_variant_builder_add(dict_builder, "{sv}", "mpris:trackid", trackid);
   }
-  
+
   // Add the track length if it's non-zero
   if (argc->songtime_in_milliseconds) {
-   uint64_t track_length_in_microseconds = argc->songtime_in_milliseconds;
-   track_length_in_microseconds *= 1000; // to microseconds in 64-bit precision
-    // Make up the track name and album name
-   //debug(1, "Set tracklength to %lu.", track_length_in_microseconds);
-   GVariant *tracklength = g_variant_new("x", track_length_in_microseconds);
-   g_variant_builder_add(dict_builder, "{sv}", "mpris:length", tracklength);
+    uint64_t track_length_in_microseconds = argc->songtime_in_milliseconds;
+    track_length_in_microseconds *= 1000; // to microseconds in 64-bit precision
+                                          // Make up the track name and album name
+    // debug(1, "Set tracklength to %lu.", track_length_in_microseconds);
+    GVariant *tracklength = g_variant_new("x", track_length_in_microseconds);
+    g_variant_builder_add(dict_builder, "{sv}", "mpris:length", tracklength);
   }
 
   // Add the track name if there is one
@@ -108,14 +108,14 @@ void mpris_metadata_watcher(struct metadata_bundle *argc, void *userdata) {
     GVariant *trackname = g_variant_new("s", argc->track_name);
     g_variant_builder_add(dict_builder, "{sv}", "xesam:title", trackname);
   }
-  
+
   // Add the album name if there is one
-   if (argc->album_name) {
+  if (argc->album_name) {
     // debug(1, "Album name set to \"%s\".", argc->album_name);
     GVariant *albumname = g_variant_new("s", argc->album_name);
     g_variant_builder_add(dict_builder, "{sv}", "xesam:album", albumname);
   }
-  
+
   // Add the artists if there are any (actually there will be at most one, but put it in an array)
   if (argc->artist_name) {
     /* Build the artists array */
@@ -126,7 +126,7 @@ void mpris_metadata_watcher(struct metadata_bundle *argc, void *userdata) {
     g_variant_builder_unref(aa);
     g_variant_builder_add(dict_builder, "{sv}", "xesam:artist", artists);
   }
-  
+
   // Add the genres if there are any (actually there will be at most one, but put it in an array)
   if (argc->genre) {
     // debug(1,"Build genre");
@@ -136,15 +136,14 @@ void mpris_metadata_watcher(struct metadata_bundle *argc, void *userdata) {
     g_variant_builder_unref(aa);
     g_variant_builder_add(dict_builder, "{sv}", "xesam:genre", genres);
   }
- 
+
   GVariant *dict = g_variant_builder_end(dict_builder);
   g_variant_builder_unref(dict_builder);
 
   // debug(1,"Set metadata");
   media_player2_player_set_metadata(mprisPlayerPlayerSkeleton, dict);
-  
-  media_player2_player_set_volume(mprisPlayerPlayerSkeleton, metadata_store.speaker_volume);
 
+  media_player2_player_set_volume(mprisPlayerPlayerSkeleton, metadata_store.speaker_volume);
 }
 
 static gboolean on_handle_next(MediaPlayer2Player *skeleton, GDBusMethodInvocation *invocation,
@@ -194,7 +193,8 @@ static void on_mpris_name_acquired(GDBusConnection *connection, const gchar *nam
 
   const char *empty_string_array[] = {NULL};
 
-  // debug(1, "MPRIS well-known interface name \"%s\" acquired on the %s bus.", name, (config.mpris_service_bus_type == DBT_session) ? "session" : "system");
+  // debug(1, "MPRIS well-known interface name \"%s\" acquired on the %s bus.", name,
+  // (config.mpris_service_bus_type == DBT_session) ? "session" : "system");
   mprisPlayerSkeleton = media_player2_skeleton_new();
   mprisPlayerPlayerSkeleton = media_player2_player_skeleton_new();
 
@@ -234,16 +234,19 @@ static void on_mpris_name_acquired(GDBusConnection *connection, const gchar *nam
 
   add_metadata_watcher(mpris_metadata_watcher, NULL);
 
-  debug(1, "MPRIS service started at \"%s\" on the %s bus.", name, (config.mpris_service_bus_type == DBT_session) ? "session" : "system");
+  debug(1, "MPRIS service started at \"%s\" on the %s bus.", name,
+        (config.mpris_service_bus_type == DBT_session) ? "session" : "system");
 }
 
 static void on_mpris_name_lost_again(GDBusConnection *connection, const gchar *name,
                                      gpointer user_data) {
-  warn("Could not acquire an MPRIS interface named \"%s\" on the %s bus.",name,(config.mpris_service_bus_type == DBT_session) ? "session" : "system");
+  warn("Could not acquire an MPRIS interface named \"%s\" on the %s bus.", name,
+       (config.mpris_service_bus_type == DBT_session) ? "session" : "system");
 }
 
 static void on_mpris_name_lost(GDBusConnection *connection, const gchar *name, gpointer user_data) {
-  //debug(1, "Could not acquire MPRIS interface \"%s\" on the %s bus -- will try adding the process "
+  // debug(1, "Could not acquire MPRIS interface \"%s\" on the %s bus -- will try adding the process
+  // "
   //         "number to the end of it.",
   //      name,(mpris_bus_type==G_BUS_TYPE_SESSION) ? "session" : "system");
   pid_t pid = getpid();
@@ -252,7 +255,8 @@ static void on_mpris_name_lost(GDBusConnection *connection, const gchar *name, g
   GBusType mpris_bus_type = G_BUS_TYPE_SYSTEM;
   if (config.mpris_service_bus_type == DBT_session)
     mpris_bus_type = G_BUS_TYPE_SESSION;
-  // debug(1, "Looking for an MPRIS interface \"%s\" on the %s bus.",interface_name, (mpris_bus_type==G_BUS_TYPE_SESSION) ? "session" : "system");
+  // debug(1, "Looking for an MPRIS interface \"%s\" on the %s bus.",interface_name,
+  // (mpris_bus_type==G_BUS_TYPE_SESSION) ? "session" : "system");
   g_bus_own_name(mpris_bus_type, interface_name, G_BUS_NAME_OWNER_FLAGS_NONE, NULL,
                  on_mpris_name_acquired, on_mpris_name_lost_again, NULL, NULL);
 }
@@ -263,7 +267,8 @@ int start_mpris_service() {
   GBusType mpris_bus_type = G_BUS_TYPE_SYSTEM;
   if (config.mpris_service_bus_type == DBT_session)
     mpris_bus_type = G_BUS_TYPE_SESSION;
-  // debug(1, "Looking for an MPRIS interface \"org.mpris.MediaPlayer2.ShairportSync\" on the %s bus.",(mpris_bus_type==G_BUS_TYPE_SESSION) ? "session" : "system");
+  // debug(1, "Looking for an MPRIS interface \"org.mpris.MediaPlayer2.ShairportSync\" on the %s
+  // bus.",(mpris_bus_type==G_BUS_TYPE_SESSION) ? "session" : "system");
   g_bus_own_name(mpris_bus_type, "org.mpris.MediaPlayer2.ShairportSync",
                  G_BUS_NAME_OWNER_FLAGS_NONE, NULL, on_mpris_name_acquired, on_mpris_name_lost,
                  NULL, NULL);

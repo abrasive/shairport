@@ -31,11 +31,11 @@
 #include <libconfig.h>
 #include <libgen.h>
 #include <memory.h>
-#include <sys/socket.h>
 #include <net/if.h>
 #include <popt.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>

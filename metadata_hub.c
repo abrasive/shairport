@@ -62,7 +62,7 @@ pthread_rwlock_t metadata_hub_re_lock = PTHREAD_RWLOCK_INITIALIZER;
 void release_char_string(char **str) {
   if (*str) {
     free(*str);
-    *str=NULL;
+    *str = NULL;
   }
 }
 
@@ -95,7 +95,7 @@ void metadata_hub_release_track_artwork(void) {
 }
 
 void metadata_hub_reset_track_metadata(void) {
-  //debug(1,"release track metadata");
+  // debug(1,"release track metadata");
   release_char_string(&metadata_store.track_name);
   release_char_string(&metadata_store.artist_name);
   release_char_string(&metadata_store.album_name);
@@ -259,7 +259,7 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
   if (type == 'core') {
     switch (code) {
     case 'mper':
-      metadata_store.item_id = ntohl(*(uint32_t*)data);
+      metadata_store.item_id = ntohl(*(uint32_t *)data);
       debug(2, "MH Item ID set to: \"%u\"", metadata_store.item_id);
       break;
     case 'asal':
@@ -438,15 +438,15 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
     case 'pfls':
     case 'prsm':
       break;
-    
+
     default: {
       char typestring[5];
       uint32_t tm = htonl(type);
-      memcpy(typestring,&tm,sizeof(uint32_t));
+      memcpy(typestring, &tm, sizeof(uint32_t));
       typestring[4] = 0;
       char codestring[5];
       uint32_t cm = htonl(code);
-      memcpy(codestring,&cm,sizeof(uint32_t));
+      memcpy(codestring, &cm, sizeof(uint32_t));
       codestring[4] = 0;
       char *payload;
       if (length < 2048)

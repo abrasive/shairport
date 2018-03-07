@@ -145,7 +145,7 @@ void *rtp_audio_receiver(void *arg) {
         //  debug(3, "RTP: Packets out of sequence: expected: %d, got %d.", last_seqno, seqno);
         last_seqno = seqno; // reset warning...
       }
-      int64_t timestamp = monotonic_timestamp(ntohl(*(uint32_t*)(pktp + 4)), conn);
+      int64_t timestamp = monotonic_timestamp(ntohl(*(uint32_t *)(pktp + 4)), conn);
 
       // if (packet[1]&0x10)
       //	debug(1,"Audio packet Extension bit set.");
@@ -227,7 +227,7 @@ void *rtp_control_receiver(void *arg) {
         // debug(1,"Remote Sync Time: %0llx.",remote_time_of_sync);
 
         sync_rtp_timestamp = monotonic_timestamp(nctohl(&packet[16]), conn);
-        
+
         // debug(1,"Sync timestamp is %u.",ntohl(*((uint32_t *)&packet[16])));
 
         if (config.userSuppliedLatency) {
@@ -237,8 +237,7 @@ void *rtp_control_receiver(void *arg) {
           conn->latency = config.userSuppliedLatency;
         } else if (packet[0] &
                    0x10) { // only set latency if it's a packet just after a flush or resume
-          int64_t rtp_timestamp_less_latency =
-              monotonic_timestamp(nctohl(&packet[4]), conn);
+          int64_t rtp_timestamp_less_latency = monotonic_timestamp(nctohl(&packet[4]), conn);
           int64_t la = sync_rtp_timestamp - rtp_timestamp_less_latency + config.fixedLatencyOffset;
           if ((conn->maximum_latency) && (conn->maximum_latency < la))
             la = conn->maximum_latency;
@@ -285,9 +284,9 @@ void *rtp_control_receiver(void *arg) {
       // debug(1, "Control Port -- Retransmitted Audio Data Packet received.");
       pktp = packet + 4;
       plen -= 4;
-      seq_t seqno = ntohs(*(uint16_t*)(pktp + 2));
+      seq_t seqno = ntohs(*(uint16_t *)(pktp + 2));
 
-      int64_t timestamp = monotonic_timestamp(ntohl(*(uint32_t*)(pktp + 4)), conn);
+      int64_t timestamp = monotonic_timestamp(ntohl(*(uint32_t *)(pktp + 4)), conn);
 
       pktp += 12;
       plen -= 12;
@@ -450,7 +449,6 @@ void *rtp_timing_receiver(void *arg) {
       return_time = arrival_time - conn->departure_time;
 
       uint64_t rtus = (return_time * 1000000) >> 32;
-      
 
       if (rtus < 300000) {
 
@@ -512,7 +510,7 @@ void *rtp_timing_receiver(void *arg) {
           if (l2rtd > conn->local_to_remote_time_difference) {
             local_to_remote_time_jitters =
                 local_to_remote_time_jitters + l2rtd - conn->local_to_remote_time_difference;
-           //  ji = l2rtd - conn->local_to_remote_time_difference;
+            //  ji = l2rtd - conn->local_to_remote_time_difference;
           } else {
             local_to_remote_time_jitters =
                 local_to_remote_time_jitters + conn->local_to_remote_time_difference - l2rtd;
@@ -541,7 +539,7 @@ void *rtp_timing_receiver(void *arg) {
         } else {
           // uint64_t local_time_change = local_time_chosen - first_local_time;
           // uint64_t remote_time_change = remote_time_chosen - first_remote_time;
-          
+
           /*
           if (remote_time_change >= local_time_change)
             clock_drift = remote_time_change - local_time_change;
@@ -554,7 +552,7 @@ void *rtp_timing_receiver(void *arg) {
           else
             clock_drift_in_usec = -(((-clock_drift) * 1000000) >> 32);
           */
-          
+
           // clock_drift_ppm = (1.0 * clock_drift_in_usec) / (local_time_change >> 32);
         }
 
@@ -843,8 +841,10 @@ void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
     }
 #endif
     uint64_t time_of_sending_fp = get_absolute_time_in_fp();
-    uint64_t resend_error_backoff_time = (uint64_t)10<<32; // ten seconds
-    if ((conn->rtp_time_of_last_resend_request_error_fp) || ((time_of_sending_fp-conn->rtp_time_of_last_resend_request_error_fp)>resend_error_backoff_time)) {
+    uint64_t resend_error_backoff_time = (uint64_t)10 << 32; // ten seconds
+    if ((conn->rtp_time_of_last_resend_request_error_fp) ||
+        ((time_of_sending_fp - conn->rtp_time_of_last_resend_request_error_fp) >
+         resend_error_backoff_time)) {
       if (sendto(conn->audio_socket, req, sizeof(req), 0,
                  (struct sockaddr *)&conn->rtp_client_control_socket, msgsize) == -1) {
         char em[1024];
@@ -852,7 +852,7 @@ void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
         debug(1, "Error %d using send-to to an audio socket: \"%s\". ", errno, em);
         conn->rtp_time_of_last_resend_request_error_fp = time_of_sending_fp;
       } else {
-        conn->rtp_time_of_last_resend_request_error_fp=0;
+        conn->rtp_time_of_last_resend_request_error_fp = 0;
       }
     }
   } else {
