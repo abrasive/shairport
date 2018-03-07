@@ -66,7 +66,7 @@ void stream_state_cb(pa_stream *s, void *mainloop);
 void stream_success_cb(pa_stream *stream, int success, void *userdata);
 void stream_write_cb(pa_stream *stream, size_t requested_bytes, void *userdata);
 
-static int init(int argc, char **argv) {
+static int init(__attribute__((unused)) int argc, __attribute__((unused)) char **argv) {
 
   // set up default values first
   config.audio_backend_buffer_desired_length = 0.35;
@@ -144,7 +144,8 @@ static void deinit(void) {
   // debug(1, "pa deinit done");
 }
 
-static void start(int sample_rate, int sample_format) {
+static void start(__attribute__((unused)) int sample_rate,
+                  __attribute__((unused)) int sample_format) {
 
   uint32_t buffer_size_in_bytes = (uint32_t)2 * 2 * RATE * 0.1; // hard wired in here
   // debug(1, "pa_buffer size is %u bytes.", buffer_size_in_bytes);
@@ -294,13 +295,16 @@ audio_output audio_pa = {.name = "pa",
                          .parameters = NULL,
                          .mute = NULL};
 
-void context_state_cb(pa_context *context, void *mainloop) {
+void context_state_cb(__attribute__((unused)) pa_context *context, void *mainloop) {
   pa_threaded_mainloop_signal(mainloop, 0);
 }
 
-void stream_state_cb(pa_stream *s, void *mainloop) { pa_threaded_mainloop_signal(mainloop, 0); }
+void stream_state_cb(__attribute__((unused)) pa_stream *s, void *mainloop) {
+  pa_threaded_mainloop_signal(mainloop, 0);
+}
 
-void stream_write_cb(pa_stream *stream, size_t requested_bytes, void *userdata) {
+void stream_write_cb(pa_stream *stream, size_t requested_bytes,
+                     __attribute__((unused)) void *userdata) {
 
   /*
     // play with timing information
@@ -348,7 +352,7 @@ void stream_write_cb(pa_stream *stream, size_t requested_bytes, void *userdata) 
     // bytes we can transfer will never be greater than the bytes available
 
     pa_stream_begin_write(stream, (void **)&buffer, &bytes_we_can_transfer);
-    if (bytes_we_can_transfer <= (audio_umb - audio_toq)) {
+    if (bytes_we_can_transfer <= (size_t)(audio_umb - audio_toq)) {
       // the bytes are all in a row in the audo buffer
       memcpy(buffer, audio_toq, bytes_we_can_transfer);
       audio_toq += bytes_we_can_transfer;
@@ -383,9 +387,10 @@ void stream_write_cb(pa_stream *stream, size_t requested_bytes, void *userdata) 
   // %d.",requested_bytes/4,bytes_transferred/4,pa_stream_is_corked(stream));
 }
 
-void alt_stream_write_cb(pa_stream *stream, size_t requested_bytes, void *userdata) {
+void alt_stream_write_cb(pa_stream *stream, size_t requested_bytes,
+                         __attribute__((unused)) void *userdata) {
   // debug(1, "***Bytes requested bytes %d.", requested_bytes);
-  int bytes_remaining = requested_bytes;
+  size_t bytes_remaining = requested_bytes;
   while (bytes_remaining > 0) {
     uint8_t *buffer = NULL;
     size_t bytes_to_fill = 44100;
@@ -410,4 +415,8 @@ void alt_stream_write_cb(pa_stream *stream, size_t requested_bytes, void *userda
   }
 }
 
-void stream_success_cb(pa_stream *stream, int success, void *userdata) { return; }
+void stream_success_cb(__attribute__((unused)) pa_stream *stream,
+                       __attribute__((unused)) int success,
+                       __attribute__((unused)) void *userdata) {
+  return;
+}

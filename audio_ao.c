@@ -118,7 +118,8 @@ static void deinit(void) {
   ao_shutdown();
 }
 
-static void start(int sample_rate, int sample_format) {}
+static void start(__attribute__((unused)) int sample_rate,
+                  __attribute__((unused)) int sample_format) {}
 
 static void play(short buf[], int samples) { ao_play(dev, (char *)buf, samples * 4); }
 

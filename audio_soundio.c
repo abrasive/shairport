@@ -77,12 +77,12 @@ static void write_callback(struct SoundIoOutStream *outstream, int frame_count_m
   soundio_ring_buffer_advance_read_ptr(ring_buffer, read_count * outstream->bytes_per_frame);
 }
 
-static void underflow_callback(struct SoundIoOutStream *outstream) {
+static void underflow_callback(__attribute__((unused)) struct SoundIoOutStream *outstream) {
   static int count = 0;
   debug(0, "underflow %d\n", ++count);
 }
 
-static int init(int argc, char **argv) {
+static int init(__attribute__((unused)) int argc, __attribute__((unused)) char **argv) {
   int err;
 
   config.audio_backend_buffer_desired_length = 2.0;

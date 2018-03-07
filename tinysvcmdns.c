@@ -760,7 +760,7 @@ static size_t mdns_parse_rr(uint8_t *pkt_buf, size_t pkt_len, size_t off, struct
       break;
     }
     rr->data.AAAA.addr = malloc(sizeof(struct in6_addr));
-    int i;
+    unsigned int i;
     for (i = 0; i < sizeof(struct in6_addr); i++)
       rr->data.AAAA.addr->s6_addr[i] = p[i];
     p += sizeof(struct in6_addr);
@@ -883,8 +883,8 @@ struct mdns_pkt *mdns_parse_pkt(uint8_t *pkt_buf, size_t pkt_len) {
 
 // encodes a name (label) into a packet using the name compression scheme
 // encoded names will be added to the compression list for subsequent use
-static size_t mdns_encode_name(uint8_t *pkt_buf, size_t pkt_len, size_t off, const uint8_t *name,
-                               struct name_comp *comp) {
+static size_t mdns_encode_name(uint8_t *pkt_buf, __attribute__((unused)) size_t pkt_len, size_t off,
+                               const uint8_t *name, struct name_comp *comp) {
   struct name_comp *c, *c_tail = NULL;
   uint8_t *p = pkt_buf + off;
   size_t len = 0;
@@ -934,7 +934,7 @@ static size_t mdns_encode_rr(uint8_t *pkt_buf, size_t pkt_len, size_t off, struc
   size_t l;
   struct rr_data_txt *txt_rec;
   uint8_t *label;
-  int i;
+  unsigned int i;
 
   assert(off < pkt_len);
 
@@ -1025,7 +1025,7 @@ size_t mdns_encode_pkt(struct mdns_pkt *answer, uint8_t *pkt_buf, size_t pkt_len
   uint8_t *p = pkt_buf;
   // uint8_t *e = pkt_buf + pkt_len;
   size_t off;
-  int i;
+  unsigned int i;
 
   assert(answer != NULL);
   assert(pkt_len >= 12);

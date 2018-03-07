@@ -1888,14 +1888,13 @@ static void *player_thread_func(void *arg) {
               //        sync_error_out_of_bounds, sync_error);
               sync_error_out_of_bounds = 0;
 
-              size_t filler_length =
-                  config.resyncthreshold * config.output_rate; // number of samples
+              int filler_length = config.resyncthreshold * config.output_rate; // number of samples
               if ((sync_error > 0) && (sync_error > filler_length)) {
                 // debug(1, "Large positive sync error: %lld.", sync_error);
                 frames_to_drop = sync_error / conn->output_sample_ratio;
               } else if ((sync_error < 0) && ((-sync_error) > filler_length)) {
                 // debug(1, "Large negative sync error: %lld. Inserting silence.", sync_error);
-                size_t silence_length = -sync_error;
+                int silence_length = -sync_error;
                 if (silence_length > (filler_length * 5))
                   silence_length = filler_length * 5;
 
