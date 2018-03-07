@@ -7,8 +7,9 @@
 
 GMainLoop *loop;
 
-void on_properties_changed(GDBusProxy *proxy, GVariant *changed_properties,
-                           const gchar *const *invalidated_properties, gpointer user_data) {
+void on_properties_changed(__attribute__((unused)) GDBusProxy *proxy, GVariant *changed_properties,
+                           const gchar *const *invalidated_properties,
+                           __attribute__((unused)) gpointer user_data) {
   /* Note that we are guaranteed that changed_properties and
    * invalidated_properties are never NULL
    */
@@ -40,7 +41,7 @@ void on_properties_changed(GDBusProxy *proxy, GVariant *changed_properties,
 }
 
 pthread_t dbus_thread;
-void *dbus_thread_func(void *arg) {
+void *dbus_thread_func(__attribute__((unused)) void *arg) {
 
   loop = g_main_loop_new(NULL, FALSE);
 
@@ -63,7 +64,7 @@ int main(int argc, char *argv[]) {
        "Listen on the D-Bus session bus -- pick this option or the \'--system\' option, but not "
        "both.",
        NULL},
-      POPT_AUTOHELP{NULL, 0, 0, NULL, 0}};
+      POPT_AUTOHELP{NULL, 0, 0, NULL, 0, NULL, NULL}};
 
   optCon = poptGetContext(NULL, argc, (const char **)argv, optionsTable, 0);
   poptSetOtherOptionHelp(optCon, "[--system | --session]");

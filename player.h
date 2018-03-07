@@ -82,7 +82,8 @@ typedef struct {
   uint64_t packet_count;
   int connection_state_to_output;
   int player_thread_please_stop;
-  int64_t first_packet_time_to_play, time_since_play_started; // nanoseconds
+  uint64_t first_packet_time_to_play;
+  int64_t time_since_play_started; // nanoseconds
                                                               // stats
   uint64_t missing_packets, late_packets, too_late_packets, resend_requests;
   int decoder_in_use;

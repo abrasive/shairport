@@ -14,7 +14,7 @@
 #include "metadata_hub.h"
 #include "mpris-service.h"
 
-void mpris_metadata_watcher(struct metadata_bundle *argc, void *userdata) {
+void mpris_metadata_watcher(struct metadata_bundle *argc, __attribute__((unused)) void *userdata) {
   // debug(1, "MPRIS metadata watcher called");
   char response[100];
 
@@ -147,49 +147,50 @@ void mpris_metadata_watcher(struct metadata_bundle *argc, void *userdata) {
 }
 
 static gboolean on_handle_next(MediaPlayer2Player *skeleton, GDBusMethodInvocation *invocation,
-                               gpointer user_data) {
+                               __attribute__((unused)) gpointer user_data) {
   send_simple_dacp_command("nextitem");
   media_player2_player_complete_next(skeleton, invocation);
   return TRUE;
 }
 
 static gboolean on_handle_previous(MediaPlayer2Player *skeleton, GDBusMethodInvocation *invocation,
-                                   gpointer user_data) {
+                                   __attribute__((unused)) gpointer user_data) {
   send_simple_dacp_command("previtem");
   media_player2_player_complete_previous(skeleton, invocation);
   return TRUE;
 }
 
 static gboolean on_handle_stop(MediaPlayer2Player *skeleton, GDBusMethodInvocation *invocation,
-                               gpointer user_data) {
+                               __attribute__((unused)) gpointer user_data) {
   send_simple_dacp_command("stop");
   media_player2_player_complete_stop(skeleton, invocation);
   return TRUE;
 }
 
 static gboolean on_handle_pause(MediaPlayer2Player *skeleton, GDBusMethodInvocation *invocation,
-                                gpointer user_data) {
+                                __attribute__((unused)) gpointer user_data) {
   send_simple_dacp_command("pause");
   media_player2_player_complete_pause(skeleton, invocation);
   return TRUE;
 }
 
 static gboolean on_handle_play_pause(MediaPlayer2Player *skeleton,
-                                     GDBusMethodInvocation *invocation, gpointer user_data) {
+                                     GDBusMethodInvocation *invocation,
+                                     __attribute__((unused)) gpointer user_data) {
   send_simple_dacp_command("playpause");
   media_player2_player_complete_play_pause(skeleton, invocation);
   return TRUE;
 }
 
 static gboolean on_handle_play(MediaPlayer2Player *skeleton, GDBusMethodInvocation *invocation,
-                               gpointer user_data) {
+                               __attribute__((unused)) gpointer user_data) {
   send_simple_dacp_command("play");
   media_player2_player_complete_play(skeleton, invocation);
   return TRUE;
 }
 
 static void on_mpris_name_acquired(GDBusConnection *connection, const gchar *name,
-                                   gpointer user_data) {
+                                   __attribute__((unused)) gpointer user_data) {
 
   const char *empty_string_array[] = {NULL};
 
@@ -238,13 +239,16 @@ static void on_mpris_name_acquired(GDBusConnection *connection, const gchar *nam
         (config.mpris_service_bus_type == DBT_session) ? "session" : "system");
 }
 
-static void on_mpris_name_lost_again(GDBusConnection *connection, const gchar *name,
-                                     gpointer user_data) {
+static void on_mpris_name_lost_again(__attribute__((unused)) GDBusConnection *connection,
+                                     const gchar *name,
+                                     __attribute__((unused)) gpointer user_data) {
   warn("Could not acquire an MPRIS interface named \"%s\" on the %s bus.", name,
        (config.mpris_service_bus_type == DBT_session) ? "session" : "system");
 }
 
-static void on_mpris_name_lost(GDBusConnection *connection, const gchar *name, gpointer user_data) {
+static void on_mpris_name_lost(__attribute__((unused)) GDBusConnection *connection,
+                               __attribute__((unused)) const gchar *name,
+                               __attribute__((unused)) gpointer user_data) {
   // debug(1, "Could not acquire MPRIS interface \"%s\" on the %s bus -- will try adding the process
   // "
   //         "number to the end of it.",

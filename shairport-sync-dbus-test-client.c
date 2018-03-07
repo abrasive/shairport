@@ -6,8 +6,9 @@
 
 GMainLoop *loop;
 
-void on_properties_changed(GDBusProxy *proxy, GVariant *changed_properties,
-                           const gchar *const *invalidated_properties, gpointer user_data) {
+void on_properties_changed(__attribute__((unused)) GDBusProxy *proxy, GVariant *changed_properties,
+                           const gchar *const *invalidated_properties,
+                           __attribute__((unused)) gpointer user_data) {
   /* Note that we are guaranteed that changed_properties and
    * invalidated_properties are never NULL
    */
@@ -38,7 +39,8 @@ void on_properties_changed(GDBusProxy *proxy, GVariant *changed_properties,
   }
 }
 
-void notify_loudness_filter_active_callback(ShairportSync *proxy, gpointer user_data) {
+void notify_loudness_filter_active_callback(ShairportSync *proxy,
+                                            __attribute__((unused)) gpointer user_data) {
   //  printf("\"notify_loudness_filter_active_callback\" called with a gpointer of
   //  %lx.\n",(int64_t)user_data);
   gboolean ebl = shairport_sync_get_loudness_filter_active(proxy);
@@ -48,18 +50,19 @@ void notify_loudness_filter_active_callback(ShairportSync *proxy, gpointer user_
     printf("Client reports loudness is disabled.\n");
 }
 
-void notify_loudness_threshold_callback(ShairportSync *proxy, gpointer user_data) {
+void notify_loudness_threshold_callback(ShairportSync *proxy,
+                                        __attribute__((unused)) gpointer user_data) {
   gdouble th = shairport_sync_get_loudness_threshold(proxy);
   printf("Client reports loudness threshold set to %.2f dB.\n", th);
 }
 
-void notify_volume_callback(ShairportSync *proxy, gpointer user_data) {
+void notify_volume_callback(ShairportSync *proxy, __attribute__((unused)) gpointer user_data) {
   gdouble th = shairport_sync_get_volume(proxy);
   printf("Client reports volume set to %.2f.\n", th);
 }
 
 pthread_t dbus_thread;
-void *dbus_thread_func(void *arg) {
+void *dbus_thread_func(__attribute__((unused)) void *arg) {
 
   loop = g_main_loop_new(NULL, FALSE);
 
@@ -85,7 +88,7 @@ int main(int argc, char *argv[]) {
        "Listen on the D-Bus session bus -- pick this option or the \'--system\' option, but not "
        "both.",
        NULL},
-      POPT_AUTOHELP{NULL, 0, 0, NULL, 0}};
+      POPT_AUTOHELP{NULL, 0, 0, NULL, 0, NULL, NULL}};
 
   optCon = poptGetContext(NULL, argc, (const char **)argv, optionsTable, 0);
   poptSetOtherOptionHelp(optCon, "[--system | --session]");

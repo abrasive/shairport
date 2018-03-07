@@ -104,8 +104,10 @@ void shairport_shutdown() {
     config.output->deinit();
 }
 
-static void sig_ignore(int foo, siginfo_t *bar, void *baz) {}
-static void sig_shutdown(int foo, siginfo_t *bar, void *baz) {
+static void sig_ignore(__attribute__((unused)) int foo, __attribute__((unused)) siginfo_t *bar,
+                       __attribute__((unused)) void *baz) {}
+static void sig_shutdown(__attribute__((unused)) int foo, __attribute__((unused)) siginfo_t *bar,
+                         __attribute__((unused)) void *baz) {
   debug(1, "shutdown requested...");
   shairport_shutdown();
   //  daemon_log(LOG_NOTICE, "exit...");
@@ -114,7 +116,8 @@ static void sig_shutdown(int foo, siginfo_t *bar, void *baz) {
   exit(0);
 }
 
-static void sig_child(int foo, siginfo_t *bar, void *baz) {
+static void sig_child(__attribute__((unused)) int foo, __attribute__((unused)) siginfo_t *bar,
+                      __attribute__((unused)) void *baz) {
   pid_t pid;
   while ((pid = waitpid((pid_t)-1, 0, WNOHANG)) > 0) {
     if (pid == mdns_pid && !shutting_down) {
@@ -123,12 +126,16 @@ static void sig_child(int foo, siginfo_t *bar, void *baz) {
   }
 }
 
-static void sig_disconnect_audio_output(int foo, siginfo_t *bar, void *baz) {
+static void sig_disconnect_audio_output(__attribute__((unused)) int foo,
+                                        __attribute__((unused)) siginfo_t *bar,
+                                        __attribute__((unused)) void *baz) {
   debug(1, "disconnect audio output requested.");
   set_requested_connection_state_to_output(0);
 }
 
-static void sig_connect_audio_output(int foo, siginfo_t *bar, void *baz) {
+static void sig_connect_audio_output(__attribute__((unused)) int foo,
+                                     __attribute__((unused)) siginfo_t *bar,
+                                     __attribute__((unused)) void *baz) {
   debug(1, "connect audio output requested.");
   set_requested_connection_state_to_output(1);
 }
@@ -295,34 +302,34 @@ int parse_options(int argc, char **argv) {
   int daemonisewith = 0;
   int daemonisewithout = 0;
   struct poptOption optionsTable[] = {
-      {"verbose", 'v', POPT_ARG_NONE, NULL, 'v', NULL},
-      {"disconnectFromOutput", 'D', POPT_ARG_NONE, NULL, 0, NULL},
-      {"reconnectToOutput", 'R', POPT_ARG_NONE, NULL, 0, NULL},
-      {"kill", 'k', POPT_ARG_NONE, NULL, 0, NULL},
-      {"daemon", 'd', POPT_ARG_NONE, &daemonisewith, 0, NULL},
-      {"justDaemoniseNoPIDFile", 'j', POPT_ARG_NONE, &daemonisewithout, 0, NULL},
-      {"configfile", 'c', POPT_ARG_STRING, &config.configfile, 0, NULL},
-      {"statistics", 0, POPT_ARG_NONE, &config.statistics_requested, 0, NULL},
-      {"logOutputLevel", 0, POPT_ARG_NONE, &config.logOutputLevel, 0, NULL},
-      {"version", 'V', POPT_ARG_NONE, NULL, 0, NULL},
-      {"port", 'p', POPT_ARG_INT, &config.port, 0, NULL},
-      {"name", 'a', POPT_ARG_STRING, &raw_service_name, 0, NULL},
-      {"output", 'o', POPT_ARG_STRING, &config.output_name, 0, NULL},
-      {"on-start", 'B', POPT_ARG_STRING, &config.cmd_start, 0, NULL},
-      {"on-stop", 'E', POPT_ARG_STRING, &config.cmd_stop, 0, NULL},
-      {"wait-cmd", 'w', POPT_ARG_NONE, &config.cmd_blocking, 0, NULL},
-      {"mdns", 'm', POPT_ARG_STRING, &config.mdns_name, 0, NULL},
-      {"latency", 'L', POPT_ARG_INT, &config.userSuppliedLatency, 0, NULL},
-      {"stuffing", 'S', POPT_ARG_STRING, &stuffing, 'S', NULL},
-      {"resync", 'r', POPT_ARG_INT, &fResyncthreshold, 0, NULL},
-      {"timeout", 't', POPT_ARG_INT, &config.timeout, 't', NULL},
-      {"password", 0, POPT_ARG_STRING, &config.password, 0, NULL},
-      {"tolerance", 'z', POPT_ARG_INT, &fTolerance, 0, NULL},
+      {"verbose", 'v', POPT_ARG_NONE, NULL, 'v', NULL, NULL},
+      {"disconnectFromOutput", 'D', POPT_ARG_NONE, NULL, 0, NULL, NULL},
+      {"reconnectToOutput", 'R', POPT_ARG_NONE, NULL, 0, NULL, NULL},
+      {"kill", 'k', POPT_ARG_NONE, NULL, 0, NULL, NULL},
+      {"daemon", 'd', POPT_ARG_NONE, &daemonisewith, 0, NULL, NULL},
+      {"justDaemoniseNoPIDFile", 'j', POPT_ARG_NONE, &daemonisewithout, 0, NULL, NULL},
+      {"configfile", 'c', POPT_ARG_STRING, &config.configfile, 0, NULL, NULL},
+      {"statistics", 0, POPT_ARG_NONE, &config.statistics_requested, 0, NULL, NULL},
+      {"logOutputLevel", 0, POPT_ARG_NONE, &config.logOutputLevel, 0, NULL, NULL},
+      {"version", 'V', POPT_ARG_NONE, NULL, 0, NULL, NULL},
+      {"port", 'p', POPT_ARG_INT, &config.port, 0, NULL, NULL},
+      {"name", 'a', POPT_ARG_STRING, &raw_service_name, 0, NULL, NULL},
+      {"output", 'o', POPT_ARG_STRING, &config.output_name, 0, NULL, NULL},
+      {"on-start", 'B', POPT_ARG_STRING, &config.cmd_start, 0, NULL, NULL},
+      {"on-stop", 'E', POPT_ARG_STRING, &config.cmd_stop, 0, NULL, NULL},
+      {"wait-cmd", 'w', POPT_ARG_NONE, &config.cmd_blocking, 0, NULL, NULL},
+      {"mdns", 'm', POPT_ARG_STRING, &config.mdns_name, 0, NULL, NULL},
+      {"latency", 'L', POPT_ARG_INT, &config.userSuppliedLatency, 0, NULL, NULL},
+      {"stuffing", 'S', POPT_ARG_STRING, &stuffing, 'S', NULL, NULL},
+      {"resync", 'r', POPT_ARG_INT, &fResyncthreshold, 0, NULL, NULL},
+      {"timeout", 't', POPT_ARG_INT, &config.timeout, 't', NULL, NULL},
+      {"password", 0, POPT_ARG_STRING, &config.password, 0, NULL, NULL},
+      {"tolerance", 'z', POPT_ARG_INT, &fTolerance, 0, NULL, NULL},
 #ifdef CONFIG_METADATA
-      {"metadata-pipename", 'M', POPT_ARG_STRING, &config.metadata_pipename, 'M', NULL},
-      {"get-coverart", 'g', POPT_ARG_NONE, &config.get_coverart, 'g', NULL},
+      {"metadata-pipename", 'M', POPT_ARG_STRING, &config.metadata_pipename, 'M', NULL, NULL},
+      {"get-coverart", 'g', POPT_ARG_NONE, &config.get_coverart, 'g', NULL, NULL},
 #endif
-      POPT_AUTOHELP{NULL, 0, 0, NULL, 0}};
+      POPT_AUTOHELP{NULL, 0, 0, NULL, 0, NULL, NULL}};
 
   // we have to parse the command line arguments to look for a config file
   int optind;
@@ -1019,7 +1026,7 @@ int parse_options(int argc, char **argv) {
 GMainLoop *loop;
 
 pthread_t dbus_thread;
-void *dbus_thread_func(void *arg) {
+void *dbus_thread_func(__attribute__((unused)) void *arg) {
   loop = g_main_loop_new(NULL, FALSE);
   g_main_loop_run(loop);
   return NULL;

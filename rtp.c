@@ -43,8 +43,8 @@
 #include "player.h"
 #include "rtp.h"
 
-uint64_t static local_to_remote_time_jitters;
-uint64_t static local_to_remote_time_jitters_count;
+uint64_t local_to_remote_time_jitters;
+uint64_t local_to_remote_time_jitters_count;
 
 void memory_barrier();
 

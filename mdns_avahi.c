@@ -66,8 +66,10 @@ static int port = 0;
 static void resolve_callback(AvahiServiceResolver *r, AVAHI_GCC_UNUSED AvahiIfIndex interface,
                              AVAHI_GCC_UNUSED AvahiProtocol protocol, AvahiResolverEvent event,
                              const char *name, const char *type, const char *domain,
-                             const char *host_name, const AvahiAddress *address, uint16_t port,
-                             AvahiStringList *txt, AvahiLookupResultFlags flags, void *userdata) {
+                             __attribute__((unused)) const char *host_name,
+                             __attribute__((unused)) const AvahiAddress *address, uint16_t port,
+                             __attribute__((unused)) AvahiStringList *txt,
+                             __attribute__((unused)) AvahiLookupResultFlags flags, void *userdata) {
   assert(r);
 
   rtsp_conn_info *conn = (rtsp_conn_info *)userdata;

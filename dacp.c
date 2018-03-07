@@ -65,7 +65,9 @@ struct HttpResponse {
   int code;
 };
 
-static void *response_realloc(void *opaque, void *ptr, int size) { return realloc(ptr, size); }
+static void *response_realloc(__attribute__((unused)) void *opaque, void *ptr, int size) {
+  return realloc(ptr, size);
+}
 
 static void response_body(void *opaque, const char *data, int size) {
   struct HttpResponse *response = (struct HttpResponse *)opaque;
@@ -89,8 +91,10 @@ static void response_body(void *opaque, const char *data, int size) {
   response->size += size;
 }
 
-static void response_header(void *opaque, const char *ckey, int nkey, const char *cvalue,
-                            int nvalue) { /* example doesn't care about headers */
+static void
+response_header(__attribute__((unused)) void *opaque, __attribute__((unused)) const char *ckey,
+                __attribute__((unused)) int nkey, __attribute__((unused)) const char *cvalue,
+                __attribute__((unused)) int nvalue) { /* example doesn't care about headers */
 }
 
 static void response_code(void *opaque, int code) {
@@ -183,7 +187,7 @@ int dacp_send_command(const char *command, char **body, ssize_t *bodysize) {
 
           // Send command
           // debug(1,"DACP connect message: \"%s\".",message);
-          if (send(sockfd, message, strlen(message), 0) != strlen(message)) {
+          if (send(sockfd, message, strlen(message), 0) != (ssize_t)strlen(message)) {
             // debug(1, "Send failed");
             response.code = 493; // Client failed to send a message
 
@@ -278,7 +282,7 @@ void set_dacp_server_information(rtsp_conn_info *conn) { // tell the DACP conver
   pthread_mutex_unlock(&dacp_server_information_lock);
 }
 
-void *dacp_monitor_thread_code(void *na) {
+void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
   int scan_index = 0;
   // char server_reply[10000];
   // debug(1, "DACP monitor thread started.");

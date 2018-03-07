@@ -14,12 +14,13 @@
 #include "dbus-service.h"
 #include "metadata_hub.h"
 
-void dbus_metadata_watcher(struct metadata_bundle *argc, void *userdata) {
+void dbus_metadata_watcher(struct metadata_bundle *argc, __attribute__((unused)) void *userdata) {
   // debug(1, "DBUS metadata watcher called");
-  shairport_sync_set_volume(shairportSyncSkeleton, metadata_store.speaker_volume);
+  shairport_sync_set_volume(shairportSyncSkeleton, argc->speaker_volume);
 }
 
-gboolean notify_loudness_filter_active_callback(ShairportSync *skeleton, gpointer user_data) {
+gboolean notify_loudness_filter_active_callback(ShairportSync *skeleton,
+                                                __attribute__((unused)) gpointer user_data) {
   debug(1, "\"notify_loudness_filter_active_callback\" called.");
   if (shairport_sync_get_loudness_filter_active(skeleton)) {
     debug(1, "activating loudness filter");
@@ -31,7 +32,8 @@ gboolean notify_loudness_filter_active_callback(ShairportSync *skeleton, gpointe
   return TRUE;
 }
 
-gboolean notify_loudness_threshold_callback(ShairportSync *skeleton, gpointer user_data) {
+gboolean notify_loudness_threshold_callback(ShairportSync *skeleton,
+                                            __attribute__((unused)) gpointer user_data) {
   gdouble th = shairport_sync_get_loudness_threshold(skeleton);
   if ((th <= 0.0) && (th >= -100.0)) {
     debug(1, "Setting loudness threshhold to %f.", th);
@@ -42,7 +44,8 @@ gboolean notify_loudness_threshold_callback(ShairportSync *skeleton, gpointer us
   return TRUE;
 }
 
-gboolean notify_volume_callback(ShairportSync *skeleton, gpointer user_data) {
+gboolean notify_volume_callback(ShairportSync *skeleton,
+                                __attribute__((unused)) gpointer user_data) {
   gint gvo = shairport_sync_get_volume(skeleton);
   int32_t vo = gvo;
   if ((vo >= 0) && (vo <= 100)) {
@@ -149,7 +152,8 @@ gboolean notify_volume_callback(ShairportSync *skeleton, gpointer user_data) {
 }
 
 static gboolean on_handle_remote_command(ShairportSync *skeleton, GDBusMethodInvocation *invocation,
-                                         const gchar *command, gpointer user_data) {
+                                         const gchar *command,
+                                         __attribute__((unused)) gpointer user_data) {
   debug(1, "RemoteCommand with command \"%s\".", command);
   send_simple_dacp_command((const char *)command);
   shairport_sync_complete_remote_command(skeleton, invocation);
@@ -157,7 +161,7 @@ static gboolean on_handle_remote_command(ShairportSync *skeleton, GDBusMethodInv
 }
 
 static void on_dbus_name_acquired(GDBusConnection *connection, const gchar *name,
-                                  gpointer user_data) {
+                                  __attribute__((unused)) gpointer user_data) {
 
   // debug(1, "Shairport Sync native D-Bus interface \"%s\" acquired on the %s bus.", name,
   // (config.dbus_service_bus_type == DBT_session) ? "session" : "system");
@@ -193,13 +197,16 @@ static void on_dbus_name_acquired(GDBusConnection *connection, const gchar *name
         (config.dbus_service_bus_type == DBT_session) ? "session" : "system");
 }
 
-static void on_dbus_name_lost_again(GDBusConnection *connection, const gchar *name,
-                                    gpointer user_data) {
+static void on_dbus_name_lost_again(__attribute__((unused)) GDBusConnection *connection,
+                                    __attribute__((unused)) const gchar *name,
+                                    __attribute__((unused)) gpointer user_data) {
   warn("Could not acquire a Shairport Sync native D-Bus interface \"%s\" on the %s bus.", name,
        (config.dbus_service_bus_type == DBT_session) ? "session" : "system");
 }
 
-static void on_dbus_name_lost(GDBusConnection *connection, const gchar *name, gpointer user_data) {
+static void on_dbus_name_lost(__attribute__((unused)) GDBusConnection *connection,
+                              __attribute__((unused)) const gchar *name,
+                              __attribute__((unused)) gpointer user_data) {
   // debug(1, "Could not acquire a Shairport Sync native D-Bus interface \"%s\" on the %s bus --
   // will try adding the process "
   //         "number to the end of it.",

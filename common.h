@@ -88,7 +88,7 @@ typedef struct {
   char *metadata_pipename;
   char *metadata_sockaddr;
   int metadata_sockport;
-  int metadata_sockmsglength;
+  size_t metadata_sockmsglength;
   int get_coverart;
 #endif
   uint8_t hw_addr[6];

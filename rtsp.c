@@ -123,7 +123,7 @@ typedef struct {
 
 typedef struct {
   uint32_t referenceCount; // we might start using this...
-  int nheaders;
+  unsigned int nheaders;
   char *name[16];
   char *value[16];
 
@@ -362,7 +362,7 @@ static int msg_add_header(rtsp_message *msg, char *name, char *value) {
 }
 
 static char *msg_get_header(rtsp_message *msg, char *name) {
-  int i;
+  unsigned int i;
   for (i = 0; i < msg->nheaders; i++)
     if (!strcasecmp(msg->name[i], name))
       return msg->value[i];
@@ -370,7 +370,7 @@ static char *msg_get_header(rtsp_message *msg, char *name) {
 }
 
 static void debug_print_msg_headers(int level, rtsp_message *msg) {
-  int i;
+  unsigned int i;
   for (i = 0; i < msg->nheaders; i++) {
     debug(level, "  Type: \"%s\", content: \"%s\"", msg->name[i], msg->value[i]);
   }
@@ -410,7 +410,7 @@ static void msg_free(rtsp_message *msg) {
     if (rc)
       debug(1, "Error %d unlocking reference counter lock during msg_free()", rc);
     if (msg->referenceCount == 0) {
-      int i;
+      unsigned int i;
       for (i = 0; i < msg->nheaders; i++) {
         free(msg->name[i]);
         free(msg->value[i]);
@@ -589,7 +589,7 @@ static enum rtsp_read_request_response rtsp_read_request(rtsp_conn_info *conn,
       reply = rtsp_read_request_response_immediate_shutdown_requested;
       goto shutdown;
     }
-    ssize_t read_chunk = msg_size - inbuf;
+    size_t read_chunk = msg_size - inbuf;
     if (read_chunk > max_read_chunk)
       read_chunk = max_read_chunk;
     usleep(40000); // wait about 40 milliseconds between reads of up to about 64 kB
@@ -628,7 +628,8 @@ static void msg_write_response(int fd, rtsp_message *resp) {
   char pkt[2048];
   int pktfree = sizeof(pkt);
   char *p = pkt;
-  int i, n;
+  int n;
+  unsigned int i;
 
   n = snprintf(p, pktfree, "RTSP/1.0 %d %s\r\n", resp->respcode,
                resp->respcode == 200 ? "OK" : "Unauthorized");
@@ -708,7 +709,8 @@ static void handle_record(rtsp_conn_info *conn, rtsp_message *req, rtsp_message 
   // usleep(500000);
 }
 
-static void handle_options(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
+static void handle_options(rtsp_conn_info *conn, __attribute__((unused)) rtsp_message *req,
+                           rtsp_message *resp) {
   debug(3, "Connection %d: OPTIONS", conn->connection_number);
   resp->respcode = 200;
   msg_add_header(resp, "Public", "ANNOUNCE, SETUP, RECORD, "
@@ -716,7 +718,8 @@ static void handle_options(rtsp_conn_info *conn, rtsp_message *req, rtsp_message
                                  "OPTIONS, GET_PARAMETER, SET_PARAMETER");
 }
 
-static void handle_teardown(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
+static void handle_teardown(rtsp_conn_info *conn, __attribute__((unused)) rtsp_message *req,
+                            rtsp_message *resp) {
   debug(2, "Connection %d: TEARDOWN", conn->connection_number);
   // if (!rtsp_playing())
   //  debug(1, "This RTSP connection thread (%d) doesn't think it's playing, but "
@@ -857,7 +860,7 @@ static void handle_ignore(rtsp_conn_info *conn, rtsp_message *req, rtsp_message 
 */
 
 static void handle_set_parameter_parameter(rtsp_conn_info *conn, rtsp_message *req,
-                                           rtsp_message *resp) {
+                                           __attribute__((unused)) rtsp_message *resp) {
   char *cp = req->content;
   int cp_left = req->contentlength;
   char *next;
@@ -977,7 +980,7 @@ static char encoding_table[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'
                                 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
                                 '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '/'};
 
-static int mod_table[] = {0, 2, 1};
+static size_t mod_table[] = {0, 2, 1};
 
 // pass in a pointer to the data, its length, a pointer to the output buffer and
 // a pointer to an int
@@ -992,7 +995,7 @@ char *base64_encode_so(const unsigned char *data, size_t input_length, char *enc
     return (NULL);
   *output_length = calculated_output_length;
 
-  int i, j;
+  size_t i, j;
   for (i = 0, j = 0; i < input_length;) {
 
     uint32_t octet_a = i < input_length ? (unsigned char)data[i++] : 0;
@@ -1136,7 +1139,7 @@ void metadata_process(uint32_t type, uint32_t code, char *data, uint32_t length)
       v = htonl(code);
       memcpy(ptr, &v, 4);
       ptr += 4;
-      uint32_t datalen = remaining;
+      size_t datalen = remaining;
       if (datalen > config.metadata_sockmsglength - 24) {
         datalen = config.metadata_sockmsglength - 24;
       }
@@ -1212,7 +1215,7 @@ void metadata_process(uint32_t type, uint32_t code, char *data, uint32_t length)
   }
 }
 
-void *metadata_thread_function(void *ignore) {
+void *metadata_thread_function(__attribute__((unused)) void *ignore) {
   metadata_create();
   metadata_package pack;
   while (1) {
@@ -1285,10 +1288,11 @@ int send_metadata(uint32_t type, uint32_t code, char *data, uint32_t length, rts
   return rc;
 }
 
-static void handle_set_parameter_metadata(rtsp_conn_info *conn, rtsp_message *req,
-                                          rtsp_message *resp) {
+static void handle_set_parameter_metadata(__attribute__((unused)) rtsp_conn_info *conn,
+                                          rtsp_message *req,
+                                          __attribute__((unused)) rtsp_message *resp) {
   char *cp = req->content;
-  int cl = req->contentlength;
+  unsigned int cl = req->contentlength;
 
   unsigned int off = 8;
 
@@ -1317,7 +1321,8 @@ static void handle_set_parameter_metadata(rtsp_conn_info *conn, rtsp_message *re
 
 #endif
 
-static void handle_get_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
+static void handle_get_parameter(__attribute__((unused)) rtsp_conn_info *conn, rtsp_message *req,
+                                 rtsp_message *resp) {
   // debug(1, "Connection %d: GET_PARAMETER", conn->connection_number);
   // debug_print_msg_headers(1,req);
   // debug_print_msg_content(1,req);
@@ -1562,7 +1567,7 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
       memcpy(conn->stream.aeskey, aeskey, 16);
       free(aeskey);
     }
-    int i;
+    unsigned int i;
     for (i = 0; i < sizeof(conn->stream.fmtp) / sizeof(conn->stream.fmtp[0]); i++)
       conn->stream.fmtp[i] = atoi(strsep(&pfmtp, " \t"));
     // here we should check the sanity ot the fmtp values
