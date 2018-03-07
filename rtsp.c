@@ -376,6 +376,7 @@ static void debug_print_msg_headers(int level, rtsp_message *msg) {
   }
 }
 
+/*
 static void debug_print_msg_content(int level, rtsp_message *msg) {
   if (msg->contentlength) {
     char *obf = malloc(msg->contentlength * 2 + 1);
@@ -396,6 +397,7 @@ static void debug_print_msg_content(int level, rtsp_message *msg) {
     debug(level, "No content");
   }
 }
+*/
 
 static void msg_free(rtsp_message *msg) {
 
@@ -432,6 +434,7 @@ static int msg_handle_line(rtsp_message **pmsg, char *line) {
     msg = msg_init();
     *pmsg = msg;
     char *sp, *p;
+    sp = NULL; // this is to quieten a compiler warning
 
     // debug(1, "received request: %s", line);
 
@@ -653,15 +656,18 @@ static void msg_write_response(int fd, rtsp_message *resp) {
       die("Attempted to write overlong RTSP packet");
   }
 
-  int ignore = write(fd, pkt, p - pkt);
+  if (write(fd, pkt, p - pkt) != p - pkt)
+    debug(1,"Error writing an RTSP packet -- requested bytes not fully written.");
 
   // Here, if there's content, write it
   if (resp->contentlength) {
     debug(1, "Content is \"%s\"", resp->content);
-    ignore = write(fd, resp->content, resp->contentlength);
+    if (write(fd, resp->content, resp->contentlength) != resp->contentlength)
+      debug(1,"Error writing RTSP content -- requested bytes not fully written.");
   }
 
-  ignore = write(fd, "\r\n", strlen("\r\n"));
+  if (write(fd, "\r\n", strlen("\r\n")) != strlen("\r\n"))
+    debug(1,"Error terminating RTSP content.");
 }
 
 static void handle_record(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
@@ -843,10 +849,12 @@ error:
   resp->respcode = 451; // invalid arguments
 }
 
+/*
 static void handle_ignore(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
   debug(1, "Connection thread %d: IGNORE", conn->connection_number);
   resp->respcode = 200;
 }
+*/
 
 static void handle_set_parameter_parameter(rtsp_conn_info *conn, rtsp_message *req,
                                            rtsp_message *resp) {
@@ -1009,7 +1017,7 @@ char *base64_encode_so(const unsigned char *data, size_t input_length, char *enc
 //
 
 static int fd = -1;
-static int dirty = 0;
+// static int dirty = 0;
 pc_queue metadata_queue;
 static int metadata_sock = -1;
 static struct sockaddr_in metadata_sockaddr;
@@ -1077,10 +1085,12 @@ void metadata_open(void) {
   free(path);
 }
 
+/*
 static void metadata_close(void) {
   close(fd);
   fd = -1;
 }
+*/
 
 void metadata_process(uint32_t type, uint32_t code, char *data, uint32_t length) {
   // debug(2, "Process metadata with type %x, code %x and length %u.", type, code, length);
@@ -1167,7 +1177,7 @@ void metadata_process(uint32_t type, uint32_t code, char *data, uint32_t length)
     // thus, we send groups of (76/4)*3 =  57 bytes to the encoder at a time
     size_t remaining_count = length;
     char *remaining_data = data;
-    size_t towrite_count;
+    // size_t towrite_count;
     char outbuf[76];
     while ((remaining_count) && (ret >= 0)) {
       size_t towrite_count = remaining_count;
@@ -1669,7 +1679,9 @@ static char *make_nonce(void) {
   int fd = open("/dev/random", O_RDONLY);
   if (fd < 0)
     die("could not open /dev/random!");
-  int ignore = read(fd, random, sizeof(random));
+  // int ignore = 
+  if (read(fd, random, sizeof(random)) != sizeof(random))
+    debug(1,"Error reading /dev/random");
   close(fd);
   return base64_enc(random, 8);
 }
@@ -1934,6 +1946,7 @@ static void *rtsp_conversation_thread_func(void *pconn) {
   return NULL;
 }
 
+/*
 // this function is not thread safe.
 static const char *format_address(struct sockaddr *fsa) {
   static char string[INETx_ADDRSTRLEN];
@@ -1950,6 +1963,7 @@ static const char *format_address(struct sockaddr *fsa) {
   }
   return inet_ntop(fsa->sa_family, addr, string, sizeof(string));
 }
+*/
 
 void rtsp_listen_loop(void) {
   struct addrinfo hints, *info, *p;

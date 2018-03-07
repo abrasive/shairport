@@ -45,11 +45,13 @@
 
 static pthread_mutex_t buffer_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+/*
 static struct {
   char *server;
   char *sink;
   char *service_name;
 } pulse_options = {.server = NULL, .sink = NULL, .service_name = NULL};
+*/
 
 pa_threaded_mainloop *mainloop;
 pa_mainloop_api *mainloop_api;

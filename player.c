@@ -218,8 +218,8 @@ static inline int seq_order(seq_t a, seq_t b, seq_t base) {
 }
 
 static inline seq_t seq_sum(seq_t a, seq_t b) {
-  uint32_t p = a & 0xffff;
-  uint32_t q = b & 0x0ffff;
+//  uint32_t p = a & 0xffff;
+//  uint32_t q = b & 0x0ffff;
   uint32_t r = (a + b) & 0xffff;
   return r;
 }
@@ -254,7 +254,7 @@ static int alac_decode(short *dest, int *destlen, uint8_t *buf, int len, rtsp_co
     return -1;
   }
   unsigned char packet[MAX_PACKET];
-  unsigned char packetp[MAX_PACKET];
+  // unsigned char packetp[MAX_PACKET];
   assert(len <= MAX_PACKET);
   int reply = 0;                                          // everything okay
   int outsize = conn->input_bytes_per_frame * (*destlen); // the size the output should be, in bytes
@@ -578,7 +578,7 @@ int32_t rand_in_range(int32_t exclusive_range_limit) {
 static inline void process_sample(int32_t sample, char **outp, enum sps_format_t format, int volume,
                                   int dither, rtsp_conn_info *conn) {
   int64_t hyper_sample = sample;
-  int result;
+  int result = 0;
 
   if (config.loudness) {
     hyper_sample <<=
@@ -606,7 +606,7 @@ static inline void process_sample(int32_t sample, char **outp, enum sps_format_t
     // http://www.ece.rochester.edu/courses/ECE472/resources/Papers/Lipshitz_1992.pdf
     // by Lipshitz, Wannamaker and Vanderkooy, 1992.
 
-    int64_t dither_mask;
+    int64_t dither_mask = 0;
     switch (format) {
     case SPS_FORMAT_S32:
       dither_mask = (int64_t)1 << (64 + 1 - 32);
@@ -708,7 +708,7 @@ static inline void process_sample(int32_t sample, char **outp, enum sps_format_t
 
 // get the next frame, when available. return 0 if underrun/stream reset.
 static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
-  int16_t buf_fill;
+  // int16_t buf_fill;
   uint64_t local_time_now;
   // struct timespec tn;
   abuf_t *abuf = 0;
@@ -811,7 +811,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
         notified_buffer_empty = 0; // at least one buffer now -- diagnostic only.
         if (conn->ab_buffering) {  // if we are getting packets but not yet forwarding them to the
                                    // player
-          int have_sent_prefiller_silence; // set true when we have sent some silent frames to the
+          int have_sent_prefiller_silence = 0; // set true when we have sent some silent frames to the
                                            // DAC
           int64_t reference_timestamp;
           uint64_t reference_timestamp_time, remote_reference_timestamp_time;
@@ -1163,7 +1163,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
     return 0;
   }
 
-  seq_t read = conn->ab_read;
+  // seq_t read = conn->ab_read;
 
   // check if t+8, t+16, t+32, t+64, t+128, ... (buffer_start_fill / 2)
   // packets have arrived... last-chance resend
@@ -1502,7 +1502,7 @@ static void *player_thread_func(void *arg) {
 
   conn->buffer_occupancy = 0;
 
-  int play_samples;
+  int play_samples = 0;
   int64_t current_delay;
   int play_number = 0;
   conn->play_number_after_flush = 0;
@@ -1689,9 +1689,9 @@ static void *player_thread_func(void *arg) {
           case 16: {
             int i, j;
             int16_t ls, rs;
-            int32_t ll, rl;
+            int32_t ll = 0, rl = 0;
             int16_t *inps = inbuf;
-            int16_t *outps = tbuf;
+            // int16_t *outps = tbuf;
             int32_t *outpl = (int32_t *)tbuf;
             for (i = 0; i < inbuflength; i++) {
               ls = *inps++;
@@ -1983,7 +1983,7 @@ static void *player_thread_func(void *arg) {
                   // Volume must be applied here because the loudness filter will increase the
                   // signal level and it would saturate the int32_t otherwise
                   float gain = conn->fix_volume / 65536.0f;
-                  float gain_db = 20 * log10(gain);
+                  // float gain_db = 20 * log10(gain);
                   // debug(1, "Applying soft volume dB: %f k: %f", gain_db, gain);
 
                   for (i = 0; i < inbuflength; ++i) {
@@ -2134,7 +2134,7 @@ static void *player_thread_func(void *arg) {
           double moving_average_correction = (1.0 * tsum_of_corrections) / number_of_statistics;
           double moving_average_insertions_plus_deletions =
               (1.0 * tsum_of_insertions_and_deletions) / number_of_statistics;
-          double moving_average_drift = (1.0 * tsum_of_drifts) / number_of_statistics;
+          // double moving_average_drift = (1.0 * tsum_of_drifts) / number_of_statistics;
           // if ((play_number/print_interval)%20==0)
           if (config.statistics_requested) {
             if (at_least_one_frame_seen) {
@@ -2307,7 +2307,7 @@ void player_volume_without_notification(double airplay_volume, rtsp_conn_info *c
   // Thus, we ask our vol2attn function for an appropriate dB between -96.3 and 0 dB and translate
   // it back to a number.
 
-  int32_t hw_min_db, hw_max_db, hw_range_db, range_to_use, min_db,
+  int32_t hw_min_db, hw_max_db, hw_range_db, min_db,
       max_db; // hw_range_db is a flag; if 0 means no mixer
 
   if (config.output->parameters) {
@@ -2410,7 +2410,7 @@ void player_volume_without_notification(double airplay_volume, rtsp_conn_info *c
       }
     }
   */
-  double hardware_attenuation, software_attenuation;
+  double hardware_attenuation, software_attenuation = 0.0;
   double scaled_attenuation = hw_min_db + sw_min_db;
 
   // now, we can map the input to the desired output volume

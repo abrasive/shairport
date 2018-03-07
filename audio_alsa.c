@@ -103,8 +103,8 @@ int volume_based_mute_is_active =
 static snd_pcm_sframes_t (*alsa_pcm_write)(snd_pcm_t *, const void *,
                                            snd_pcm_uframes_t) = snd_pcm_writei;
 
-static int play_number;
-static int64_t accumulated_delay, accumulated_da_delay;
+// static int play_number;
+// static int64_t accumulated_delay, accumulated_da_delay;
 int alsa_characteristics_already_listed = 0;
 
 static snd_pcm_uframes_t period_size_requested, buffer_size_requested;
@@ -170,7 +170,7 @@ static int init(int argc, char **argv) {
   // debug(2,"audio_alsa init called.");
   const char *str;
   int value;
-  double dvalue;
+  // double dvalue;
 
   // set up default values first
   set_period_size_request = 0;
@@ -433,8 +433,8 @@ static int init(int argc, char **argv) {
         */
       }
     }
-    if ((config.alsa_use_playback_switch_for_mute == 1) &&
-            (snd_mixer_selem_has_playback_switch(alsa_mix_elem)) ||
+    if (((config.alsa_use_playback_switch_for_mute == 1) &&
+            (snd_mixer_selem_has_playback_switch(alsa_mix_elem))) ||
         mixer_volume_setting_gives_mute) {
       audio_alsa.mute = &mute; // insert the mute function now we know it can do muting stuff
       // debug(1, "Has mixer and mute ability we will use.");
@@ -462,13 +462,16 @@ int open_alsa_device(void) {
   const snd_pcm_uframes_t minimal_buffer_headroom =
       352 * 2; // we accept this much headroom in the hardware buffer, but we'll
                // accept less
+/*
   const snd_pcm_uframes_t requested_buffer_headroom =
       minimal_buffer_headroom + 2048; // we ask for this much headroom in the
                                       // hardware buffer, but we'll accept less
+*/
+
   int ret, dir = 0;
   unsigned int my_sample_rate = desired_sample_rate;
   // snd_pcm_uframes_t frames = 441 * 10;
-  snd_pcm_uframes_t buffer_size, actual_buffer_length;
+  snd_pcm_uframes_t actual_buffer_length;
   snd_pcm_access_t access;
 
   // ensure no calls are made to the alsa device enquiring about the buffer length if
@@ -545,6 +548,7 @@ int open_alsa_device(void) {
     break;
   default:
     pthread_mutex_unlock(&alsa_mutex);
+    sf = SND_PCM_FORMAT_S16; // this is just to quieten a compiler warning
     die("Unsupported output format at audio_alsa.c");
   }
   ret = snd_pcm_hw_params_set_format(alsa_handle, alsa_params, sf);
@@ -591,13 +595,13 @@ int open_alsa_device(void) {
       pthread_mutex_unlock(&alsa_mutex);
       die("audio_alsa: cannot set buffer size of %lu: %s", buffer_size_requested,
           snd_strerror(ret));
-      snd_pcm_uframes_t actual_buffer_size;
-      snd_pcm_hw_params_get_buffer_size(alsa_params, &actual_buffer_size);
-      if (actual_buffer_size != buffer_size_requested)
-        inform("Actual period size set to a different value than requested. Requested: %lu, actual "
-               "setting: %lu",
-               buffer_size, actual_buffer_size);
     }
+    snd_pcm_uframes_t actual_buffer_size;
+    snd_pcm_hw_params_get_buffer_size(alsa_params, &actual_buffer_size);
+    if (actual_buffer_size != buffer_size_requested)
+      inform("Actual period size set to a different value than requested. Requested: %lu, actual "
+             "setting: %lu",
+             buffer_size_requested, actual_buffer_size);
   }
 
   ret = snd_pcm_hw_params(alsa_handle, alsa_params);
@@ -650,11 +654,11 @@ int open_alsa_device(void) {
   if (alsa_characteristics_already_listed == 0) {
     alsa_characteristics_already_listed = 1;
     int log_level = 2; // the level at which debug information should be output
-    int rc;
+//    int rc;
     snd_pcm_access_t access_type;
     snd_pcm_format_t format_type;
     snd_pcm_subformat_t subformat_type;
-    unsigned int val, val2;
+//    unsigned int val, val2;
     unsigned int uval, uval2;
     int sval;
     int dir;
@@ -799,14 +803,14 @@ int delay(long *the_delay) {
     return -ENODEV;
   } else {
     pthread_mutex_lock(&alsa_mutex);
-    int derr, ignore;
+    int derr;
     if (snd_pcm_state(alsa_handle) == SND_PCM_STATE_RUNNING) {
       *the_delay = 0; // just to see what happens
       reply = snd_pcm_delay(alsa_handle, the_delay);
       if (reply != 0) {
         debug(1, "Error %d in delay(): \"%s\". Delay reported is %d frames.", reply,
               snd_strerror(reply), *the_delay);
-        ignore = snd_pcm_recover(alsa_handle, reply, 1);
+        snd_pcm_recover(alsa_handle, reply, 1);
       }
     } else if (snd_pcm_state(alsa_handle) == SND_PCM_STATE_PREPARED) {
       *the_delay = 0;
@@ -820,7 +824,7 @@ int delay(long *the_delay) {
         debug(1, "Error -- ALSA delay(): bad state: %d.", snd_pcm_state(alsa_handle));
       }
       if ((derr = snd_pcm_prepare(alsa_handle))) {
-        ignore = snd_pcm_recover(alsa_handle, derr, 1);
+        snd_pcm_recover(alsa_handle, derr, 1);
         debug(1, "Error preparing after delay error: \"%s\".", snd_strerror(derr));
       }
     }
@@ -848,11 +852,11 @@ static void play(short buf[], int samples) {
   }
   if (ret == 0) {
     pthread_mutex_lock(&alsa_mutex);
-    snd_pcm_sframes_t current_delay = 0;
-    int err, ignore;
+//    snd_pcm_sframes_t current_delay = 0;
+    int err;
     if (snd_pcm_state(alsa_handle) == SND_PCM_STATE_XRUN) {
       if ((err = snd_pcm_prepare(alsa_handle))) {
-        ignore = snd_pcm_recover(alsa_handle, err, 1);
+        snd_pcm_recover(alsa_handle, err, 1);
         debug(1, "Error preparing after underrun: \"%s\".", snd_strerror(err));
       }
     }
@@ -867,14 +871,14 @@ static void play(short buf[], int samples) {
         if (err < 0) {
           debug(1, "Error %d writing %d samples in play(): \"%s\".", err, samples,
                 snd_strerror(err));
-          ignore = snd_pcm_recover(alsa_handle, err, 1);
+          snd_pcm_recover(alsa_handle, err, 1);
         }
       }
     } else {
       debug(1, "Error -- ALSA device in incorrect state (%d) for play.",
             snd_pcm_state(alsa_handle));
       if ((err = snd_pcm_prepare(alsa_handle))) {
-        ignore = snd_pcm_recover(alsa_handle, err, 1);
+        snd_pcm_recover(alsa_handle, err, 1);
         debug(1, "Error preparing after play error: \"%s\".", snd_strerror(err));
       }
     }

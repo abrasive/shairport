@@ -616,7 +616,7 @@ uint32_t dacp_tlv_crawl(char **p, int32_t *length) {
 }
 
 int dacp_get_client_volume(int32_t *result) {
-  debug(1,"dacp_get_client_volume");
+  // debug(1,"dacp_get_client_volume");
   char *server_reply = NULL;
   int32_t overall_volume = -1;
   ssize_t reply_size;
@@ -650,7 +650,7 @@ int dacp_get_client_volume(int32_t *result) {
   } */
   if (result) {
     *result=overall_volume;
-    debug(1,"dacp_get_client_volume returns: %" PRId32 ".",overall_volume);
+    // debug(1,"dacp_get_client_volume returns: %" PRId32 ".",overall_volume);
   }
   return response;
 }
@@ -796,7 +796,7 @@ int dacp_get_volume(int32_t *the_actual_volume) {
   int32_t actual_volume = 0;
   int http_response = dacp_get_client_volume(&overall_volume);
   if (http_response==200) {
-    debug(1,"Overall volume is: %u.",overall_volume);
+    // debug(1,"Overall volume is: %u.",overall_volume);
     int speaker_count = 0;
     http_response = dacp_get_speaker_list((dacp_spkr_stuff *)&speaker_info, 50,&speaker_count);
     if (http_response==200) {
@@ -813,17 +813,18 @@ int dacp_get_volume(int32_t *the_actual_volume) {
       for (i = 0; i < speaker_count; i++) {
         if (speaker_info[i].speaker_number == machine_number) {
           relative_volume = speaker_info[i].volume;
+          /*
           debug(1,"Our speaker was found with a relative volume of: %u.",relative_volume);
           
           if (speaker_info[i].active)
             debug(1,"Our speaker is active.");
           else
             debug(1,"Our speaker is inactive.");
-          
+          */
         }
       }
       actual_volume = (overall_volume * relative_volume + 50) / 100;
-      debug(1,"Overall volume: %d, relative volume: %d%, actual volume: %d.",overall_volume,relative_volume,actual_volume);
+      // debug(1,"Overall volume: %d, relative volume: %d%, actual volume: %d.",overall_volume,relative_volume,actual_volume);
       // debug(1,"Our actual speaker volume is %d.",actual_volume);
       //metadata_hub_modify_prolog();
       //metadata_store.speaker_volume = actual_volume;
@@ -835,7 +836,7 @@ int dacp_get_volume(int32_t *the_actual_volume) {
     debug(1,"Unexpected return code %d from dacp_get_client_volume.",http_response);
   } 
   if (the_actual_volume) {
-    debug(1,"dacp_get_volume returns %d.",actual_volume);
+    // debug(1,"dacp_get_volume returns %d.",actual_volume);
     *the_actual_volume = actual_volume;
   }
   return http_response;

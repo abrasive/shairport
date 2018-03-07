@@ -441,10 +441,12 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
     
     default: {
       char typestring[5];
-      *(uint32_t *)typestring = htonl(type);
+      uint32_t tm = htonl(type);
+      memcpy(typestring,&tm,sizeof(uint32_t));
       typestring[4] = 0;
       char codestring[5];
-      *(uint32_t *)codestring = htonl(code);
+      uint32_t cm = htonl(code);
+      memcpy(codestring,&cm,sizeof(uint32_t));
       codestring[4] = 0;
       char *payload;
       if (length < 2048)

@@ -1,7 +1,7 @@
 /*
  * Embedded Avahi client. This file is part of Shairport.
  * Copyright (c) James Laird 2013
- * Additions for metadata and for detecting IPv6 Copyright (c) Mike Brady 2015
+ * Additions for metadata and for detecting IPv6 Copyright (c) Mike Brady 2015--2018
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -71,7 +71,7 @@ static void resolve_callback(AvahiServiceResolver *r, AVAHI_GCC_UNUSED AvahiIfIn
   assert(r);
 
   rtsp_conn_info *conn = (rtsp_conn_info *)userdata;
-  dacp_browser_struct *dbs = (dacp_browser_struct *)conn->mdns_private_pointer;
+//  dacp_browser_struct *dbs = (dacp_browser_struct *)conn->mdns_private_pointer;
 
   /* Called whenever a service has been resolved successfully or timed out */
   switch (event) {
@@ -80,7 +80,7 @@ static void resolve_callback(AvahiServiceResolver *r, AVAHI_GCC_UNUSED AvahiIfIn
           type, domain, avahi_strerror(avahi_client_errno(avahi_service_resolver_get_client(r))));
     break;
   case AVAHI_RESOLVER_FOUND: {
-    char a[AVAHI_ADDRESS_STR_MAX], *t;
+//    char a[AVAHI_ADDRESS_STR_MAX], *t;
     // debug(1, "Resolve callback: Service '%s' of type '%s' in domain '%s':", name, type, domain);
     char *dacpid = strstr(name, "iTunes_Ctrl_");
     if (dacpid) {

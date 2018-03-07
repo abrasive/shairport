@@ -969,7 +969,7 @@ uint64_t ranarray64u() { return (ranarrayval()); }
 
 int64_t ranarray64i() { return (ranarrayval() >> 1); }
 
-uint32_t nctohl(const char * p) {  // read 4 characters from the p and do ntohl on them
+uint32_t nctohl(const uint8_t * p) {  // read 4 characters from the p and do ntohl on them
   // this is to avoid possible aliasing violations
   uint32_t holder;
   memcpy(&holder,p,sizeof(holder));

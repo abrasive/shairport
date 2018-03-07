@@ -183,8 +183,8 @@ void *rtp_control_receiver(void *arg) {
 
   conn->reference_timestamp = 0; // nothing valid received yet
   uint8_t packet[2048], *pktp;
-  struct timespec tn;
-  uint64_t remote_time_of_sync, local_time_now, remote_time_now;
+  // struct timespec tn;
+  uint64_t remote_time_of_sync;
   int64_t sync_rtp_timestamp;
   ssize_t nread;
   while (conn->please_stop == 0) {
@@ -199,7 +199,7 @@ void *rtp_control_receiver(void *arg) {
       break;
     }
     nread = recv(conn->control_socket, packet, sizeof(packet), 0);
-    local_time_now = get_absolute_time_in_fp();
+    // local_time_now = get_absolute_time_in_fp();
     //        clock_gettime(CLOCK_MONOTONIC,&tn);
     //        local_time_now=((uint64_t)tn.tv_sec<<32)+((uint64_t)tn.tv_nsec<<32)/1000000000;
 
@@ -396,22 +396,21 @@ void *rtp_timing_receiver(void *arg) {
   // we inherit the signal mask (SIGUSR1)
   rtsp_conn_info *conn = (rtsp_conn_info *)arg;
 
-  uint8_t packet[2048], *pktp;
+  uint8_t packet[2048];
   ssize_t nread;
   conn->timing_sender_stop = 0;
   pthread_t timer_requester;
   pthread_create(&timer_requester, NULL, &rtp_timing_sender, arg);
   //    struct timespec att;
-  uint64_t distant_receive_time, distant_transmit_time, arrival_time, return_time, transit_time,
-      processing_time;
+  uint64_t distant_receive_time, distant_transmit_time, arrival_time, return_time;
   local_to_remote_time_jitters = 0;
   local_to_remote_time_jitters_count = 0;
-  uint64_t first_remote_time = 0;
+  // uint64_t first_remote_time = 0;
   uint64_t first_local_time = 0;
 
   uint64_t first_local_to_remote_time_difference = 0;
-  uint64_t first_local_to_remote_time_difference_time;
-  uint64_t l2rtd = 0;
+  // uint64_t first_local_to_remote_time_difference_time;
+  // uint64_t l2rtd = 0;
   while (conn->please_stop == 0) {
     fd_set readfds;
     FD_ZERO(&readfds);
@@ -430,7 +429,7 @@ void *rtp_timing_receiver(void *arg) {
     if (nread < 0)
       break;
 
-    ssize_t plen = nread;
+    // ssize_t plen = nread;
     // debug(1,"Packet Received on Timing Port.");
     if (packet[1] == 0xd3) { // timing reply
       /*
@@ -469,14 +468,14 @@ void *rtp_timing_receiver(void *arg) {
         distant_transmit_time = (uint64_t)nctohl(&packet[24]) << 32;
         distant_transmit_time += nctohl(&packet[28]);
 
-        processing_time = distant_transmit_time - distant_receive_time;
+        // processing_time = distant_transmit_time - distant_receive_time;
 
         // debug(1,"Return trip time: %lluuS, remote processing time:
         // %lluuS.",(return_time*1000000)>>32,(processing_time*1000000)>>32);
 
         uint64_t local_time_by_remote_clock = distant_transmit_time + return_time / 2;
 
-        unsigned int cc, chosen;
+        unsigned int cc;
         for (cc = time_ping_history - 1; cc > 0; cc--) {
           conn->time_pings[cc] = conn->time_pings[cc - 1];
           conn->time_pings[cc].dispersion =
@@ -494,30 +493,30 @@ void *rtp_timing_receiver(void *arg) {
 
         uint64_t local_time_chosen = arrival_time;
         ;
-        uint64_t remote_time_chosen = distant_transmit_time;
+        // uint64_t remote_time_chosen = distant_transmit_time;
         // now pick the timestamp with the lowest dispersion
         uint64_t l2rtd = conn->time_pings[0].local_to_remote_difference;
         uint64_t tld = conn->time_pings[0].dispersion;
-        chosen = 0;
+        // chosen = 0;
         for (cc = 1; cc < conn->time_ping_count; cc++)
           if (conn->time_pings[cc].dispersion < tld) {
             l2rtd = conn->time_pings[cc].local_to_remote_difference;
-            chosen = cc;
+            // chosen = cc;
             tld = conn->time_pings[cc].dispersion;
             local_time_chosen = conn->time_pings[cc].local_time;
-            remote_time_chosen = conn->time_pings[cc].remote_time;
+            // remote_time_chosen = conn->time_pings[cc].remote_time;
           }
-        int64_t ji;
+        // int64_t ji;
 
         if (conn->time_ping_count > 1) {
           if (l2rtd > conn->local_to_remote_time_difference) {
             local_to_remote_time_jitters =
                 local_to_remote_time_jitters + l2rtd - conn->local_to_remote_time_difference;
-            ji = l2rtd - conn->local_to_remote_time_difference;
+           //  ji = l2rtd - conn->local_to_remote_time_difference;
           } else {
             local_to_remote_time_jitters =
                 local_to_remote_time_jitters + conn->local_to_remote_time_difference - l2rtd;
-            ji = -(conn->local_to_remote_time_difference - l2rtd);
+            // ji = -(conn->local_to_remote_time_difference - l2rtd);
           }
           local_to_remote_time_jitters_count += 1;
         }
@@ -529,28 +528,34 @@ void *rtp_timing_receiver(void *arg) {
         conn->local_to_remote_time_difference = l2rtd;
         if (first_local_to_remote_time_difference == 0) {
           first_local_to_remote_time_difference = conn->local_to_remote_time_difference;
-          first_local_to_remote_time_difference_time = get_absolute_time_in_fp();
+          // first_local_to_remote_time_difference_time = get_absolute_time_in_fp();
         }
 
-        int64_t clock_drift, clock_drift_in_usec;
-        double clock_drift_ppm = 0.0;
+        // int64_t clock_drift;
+        // int64_t clock_drift_in_usec;
+        // double clock_drift_ppm = 0.0;
         if (first_local_time == 0) {
           first_local_time = local_time_chosen;
-          first_remote_time = remote_time_chosen;
-          clock_drift = 0;
+          // first_remote_time = remote_time_chosen;
+          // clock_drift = 0;
         } else {
-          uint64_t local_time_change = local_time_chosen - first_local_time;
-          uint64_t remote_time_change = remote_time_chosen - first_remote_time;
-
+          // uint64_t local_time_change = local_time_chosen - first_local_time;
+          // uint64_t remote_time_change = remote_time_chosen - first_remote_time;
+          
+          /*
           if (remote_time_change >= local_time_change)
             clock_drift = remote_time_change - local_time_change;
           else
             clock_drift = -(local_time_change - remote_time_change);
+          */
+          /*
           if (clock_drift >= 0)
             clock_drift_in_usec = (clock_drift * 1000000) >> 32;
           else
             clock_drift_in_usec = -(((-clock_drift) * 1000000) >> 32);
-          clock_drift_ppm = (1.0 * clock_drift_in_usec) / (local_time_change >> 32);
+          */
+          
+          // clock_drift_ppm = (1.0 * clock_drift_in_usec) / (local_time_change >> 32);
         }
 
         int64_t source_drift_usec;
@@ -697,10 +702,10 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, int *lsp
   debug(2, "rtp_setup: cport=%d tport=%d.", cport, tport);
 
   // print out what we know about the client
-  void *client_addr, *self_addr;
-  int client_port, self_port;
-  char client_port_str[64];
-  char self_addr_str[64];
+  void *client_addr = NULL, *self_addr = NULL;
+  // int client_port, self_port;
+  // char client_port_str[64];
+  // char self_addr_str[64];
 
   conn->connection_ip_family =
       remote->SAFAMILY; // keep information about the kind of ip of the client
@@ -709,20 +714,20 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, int *lsp
   if (conn->connection_ip_family == AF_INET6) {
     struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)remote;
     client_addr = &(sa6->sin6_addr);
-    client_port = ntohs(sa6->sin6_port);
+    // client_port = ntohs(sa6->sin6_port);
     sa6 = (struct sockaddr_in6 *)local;
     self_addr = &(sa6->sin6_addr);
-    self_port = ntohs(sa6->sin6_port);
+    // self_port = ntohs(sa6->sin6_port);
     conn->self_scope_id = sa6->sin6_scope_id;
   }
 #endif
   if (conn->connection_ip_family == AF_INET) {
     struct sockaddr_in *sa4 = (struct sockaddr_in *)remote;
     client_addr = &(sa4->sin_addr);
-    client_port = ntohs(sa4->sin_port);
+    // client_port = ntohs(sa4->sin_port);
     sa4 = (struct sockaddr_in *)local;
     self_addr = &(sa4->sin_addr);
-    self_port = ntohs(sa4->sin_port);
+    // self_port = ntohs(sa4->sin_port);
   }
 
   inet_ntop(conn->connection_ip_family, client_addr, conn->client_ip_string,
