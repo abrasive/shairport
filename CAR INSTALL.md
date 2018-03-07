@@ -10,7 +10,7 @@ The Basic Idea
 =====
 The basic idea is to use the Pi to create an isolated local WiFi network for the car and to run Shairport Sync on it to provide an AirPlay service. The audio goes via the DAC to the AUX IN of your car stereo.
 
-The car network is isolated and local to your car -- and since it isn't connected to the internet, you don't really need to secure it with a password. Likewise, you don't really have to use a password to connect to the AirPlay service.
+The car network is isolated and local to your car, and since it isn't connected to the internet, you don't really need to secure it with a password. Likewise, you don't really have to use a password to connect to the AirPlay service.
 
 When an iPhone or an iPad with cellular capability is connected to an isolated WiFi network like this, it can use the cellular network to connect to the internet.
 This means it can connect to internet radio, YouTube, Apple Music, Spotify, etc. over the cellular network and play the audio through the car network to the AirPlay service provided by Shairport Sync.
