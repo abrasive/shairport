@@ -221,12 +221,12 @@ void *rtp_control_receiver(void *arg) {
       */
       if (conn->local_to_remote_time_difference) { // need a time packet to be interchanged first...
 
-        remote_time_of_sync = (uint64_t)ntohl(*((uint32_t *)&packet[8])) << 32;
-        remote_time_of_sync += ntohl(*((uint32_t *)&packet[12]));
+        remote_time_of_sync = (uint64_t)nctohl(&packet[8]) << 32;
+        remote_time_of_sync += nctohl(&packet[12]);
 
         // debug(1,"Remote Sync Time: %0llx.",remote_time_of_sync);
 
-        sync_rtp_timestamp = monotonic_timestamp(ntohl(*((uint32_t *)&packet[16])), conn);
+        sync_rtp_timestamp = monotonic_timestamp(nctohl(&packet[16]), conn);
         
         // debug(1,"Sync timestamp is %u.",ntohl(*((uint32_t *)&packet[16])));
 
@@ -238,7 +238,7 @@ void *rtp_control_receiver(void *arg) {
         } else if (packet[0] &
                    0x10) { // only set latency if it's a packet just after a flush or resume
           int64_t rtp_timestamp_less_latency =
-              monotonic_timestamp(ntohl(*((uint32_t *)&packet[4])), conn);
+              monotonic_timestamp(nctohl(&packet[4]), conn);
           int64_t la = sync_rtp_timestamp - rtp_timestamp_less_latency + config.fixedLatencyOffset;
           if ((conn->maximum_latency) && (conn->maximum_latency < la))
             la = conn->maximum_latency;
@@ -460,14 +460,14 @@ void *rtp_timing_receiver(void *arg) {
         // distant_receive_time =
         // ((uint64_t)ntohl(*((uint32_t*)&packet[16])))<<32+ntohl(*((uint32_t*)&packet[20]));
 
-        distant_receive_time = (uint64_t)ntohl(*((uint32_t *)&packet[16])) << 32;
-        distant_receive_time += ntohl(*((uint32_t *)&packet[20]));
+        distant_receive_time = (uint64_t)nctohl(&packet[16]) << 32;
+        distant_receive_time += nctohl(&packet[20]);
 
         // distant_transmit_time =
         // ((uint64_t)ntohl(*((uint32_t*)&packet[24])))<<32+ntohl(*((uint32_t*)&packet[28]));
 
-        distant_transmit_time = (uint64_t)ntohl(*((uint32_t *)&packet[24])) << 32;
-        distant_transmit_time += ntohl(*((uint32_t *)&packet[28]));
+        distant_transmit_time = (uint64_t)nctohl(&packet[24]) << 32;
+        distant_transmit_time += nctohl(&packet[28]);
 
         processing_time = distant_transmit_time - distant_receive_time;
 
