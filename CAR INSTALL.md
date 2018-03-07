@@ -8,7 +8,7 @@ Linux computer. In this example, we are assuming that a Raspberry Pi Zero W and 
 
 The Basic Idea
 =====
-The basic idea is to use the Pi to create an isolated local WiFi network for the car and to run Shairport Sync on it to provide an AirPlay service. The audio output connected from the DAC to the AUX IN of your car stereo.
+The basic idea is to use the Pi to create an isolated local WiFi network for the car and to run Shairport Sync on it to provide an AirPlay service. The audio goes via the DAC to the AUX IN of your car stereo.
 
 The car network is isolated and local to your car -- and since it isn't connected to the internet, you don't really need to secure it with a password. Likewise, you don't really have to use a password to connect to the AirPlay service.
 
