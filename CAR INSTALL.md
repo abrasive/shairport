@@ -1,10 +1,10 @@
 # Shairport Sync for Cars
 
-At the moment, this is just a mess of notes, probably omitting some important steps... More later...
+At the moment, this is just a mess of notes, probably omitting some important steps, with some slightly incorrect information... More later...
 
-Many car audio systems sadly don't have Apple's great AirPlay, many don't even have Bluetooth or else it's of very poor quality. 
-But most cars *will* have an AUX IN for line-level audio. In these cases, you can get AirPlay using Shairport Sync and a small
-Linux computer. In this example, we are assuming that a Raspberry Pi Zero W and a Pimoroni PHAT DAC are used.
+If your car audio has an AUX IN, you can get AirPlay in your car using Shairport Sync. AirPlay and an iPhone gives you access to internet radio, YouTube, Apple Music, Spotify, etc. on the move. Your passengers can enjoy movies using the car audio for the sound track. You can even listen to Siri's traffic directions on your car audio. Finally, while it's no substitute for CarPlay, the audio quality is often much better than Bluetooth delivers.
+
+In this example, we are assuming that a Raspberry Pi Zero W and a Pimoroni PHAT DAC are used.
 
 The Basic Idea
 =====
