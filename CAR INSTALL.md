@@ -2,7 +2,7 @@
 
 At the moment, this is just a mess of notes, probably omitting some important steps, with some slightly incorrect information... More later...
 
-If your car audio has an AUX IN, you can get AirPlay in your car using Shairport Sync. AirPlay and an iPhone gives you access to internet radio, YouTube, Apple Music, Spotify, etc. on the move. Your passengers can enjoy movies using the car audio for the sound track. You can even listen to Siri's traffic directions on your car audio. Finally, while it's no substitute for CarPlay, the audio quality is often much better than Bluetooth delivers.
+If your car audio has an AUX IN, you can get AirPlay in your car using Shairport Sync. AirPlay and an iPhone gives you access to internet radio, YouTube, Apple Music, Spotify, etc. on the move. While it's no substitute for CarPlay, the audio quality delivered by Sahirport Sync is often much better than Bluetooth. Your passengers can enjoy movies using the car audio for the sound track. You can even listen to Siri's traffic directions on your car audio. 
 
 In this example, we are assuming that a Raspberry Pi Zero W and a Pimoroni PHAT DAC are used.
 
