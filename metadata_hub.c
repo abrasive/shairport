@@ -333,7 +333,7 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
         if (metadata_store.file_kind)
           free(metadata_store.file_kind);
         metadata_store.file_kind = strndup(data, length);
-        debug(2, "MH File Kind set to: \"%s\"", metadata_store.file_kind);
+        debug(2, "MH Song Description set to: \"%s\"", metadata_store.file_kind);
         metadata_store.file_kind_changed = 1;
         metadata_store.changed = 1;
       }
