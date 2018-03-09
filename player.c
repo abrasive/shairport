@@ -815,7 +815,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
         if (conn->ab_buffering) {  // if we are getting packets but not yet forwarding them to the
                                    // player
           int have_sent_prefiller_silence =
-              0; // set true when we have sent some silent frames to the
+              1; // set true when we have sent some silent frames to the
                  // DAC
           int64_t reference_timestamp;
           uint64_t reference_timestamp_time, remote_reference_timestamp_time;
