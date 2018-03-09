@@ -16,7 +16,6 @@
 
 void dbus_metadata_watcher(struct metadata_bundle *argc, __attribute__((unused)) void *userdata) {
   // debug(1, "DBUS metadata watcher called");
-  debug(1,"Set volume to %d.",argc->speaker_volume);
   shairport_sync_set_volume(shairportSyncSkeleton, argc->speaker_volume);
 }
 
@@ -47,107 +46,115 @@ gboolean notify_loudness_threshold_callback(ShairportSync *skeleton,
 
 gboolean notify_volume_callback(ShairportSync *skeleton,
                                 __attribute__((unused)) gpointer user_data) {
+  metadata_hub_read_prolog();
+  int md_speaker_volume = metadata_store.speaker_volume;
+  metadata_hub_read_epilog();
   gint gvo = shairport_sync_get_volume(skeleton);
   int32_t vo = gvo;
   if ((vo >= 0) && (vo <= 100)) {
-    if (playing_conn) {
-      if (vo !=
-          playing_conn
-              ->dacp_volume) { // this is to stop an infinite loop of setting->checking->setting...
-        debug(1, "Remote-setting volume to %d.", vo);
-        // get the information we need -- the absolute volume, the speaker list, our ID
-        struct dacp_speaker_stuff speaker_info[50];
-        int32_t overall_volume;
-        int http_response = dacp_get_client_volume(&overall_volume);
+    if (vo !=
+        md_speaker_volume) { // this is to stop an infinite loop of setting->checking->setting...
+      // get the information we need -- the absolute volume, the speaker list, our ID
+      struct dacp_speaker_stuff speaker_info[50];
+      int32_t overall_volume;
+      int http_response = dacp_get_client_volume(&overall_volume);
+      if (http_response == 200) {
         int speaker_count;
         http_response = dacp_get_speaker_list((dacp_spkr_stuff *)&speaker_info, 50, &speaker_count);
+        if (http_response == 200) {
+          // get our machine number
+          uint16_t *hn = (uint16_t *)config.hw_addr;
+          uint32_t *ln = (uint32_t *)(config.hw_addr + 2);
+          uint64_t t1 = ntohs(*hn);
+          uint64_t t2 = ntohl(*ln);
+          int64_t machine_number = (t1 << 32) + t2; // this form is useful
 
-        // get our machine number
-        uint16_t *hn = (uint16_t *)config.hw_addr;
-        uint32_t *ln = (uint32_t *)(config.hw_addr + 2);
-        uint64_t t1 = ntohs(*hn);
-        uint64_t t2 = ntohl(*ln);
-        int64_t machine_number = (t1 << 32) + t2; // this form is useful
-
-        // Let's find our own speaker in the array and pick up its relative volume
-        int i;
-        int32_t active_speakers = 0;
-        for (i = 0; i < speaker_count; i++) {
-          if (speaker_info[i].speaker_number == machine_number) {
-            debug(1, "Our speaker number found: %ld with relative volume.", machine_number,
-                  speaker_info[i].volume);
-          }
-          if (speaker_info[i].active == 1) {
-            active_speakers++;
-          }
-        }
-
-        if (active_speakers == 1) {
-          // must be just this speaker
-          debug(1, "Remote-setting volume to %d on just one speaker.", vo);
-          dacp_set_include_speaker_volume(machine_number, vo);
-        } else if (active_speakers == 0) {
-          debug(1, "No speakers!");
-        } else {
-          debug(1, "Speakers: %d, active: %d", speaker_count, active_speakers);
-          if (vo >= overall_volume) {
-            debug(1, "Multiple speakers active, but desired new volume is highest");
-            dacp_set_include_speaker_volume(machine_number, vo);
-          } else {
-            // the desired volume is less than the current overall volume and there is more than one
-            // speaker
-            // we must find out the highest other speaker volume.
-            // If the desired volume is less than it, we must set the current_overall volume to that
-            // highest volume
-            // and set our volume relative to it.
-            // If the desired volume is greater than the highest current volume, then we can just go
-            // ahead
-            // with dacp_set_include_speaker_volume, setting the new current overall volume to the
-            // desired new level
-            // with the speaker at 100%
-
-            int32_t highest_other_volume = 0;
-            for (i = 0; i < speaker_count; i++) {
-              if ((speaker_info[i].speaker_number != machine_number) &&
-                  (speaker_info[i].active == 1) &&
-                  (speaker_info[i].volume > highest_other_volume)) {
-                highest_other_volume = speaker_info[i].volume;
-              }
+          // Let's find our own speaker in the array and pick up its relative volume
+          int i;
+          int32_t active_speakers = 0;
+          for (i = 0; i < speaker_count; i++) {
+            if (speaker_info[i].speaker_number == machine_number) {
+              debug(2, "Our speaker number found: %ld with relative volume.", machine_number,
+                    speaker_info[i].volume);
             }
-            highest_other_volume = (highest_other_volume * overall_volume + 50) / 100;
-            if (highest_other_volume <= vo) {
-              debug(1,
-                    "Highest other volume %d is less than or equal to the desired new volume %d.",
-                    highest_other_volume, vo);
+            if (speaker_info[i].active == 1) {
+              active_speakers++;
+            }
+          }
+
+          if (active_speakers == 1) {
+            // must be just this speaker
+            debug(2, "Remote-setting volume to %d on just one speaker.", vo);
+            dacp_set_include_speaker_volume(machine_number, vo);
+          } else if (active_speakers == 0) {
+            debug(2, "No speakers!");
+          } else {
+            debug(2, "Speakers: %d, active: %d", speaker_count, active_speakers);
+            if (vo >= overall_volume) {
+              debug(2, "Multiple speakers active, but desired new volume is highest");
               dacp_set_include_speaker_volume(machine_number, vo);
             } else {
-              debug(1, "Highest other volume %d is greater than the desired new volume %d.",
-                    highest_other_volume, vo);
-              // if the present overall volume is higher than the highest other volume at present,
-              // then bring it down to it.
-              if (overall_volume > highest_other_volume) {
-                debug(1, "Lower overall volume to new highest volume.");
-                dacp_set_include_speaker_volume(
-                    machine_number,
-                    highest_other_volume); // set the overall volume to the highest one
+              // the desired volume is less than the current overall volume and there is more than
+              // one
+              // speaker
+              // we must find out the highest other speaker volume.
+              // If the desired volume is less than it, we must set the current_overall volume to
+              // that
+              // highest volume
+              // and set our volume relative to it.
+              // If the desired volume is greater than the highest current volume, then we can just
+              // go
+              // ahead
+              // with dacp_set_include_speaker_volume, setting the new current overall volume to the
+              // desired new level
+              // with the speaker at 100%
+
+              int32_t highest_other_volume = 0;
+              for (i = 0; i < speaker_count; i++) {
+                if ((speaker_info[i].speaker_number != machine_number) &&
+                    (speaker_info[i].active == 1) &&
+                    (speaker_info[i].volume > highest_other_volume)) {
+                  highest_other_volume = speaker_info[i].volume;
+                }
               }
-              int32_t desired_relative_volume =
-                  (vo * 100 + (highest_other_volume / 2)) / highest_other_volume;
-              debug(1, "Set our speaker volume relative to the highest volume.");
-              dacp_set_speaker_volume(
-                  machine_number,
-                  desired_relative_volume); // set the overall volume to the highest one
+              highest_other_volume = (highest_other_volume * overall_volume + 50) / 100;
+              if (highest_other_volume <= vo) {
+                debug(2,
+                      "Highest other volume %d is less than or equal to the desired new volume %d.",
+                      highest_other_volume, vo);
+                dacp_set_include_speaker_volume(machine_number, vo);
+              } else {
+                debug(2, "Highest other volume %d is greater than the desired new volume %d.",
+                      highest_other_volume, vo);
+                // if the present overall volume is higher than the highest other volume at present,
+                // then bring it down to it.
+                if (overall_volume > highest_other_volume) {
+                  debug(2, "Lower overall volume to new highest volume.");
+                  dacp_set_include_speaker_volume(
+                      machine_number,
+                      highest_other_volume); // set the overall volume to the highest one
+                }
+                int32_t desired_relative_volume =
+                    (vo * 100 + (highest_other_volume / 2)) / highest_other_volume;
+                debug(2, "Set our speaker volume relative to the highest volume.");
+                dacp_set_speaker_volume(
+                    machine_number,
+                    desired_relative_volume); // set the overall volume to the highest one
+              }
             }
           }
+        } else {
+          debug(2, "Can't get speakers list");
         }
       } else {
-        debug(1, "No need to remote-set volume to %d, as it is already set to this value.",
-              playing_conn->dacp_volume);
+        debug(2, "Can't get client volume");
       }
-    } else
-      debug(1, "no thread playing -- ignored.");
+    } // else {
+      // debug(1, "No need to remote-set volume to %d, as it is already set to this value.", vo);
+    // }
+
   } else {
-    debug(1, "Invalid volume: %d -- ignored.", vo);
+    debug(2, "Invalid volume: %d -- ignored.", vo);
   }
   return TRUE;
 }
@@ -188,7 +195,7 @@ static void on_dbus_name_acquired(GDBusConnection *connection, const gchar *name
   g_signal_connect(shairportSyncSkeleton, "notify::loudness-threshold",
                    G_CALLBACK(notify_loudness_threshold_callback), NULL);
   g_signal_connect(shairportSyncSkeleton, "notify::volume", G_CALLBACK(notify_volume_callback),
-                   NULL);
+                   &metadata_store);
   g_signal_connect(shairportSyncSkeleton, "handle-remote-command",
                    G_CALLBACK(on_handle_remote_command), NULL);
 
