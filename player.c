@@ -2512,6 +2512,8 @@ void player_volume(double airplay_volume, rtsp_conn_info *conn) {
 #ifdef HAVE_DACP_CLIENT
   int32_t actual_volume;
   if (dacp_get_volume(&actual_volume) == 200) {
+    conn->dacp_volume = actual_volume; // store this as the actual volume
+    debug(1,"Got volume of %d.",actual_volume);
     metadata_hub_modify_prolog();
     if (metadata_store.speaker_volume == actual_volume)
       metadata_hub_modify_epilog(0); // no change

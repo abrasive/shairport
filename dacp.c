@@ -126,7 +126,7 @@ int dacp_send_command(const char *command, char **body, ssize_t *bodysize) {
   // to do it.
   struct timespec mutex_wait_time;
   mutex_wait_time.tv_sec = 0;
-  mutex_wait_time.tv_nsec = 20000000; // 20 ms
+  mutex_wait_time.tv_nsec = 100000000; // 100 ms
 
   struct addrinfo hints, *res;
   int sockfd;

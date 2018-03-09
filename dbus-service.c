@@ -16,6 +16,7 @@
 
 void dbus_metadata_watcher(struct metadata_bundle *argc, __attribute__((unused)) void *userdata) {
   // debug(1, "DBUS metadata watcher called");
+  debug(1,"Set volume to %d.",argc->speaker_volume);
   shairport_sync_set_volume(shairportSyncSkeleton, argc->speaker_volume);
 }
 
