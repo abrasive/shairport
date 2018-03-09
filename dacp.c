@@ -126,7 +126,7 @@ int dacp_send_command(const char *command, char **body, ssize_t *bodysize) {
   // to do it.
   struct timespec mutex_wait_time;
   mutex_wait_time.tv_sec = 0;
-  mutex_wait_time.tv_nsec = 100000000; // 100 ms
+  mutex_wait_time.tv_nsec = 20000000; // 20 ms
 
   struct addrinfo hints, *res;
   int sockfd;
@@ -162,7 +162,8 @@ int dacp_send_command(const char *command, char **body, ssize_t *bodysize) {
 
     // only do this one at a time -- not sure it is necessary, but better safe than sorry
 
-    int mutex_reply = pthread_mutex_timedlock(&dacp_conversation_lock, &mutex_wait_time);
+//    int mutex_reply = pthread_mutex_timedlock(&dacp_conversation_lock, &mutex_wait_time);
+    int mutex_reply = pthread_mutex_lock(&dacp_conversation_lock);
     if (mutex_reply == 0) {
 
       // make a socket:
