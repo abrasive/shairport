@@ -130,6 +130,18 @@ void metadata_hub_modify_epilog(int modified) {
   }
 }
 
+void metadata_hub_read_prolog(void) {
+  // always run this before reading an entry or a sequence of entries in the metadata_hub
+  // debug(1, "locking metadata hub for reading");
+  pthread_rwlock_rdlock(&metadata_hub_re_lock);
+}
+
+void metadata_hub_read_epilog(void) {
+  // always run this after reading an entry or a sequence of entries in the metadata_hub
+  // debug(1, "unlocking metadata hub for reading");
+  pthread_rwlock_unlock(&metadata_hub_re_lock);
+}
+
 char *metadata_write_image_file(const char *buf, int len) {
 
   // warning -- this removes all files from the directory apart from this one, if it exists

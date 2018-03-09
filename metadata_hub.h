@@ -87,7 +87,7 @@ typedef struct metadata_bundle {
 
   int speaker_volume; // this is the actual speaker volume, allowing for the main volume and the
                       // speaker volume control
-  int previous_speaker_volume; // this is needed to prevent a loop
+  // int previous_speaker_volume; // this is needed to prevent a loop
 
   metadata_watcher watchers[number_of_watchers]; // functions to call if the metadata is changed.
   void *watchers_data[number_of_watchers];       // their individual data
@@ -107,3 +107,7 @@ void metadata_hub_release_track_artwork(void);
 // afterwards
 void metadata_hub_modify_prolog(void);
 void metadata_hub_modify_epilog(int modified); // set to true if modifications occured, 0 otherwise
+
+// these are for safe reading
+void metadata_hub_read_prolog(void);
+void metadata_hub_read_epilog(void);
