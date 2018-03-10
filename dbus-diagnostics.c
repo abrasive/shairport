@@ -76,7 +76,7 @@ void dbus_diagnostics_on_dbus_name_acquired(GDBusConnection *connection,
   // debug(1,"dbus_diagnostics_on_dbus_name_acquired");
   shairportSyncDiagnosticsSkeleton = shairport_sync_diagnostics_skeleton_new();
   g_dbus_interface_skeleton_export(G_DBUS_INTERFACE_SKELETON(shairportSyncDiagnosticsSkeleton), connection,
-                                   "/org/gnome/ShairportSync/Diagnostics", NULL);
+                                   "/org/gnome/ShairportSync", NULL);
                                    
   shairport_sync_diagnostics_set_verbosity(SHAIRPORT_SYNC_DIAGNOSTICS(shairportSyncDiagnosticsSkeleton),
                                         debuglev);
