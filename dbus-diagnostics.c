@@ -60,6 +60,8 @@ gboolean notify_verbosity_callback(ShairportSyncDiagnostics *skeleton,
                                             __attribute__((unused)) gpointer user_data) {
   gint th = shairport_sync_diagnostics_get_verbosity(skeleton);
   if ((th >= 0) && (th <= 3)) {
+    if (th==0)
+      debug(1, ">> log verbosity set to %d.", th);
     debuglev = th;
     debug(1, ">> log verbosity set to %d.", th);
   } else {
