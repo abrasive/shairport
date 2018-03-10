@@ -85,7 +85,6 @@ enum rtsp_read_request_response {
 };
 
 // Mike Brady's part...
-static pthread_mutex_t barrier_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t play_lock = PTHREAD_MUTEX_INITIALIZER;
 
 // every time we want to retain or release a reference count, lock it with this
@@ -102,10 +101,6 @@ static rtsp_conn_info **conns = NULL;
 
 int RTSP_connection_index = 0;
 
-void memory_barrier() {
-  pthread_mutex_lock(&barrier_mutex);
-  pthread_mutex_unlock(&barrier_mutex);
-}
 
 #ifdef CONFIG_METADATA
 typedef struct {

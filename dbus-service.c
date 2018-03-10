@@ -10,9 +10,14 @@
 #include "rtp.h"
 
 #include "dacp.h"
+#include "metadata_hub.h"
 
 #include "dbus-service.h"
-#include "metadata_hub.h"
+
+#ifdef HAVE_DBUS_DIAGNOSTICS
+  #include "dbus-diagnostics.h"
+#endif
+
 
 void dbus_metadata_watcher(struct metadata_bundle *argc, __attribute__((unused)) void *userdata) {
   // debug(1, "DBUS metadata watcher called");
@@ -62,8 +67,7 @@ static gboolean on_handle_remote_command(ShairportSync *skeleton, GDBusMethodInv
   return TRUE;
 }
 
-static void on_dbus_name_acquired(GDBusConnection *connection, const gchar *name,
-                                  __attribute__((unused)) gpointer user_data) {
+static void on_dbus_name_acquired(GDBusConnection *connection, const gchar *name, gpointer user_data) {
 
   // debug(1, "Shairport Sync native D-Bus interface \"%s\" acquired on the %s bus.", name,
   // (config.dbus_service_bus_type == DBT_session) ? "session" : "system");
@@ -94,6 +98,10 @@ static void on_dbus_name_acquired(GDBusConnection *connection, const gchar *name
                    NULL);
 
   add_metadata_watcher(dbus_metadata_watcher, NULL);
+  
+#ifdef HAVE_DBUS_DIAGNOSTICS
+  dbus_diagnostics_on_dbus_name_acquired(connection,name,user_data);
+#endif
 
   debug(1, "Shairport Sync native D-Bus service started at \"%s\" on the %s bus.", name,
         (config.dbus_service_bus_type == DBT_session) ? "session" : "system");
@@ -126,7 +134,7 @@ static void on_dbus_name_lost(__attribute__((unused)) GDBusConnection *connectio
 }
 
 int start_dbus_service() {
-  shairportSyncSkeleton = NULL;
+//  shairportSyncSkeleton = NULL;
   GBusType dbus_bus_type = G_BUS_TYPE_SYSTEM;
   if (config.dbus_service_bus_type == DBT_session)
     dbus_bus_type = G_BUS_TYPE_SESSION;

@@ -279,9 +279,12 @@ AC_ARG_WITH(dbus, [  --with-dbus-interface = include support for a native Shairp
   AC_MSG_RESULT(>>Including dbus support)
   HAS_DBUS=1
   AC_DEFINE([HAVE_DBUS], 1, [Needed by the compiler.])
+  AC_DEFINE([HAVE_DBUS_DIAGNOSTICS], 1, [Needed by the compiler.])  
   PKG_CHECK_MODULES([GIO_UNIX], [gio-unix-2.0 >= 2.30.0],[CFLAGS="${GIO_UNIX_CFLAGS} ${CFLAGS}" LIBS="${GIO_UNIX_LIBS} ${LIBS}"],[AC_MSG_ERROR(dbus messaging support requires the glib 2.0 library -- libglib2.0-dev suggested!)])
   ], )
 AM_CONDITIONAL([USE_DBUS], [test "x$HAS_DBUS" = "x1"])
+# Automatically include the diagnostics interface
+AM_CONDITIONAL([USE_DBUS_DIAGNOSTICS], [test "x$HAS_DBUS" = "x1"])
 
 # Look for dbus test client flag
 AC_ARG_WITH(dbus-test-client, [  --with-dbus-test-client = compile dbus test client], [

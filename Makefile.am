@@ -75,6 +75,14 @@ if USE_DNS_SD
 shairport_sync_SOURCES += mdns_dns_sd.c
 endif
 
+if USE_METADATA_HUB
+shairport_sync_SOURCES += metadata_hub.c 
+endif
+
+if USE_DACP_CLIENT
+shairport_sync_SOURCES += dacp.c tinyhttp/chunk.c tinyhttp/header.c tinyhttp/http.c 
+endif
+
 BUILT_SOURCES =
 noinst_HEADERS =
 CLEANFILES =
@@ -91,13 +99,19 @@ dbus-interface.h dbus-interface.c:  org.gnome.ShairportSync.xml
 	gdbus-codegen --interface-prefix org.gnome --generate-c-code dbus-interface org.gnome.ShairportSync.xml
 endif
 
-if USE_METADATA_HUB
-shairport_sync_SOURCES += metadata_hub.c 
+if USE_DBUS_DIAGNOSTICS
+shairport_sync_SOURCES += dbus-diagnostics.c dbus-diagnostics-interface.c
+BUILT_SOURCES += dbus-diagnostics-interface.h dbus-diagnostics-interface.c 
+# We don't want to install this header
+noinst_HEADERS += $(BUILT_SOURCES)
+# Correctly clean the generated headers, but keep the xml description
+CLEANFILES += $(BUILT_SOURCES)
+
+dbus-diagnostics-interface.h dbus-diagnostics-interface.c:  org.gnome.ShairportSync.Diagnostics.xml
+	gdbus-codegen --interface-prefix org.gnome --generate-c-code dbus-diagnostics-interface org.gnome.ShairportSync.Diagnostics.xml
 endif
 
-if USE_DACP_CLIENT
-shairport_sync_SOURCES += dacp.c tinyhttp/chunk.c tinyhttp/header.c tinyhttp/http.c 
-endif
+
 
 if USE_MPRIS
 shairport_sync_SOURCES += mpris-service.c mpris-interface.c mpris-player-interface.c

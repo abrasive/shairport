@@ -976,3 +976,11 @@ uint32_t nctohl(const uint8_t *p) { // read 4 characters from the p and do ntohl
   memcpy(&holder, p, sizeof(holder));
   return ntohl(holder);
 }
+
+static pthread_mutex_t barrier_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+void memory_barrier() {
+  pthread_mutex_lock(&barrier_mutex);
+  pthread_mutex_unlock(&barrier_mutex);
+}
+
