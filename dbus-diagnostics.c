@@ -21,11 +21,11 @@ gboolean notify_elapsed_time_callback(ShairportSyncDiagnostics *skeleton,
                                                 __attribute__((unused)) gpointer user_data) {
   // debug(1, "\"notify_elapsed_time_callback\" called.");
   if (shairport_sync_diagnostics_get_elapsed_time(skeleton)) {
-    debug(1, ">> start including elapsed time in logs");
     config.debugger_show_elapsed_time = 1;
+    debug(1, ">> start including elapsed time in logs");
   } else {
-    debug(1, ">> stop including elapsed time in logs");
     config.debugger_show_elapsed_time = 0;
+    debug(1, ">> stop including elapsed time in logs");
   }
   return TRUE;
 }
@@ -34,11 +34,11 @@ gboolean notify_delta_time_callback(ShairportSyncDiagnostics *skeleton,
                                                 __attribute__((unused)) gpointer user_data) {
   // debug(1, "\"notify_delta_time_callback\" called.");
   if (shairport_sync_diagnostics_get_delta_time(skeleton)) {
-    debug(1, ">> start including delta time in logs");
     config.debugger_show_relative_time = 1;
+    debug(1, ">> start including delta time in logs");
   } else {
-    debug(1, ">> stop including delta time in logs");
     config.debugger_show_relative_time = 0;
+    debug(1, ">> stop including delta time in logs");
   }
   return TRUE;
 }
@@ -60,8 +60,8 @@ gboolean notify_verbosity_callback(ShairportSyncDiagnostics *skeleton,
                                             __attribute__((unused)) gpointer user_data) {
   gint th = shairport_sync_diagnostics_get_verbosity(skeleton);
   if ((th >= 0) && (th <= 3)) {
-    debug(1, ">> set log verbosity to %d.", th);
     debuglev = th;
+    debug(1, ">> log verbosity set to %d.", th);
   } else {
     debug(1, ">> invalid log verbosity: %d. Ignored.", th);
   }
