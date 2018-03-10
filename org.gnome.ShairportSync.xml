@@ -3,9 +3,12 @@
   <interface name="org.gnome.ShairportSync">
     <property name="LoudnessFilterActive" type="b" access="readwrite" />
     <property name="LoudnessThreshold" type="d" access="readwrite" />
-    <property name="Volume" type="d" access="readwrite" />
+    <property name="Volume" type="i" access="read" />
     <method name="RemoteCommand">
       <arg name="command" type="s" direction="in" />
+    </method>
+    <method name="SetVolume">
+      <arg name="volume" type="i" direction="in" />
     </method>
   </interface>
 </node>

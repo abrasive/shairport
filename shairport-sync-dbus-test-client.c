@@ -132,13 +132,13 @@ int main(int argc, char *argv[]) {
 
   g_print("Starting test...\n");
 
-  shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), 20);
+  shairport_sync_call_set_volume(SHAIRPORT_SYNC(proxy), 20, NULL, NULL, 0);
   sleep(5);
-  shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), 100);
+  shairport_sync_call_set_volume(SHAIRPORT_SYNC(proxy), 100, NULL, NULL, 0);
   sleep(5);
-  shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), 40);
+  shairport_sync_call_set_volume(SHAIRPORT_SYNC(proxy), 40, NULL, NULL, 0);
   sleep(5);
-  shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), 60);
+  shairport_sync_call_set_volume(SHAIRPORT_SYNC(proxy), 60, NULL, NULL, 0);
   // sleep(1);
   /*
     shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), 10);
