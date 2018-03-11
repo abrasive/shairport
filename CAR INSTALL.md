@@ -1,9 +1,9 @@
 # Shairport Sync for Cars
-If your car audio has an AUX IN, you can get AirPlay in your car using Shairport Sync. AirPlay and an iPhone gives you access to internet radio, YouTube, Apple Music, Spotify, etc. on the move. While Shairport Sync is not a substitute for CarPlay, the audio quality is often much better than Bluetooth. Your passengers can enjoy movies listening to th soound track on the car audio. You can even listen to Siri's traffic directions on your car audio. 
+If your car audio has an AUX input, you can get AirPlay in your car using Shairport Sync. AirPlay and an iPhone gives you access to internet radio, YouTube, Apple Music, Spotify, etc. on the move. While Shairport Sync is not a substitute for CarPlay, the audio quality is often much better than Bluetooth. Your passengers can enjoy movies listening to the sound track on the car audio. You can even listen to Siri's traffic directions on your car audio. 
 
 The Basic Idea
 =====
-The basic idea is to use a small Linux computer to create an isolated WiFi network for the car and to run Shairport Sync on it to provide an AirPlay service. The audio goes via a DAC to the AUX IN of your car stereo.
+The basic idea is to use a small Linux computer to create an isolated WiFi network for the car and to run Shairport Sync on it to provide an AirPlay service. The audio goes via a DAC to the AUX input of your car stereo.
 
 The car network is isolated and local to your car, and since it isn't connected to the internet, you don't really need to secure it with a password. Likewise, you don't really have to use a password to connect to the AirPlay service.
 
@@ -14,7 +14,7 @@ Note that Android devices can not, so far, do this trick of using the two networ
 
 Example
 =====
-In this example, we are using a Raspberry Pi Zero W and a Pimoroni PHAT DAC are used. This combination has been tested for well over a year. Please note that some of the details of setting up networks are specific to the version of Linux used. In particular, Stretch's treatment of networks is different from Jessie.
+In this example, we are using a Raspberry Pi Zero W and a Pimoroni PHAT DAC. This combination has been tested for well over a year. Please note that some of the details of setting up networks are specific to the version of Linux used. In particular, Stretch's treatment of networks is different from Jessie.
 * Download the latest version of Raspbian Lite -- this is Stretch Lite of 2017-11-29 at the time of writing -- and install it onto an SD Card.
 * Mount the card on a Linux machine. Two drives should appear -- a `boot` drive and a `rootfs` drive. Both of these need a little modification.
 * Enable SSH service by creating a file called `ssh` on the boot drive. To do this, mount the drive and CD to its `boot` partiton (since my username is `mike`, the drive is at `/media/mike/boot`):
@@ -25,7 +25,7 @@ $ touch ssh
 ```
 dtoverlay=hifiberry-dac
 ```
-* Next, some modifications need to be done to the `rootfs` drive to make the Pi connect to your main WiFi network. )This is a temporary measure to enable you to connect the Pi to your main network so that you can do all the software installation and updating of the software necessary. Later, the Pi will be configured to start its own isolated network.) Edit the file `/etc/wpa_supplicant/wpa_supplicant.conf` (you'll need root priviliges) and add the name and password of your main WiFi network (substitute your own network name and password in, but keep the quotation marks):
+* Next, some modifications need to be done to the `rootfs` drive to make the Pi connect to your main WiFi network. (This is a temporary measure to enable you to connect the Pi to your main network so that you can do all the software installation and updating of the software necessary. Later, the Pi will be configured to start its own isolated network.) Edit the file `/etc/wpa_supplicant/wpa_supplicant.conf` (you'll need root priviliges) and add the name and password of your main WiFi network (substitute your own network name and password in, but keep the quotation marks):
 ```
 network={
     ssid="Network Name"
@@ -162,7 +162,7 @@ ignore_broadcast_ssid=0
 #rsn_pairwise=CCMP
 
 ```
-Next add commands to `/etc/rc.local` to start the `hostapd` service and then to start `shairport-sync` automatically after startup. Its contents should look like this:
+Next add commands to `/etc/rc.local` to start `hostapd` and the `dhcp` server and then to start `shairport-sync` automatically after startup. Its contents should look like this:
 ```
 #!/bin/sh -e
 #
@@ -192,8 +192,10 @@ sleep 2
 
 exit 0
 ```
-As you can see, the effect of these commands is to start the WiFi transmitter, give the base station the IP address `10.0.10.1`, start a DHCP server to give devices a local IP number in the range 10.0.10.5 to 10.0.10.150 and finally start the Shairport Sync service.
+As you can see, the effect of these commands is to start the WiFi transmitter, give the base station the IP address `10.0.10.1`, start a DHCP server and finally start the Shairport Sync service.
 
 Install the Raspberry Pi in your car. It should be powered from a source that is switched off when you leave the car, otherwise the slight current drain will eventually flatten the battery.
 
 When the power source is switched on, typically when you start the car, it will take maybe a minute for the system to boot up.
+
+Enjoy!
