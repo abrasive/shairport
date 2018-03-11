@@ -14,18 +14,18 @@ Note that Android devices can not, so far, do this trick of using the two networ
 
 Example
 =====
-In this example, we are using a Raspberry Pi Zero W and a Pimoroni PHAT DAC. This combination has been tested for well over a year. Please note that some of the details of setting up networks are specific to the version of Linux used. In particular, Stretch's treatment of networks is different from Jessie.
-* Download the latest version of Raspbian Lite -- this is Stretch Lite of 2017-11-29 at the time of writing -- and install it onto an SD Card.
+In this example, we are using a Raspberry Pi Zero W and a Pimoroni PHAT DAC. This combination has been tested for well over a year. Please note that some of the details of setting up networks are specific to the version of Linux used. In particular, the treatment of networks is different in Stretch from Jessie.
+* Download the latest version of Raspbian Lite -- Stretch Lite of 2017-11-29 at the time of writing -- and install it onto an SD Card.
 * Mount the card on a Linux machine. Two drives should appear -- a `boot` drive and a `rootfs` drive. Both of these need a little modification.
-* Enable SSH service by creating a file called `ssh` on the boot drive. To do this, mount the drive and CD to its `boot` partiton (since my username is `mike`, the drive is at `/media/mike/boot`):
+* Enable SSH service by creating a file called `ssh` on the `boot` drive. To do this, mount the drive and CD to its `boot` partiton (since my username is `mike`, the drive is at `/media/mike/boot`):
 ```
 $ touch ssh
 ```
-* Also in the `boot` drive, edit the `config.txt` file to add the overlay needed for the sound card. This may not be necessary in your case, but in this example, a Pimoroni PHAT is being used, and it needs the following entry to be added:
+* Also in the `boot` drive, edit the `config.txt` file to add the overlay needed for the sound card. This may not be necessary in your case, but in this example a Pimoroni PHAT is being used and it needs the following entry to be added:
 ```
 dtoverlay=hifiberry-dac
 ```
-* Next, some modifications need to be done to the `rootfs` drive to make the Pi connect to your main WiFi network. (This is a temporary measure to enable you to connect the Pi to your main network so that you can do all the software installation and updating of the software necessary. Later, the Pi will be configured to start its own isolated network.) Edit the file `/etc/wpa_supplicant/wpa_supplicant.conf` (you'll need root priviliges) and add the name and password of your main WiFi network (substitute your own network name and password in, but keep the quotation marks):
+* Next, some modifications need to be done to the `rootfs` drive to make the Pi connect to your main WiFi network. (This is a temporary measure to enable you to connect the Pi to your main network so that you can do all the software installation and updating of the software necessary. Later, the Pi will be configured to start its own isolated network.) Edit the file `/etc/wpa_supplicant/wpa_supplicant.conf` (you'll need root privileges) and add the name and password of your main WiFi network (substitute your own network name and password in, but keep the quotation marks):
 ```
 network={
     ssid="Network Name"
@@ -54,13 +54,11 @@ $ ./configure --sysconfdir=/etc --with-alsa --with-avahi --with-ssl=openssl --wi
 $ make
 $ sudo make install
 ```
-This is a stripped-down set of options. In particular, SoX interpolaton is not included, as the Pi Zero would not be fast enough. *Do not* enable Shairport Sync to autormatially start at boot time -- startup will be taken care of differently.
+SoX interpolaton is not included, as the Pi Zero would not be fast enough. *Do not* enable Shairport Sync to automatically start at boot time -- startup is organised differently.
 
 Here are the important options for the Shairport Sync configuration file at `/etc/shairport-sync.conf`:
 ```
 // Sample Configuration File for Shairport Sync for Car Audio with a Pimoroni PHAT
-
-// General Settings
 general =
 {
 	name = "BMW Radio";
@@ -68,7 +66,6 @@ general =
 	volume_max_db = -3.00;
 };
 
-// These are parameters for the "alsa" audio back end, the only back end that supports synchronised audio.
 alsa =
 {
 	output_device = "hw:1"; // the name of the alsa output device. Use "alsamixer" or "aplay" to find out the names of devices, mixers, etc.
@@ -91,14 +88,16 @@ Disable both of these services from starting at boot time (this is because we wi
 # systemctl disable hostapd
 # systemctl disable isc-dhcp-server
 ```
-Now, allow `wlan0` to be configurred with a static IP number by first removing it from the control of the `dhcpcp` service. Edit `/etc/dhcpcp.conf` and insert the following line at the start:
+
+* Configure DHCP server in the following three steps.
+
+First, allow `wlan0` to be configured with a static IP number by first removing it from the control of the `dhcpcp` service. Edit `/etc/dhcpcp.conf` and insert the following line at the start:
 
 ```
 denyinterfaces wlan0
 ```
 
-* Configure DHCP server in the follwing two steps.
-First,  replace the contents of `/etc/dhcp/dhcpd.conf` with this:
+Second,  replace the contents of `/etc/dhcp/dhcpd.conf` with this:
 
 ```
 subnet 10.0.10.0 netmask 255.255.255.0 {
@@ -108,12 +107,12 @@ subnet 10.0.10.0 netmask 255.255.255.0 {
 }
 ```
 
-Second, modify the INTERFACESv4 entry at the end of the file `/etc/default/isc-dhcp-server` to look as follows:
+Third, modify the INTERFACESv4 entry at the end of the file `/etc/default/isc-dhcp-server` to look as follows:
 ```
 INTERFACESv4="wlan0"
 INTERFACESv6=""
 ```
-Configure `hostapd` by creating `/etc/hostapd/hostapd.conf` with the following contents to give an open network with the name BMW. You might wish to change the name:
+* Configure `hostapd` by creating `/etc/hostapd/hostapd.conf` with the following contents to give an open network with the name BMW. You might wish to change the name:
 
 ``` 
 # This is the name of the WiFi interface we configured above
@@ -162,7 +161,7 @@ ignore_broadcast_ssid=0
 #rsn_pairwise=CCMP
 
 ```
-Next add commands to `/etc/rc.local` to start `hostapd` and the `dhcp` server and then to start `shairport-sync` automatically after startup. Its contents should look like this:
+* Configure the startup sequence by adding commands to `/etc/rc.local` to start `hostapd` and the `dhcp` server and then to start `shairport-sync` automatically after startup. Its contents should look like this:
 ```
 #!/bin/sh -e
 #
@@ -194,8 +193,8 @@ exit 0
 ```
 As you can see, the effect of these commands is to start the WiFi transmitter, give the base station the IP address `10.0.10.1`, start a DHCP server and finally start the Shairport Sync service.
 
-Install the Raspberry Pi in your car. It should be powered from a source that is switched off when you leave the car, otherwise the slight current drain will eventually flatten the battery.
+* Install the Raspberry Pi in your car. It should be powered from a source that is switched off when you leave the car, otherwise the slight current drain will eventually flatten the battery.
 
 When the power source is switched on, typically when you start the car, it will take maybe a minute for the system to boot up.
 
-Enjoy!
+* Enjoy!
