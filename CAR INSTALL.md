@@ -1,5 +1,5 @@
 # Shairport Sync for Cars
-If your car audio has an AUX input, you can get AirPlay in your car using Shairport Sync. AirPlay and an iPhone gives you access to internet radio, YouTube, Apple Music, Spotify, etc. on the move. While Shairport Sync is not a substitute for CarPlay, the audio quality is often much better than Bluetooth. Your passengers can enjoy movies while listening to the sound track on the car audio. You can even listen to Siri's traffic directions on your car audio. 
+If your car audio has an AUX input, you can get AirPlay in your car using Shairport Sync. Together, Shairport Sync and an iPhone can give you access to internet radio, YouTube, Apple Music, Spotify, etc. on the move. While Shairport Sync is not a substitute for CarPlay, the audio quality is often much better than Bluetooth. Your passengers can enjoy movies while listening to the sound track on the car audio. You can even listen to Siri's traffic directions on your car audio. 
 
 The Basic Idea
 =====
@@ -7,7 +7,7 @@ The basic idea is to use a small Linux computer to create an isolated WiFi netwo
 
 The car network is isolated and local to your car, and since it isn't connected to the internet, you don't really need to secure it with a password. Likewise, you don't really have to use a password to connect to the AirPlay service.
 
-When an iPhone or an iPad with cellular capability is connected to an isolated WiFi network like this, it can use the cellular network to connect to the internet.
+When an iPhone or an iPad with cellular capability is connected to an isolated WiFi network like this, it can use the cellular network to connect to the Internet.
 This means it can connect to internet radio, YouTube, Apple Music, Spotify, etc. over the cellular network and play the audio through the car network to the AirPlay service provided by Shairport Sync.
 
 Note that Android devices can not, so far, do this trick of using the two networks simultaneously.
