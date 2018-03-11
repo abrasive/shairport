@@ -1,5 +1,5 @@
 # Shairport Sync for Cars
-If your car audio has an AUX input, you can get AirPlay in your car using Shairport Sync. AirPlay and an iPhone gives you access to internet radio, YouTube, Apple Music, Spotify, etc. on the move. While Shairport Sync is not a substitute for CarPlay, the audio quality is often much better than Bluetooth. Your passengers can enjoy movies listening to the sound track on the car audio. You can even listen to Siri's traffic directions on your car audio. 
+If your car audio has an AUX input, you can get AirPlay in your car using Shairport Sync. AirPlay and an iPhone gives you access to internet radio, YouTube, Apple Music, Spotify, etc. on the move. While Shairport Sync is not a substitute for CarPlay, the audio quality is often much better than Bluetooth. Your passengers can enjoy movies while listening to the sound track on the car audio. You can even listen to Siri's traffic directions on your car audio. 
 
 The Basic Idea
 =====
