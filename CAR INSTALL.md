@@ -89,8 +89,6 @@ wpa_passphrase=roadgoing
 rsn_pairwise=CCMP
 ```
 
-* Next, in `/etc/default/hostapd`, find the line `#DAEMON_CONF=""` and replace it with `DAEMON_CONF="/etc/hostapd/hostapd.conf"`
-
 * Configure dhcp server by editing `/etc/dhcp/dhcpd.conf` to look like this:
 
 ```
