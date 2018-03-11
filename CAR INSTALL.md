@@ -1,8 +1,8 @@
 # Shairport Sync for Cars
 If your car audio has an AUX input, you can get AirPlay in your car using Shairport Sync. Together, Shairport Sync and an iPhone can give you access to internet radio, YouTube, Apple Music, Spotify, etc. on the move. While Shairport Sync is not a substitute for CarPlay, the audio quality is often much better than Bluetooth. Your passengers can enjoy movies while listening to the sound track on the car audio. You can even listen to Siri's traffic directions on your car audio. 
 
-The Basic Idea
-=====
+## The Basic Idea
+
 The basic idea is to use a small Linux computer to create an isolated WiFi network for the car and to run Shairport Sync on it to provide an AirPlay service. The audio goes via a DAC to the AUX input of your car stereo.
 
 The car WiFi network is isolated and local to your car, and since it isn't connected to the Internet, you don't really need to secure it with a password. Likewise, you don't really have to use a password to connect to the AirPlay service.
@@ -12,9 +12,11 @@ This means it can connect to internet radio, YouTube, Apple Music, Spotify, etc.
 
 Note that Android devices can not, so far, do this trick of using the two networks simultaneously.
 
-Example
-=====
+## Example
+
 In this example, we are using a Raspberry Pi Zero W and a Pimoroni PHAT DAC. This combination has been tested for well over a year. Please note that some of the details of setting up networks are specific to the version of Linux used. In particular, the treatment of networks is different in Stretch from Jessie.
+
+### Prepare the initial SD Image
 * Download the latest version of Raspbian Lite -- Stretch Lite of 2017-11-29 at the time of writing -- and install it onto an SD Card.
 * Mount the card on a Linux machine. Two drives should appear -- a `boot` drive and a `rootfs` drive. Both of these need a little modification.
 * Enable SSH service by creating a file called `ssh` on the `boot` drive. To do this, mount the drive and CD to its `boot` partiton (since my username is `mike`, the drive is at `/media/mike/boot`):
@@ -35,13 +37,16 @@ network={
 ```
 Close the file and carefully dismount and eject the two drives. Remove the SD card from the Linux machine, insert it into the Pi and reboot. After a short time, the Pi should appear on your network and you can SSH into it. To check that it has appeared on the network, try to ping it at `raspberrypi.local`. It may take a minute or so to appear. Once it has appeared on your network you can SSH into it and configure it.
 
-First thing to do on a Pi would be to use the `raspi-config` tool to expand the file system to use the entire card. It might be useful to change the `hostname` too. Next, do the usual update and upgrade:
+### Boot, Configure, Update 
+The first thing to do on a Pi would be to use the `raspi-config` tool to expand the file system to use the entire card. It might be useful to change the `hostname` too. Next, do the usual update and upgrade:
 ```
 # apt-get update
 # apt-get upgrade
 # rpi-update
 ``` 
-Next, install Shairport Sync. Install the packages needed by Shairport Sync:
+
+### Shairport Sync
+First, install the packages needed by Shairport Sync:
 ```
 # apt-get install build-essential git xmltoman autoconf automake libtool libdaemon-dev libpopt-dev libconfig-dev libasound2-dev avahi-daemon libavahi-client-dev libssl-dev
 ```
@@ -56,6 +61,7 @@ $ sudo make install
 ```
 SoX interpolaton is not included, as the Pi Zero would not be fast enough. *Do not* enable Shairport Sync to automatically start at boot time -- startup is organised differently.
 
+Third, finish by configuring Shairport Sync.
 Here are the important options for the Shairport Sync configuration file at `/etc/shairport-sync.conf`:
 ```
 // Sample Configuration File for Shairport Sync for Car Audio with a Pimoroni PHAT
@@ -78,8 +84,8 @@ Second, the maximum output offered to the AUX port of the radio can be reduced i
 
 The `alsa` settings are specific to the Pimoroni PHAT -- it does not have a hardware mixer and it does have a 32-bit capability which is worth enabling.
 
-Next, a number of packages that will enable the Pi to work as a WiFi base station are needed:
-
+### Extra Packages
+A number of packages to enable the Pi to work as a WiFi base station are needed:
 ```
 # apt-get install hostapd isc-dhcp-server
 ```
@@ -88,17 +94,13 @@ Disable both of these services from starting at boot time (this is because we wi
 # systemctl disable hostapd
 # systemctl disable isc-dhcp-server
 ```
+#### Configure DHCP server
 
-* Configure DHCP server in the following three steps.
-
-First, allow `wlan0` to be configured with a static IP number by first removing it from the control of the `dhcpcp` service. Edit `/etc/dhcpcp.conf` and insert the following line at the start:
-
+First, allow `wlan0` to be configured with a static IP number by removing it from the control of the `dhcpcp` service. Edit `/etc/dhcpcp.conf` and insert the following line at the start:
 ```
 denyinterfaces wlan0
 ```
-
 Second,  replace the contents of `/etc/dhcp/dhcpd.conf` with this:
-
 ```
 subnet 10.0.10.0 netmask 255.255.255.0 {
      range 10.0.10.5 10.0.10.150;
@@ -106,14 +108,13 @@ subnet 10.0.10.0 netmask 255.255.255.0 {
      #option broadcast-address <the-broadcast-IP-address-for-your-network>;
 }
 ```
-
 Third, modify the INTERFACESv4 entry at the end of the file `/etc/default/isc-dhcp-server` to look as follows:
 ```
 INTERFACESv4="wlan0"
 INTERFACESv6=""
 ```
-* Configure `hostapd` by creating `/etc/hostapd/hostapd.conf` with the following contents to give an open network with the name BMW. You might wish to change the name:
-
+#### Configure HostAPD
+Configure `hostapd` by creating `/etc/hostapd/hostapd.conf` with the following contents which will set up an open network with the name BMW. You might wish to change the name:
 ``` 
 # This is the name of the WiFi interface we configured above
 interface=wlan0
@@ -159,9 +160,9 @@ ignore_broadcast_ssid=0
 
 # Use AES, instead of TKIP
 #rsn_pairwise=CCMP
-
 ```
-* Configure the startup sequence by adding commands to `/etc/rc.local` to start `hostapd` and the `dhcp` server and then to start `shairport-sync` automatically after startup. Its contents should look like this:
+### Set up the Startup Sequence
+Configure the startup sequence by adding commands to `/etc/rc.local` to start `hostapd` and the `dhcp` server and then to start `shairport-sync` automatically after startup. Its contents should look like this:
 ```
 #!/bin/sh -e
 #
@@ -193,8 +194,8 @@ exit 0
 ```
 As you can see, the effect of these commands is to start the WiFi transmitter, give the base station the IP address `10.0.10.1`, start a DHCP server and finally start the Shairport Sync service.
 
-* Install the Raspberry Pi in your car. It should be powered from a source that is switched off when you leave the car, otherwise the slight current drain will eventually flatten the battery.
+### Ready
+Install the Raspberry Pi in your car. It should be powered from a source that is switched off when you leave the car, otherwise the slight current drain will eventually flatten the battery.
 
 When the power source is switched on, typically when you start the car, it will take maybe a minute for the system to boot up.
-
-* Enjoy!
+### Enjoy!
