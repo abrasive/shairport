@@ -1,6 +1,7 @@
 Version 3.2d29
 ====
 **Enhancements**
+* CAR INSTALL and OPENBSD notes added.
 * A bare-bones "native" D-Bus interface for Shairport Sync permitting control of some diagnostic settings. To be expanded...
 * A partly implemented MPRIS control interface including  play/pause/next/previous/volume and some metadata.
 * Remote control of an iTunes source including play/pause/next/previous/volume.
