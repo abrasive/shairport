@@ -79,8 +79,8 @@ alsa =
 };
 
 ```
-Two `general` settings are worth noting. First, the option to ignore the sending device's volume control is enabled -- this means that the car audio's volume control is the only one that matters. Of course this is a matter of personal preference.
-Second, the maximum output offered to the AUX port of the radio can be reduced if it is overloading the circuits. Again, that's a matter for personal selection and adjustment.
+Two `general` settings are worth noting. First, the option to ignore the sending device's volume control is enabled -- this means that the car audio's volume control is the only one that affects the audio volume. Of course this is a matter of personal preference.
+Second, the maximum output offered by the DAC to the AUX port of the car audio can be reduced if it is overloading the input circuits. Again, that's a matter for personal selection and adjustment.
 
 The `alsa` settings are specific to the Pimoroni PHAT -- it does not have a hardware mixer and it does have a 32-bit capability which is worth enabling.
 
@@ -195,7 +195,7 @@ exit 0
 As you can see, the effect of these commands is to start the WiFi transmitter, give the base station the IP address `10.0.10.1`, start a DHCP server and finally start the Shairport Sync service.
 
 ### Ready
-Install the Raspberry Pi in your car. It should be powered from a source that is switched off when you leave the car, otherwise the slight current drain will eventually flatten the battery.
+Install the Raspberry Pi in your car. It should be powered from a source that is switched off when you leave the car, otherwise the slight current drain will eventually flatten the car's battery.
 
 When the power source is switched on, typically when you start the car, it will take maybe a minute for the system to boot up.
 ### Enjoy!
