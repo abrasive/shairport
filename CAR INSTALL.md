@@ -184,10 +184,10 @@ if [ "$_IP" ]; then
 fi
 
 /usr/sbin/hostapd -B -P /run/hostapd.pid /etc/hostapd/hostapd.conf
-/sbin/ifconfig wlan0 10.0.10.1 netmask 255.255.255.0
-sleep 1
+/sbin/ip addr add 10.0.10.1/24 dev wlan0
+/bin/sleep 1
 /bin/systemctl start isc-dhcp-server
-sleep 2
+/bin/sleep 2
 /bin/systemctl start shairport-sync
 
 exit 0
