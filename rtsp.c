@@ -1920,7 +1920,7 @@ static void *rtsp_conversation_thread_func(void *pconn) {
         debug(3, "Synchronously terminate playing thread of RTSP conversation thread %d.",
               conn->connection_number);
         if (conn->player_thread)
-          debug(1, "RTSP Channel unexpectedly closed or erred -- closing the session.");
+          debug(1, "RTSP Channel unexpectedly closed or a serious error occured -- closing the player thread.");
         player_stop(conn);
         debug(3, "Successful termination of playing thread of RTSP conversation thread %d.",
               conn->connection_number);
