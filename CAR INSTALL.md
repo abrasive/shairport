@@ -183,6 +183,7 @@ if [ "$_IP" ]; then
   printf "My IP address is %s\n" "$_IP"
 fi
 
+/sbin/iw dev wlan0 set power_save off
 /usr/sbin/hostapd -B -P /run/hostapd.pid /etc/hostapd/hostapd.conf
 /sbin/ip addr add 10.0.10.1/24 dev wlan0
 /bin/sleep 1
