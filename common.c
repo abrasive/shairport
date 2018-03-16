@@ -977,10 +977,34 @@ uint32_t nctohl(const uint8_t *p) { // read 4 characters from the p and do ntohl
   return ntohl(holder);
 }
 
-static pthread_mutex_t barrier_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t barrier_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void memory_barrier() {
   pthread_mutex_lock(&barrier_mutex);
   pthread_mutex_unlock(&barrier_mutex);
 }
+
+int ss_pthread_mutex_timedlock(pthread_mutex_t *mutex, time_t sec, long nsec, char * debugmessage, int debuglevel) {
+	// Do a timed mutex lock for the time specified.
+	// If it is unsuccessful, print the debug message at the debug level
+	// return the reply from the pthread lock 
+	
+	uint64_t time_now_fp = get_absolute_time_in_fp();
+	uint64_t delta_fp =
+      ((uint64_t)sec << 32) + ((uint64_t)nsec << 32) / 1000000000; 
+	uint64_t wait_until_fp = time_now_fp + delta_fp;
+	struct timespec wait_until;
+	wait_until.tv_sec = wait_until_fp>>32; // the seconds
+	uint64_t wtf = wait_until_fp&0xFFFFFFFF;
+	wtf = wtf*1000000000;
+	wtf = wtf>>32;
+	wait_until.tv_nsec = wtf;
+	int r = pthread_mutex_timedlock(mutex,
+       &wait_until); 
+  if (r!=0)
+  	debug(debuglevel,"timed out waiting for a mutex: \"%s\".",debugmessage);
+  return r;
+}
+
+
 

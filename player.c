@@ -1652,7 +1652,9 @@ static void *player_thread_func(void *arg) {
 
   player_volume(config.airplay_volume, conn);
   int64_t frames_to_drop = 0;
-
+	debug(1,"Play begin");
+	if (play_number % 100 == 0)
+		debug(3,"Play frame %d.",play_number);
   while (!conn->player_thread_please_stop) {
     abuf_t *inframe = buffer_get_frame(conn);
     if (inframe) {

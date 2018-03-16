@@ -250,4 +250,6 @@ void shairport_shutdown();
 
 extern sigset_t pselect_sigset;
 
+int ss_pthread_mutex_timedlock(pthread_mutex_t *mutex, time_t sec, long nsec, char * debugmessage, int debuglevel);
+
 #endif // _COMMON_H
