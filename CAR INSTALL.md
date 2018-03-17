@@ -96,7 +96,7 @@ Disable both of these services from starting at boot time (this is because we wi
 ```
 #### Configure DHCP server
 
-First, allow `wlan0` to be configured with a static IP number by removing it from the control of the `dhcpcp` service. Edit `/etc/dhcpcp.conf` and insert the following line at the start:
+First, allow `wlan0` to be configured with a static IP number by removing it from the control of the `dhcpcp` service. Edit `/etc/dhcpcd.conf` and insert the following line at the start:
 ```
 denyinterfaces wlan0
 ```
