@@ -17,7 +17,7 @@ Note that Android devices can not, so far, do this trick of using the two networ
 In this example, we are using a Raspberry Pi Zero W and a Pimoroni PHAT DAC. This combination has been tested for well over a year. Please note that some of the details of setting up networks are specific to the version of Linux used. In particular, the treatment of networks is different in Stretch from Jessie.
 
 ### Prepare the initial SD Image
-* Download the latest version of Raspbian Lite -- Stretch Lite of 2017-11-29 at the time of writing -- and install it onto an SD Card.
+* Download the latest version of Raspbian Lite -- Stretch Lite of 2018-03-13 at the time of writing -- and install it onto an SD Card.
 * Mount the card on a Linux machine. Two drives should appear -- a `boot` drive and a `rootfs` drive. Both of these need a little modification.
 * Enable SSH service by creating a file called `ssh` on the `boot` drive. To do this, mount the drive and CD to its `boot` partiton (since my username is `mike`, the drive is at `/media/mike/boot`):
 ```
