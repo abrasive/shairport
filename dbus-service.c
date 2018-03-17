@@ -18,6 +18,9 @@
   #include "dbus-diagnostics.h"
 #endif
 
+#ifdef HAVE_DBUS_BASIC_REMOTE_CONTROL
+  #include "dbus-basic-remote-control.h"
+#endif
 
 void dbus_metadata_watcher(struct metadata_bundle *argc, __attribute__((unused)) void *userdata) {
   // debug(1, "DBUS metadata watcher called");
@@ -101,6 +104,10 @@ static void on_dbus_name_acquired(GDBusConnection *connection, const gchar *name
   
 #ifdef HAVE_DBUS_DIAGNOSTICS
   dbus_diagnostics_on_dbus_name_acquired(connection,name,user_data);
+#endif
+
+#ifdef HAVE_DBUS_BASIC_REMOTE_CONTROL
+  dbus_basic_remote_control_on_dbus_name_acquired(connection,name,user_data);
 #endif
 
   debug(1, "Shairport Sync native D-Bus service started at \"%s\" on the %s bus.", name,

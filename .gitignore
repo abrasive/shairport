@@ -34,6 +34,7 @@ shairport-sync.core
 /mpris-interface.*
 /mpris-player-interface.*
 /dbus-diagnostics-interface.*
+/dbus-basic-remote-control-interface.*
 
 # Some eclipse project files
 .cproject
