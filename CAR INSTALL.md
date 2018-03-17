@@ -94,25 +94,6 @@ Disable both of these services from starting at boot time (this is because we wi
 # systemctl disable hostapd
 # systemctl disable isc-dhcp-server
 ```
-#### Configure DHCP server
-
-First, allow `wlan0` to be configured with a static IP number by removing it from the control of the `dhcpcp` service. Edit `/etc/dhcpcd.conf` and insert the following line at the start:
-```
-denyinterfaces wlan0
-```
-Second,  replace the contents of `/etc/dhcp/dhcpd.conf` with this:
-```
-subnet 10.0.10.0 netmask 255.255.255.0 {
-     range 10.0.10.5 10.0.10.150;
-     #option routers <the-IP-address-of-your-gateway-or-router>;
-     #option broadcast-address <the-broadcast-IP-address-for-your-network>;
-}
-```
-Third, modify the INTERFACESv4 entry at the end of the file `/etc/default/isc-dhcp-server` to look as follows:
-```
-INTERFACESv4="wlan0"
-INTERFACESv6=""
-```
 #### Configure HostAPD
 Configure `hostapd` by creating `/etc/hostapd/hostapd.conf` with the following contents which will set up an open network with the name BMW. You might wish to change the name:
 ``` 
@@ -161,6 +142,27 @@ ignore_broadcast_ssid=0
 # Use AES, instead of TKIP
 #rsn_pairwise=CCMP
 ```
+#### Configure DHCP server
+
+First,  replace the contents of `/etc/dhcp/dhcpd.conf` with this:
+```
+subnet 10.0.10.0 netmask 255.255.255.0 {
+     range 10.0.10.5 10.0.10.150;
+     #option routers <the-IP-address-of-your-gateway-or-router>;
+     #option broadcast-address <the-broadcast-IP-address-for-your-network>;
+}
+```
+Second, modify the INTERFACESv4 entry at the end of the file `/etc/default/isc-dhcp-server` to look as follows:
+```
+INTERFACESv4="wlan0"
+INTERFACESv6=""
+```
+Third, allow `wlan0` to be configured with a static IP number by removing it from the control of the `dhcpcp` service. Edit `/etc/dhcpcd.conf` and insert the following line at the start:
+```
+denyinterfaces wlan0
+```
+(Note that from this point on, at least on the Raspberry Pi, if you reboot the machine, it will not reconnect to your network.)
+
 ### Set up the Startup Sequence
 Configure the startup sequence by adding commands to `/etc/rc.local` to start `hostapd` and the `dhcp` server and then to start `shairport-sync` automatically after startup. Its contents should look like this:
 ```
