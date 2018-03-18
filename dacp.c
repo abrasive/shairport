@@ -157,8 +157,9 @@ int dacp_send_command(const char *command, char **body, ssize_t *bodysize) {
 
     // only do this one at a time -- not sure it is necessary, but better safe than sorry
 
-    int mutex_reply = ss_pthread_mutex_timedlock(&dacp_conversation_lock,1,0,"Couldn't get DACP conversation lock in 1 second!.",1);
+    int mutex_reply = ss_pthread_mutex_timedlock(&dacp_conversation_lock,1000000,command,1);
     if (mutex_reply == 0) {
+      // debug(1,"dacp_conversation_lock acquired for command \"%s\".",command);
 
       // make a socket:
       sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
@@ -235,6 +236,7 @@ int dacp_send_command(const char *command, char **body, ssize_t *bodysize) {
         // debug(1,"DACP socket closed.");
       }
       pthread_mutex_unlock(&dacp_conversation_lock);
+      // debug(1,"dacp_conversation_lock released.");
     } else {
       // debug(1, "Could not acquire a lock on the dacp transmit/receive section. Possible
       // timeout?");
@@ -262,7 +264,7 @@ int send_simple_dacp_command(const char *command) {
 // this will be running on the thread of its caller, not of the conversation thread...
 void set_dacp_server_information(rtsp_conn_info *conn) { // tell the DACP conversation thread that
                                                          // the port has been set or changed
-	ss_pthread_mutex_timedlock(&dacp_server_information_lock,1,0,"set_dacp_server_information couldn't get DACP server information lock in 1 second!.",1);
+	ss_pthread_mutex_timedlock(&dacp_server_information_lock,500000,"set_dacp_server_information couldn't get DACP server information lock in 0.5 second!.",1);
 
   dacp_server.port = conn->dacp_port;
   dacp_server.connection_family = conn->connection_ip_family;
@@ -285,7 +287,7 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
   int32_t revision_number = 1;
   while (1) {
     int result;
-		ss_pthread_mutex_timedlock(&dacp_server_information_lock,1,0,"dacp_monitor_thread_code couldn't get DACP server information lock in 1 second!.",1);
+		ss_pthread_mutex_timedlock(&dacp_server_information_lock,500000,"dacp_monitor_thread_code couldn't get DACP server information lock in 0.5 second!.",1);
     while (dacp_server.scan_enable == 0) {
       // debug(1, "Wait for a valid DACP port");
       pthread_cond_wait(&dacp_server_information_cv, &dacp_server_information_lock);

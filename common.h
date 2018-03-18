@@ -1,6 +1,7 @@
 #ifndef _COMMON_H
 #define _COMMON_H
 
+#include <unistd.h>
 #include <libconfig.h>
 #include <signal.h>
 #include <stdint.h>
@@ -250,6 +251,7 @@ void shairport_shutdown();
 
 extern sigset_t pselect_sigset;
 
-int ss_pthread_mutex_timedlock(pthread_mutex_t *mutex, time_t sec, long nsec, char * debugmessage, int debuglevel);
+// wait for the specified time in microseconds -- it checks every 20 milliseconds
+int ss_pthread_mutex_timedlock(pthread_mutex_t *mutex, useconds_t dally_time, const char * debugmessage, int debuglevel);
 
 #endif // _COMMON_H

@@ -17,6 +17,80 @@
 
 ShairportSyncBasicRemoteControl *shairportSyncBasicRemoteControlSkeleton;
 
+
+void dbus_basic_remote_control_metadata_watcher(struct metadata_bundle *argc, __attribute__((unused)) void *userdata) {
+  // debug(1, "DBUS basic remote control watcher called");
+  shairport_sync_basic_remote_control_set_airplay_volume(shairportSyncBasicRemoteControlSkeleton, argc->airplay_volume);
+  
+    GVariantBuilder *dict_builder, *aa;
+
+  /* Build the metadata array */
+  // debug(1,"Build metadata");
+  dict_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
+
+  // Make up the artwork URI if we have one
+  if (argc->cover_art_pathname) {
+    char artURIstring[1024];
+    sprintf(artURIstring, "file://%s", argc->cover_art_pathname);
+    // sprintf(artURIstring,"");
+    // debug(1,"artURI String: \"%s\".",artURIstring);
+    GVariant *artUrl = g_variant_new("s", artURIstring);
+    g_variant_builder_add(dict_builder, "{sv}", "mpris:artUrl", artUrl);
+  }
+
+  // Add the TrackID if we have one
+  if (argc->item_id) {
+    char trackidstring[128];
+    // debug(1, "Set ID using mper ID: \"%u\".",argc->item_id);
+    sprintf(trackidstring, "/org/gnome/ShairportSync/mper_%u", argc->item_id);
+    GVariant *trackid = g_variant_new("o", trackidstring);
+    g_variant_builder_add(dict_builder, "{sv}", "mpris:trackid", trackid);
+  }
+  
+  // Add the track name if there is one
+  if (argc->track_name) {
+    // debug(1, "Track name set to \"%s\".", argc->track_name);
+    GVariant *trackname = g_variant_new("s", argc->track_name);
+    g_variant_builder_add(dict_builder, "{sv}", "xesam:title", trackname);
+  }
+
+  // Add the album name if there is one
+  if (argc->album_name) {
+    // debug(1, "Album name set to \"%s\".", argc->album_name);
+    GVariant *albumname = g_variant_new("s", argc->album_name);
+    g_variant_builder_add(dict_builder, "{sv}", "xesam:album", albumname);
+  }
+
+  // Add the artists if there are any (actually there will be at most one, but put it in an array)
+  if (argc->artist_name) {
+    /* Build the artists array */
+    // debug(1,"Build artist array");
+    aa = g_variant_builder_new(G_VARIANT_TYPE("as"));
+    g_variant_builder_add(aa, "s", argc->artist_name);
+    GVariant *artists = g_variant_builder_end(aa);
+    g_variant_builder_unref(aa);
+    g_variant_builder_add(dict_builder, "{sv}", "xesam:artist", artists);
+  }
+
+  // Add the genres if there are any (actually there will be at most one, but put it in an array)
+  if (argc->genre) {
+    // debug(1,"Build genre");
+    aa = g_variant_builder_new(G_VARIANT_TYPE("as"));
+    g_variant_builder_add(aa, "s", argc->genre);
+    GVariant *genres = g_variant_builder_end(aa);
+    g_variant_builder_unref(aa);
+    g_variant_builder_add(dict_builder, "{sv}", "xesam:genre", genres);
+  }
+
+  GVariant *dict = g_variant_builder_end(dict_builder);
+  g_variant_builder_unref(dict_builder);
+
+  // debug(1,"Set metadata");
+  shairport_sync_basic_remote_control_set_metadata(shairportSyncBasicRemoteControlSkeleton, dict);
+}
+
+
+
 static gboolean on_handle_fast_forward(ShairportSyncBasicRemoteControl *skeleton, GDBusMethodInvocation *invocation,
                                __attribute__((unused)) gpointer user_data) {
   send_simple_dacp_command("beginff");
@@ -87,14 +161,14 @@ static gboolean on_handle_resume(ShairportSyncBasicRemoteControl *skeleton, GDBu
   return TRUE;
 }
 
-/*
+
 static gboolean on_handle_shuffle_songs(ShairportSyncBasicRemoteControl *skeleton, GDBusMethodInvocation *invocation,
                                __attribute__((unused)) gpointer user_data) {
   send_simple_dacp_command("shuffle_songs");
   shairport_sync_basic_remote_control_complete_shuffle_songs(skeleton, invocation);
   return TRUE;
 }
-*/
+
 static gboolean on_handle_volume_up(ShairportSyncBasicRemoteControl *skeleton, GDBusMethodInvocation *invocation,
                                __attribute__((unused)) gpointer user_data) {
   send_simple_dacp_command("volumeup");
@@ -183,9 +257,11 @@ void dbus_basic_remote_control_on_dbus_name_acquired(GDBusConnection *connection
  g_signal_connect(shairportSyncBasicRemoteControlSkeleton, "handle-play", G_CALLBACK(on_handle_play), NULL);
  g_signal_connect(shairportSyncBasicRemoteControlSkeleton, "handle-stop", G_CALLBACK(on_handle_stop), NULL);
  g_signal_connect(shairportSyncBasicRemoteControlSkeleton, "handle-resume", G_CALLBACK(on_handle_resume), NULL);
-// g_signal_connect(shairportSyncBasicRemoteControlSkeleton, "handle-shuffle-songs", G_CALLBACK(on_handle_shuffle_songs), NULL);
+ g_signal_connect(shairportSyncBasicRemoteControlSkeleton, "handle-shuffle-songs", G_CALLBACK(on_handle_shuffle_songs), NULL);
   g_signal_connect(shairportSyncBasicRemoteControlSkeleton, "handle-volume-up", G_CALLBACK(on_handle_volume_up), NULL);
   g_signal_connect(shairportSyncBasicRemoteControlSkeleton, "handle-volume-down", G_CALLBACK(on_handle_volume_down), NULL);
+ 
+ add_metadata_watcher(dbus_basic_remote_control_metadata_watcher, NULL);
 
   /*                                 
   shairport_sync_diagnostics_set_verbosity(SHAIRPORT_SYNC_DIAGNOSTICS(shairportSyncDiagnosticsSkeleton),

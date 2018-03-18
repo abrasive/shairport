@@ -2512,19 +2512,20 @@ void player_volume_without_notification(double airplay_volume, rtsp_conn_info *c
 void player_volume(double airplay_volume, rtsp_conn_info *conn) {
   command_set_volume(airplay_volume);
 #ifdef HAVE_METADATA_HUB
+  int modified = 0;
   int32_t actual_volume;
-  if (dacp_get_volume(&actual_volume) == 200) {
-    metadata_hub_modify_prolog();
-    if (metadata_store.speaker_volume == actual_volume)
-      metadata_hub_modify_epilog(0); // no change
-    else {
-      metadata_store.speaker_volume = actual_volume;
-      metadata_hub_modify_epilog(1); // change
-    }
+  int gv = dacp_get_volume(&actual_volume);
+  metadata_hub_modify_prolog();
+  if ((gv==200) && (metadata_store.speaker_volume != actual_volume)) {
+    metadata_store.speaker_volume = actual_volume;
+    modified = 1;
   }
-
+  if (metadata_store.airplay_volume != airplay_volume) {
+    metadata_store.airplay_volume = airplay_volume;
+    modified = 1;
+  }
+  metadata_hub_modify_epilog(modified); // change
 #endif
-
   player_volume_without_notification(airplay_volume, conn);
 }
 

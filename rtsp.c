@@ -865,7 +865,7 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn, rtsp_message *r
 
     if (!strncmp(cp, "volume: ", 8)) {
       float volume = atof(cp + 8);
-      // debug(2, "AirPlay request to set volume to: %f.", volume);
+      debug(2, "AirPlay request to set volume to: %f.", volume);
       player_volume(volume, conn);
     } else
 #ifdef CONFIG_METADATA

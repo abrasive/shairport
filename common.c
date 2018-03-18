@@ -984,25 +984,22 @@ void memory_barrier() {
   pthread_mutex_unlock(&barrier_mutex);
 }
 
-int ss_pthread_mutex_timedlock(pthread_mutex_t *mutex, time_t sec, long nsec, char * debugmessage, int debuglevel) {
-	// Do a timed mutex lock for the time specified.
-	// If it is unsuccessful, print the debug message at the debug level
-	// return the reply from the pthread lock 
-	
-	uint64_t time_now_fp = get_absolute_time_in_fp();
-	uint64_t delta_fp =
-      ((uint64_t)sec << 32) + ((uint64_t)nsec << 32) / 1000000000; 
-	uint64_t wait_until_fp = time_now_fp + delta_fp;
-	struct timespec wait_until;
-	wait_until.tv_sec = wait_until_fp>>32; // the seconds
-	uint64_t wtf = wait_until_fp&0xFFFFFFFF;
-	wtf = wtf*1000000000;
-	wtf = wtf>>32;
-	wait_until.tv_nsec = wtf;
-	int r = pthread_mutex_timedlock(mutex,
-       &wait_until); 
-  if (r!=0)
-  	debug(debuglevel,"timed out waiting for a mutex: \"%s\".",debugmessage);
+int ss_pthread_mutex_timedlock(pthread_mutex_t *mutex, useconds_t dally_time, const char * debugmessage, int debuglevel) {
+
+  int time_to_wait = dally_time;
+  int r = pthread_mutex_trylock(mutex);
+  while ((r) && (time_to_wait>0)) {
+    int st = time_to_wait;
+    if (st>20000)
+      st=20000;
+    usleep(st);
+    time_to_wait -= st;       
+    r = pthread_mutex_trylock(mutex);
+  }
+  if (r!=0) {
+    char errstr[1000];
+  	debug(debuglevel,"error %d: \"%s\" waiting for a mutex: \"%s\".",r,strerror_r(r,errstr,sizeof(errstr)),debugmessage);
+	}
   return r;
 }
 
