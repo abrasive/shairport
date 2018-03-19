@@ -14,6 +14,7 @@
 		<method name='ShuffleSongs'/>
 		<method name='VolumeUp'/>
 		<method name='VolumeDown'/>
+		<property name='PlaybackStatus' type='s' access='read'/>
 		<property name='Server' type='s' access='read'/>
 		<property name='AirplayVolume' type='d' access='read'/>
 		<property name='Metadata' type='a{sv}' access='read'>
