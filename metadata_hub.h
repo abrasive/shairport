@@ -27,6 +27,9 @@ struct metadata_bundle;
 typedef void (*metadata_watcher)(struct metadata_bundle *argc, void *userdata);
 
 typedef struct metadata_bundle {
+
+  int dacp_server_active; // true if there's a reachable DACP server (assumed to be the Airplay client) ; false otherwise
+  
   int changed;                          // normally 0, nonzero if a field has been changed
   int playerstatusupdates_are_received; // false if it's "traditional" metadata
 
@@ -65,7 +68,7 @@ typedef struct metadata_bundle {
   char *sort_as; // a malloced string -- if non-zero, free it before replacing it
   int sort_as_changed;
 
-  char *client_ip; // IP number used by the audio source (i.e. the "client")
+  char *client_ip; // IP number used by the audio source (i.e. the "client"), which is also the DACP server
   int client_ip_changed;
 
   char *server_ip; // IP number used by Shairport Sync

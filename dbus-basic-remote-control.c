@@ -20,7 +20,13 @@ ShairportSyncBasicRemoteControl *shairportSyncBasicRemoteControlSkeleton;
 
 void dbus_basic_remote_control_metadata_watcher(struct metadata_bundle *argc, __attribute__((unused)) void *userdata) {
   // debug(1, "DBUS basic remote control watcher called");
+  
   shairport_sync_basic_remote_control_set_airplay_volume(shairportSyncBasicRemoteControlSkeleton, argc->airplay_volume);
+  
+  if (argc->dacp_server_active)
+    shairport_sync_basic_remote_control_set_server(shairportSyncBasicRemoteControlSkeleton, argc->client_ip);
+  else
+    shairport_sync_basic_remote_control_set_server(shairportSyncBasicRemoteControlSkeleton, "");   
   
     GVariantBuilder *dict_builder, *aa;
 

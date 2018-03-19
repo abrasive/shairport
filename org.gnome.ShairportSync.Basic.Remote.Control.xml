@@ -14,7 +14,7 @@
 		<method name='ShuffleSongs'/>
 		<method name='VolumeUp'/>
 		<method name='VolumeDown'/>
-		<property name='Status' type='s' access='read'/>
+		<property name='Server' type='s' access='read'/>
 		<property name='AirplayVolume' type='d' access='read'/>
 		<property name='Metadata' type='a{sv}' access='read'>
 			<annotation name="org.qtproject.QtDBus.QtTypeName" value="QVariantMap"/>

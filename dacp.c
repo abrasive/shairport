@@ -46,6 +46,7 @@
 #include "tinyhttp/http.h"
 
 typedef struct {
+  int players_connection_thread_index;   // the connection thread index when a player thread is associated with this, zero otherwise
   int scan_enable;                  // set to 1 if if sacanning should be considered
   uint16_t port;                    // zero if no port discovered
   short connection_family;          // AF_INET6 or AF_INET
@@ -251,7 +252,7 @@ int dacp_send_command(const char *command, char **body, ssize_t *bodysize) {
 int send_simple_dacp_command(const char *command) {
   int reply = 0;
   char *server_reply = NULL;
-  debug(2, "Sending command \"%s\".", command);
+  debug(3, "Sending command \"%s\".", command);
   ssize_t reply_size = 0;
   reply = dacp_send_command(command, &server_reply, &reply_size);
   if (server_reply) {
@@ -261,11 +262,20 @@ int send_simple_dacp_command(const char *command) {
   return reply;
 }
 
+void relinquish_dacp_server_information(rtsp_conn_info *conn) {
+// this will set the dacp_server.players_connection_thread_index to zero iff it has the same value as the conn's connection number
+// this is to signify that the player has stopped, but only if another thread (with a different index) hasn't already taken over the dacp service
+	ss_pthread_mutex_timedlock(&dacp_server_information_lock,500000,"set_dacp_server_information couldn't get DACP server information lock in 0.5 second!.",1);
+  if (dacp_server.players_connection_thread_index == conn->connection_number)
+    dacp_server.players_connection_thread_index = 0;
+  pthread_mutex_unlock(&dacp_server_information_lock);
+}
+
 // this will be running on the thread of its caller, not of the conversation thread...
 void set_dacp_server_information(rtsp_conn_info *conn) { // tell the DACP conversation thread that
                                                          // the port has been set or changed
 	ss_pthread_mutex_timedlock(&dacp_server_information_lock,500000,"set_dacp_server_information couldn't get DACP server information lock in 0.5 second!.",1);
-
+  dacp_server.players_connection_thread_index = conn->connection_number;
   dacp_server.port = conn->dacp_port;
   dacp_server.connection_family = conn->connection_ip_family;
   dacp_server.scope_id = conn->self_scope_id;
@@ -275,6 +285,11 @@ void set_dacp_server_information(rtsp_conn_info *conn) { // tell the DACP conver
     dacp_server.scan_enable = 1;
   else
     dacp_server.scan_enable = 0;
+  metadata_hub_modify_prolog();
+  int ch = metadata_store.dacp_server_active != dacp_server.scan_enable;
+  metadata_store.dacp_server_active = dacp_server.scan_enable;
+  metadata_hub_modify_epilog(ch);
+
   pthread_cond_signal(&dacp_server_information_cv);
   pthread_mutex_unlock(&dacp_server_information_lock);
 }
@@ -297,6 +312,10 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
     if ((result == 496) || (result == 403) || (result == 501)) {
       // debug(1,"Stopping scan because the response to \"dacp_get_volume(NULL)\" is %d.",result);
       dacp_server.scan_enable = 0;
+      metadata_hub_modify_prolog();
+      int ch = metadata_store.dacp_server_active !=0;
+      metadata_store.dacp_server_active = 0;
+      metadata_hub_modify_epilog(ch);
     }
     pthread_mutex_unlock(&dacp_server_information_lock);
     // debug(1, "DACP Server ID \"%u\" at \"%s:%u\", scan %d.", dacp_server.active_remote_id,
@@ -840,7 +859,7 @@ int dacp_get_volume(int32_t *the_actual_volume) {
       debug(1, "Unexpected return code %d from dacp_get_speaker_list.", http_response);
     }
   } else {
-    debug(2, "Unexpected return code %d from dacp_get_client_volume.", http_response);
+    debug(3, "Unexpected return code %d from dacp_get_client_volume.", http_response);
   }
   if (the_actual_volume) {
     // debug(1,"dacp_get_volume returns %d.",actual_volume);

@@ -143,10 +143,13 @@ static void browse_callback(AvahiServiceBrowser *b, AvahiIfIndex interface, Avah
         if (conn->dacp_id != 0) {
           debug(3, "Client's DACP status withdrawn.");
           conn->dacp_port = 0;
+/*
 #ifdef HAVE_DACP_CLIENT
+// this might be in a race condition with another connection that could come into effect before this one has terminated.
           set_dacp_server_information(conn); // this will have the effect of telling the scanner
                                              // that the DACP server is no longer working
 #endif
+*/
         }
       }
     } else {
