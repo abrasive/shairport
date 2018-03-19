@@ -1603,7 +1603,9 @@ static void *player_thread_func(void *arg) {
 
   // stop looking elsewhere for DACP stuff
   conn->dacp_port = 0;
+#ifdef HAVE_DACP_CLIENT
   set_dacp_server_information(conn); // this will stop scanning until a port is registered by the code initiated by the mdns_dacp_monitor
+#endif
   // start an mdns/zeroconf thread to look for DACP messages containing our DACP_ID and getting the
   // port number
   // mdns_dacp_monitor(conn->dacp_id, &conn->dacp_port, &conn->dacp_private);
