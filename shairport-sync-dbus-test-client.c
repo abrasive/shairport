@@ -130,6 +130,24 @@ int main(int argc, char *argv[]) {
                    G_CALLBACK(notify_loudness_threshold_callback), NULL);
   g_signal_connect(proxy, "notify::volume", G_CALLBACK(notify_volume_callback), NULL);
 
+  // Now, add notification of changes in diagnostics
+
+  ShairportSyncDiagnostics *proxy2;
+  GError *error2 = NULL;
+  proxy2 = shairport_sync_diagnostics_proxy_new_for_bus_sync(
+      gbus_type_selected, G_DBUS_PROXY_FLAGS_NONE, "org.gnome.ShairportSync",
+      "/org/gnome/ShairportSync", NULL, &error2);
+  g_signal_connect(proxy2, "g-properties-changed", G_CALLBACK(on_properties_changed), NULL);
+
+  // Now, add notification of changes in remote control
+
+  ShairportSyncRemoteControl *proxy3;
+  GError *error3 = NULL;
+  proxy3 = shairport_sync_remote_control_proxy_new_for_bus_sync(
+      gbus_type_selected, G_DBUS_PROXY_FLAGS_NONE, "org.gnome.ShairportSync",
+      "/org/gnome/ShairportSync", NULL, &error3);
+  g_signal_connect(proxy3, "g-properties-changed", G_CALLBACK(on_properties_changed), NULL);
+
   g_print("Starting test...\n");
 
   shairport_sync_call_set_volume(SHAIRPORT_SYNC(proxy), 20, NULL, NULL, 0);
