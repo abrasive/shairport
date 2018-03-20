@@ -148,6 +148,8 @@ int main(int argc, char *argv[]) {
       "/org/gnome/ShairportSync", NULL, &error3);
   g_signal_connect(proxy3, "g-properties-changed", G_CALLBACK(on_properties_changed), NULL);
 
+  /*
+
   g_print("Starting test...\n");
 
   shairport_sync_call_set_volume(SHAIRPORT_SYNC(proxy), 20, NULL, NULL, 0);
@@ -158,7 +160,6 @@ int main(int argc, char *argv[]) {
   sleep(5);
   shairport_sync_call_set_volume(SHAIRPORT_SYNC(proxy), 60, NULL, NULL, 0);
   // sleep(1);
-  /*
     shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), 10);
     sleep(1);
     shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), 0);
@@ -181,8 +182,9 @@ int main(int argc, char *argv[]) {
     sleep(1);
 
     shairport_sync_call_remote_command(SHAIRPORT_SYNC(proxy), "string",NULL,NULL,NULL);
-    */
   g_print("Finished test. Waiting for property changes...\n");
+    */
+
   // g_main_loop_quit(loop);
   pthread_join(dbus_thread, NULL);
   printf("exiting program.\n");
