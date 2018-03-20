@@ -1,5 +1,4 @@
 #include "mpris-interface.h"
-#include "mpris-player-interface.h"
 #include <popt.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -91,19 +90,29 @@ int main(int argc, char *argv[]) {
 
   pthread_create(&dbus_thread, NULL, &dbus_thread_func, NULL);
 
-  MediaPlayer2Player *proxy;
-
-  GError *error = NULL;
-
-  proxy = media_player2_player_proxy_new_for_bus_sync(gbus_type_selected, G_DBUS_PROXY_FLAGS_NONE,
+  GError *error1 = NULL; 
+  MediaPlayer2 *proxy1 = media_player2_proxy_new_for_bus_sync(gbus_type_selected, G_DBUS_PROXY_FLAGS_NONE,
                                                       "org.mpris.MediaPlayer2.ShairportSync",
-                                                      "/org/mpris/MediaPlayer2", NULL, &error);
-  g_signal_connect(proxy, "g-properties-changed", G_CALLBACK(on_properties_changed), NULL);
+                                                      "/org/mpris/MediaPlayer2", NULL, &error1);
+  if (error1)
+    printf("Error proxying MediaPlayer2");  
+  g_signal_connect(proxy1, "g-properties-changed", G_CALLBACK(on_properties_changed), NULL);
+
+
+  GError *error2 = NULL;  
+  MediaPlayer2Player *proxy2 = media_player2_player_proxy_new_for_bus_sync(gbus_type_selected, G_DBUS_PROXY_FLAGS_NONE,
+                                                      "org.mpris.MediaPlayer2.ShairportSync",
+                                                      "/org/mpris/MediaPlayer2", NULL, &error2);
+  if (error2)
+    printf("Error proxying MediaPlayer2Player");  
+  g_signal_connect(proxy2, "g-properties-changed", G_CALLBACK(on_properties_changed), NULL);
+    
   // g_main_loop_quit(loop);
   pthread_join(dbus_thread, NULL);
   printf("exiting program.\n");
 
-  g_object_unref(proxy);
+  g_object_unref(proxy1);
+  g_object_unref(proxy2);
 
   return 0;
 }

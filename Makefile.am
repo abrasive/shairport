@@ -100,8 +100,8 @@ dbus-interface.h dbus-interface.c:  org.gnome.ShairportSync.xml
 endif
 
 if USE_MPRIS
-shairport_sync_SOURCES += mpris-service.c mpris-interface.c mpris-player-interface.c
-BUILT_SOURCES += mpris-interface.h mpris-interface.c mpris-player-interface.h mpris-player-interface.c
+shairport_sync_SOURCES += mpris-service.c mpris-interface.c
+BUILT_SOURCES += mpris-interface.h mpris-interface.c
 # We don't want to install this header
 noinst_HEADERS += $(BUILT_SOURCES)
 # Correctly clean the generated headers, but keep the xml description
@@ -109,9 +109,6 @@ CLEANFILES += $(BUILT_SOURCES)
 
 mpris-interface.h mpris-interface.c:  org.mpris.MediaPlayer2.xml
 	gdbus-codegen --interface-prefix org.mpris --generate-c-code mpris-interface org.mpris.MediaPlayer2.xml
-
-mpris-player-interface.h mpris-player-interface.c:  org.mpris.MediaPlayer2.Player.xml
-	gdbus-codegen --interface-prefix org.mpris --generate-c-code mpris-player-interface org.mpris.MediaPlayer2.Player.xml
 endif
 
 noinst_PROGRAMS =
@@ -125,7 +122,7 @@ endif
 if USE_MPRIS_CLIENT
  #Make it, but don't install it anywhere
 noinst_PROGRAMS += shairport-sync-mpris-test-client
-shairport_sync_mpris_test_client_SOURCES = mpris-interface.c mpris-interface.h mpris-player-interface.c mpris-player-interface.h shairport-sync-mpris-test-client.c
+shairport_sync_mpris_test_client_SOURCES = mpris-interface.c mpris-interface.h shairport-sync-mpris-test-client.c
 endif
 
 install-exec-hook:
