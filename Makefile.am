@@ -99,30 +99,6 @@ dbus-interface.h dbus-interface.c:  org.gnome.ShairportSync.xml
 	gdbus-codegen --interface-prefix org.gnome --generate-c-code dbus-interface org.gnome.ShairportSync.xml
 endif
 
-if USE_DBUS_DIAGNOSTICS
-shairport_sync_SOURCES += dbus-diagnostics.c dbus-diagnostics-interface.c
-BUILT_SOURCES += dbus-diagnostics-interface.h dbus-diagnostics-interface.c 
-# We don't want to install this header
-noinst_HEADERS += $(BUILT_SOURCES)
-# Correctly clean the generated headers, but keep the xml description
-CLEANFILES += $(BUILT_SOURCES)
-
-dbus-diagnostics-interface.h dbus-diagnostics-interface.c:  org.gnome.ShairportSync.Diagnostics.xml
-	gdbus-codegen --interface-prefix org.gnome --generate-c-code dbus-diagnostics-interface org.gnome.ShairportSync.Diagnostics.xml
-endif
-
-if USE_DBUS_BASIC_REMOTE_CONTROL
-shairport_sync_SOURCES += dbus-basic-remote-control.c dbus-basic-remote-control-interface.c
-BUILT_SOURCES += dbus-basic-remote-control-interface.h dbus-basic-remote-control-interface.c 
-# We don't want to install this header
-noinst_HEADERS += $(BUILT_SOURCES)
-# Correctly clean the generated headers, but keep the xml description
-CLEANFILES += $(BUILT_SOURCES)
-
-dbus-basic-remote-control-interface.h dbus-basic-remote-control-interface.c:  org.gnome.ShairportSync.Basic.Remote.Control.xml
-	gdbus-codegen --interface-prefix org.gnome --generate-c-code dbus-basic-remote-control-interface org.gnome.ShairportSync.Basic.Remote.Control.xml
-endif
-
 if USE_MPRIS
 shairport_sync_SOURCES += mpris-service.c mpris-interface.c mpris-player-interface.c
 BUILT_SOURCES += mpris-interface.h mpris-interface.c mpris-player-interface.h mpris-player-interface.c
