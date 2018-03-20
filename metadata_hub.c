@@ -86,10 +86,10 @@ void add_metadata_watcher(metadata_watcher fn, void *userdata) {
 void metadata_hub_modify_prolog(void) {
   // always run this before changing an entry or a sequence of entries in the metadata_hub
   // debug(1, "locking metadata hub for writing");
-  if (pthread_rwlock_trywrlock(&metadata_hub_re_lock)!=0) {
-  	debug(1,"Metadata_hub write lock is already taken -- must wait.");
-  	pthread_rwlock_wrlock(&metadata_hub_re_lock);
-  	debug(1,"Okay -- acquired the metadata_hub write lock.");
+  if (pthread_rwlock_trywrlock(&metadata_hub_re_lock) != 0) {
+    debug(1, "Metadata_hub write lock is already taken -- must wait.");
+    pthread_rwlock_wrlock(&metadata_hub_re_lock);
+    debug(1, "Okay -- acquired the metadata_hub write lock.");
   }
 }
 
@@ -137,10 +137,10 @@ void metadata_hub_modify_epilog(int modified) {
 void metadata_hub_read_prolog(void) {
   // always run this before reading an entry or a sequence of entries in the metadata_hub
   // debug(1, "locking metadata hub for reading");
-  if (pthread_rwlock_tryrdlock(&metadata_hub_re_lock)!=0) {
-  	debug(1,"Metadata_hub read lock is already taken -- must wait.");
-  	pthread_rwlock_rdlock(&metadata_hub_re_lock);
-  	debug(1,"Okay -- acquired the metadata_hub read lock.");
+  if (pthread_rwlock_tryrdlock(&metadata_hub_re_lock) != 0) {
+    debug(1, "Metadata_hub read lock is already taken -- must wait.");
+    pthread_rwlock_rdlock(&metadata_hub_re_lock);
+    debug(1, "Okay -- acquired the metadata_hub read lock.");
   }
 }
 

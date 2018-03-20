@@ -46,13 +46,14 @@
 #include "tinyhttp/http.h"
 
 typedef struct {
-  int players_connection_thread_index;   // the connection thread index when a player thread is associated with this, zero otherwise
-  int scan_enable;                  // set to 1 if if sacanning should be considered
-  uint16_t port;                    // zero if no port discovered
-  short connection_family;          // AF_INET6 or AF_INET
-  uint32_t scope_id;                // if it's an ipv6 connection, this will be its scope id
-  char ip_string[INET6_ADDRSTRLEN]; // the ip string pointing to the client
-  uint32_t active_remote_id;        // send this when you want to send remote control commands
+  int players_connection_thread_index; // the connection thread index when a player thread is
+                                       // associated with this, zero otherwise
+  int scan_enable;                     // set to 1 if if sacanning should be considered
+  uint16_t port;                       // zero if no port discovered
+  short connection_family;             // AF_INET6 or AF_INET
+  uint32_t scope_id;                   // if it's an ipv6 connection, this will be its scope id
+  char ip_string[INET6_ADDRSTRLEN];    // the ip string pointing to the client
+  uint32_t active_remote_id;           // send this when you want to send remote control commands
 } dacp_server_record;
 
 pthread_t dacp_monitor_thread;
@@ -158,7 +159,7 @@ int dacp_send_command(const char *command, char **body, ssize_t *bodysize) {
 
     // only do this one at a time -- not sure it is necessary, but better safe than sorry
 
-    int mutex_reply = ss_pthread_mutex_timedlock(&dacp_conversation_lock,1000000,command,1);
+    int mutex_reply = ss_pthread_mutex_timedlock(&dacp_conversation_lock, 1000000, command, 1);
     if (mutex_reply == 0) {
       // debug(1,"dacp_conversation_lock acquired for command \"%s\".",command);
 
@@ -263,9 +264,13 @@ int send_simple_dacp_command(const char *command) {
 }
 
 void relinquish_dacp_server_information(rtsp_conn_info *conn) {
-// this will set the dacp_server.players_connection_thread_index to zero iff it has the same value as the conn's connection number
-// this is to signify that the player has stopped, but only if another thread (with a different index) hasn't already taken over the dacp service
-	ss_pthread_mutex_timedlock(&dacp_server_information_lock,500000,"set_dacp_server_information couldn't get DACP server information lock in 0.5 second!.",1);
+  // this will set the dacp_server.players_connection_thread_index to zero iff it has the same value
+  // as the conn's connection number
+  // this is to signify that the player has stopped, but only if another thread (with a different
+  // index) hasn't already taken over the dacp service
+  ss_pthread_mutex_timedlock(
+      &dacp_server_information_lock, 500000,
+      "set_dacp_server_information couldn't get DACP server information lock in 0.5 second!.", 1);
   if (dacp_server.players_connection_thread_index == conn->connection_number)
     dacp_server.players_connection_thread_index = 0;
   pthread_mutex_unlock(&dacp_server_information_lock);
@@ -274,7 +279,9 @@ void relinquish_dacp_server_information(rtsp_conn_info *conn) {
 // this will be running on the thread of its caller, not of the conversation thread...
 void set_dacp_server_information(rtsp_conn_info *conn) { // tell the DACP conversation thread that
                                                          // the port has been set or changed
-	ss_pthread_mutex_timedlock(&dacp_server_information_lock,500000,"set_dacp_server_information couldn't get DACP server information lock in 0.5 second!.",1);
+  ss_pthread_mutex_timedlock(
+      &dacp_server_information_lock, 500000,
+      "set_dacp_server_information couldn't get DACP server information lock in 0.5 second!.", 1);
   dacp_server.players_connection_thread_index = conn->connection_number;
   dacp_server.port = conn->dacp_port;
   dacp_server.connection_family = conn->connection_ip_family;
@@ -302,7 +309,9 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
   int32_t revision_number = 1;
   while (1) {
     int result;
-		ss_pthread_mutex_timedlock(&dacp_server_information_lock,500000,"dacp_monitor_thread_code couldn't get DACP server information lock in 0.5 second!.",1);
+    ss_pthread_mutex_timedlock(
+        &dacp_server_information_lock, 500000,
+        "dacp_monitor_thread_code couldn't get DACP server information lock in 0.5 second!.", 1);
     while (dacp_server.scan_enable == 0) {
       // debug(1, "Wait for a valid DACP port");
       pthread_cond_wait(&dacp_server_information_cv, &dacp_server_information_lock);
@@ -313,7 +322,7 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
       // debug(1,"Stopping scan because the response to \"dacp_get_volume(NULL)\" is %d.",result);
       dacp_server.scan_enable = 0;
       metadata_hub_modify_prolog();
-      int ch = metadata_store.dacp_server_active !=0;
+      int ch = metadata_store.dacp_server_active != 0;
       metadata_store.dacp_server_active = 0;
       metadata_hub_modify_epilog(ch);
     }

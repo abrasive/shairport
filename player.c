@@ -1604,13 +1604,13 @@ static void *player_thread_func(void *arg) {
   // stop looking elsewhere for DACP stuff
   conn->dacp_port = 0;
 #ifdef HAVE_DACP_CLIENT
-  set_dacp_server_information(conn); // this will stop scanning until a port is registered by the code initiated by the mdns_dacp_monitor
+  set_dacp_server_information(conn); // this will stop scanning until a port is registered by the
+                                     // code initiated by the mdns_dacp_monitor
 #endif
   // start an mdns/zeroconf thread to look for DACP messages containing our DACP_ID and getting the
   // port number
   // mdns_dacp_monitor(conn->dacp_id, &conn->dacp_port, &conn->dacp_private);
   mdns_dacp_monitor(conn);
-  
 
   conn->framesProcessedInThisEpoch = 0;
   conn->framesGeneratedInThisEpoch = 0;
@@ -1658,9 +1658,9 @@ static void *player_thread_func(void *arg) {
 
   player_volume(config.airplay_volume, conn);
   int64_t frames_to_drop = 0;
-	debug(1,"Play begin");
-	if (play_number % 100 == 0)
-		debug(3,"Play frame %d.",play_number);
+  debug(1, "Play begin");
+  if (play_number % 100 == 0)
+    debug(3, "Play frame %d.", play_number);
   while (!conn->player_thread_please_stop) {
     abuf_t *inframe = buffer_get_frame(conn);
     if (inframe) {
@@ -2522,7 +2522,7 @@ void player_volume(double airplay_volume, rtsp_conn_info *conn) {
   int32_t actual_volume;
   int gv = dacp_get_volume(&actual_volume);
   metadata_hub_modify_prolog();
-  if ((gv==200) && (metadata_store.speaker_volume != actual_volume)) {
+  if ((gv == 200) && (metadata_store.speaker_volume != actual_volume)) {
     metadata_store.speaker_volume = actual_volume;
     modified = 1;
   }

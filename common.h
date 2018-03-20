@@ -1,12 +1,12 @@
 #ifndef _COMMON_H
 #define _COMMON_H
 
-#include <unistd.h>
 #include <libconfig.h>
 #include <signal.h>
 #include <stdint.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include "audio.h"
 #include "config.h"
@@ -181,7 +181,6 @@ typedef struct {
 uint32_t nctohl(const uint8_t *p); // read 4 characters from the p and do ntohl on them
 void memory_barrier();
 
-
 // true if Shairport Sync is supposed to be sending output to the output device, false otherwise
 
 int get_requested_connection_state_to_output();
@@ -252,6 +251,7 @@ void shairport_shutdown();
 extern sigset_t pselect_sigset;
 
 // wait for the specified time in microseconds -- it checks every 20 milliseconds
-int ss_pthread_mutex_timedlock(pthread_mutex_t *mutex, useconds_t dally_time, const char * debugmessage, int debuglevel);
+int ss_pthread_mutex_timedlock(pthread_mutex_t *mutex, useconds_t dally_time,
+                               const char *debugmessage, int debuglevel);
 
 #endif // _COMMON_H

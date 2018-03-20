@@ -984,24 +984,23 @@ void memory_barrier() {
   pthread_mutex_unlock(&barrier_mutex);
 }
 
-int ss_pthread_mutex_timedlock(pthread_mutex_t *mutex, useconds_t dally_time, const char * debugmessage, int debuglevel) {
+int ss_pthread_mutex_timedlock(pthread_mutex_t *mutex, useconds_t dally_time,
+                               const char *debugmessage, int debuglevel) {
 
   int time_to_wait = dally_time;
   int r = pthread_mutex_trylock(mutex);
-  while ((r) && (time_to_wait>0)) {
+  while ((r) && (time_to_wait > 0)) {
     int st = time_to_wait;
-    if (st>20000)
-      st=20000;
+    if (st > 20000)
+      st = 20000;
     usleep(st);
-    time_to_wait -= st;       
+    time_to_wait -= st;
     r = pthread_mutex_trylock(mutex);
   }
-  if (r!=0) {
+  if (r != 0) {
     char errstr[1000];
-  	debug(debuglevel,"error %d: \"%s\" waiting for a mutex: \"%s\".",r,strerror_r(r,errstr,sizeof(errstr)),debugmessage);
-	}
+    debug(debuglevel, "error %d: \"%s\" waiting for a mutex: \"%s\".", r,
+          strerror_r(r, errstr, sizeof(errstr)), debugmessage);
+  }
   return r;
 }
-
-
-
