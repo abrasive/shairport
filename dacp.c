@@ -295,6 +295,17 @@ void set_dacp_server_information(rtsp_conn_info *conn) { // tell the DACP conver
   metadata_hub_modify_prolog();
   int ch = metadata_store.dacp_server_active != dacp_server.scan_enable;
   metadata_store.dacp_server_active = dacp_server.scan_enable;
+
+  if ((metadata_store.client_ip == NULL) ||
+      (strncmp(metadata_store.client_ip, conn->client_ip_string, INET6_ADDRSTRLEN) != 0)) {
+    if (metadata_store.client_ip)
+      free(metadata_store.client_ip);
+    metadata_store.client_ip = strndup(conn->client_ip_string, INET6_ADDRSTRLEN);
+    debug(1, "MH Client IP set to: \"%s\"", metadata_store.client_ip);
+    metadata_store.client_ip_changed = 1;
+    metadata_store.changed = 1;
+    ch = 1;
+  }
   metadata_hub_modify_epilog(ch);
 
   pthread_cond_signal(&dacp_server_information_cv);

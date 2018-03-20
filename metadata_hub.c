@@ -429,6 +429,7 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
         metadata_hub_modify_epilog(1);
       }
       break;
+    /*
     case 'clip':
       if ((metadata_store.client_ip == NULL) ||
           (strncmp(metadata_store.client_ip, data, length) != 0)) {
@@ -436,12 +437,13 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
         if (metadata_store.client_ip)
           free(metadata_store.client_ip);
         metadata_store.client_ip = strndup(data, length);
-        // debug(1, "MH Client IP set to: \"%s\"", metadata_store.client_ip);
+        debug(1, "MH Client IP set to: \"%s\"", metadata_store.client_ip);
         metadata_store.client_ip_changed = 1;
         metadata_store.changed = 1;
         metadata_hub_modify_epilog(1);
       }
       break;
+    */
     case 'svip':
       if ((metadata_store.server_ip == NULL) ||
           (strncmp(metadata_store.server_ip, data, length) != 0)) {
