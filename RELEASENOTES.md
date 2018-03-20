@@ -1,8 +1,14 @@
+Version 3.2d30
+====
+**Enhancements**
+* A "native" D-Bus Remote Control permits remote control of the current AirPlay or iTunes client. It includes status information about whether the remote control connection is viable or not, i.e. whether it can still be used to control the client.
+A remote control connection to the audio client becomes valid when the client starts AirPlaying to Shairport Sync. The connections remains valid until the audio source deselects Shairport Sync for AirPlay, or until the client disappears, or until another client starts AirPlaying to Shairport Sync.
+
 Version 3.2d29
 ====
 **Enhancements**
 * CAR INSTALL and OPENBSD notes added.
-* A bare-bones "native" D-Bus interface for Shairport Sync permitting control of some diagnostic settings. To be expanded...
+* A barebones "native" D-Bus interface for Shairport Sync permitting control of some diagnostic settings. To be expanded...
 * A partly implemented MPRIS control interface including  play/pause/next/previous/volume and some metadata.
 * Remote control of an iTunes source including play/pause/next/previous/volume.
 * Remote control of an AirPlay source including play/pause/next/previous.
