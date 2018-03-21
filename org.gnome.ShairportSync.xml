@@ -3,12 +3,8 @@
   <interface name="org.gnome.ShairportSync">
     <property name="LoudnessFilterActive" type="b" access="readwrite" />
     <property name="LoudnessThreshold" type="d" access="readwrite" />
-    <property name="Volume" type="i" access="read" />
     <method name="RemoteCommand">
       <arg name="command" type="s" direction="in" />
-    </method>
-    <method name="SetVolume">
-      <arg name="volume" type="i" direction="in" />
     </method>
   </interface>
   <interface name="org.gnome.ShairportSync.Diagnostics">
@@ -37,5 +33,11 @@
 		<property name='Metadata' type='a{sv}' access='read'>
 			<annotation name="org.qtproject.QtDBus.QtTypeName" value="QVariantMap"/>
 		</property>
+  </interface>
+  <interface name="org.gnome.ShairportSync.Advanced.Remote.Control">
+    <property name="Volume" type="i" access="read" />
+    <method name="SetVolume">
+      <arg name="volume" type="i" direction="in" />
+    </method>
   </interface>
 </node>

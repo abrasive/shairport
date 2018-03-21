@@ -16,21 +16,22 @@
 
 ShairportSyncDiagnostics *shairportSyncDiagnosticsSkeleton;
 ShairportSyncRemoteControl *shairportSyncRemoteControlSkeleton;
+ShairportSyncAdvancedRemoteControl *shairportSyncAdvancedRemoteControlSkeleton;
 
 void dbus_metadata_watcher(struct metadata_bundle *argc, __attribute__((unused)) void *userdata) {
   // debug(1, "DBUS metadata watcher called");
-  shairport_sync_set_volume(shairportSyncSkeleton, argc->speaker_volume);
+  shairport_sync_advanced_remote_control_set_volume(shairportSyncAdvancedRemoteControlSkeleton,
+                                                    argc->speaker_volume);
 
   // debug(1, "No diagnostics watcher required");
 
   // debug(1, "DBUS remote control watcher called");
 
   shairport_sync_remote_control_set_airplay_volume(shairportSyncRemoteControlSkeleton,
-                                                         argc->airplay_volume);
+                                                   argc->airplay_volume);
 
   if (argc->dacp_server_active)
-    shairport_sync_remote_control_set_server(shairportSyncRemoteControlSkeleton,
-                                                   argc->client_ip);
+    shairport_sync_remote_control_set_server(shairportSyncRemoteControlSkeleton, argc->client_ip);
   else
     shairport_sync_remote_control_set_server(shairportSyncRemoteControlSkeleton, "");
 
@@ -99,6 +100,15 @@ void dbus_metadata_watcher(struct metadata_bundle *argc, __attribute__((unused))
 
   // debug(1,"Set metadata");
   shairport_sync_remote_control_set_metadata(shairportSyncRemoteControlSkeleton, dict);
+}
+
+static gboolean on_handle_set_volume(ShairportSyncAdvancedRemoteControl *skeleton,
+                                     GDBusMethodInvocation *invocation, const gint volume,
+                                     __attribute__((unused)) gpointer user_data) {
+  debug(1, "Set volume to %d.", volume);
+  dacp_set_volume(volume);
+  shairport_sync_advanced_remote_control_complete_set_volume(skeleton, invocation);
+  return TRUE;
 }
 
 static gboolean on_handle_fast_forward(ShairportSyncRemoteControl *skeleton,
@@ -283,15 +293,6 @@ gboolean notify_loudness_threshold_callback(ShairportSync *skeleton,
   return TRUE;
 }
 
-static gboolean on_handle_set_volume(ShairportSync *skeleton, GDBusMethodInvocation *invocation,
-                                     const gint volume,
-                                     __attribute__((unused)) gpointer user_data) {
-  // debug(1, "1 Set volume to d.", volume);
-  dacp_set_volume(volume);
-  shairport_sync_complete_set_volume(skeleton, invocation);
-  return TRUE;
-}
-
 static gboolean on_handle_remote_command(ShairportSync *skeleton, GDBusMethodInvocation *invocation,
                                          const gchar *command,
                                          __attribute__((unused)) gpointer user_data) {
@@ -302,7 +303,7 @@ static gboolean on_handle_remote_command(ShairportSync *skeleton, GDBusMethodInv
 }
 
 static void on_dbus_name_acquired(GDBusConnection *connection, const gchar *name,
-                                  gpointer user_data) {
+                                  __attribute__((unused)) gpointer user_data) {
 
   // debug(1, "Shairport Sync native D-Bus interface \"%s\" acquired on the %s bus.", name,
   // (config.dbus_service_bus_type == DBT_session) ? "session" : "system");
@@ -329,8 +330,6 @@ static void on_dbus_name_acquired(GDBusConnection *connection, const gchar *name
                    G_CALLBACK(notify_loudness_threshold_callback), NULL);
   g_signal_connect(shairportSyncSkeleton, "handle-remote-command",
                    G_CALLBACK(on_handle_remote_command), NULL);
-  g_signal_connect(shairportSyncSkeleton, "handle-set-volume", G_CALLBACK(on_handle_set_volume),
-                   NULL);
 
   // debug(1,"dbus_diagnostics_on_dbus_name_acquired");
   shairportSyncDiagnosticsSkeleton = shairport_sync_diagnostics_skeleton_new();
@@ -386,9 +385,8 @@ static void on_dbus_name_acquired(GDBusConnection *connection, const gchar *name
 
   // debug(1,"dbus_remote_control_on_dbus_name_acquired");
   shairportSyncRemoteControlSkeleton = shairport_sync_remote_control_skeleton_new();
-  g_dbus_interface_skeleton_export(
-      G_DBUS_INTERFACE_SKELETON(shairportSyncRemoteControlSkeleton), connection,
-      "/org/gnome/ShairportSync", NULL);
+  g_dbus_interface_skeleton_export(G_DBUS_INTERFACE_SKELETON(shairportSyncRemoteControlSkeleton),
+                                   connection, "/org/gnome/ShairportSync", NULL);
 
   g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-fast-forward",
                    G_CALLBACK(on_handle_fast_forward), NULL);
@@ -396,18 +394,18 @@ static void on_dbus_name_acquired(GDBusConnection *connection, const gchar *name
                    G_CALLBACK(on_handle_rewind), NULL);
   g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-toggle-mute",
                    G_CALLBACK(on_handle_toggle_mute), NULL);
-  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-next",
-                   G_CALLBACK(on_handle_next), NULL);
+  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-next", G_CALLBACK(on_handle_next),
+                   NULL);
   g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-previous",
                    G_CALLBACK(on_handle_previous), NULL);
-  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-pause",
-                   G_CALLBACK(on_handle_pause), NULL);
+  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-pause", G_CALLBACK(on_handle_pause),
+                   NULL);
   g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-play-pause",
                    G_CALLBACK(on_handle_play_pause), NULL);
-  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-play",
-                   G_CALLBACK(on_handle_play), NULL);
-  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-stop",
-                   G_CALLBACK(on_handle_stop), NULL);
+  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-play", G_CALLBACK(on_handle_play),
+                   NULL);
+  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-stop", G_CALLBACK(on_handle_stop),
+                   NULL);
   g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-resume",
                    G_CALLBACK(on_handle_resume), NULL);
   g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-shuffle-songs",
@@ -416,6 +414,17 @@ static void on_dbus_name_acquired(GDBusConnection *connection, const gchar *name
                    G_CALLBACK(on_handle_volume_up), NULL);
   g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-volume-down",
                    G_CALLBACK(on_handle_volume_down), NULL);
+
+  // debug(1,"dbus_advanced_remote_control_on_dbus_name_acquired");
+  shairportSyncAdvancedRemoteControlSkeleton =
+      shairport_sync_advanced_remote_control_skeleton_new();
+
+  g_dbus_interface_skeleton_export(
+      G_DBUS_INTERFACE_SKELETON(shairportSyncAdvancedRemoteControlSkeleton), connection,
+      "/org/gnome/ShairportSync", NULL);
+
+  g_signal_connect(shairportSyncAdvancedRemoteControlSkeleton, "handle-set-volume",
+                   G_CALLBACK(on_handle_set_volume), NULL);
 
   add_metadata_watcher(dbus_metadata_watcher, NULL);
 

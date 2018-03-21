@@ -56,8 +56,9 @@ void notify_loudness_threshold_callback(ShairportSync *proxy,
   printf("Client reports loudness threshold set to %.2f dB.\n", th);
 }
 
-void notify_volume_callback(ShairportSync *proxy, __attribute__((unused)) gpointer user_data) {
-  gdouble th = shairport_sync_get_volume(proxy);
+void notify_volume_callback(ShairportSyncAdvancedRemoteControl *proxy,
+                            __attribute__((unused)) gpointer user_data) {
+  gdouble th = shairport_sync_advanced_remote_control_get_volume(proxy);
   printf("Client reports volume set to %.2f.\n", th);
 }
 
@@ -115,12 +116,12 @@ int main(int argc, char *argv[]) {
 
   pthread_create(&dbus_thread, NULL, &dbus_thread_func, NULL);
 
-  ShairportSync *proxy;
+  ShairportSyncAdvancedRemoteControl *proxy;
   GError *error = NULL;
 
-  proxy = shairport_sync_proxy_new_for_bus_sync(gbus_type_selected, G_DBUS_PROXY_FLAGS_NONE,
-                                                "org.gnome.ShairportSync",
-                                                "/org/gnome/ShairportSync", NULL, &error);
+  proxy = shairport_sync_advanced_remote_control_proxy_new_for_bus_sync(
+      gbus_type_selected, G_DBUS_PROXY_FLAGS_NONE, "org.gnome.ShairportSync",
+      "/org/gnome/ShairportSync", NULL, &error);
 
   // g_signal_connect(proxy, "notify::loudness-filter-active",
   // G_CALLBACK(notify_loudness_filter_active_callback), NULL);
@@ -148,26 +149,21 @@ int main(int argc, char *argv[]) {
       "/org/gnome/ShairportSync", NULL, &error3);
   g_signal_connect(proxy3, "g-properties-changed", G_CALLBACK(on_properties_changed), NULL);
 
-  /*
-
   g_print("Starting test...\n");
 
-  shairport_sync_call_set_volume(SHAIRPORT_SYNC(proxy), 20, NULL, NULL, 0);
+  shairport_sync_advanced_remote_control_call_set_volume(
+      SHAIRPORT_SYNC_ADVANCED_REMOTE_CONTROL(proxy), 20, NULL, NULL, 0);
   sleep(5);
-  shairport_sync_call_set_volume(SHAIRPORT_SYNC(proxy), 100, NULL, NULL, 0);
+  shairport_sync_advanced_remote_control_call_set_volume(
+      SHAIRPORT_SYNC_ADVANCED_REMOTE_CONTROL(proxy), 100, NULL, NULL, 0);
   sleep(5);
-  shairport_sync_call_set_volume(SHAIRPORT_SYNC(proxy), 40, NULL, NULL, 0);
+  shairport_sync_advanced_remote_control_call_set_volume(
+      SHAIRPORT_SYNC_ADVANCED_REMOTE_CONTROL(proxy), 40, NULL, NULL, 0);
   sleep(5);
-  shairport_sync_call_set_volume(SHAIRPORT_SYNC(proxy), 60, NULL, NULL, 0);
+  shairport_sync_advanced_remote_control_call_set_volume(
+      SHAIRPORT_SYNC_ADVANCED_REMOTE_CONTROL(proxy), 60, NULL, NULL, 0);
+  /*
   // sleep(1);
-    shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), 10);
-    sleep(1);
-    shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), 0);
-    sleep(1);
-    shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), 25);
-    sleep(1);
-    shairport_sync_set_volume(SHAIRPORT_SYNC(proxy), 100);
-    sleep(1);
     shairport_sync_set_loudness_filter_active(SHAIRPORT_SYNC(proxy), TRUE);
     sleep(10);
     shairport_sync_set_loudness_threshold(SHAIRPORT_SYNC(proxy), -20.0);
@@ -182,9 +178,8 @@ int main(int argc, char *argv[]) {
     sleep(1);
 
     shairport_sync_call_remote_command(SHAIRPORT_SYNC(proxy), "string",NULL,NULL,NULL);
-  g_print("Finished test. Waiting for property changes...\n");
     */
-
+  g_print("Finished test. Listening for property changes...\n");
   // g_main_loop_quit(loop);
   pthread_join(dbus_thread, NULL);
   printf("exiting program.\n");
