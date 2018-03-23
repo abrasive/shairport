@@ -30,8 +30,9 @@ typedef struct metadata_bundle {
 
   int dacp_server_active; // true if there's a reachable DACP server (assumed to be the Airplay
                           // client) ; false otherwise
-  int advanced_dacp_server_active; // true if there's a reachable DACP server with iTunes capabilitiues
-                          // ; false otherwise
+  int advanced_dacp_server_active; // true if there's a reachable DACP server with iTunes
+                                   // capabilitiues
+                                   // ; false otherwise
 
   int changed;                          // normally 0, nonzero if a field has been changed
   int playerstatusupdates_are_received; // false if it's "traditional" metadata

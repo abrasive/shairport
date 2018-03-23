@@ -1071,4 +1071,3 @@ char *get_version_string() {
   }
   return version_string;
 }
-

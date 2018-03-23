@@ -349,7 +349,7 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
     if (diff)
       metadata_store.advanced_dacp_server_active = adv;
     metadata_hub_modify_epilog(diff);
-    
+
     if (result == 200) {
       ssize_t le;
       char *response = NULL;

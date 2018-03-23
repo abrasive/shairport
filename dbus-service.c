@@ -1,5 +1,5 @@
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "config.h"
@@ -40,9 +40,11 @@ void dbus_metadata_watcher(struct metadata_bundle *argc, __attribute__((unused))
   }
 
   if (argc->advanced_dacp_server_active) {
-    shairport_sync_advanced_remote_control_set_available(shairportSyncAdvancedRemoteControlSkeleton, TRUE);
+    shairport_sync_advanced_remote_control_set_available(shairportSyncAdvancedRemoteControlSkeleton,
+                                                         TRUE);
   } else {
-    shairport_sync_advanced_remote_control_set_available(shairportSyncAdvancedRemoteControlSkeleton, FALSE);
+    shairport_sync_advanced_remote_control_set_available(shairportSyncAdvancedRemoteControlSkeleton,
+                                                         FALSE);
   }
 
   GVariantBuilder *dict_builder, *aa;
@@ -304,59 +306,65 @@ gboolean notify_loudness_threshold_callback(ShairportSync *skeleton,
 }
 
 gboolean notify_alacdecoder_callback(ShairportSync *skeleton,
-                                   __attribute__((unused)) gpointer user_data) {
-  char* th = (char *)shairport_sync_get_alacdecoder(skeleton);
+                                     __attribute__((unused)) gpointer user_data) {
+  char *th = (char *)shairport_sync_get_alacdecoder(skeleton);
 #ifdef HAVE_APPLE_ALAC
-  if (strcasecmp(th,"hammerton")==0) 
+  if (strcasecmp(th, "hammerton") == 0)
     config.use_apple_decoder = 0;
-  else if (strcasecmp(th,"apple")==0)
+  else if (strcasecmp(th, "apple") == 0)
     config.use_apple_decoder = 1;
   else
-    warn("Unrecognised ALAC decoder: \"%s\".",th);
-  // debug(1,"Using the %s ALAC decoder.", ((config.use_apple_decoder==0) ? "Hammerton" : "Apple"));
+    warn("Unrecognised ALAC decoder: \"%s\".", th);
+// debug(1,"Using the %s ALAC decoder.", ((config.use_apple_decoder==0) ? "Hammerton" : "Apple"));
 #else
-  if (strcasecmp(th,"hammerton")==0) {
+  if (strcasecmp(th, "hammerton") == 0) {
     config.use_apple_decoder = 0;
     // debug(1,"Using the Hammerton ALAC decoder.");
-  } else 
-    warn("Unrecognised ALAC decoder: \"%s\" (or else support for this decoder was not compiled into this version of Shairport Sync).",th);
+  } else
+    warn("Unrecognised ALAC decoder: \"%s\" (or else support for this decoder was not compiled "
+         "into this version of Shairport Sync).",
+         th);
 #endif
   return TRUE;
 }
 
 gboolean notify_interpolation_callback(ShairportSync *skeleton,
-                                   __attribute__((unused)) gpointer user_data) {
-  char* th = (char *)shairport_sync_get_interpolation(skeleton);
+                                       __attribute__((unused)) gpointer user_data) {
+  char *th = (char *)shairport_sync_get_interpolation(skeleton);
 #ifdef HAVE_LIBSOXR
-  if (strcasecmp(th,"basic")==0) 
+  if (strcasecmp(th, "basic") == 0)
     config.packet_stuffing = ST_basic;
-  else if (strcasecmp(th,"soxr")==0)
+  else if (strcasecmp(th, "soxr") == 0)
     config.packet_stuffing = ST_soxr;
   else
-    warn("Unrecognised interpolation: \"%s\".",th);
+    warn("Unrecognised interpolation: \"%s\".", th);
 #else
-  if (strcasecmp(th,"basic")==0) 
+  if (strcasecmp(th, "basic") == 0)
     config.packet_stuffing = ST_basic;
-  } else 
-    warn("Unrecognised interpolation method: \"%s\" (or else support for this interolation method was not compiled into this version of Shairport Sync).",th);
+}
+else warn("Unrecognised interpolation method: \"%s\" (or else support for this interolation method "
+          "was not compiled into this version of Shairport Sync).",
+          th);
 #endif
-   debug(1,"Using %s interpolation (aka \"stuffing\").", ((config.packet_stuffing==ST_basic) ? "basic" : "soxr"));
+  debug(1, "Using %s interpolation (aka \"stuffing\").",
+        ((config.packet_stuffing == ST_basic) ? "basic" : "soxr"));
   return TRUE;
 }
 
 gboolean notify_volume_control_profile_callback(ShairportSync *skeleton,
-                                   __attribute__((unused)) gpointer user_data) {
-  char* th = (char *)shairport_sync_get_volume_control_profile(skeleton);
+                                                __attribute__((unused)) gpointer user_data) {
+  char *th = (char *)shairport_sync_get_volume_control_profile(skeleton);
   enum volume_control_profile_type previous_volume_control_profile = config.volume_control_profile;
-  if (strcasecmp(th,"standard")==0) 
+  if (strcasecmp(th, "standard") == 0)
     config.volume_control_profile = VCP_standard;
-  else if (strcasecmp(th,"flat")==0)
+  else if (strcasecmp(th, "flat") == 0)
     config.volume_control_profile = VCP_flat;
   else
-    warn("Unrecognised Volume Control Profile: \"%s\".",th);
-   debug(1,"Using the %s Volume Control Profile.", ((config.volume_control_profile==VCP_standard) ? "Standard" : "Flat"));
-  if (previous_volume_control_profile!=config.volume_control_profile)
-    debug(1,"Should really reset volume now, maybe?");
+    warn("Unrecognised Volume Control Profile: \"%s\".", th);
+  debug(1, "Using the %s Volume Control Profile.",
+        ((config.volume_control_profile == VCP_standard) ? "Standard" : "Flat"));
+  if (previous_volume_control_profile != config.volume_control_profile)
+    debug(1, "Should really reset volume now, maybe?");
   return TRUE;
 }
 
@@ -378,57 +386,41 @@ static void on_dbus_name_acquired(GDBusConnection *connection, const gchar *name
   g_dbus_interface_skeleton_export(G_DBUS_INTERFACE_SKELETON(shairportSyncSkeleton), connection,
                                    "/org/gnome/ShairportSync", NULL);
 
-
-
-
-
-
-
   shairport_sync_set_loudness_threshold(SHAIRPORT_SYNC(shairportSyncSkeleton),
                                         config.loudness_reference_volume_db);
 
 #ifdef HAVE_APPLE_ALAC
-  if (config.use_apple_decoder==0) 
-    shairport_sync_set_alacdecoder(SHAIRPORT_SYNC(shairportSyncSkeleton),
-                                        "hammerton");
+  if (config.use_apple_decoder == 0)
+    shairport_sync_set_alacdecoder(SHAIRPORT_SYNC(shairportSyncSkeleton), "hammerton");
   else
-    shairport_sync_set_alacdecoder(SHAIRPORT_SYNC(shairportSyncSkeleton),
-                                        "apple");  
+    shairport_sync_set_alacdecoder(SHAIRPORT_SYNC(shairportSyncSkeleton), "apple");
 #else
-  shairport_sync_set_alacdecoder(SHAIRPORT_SYNC(shairportSyncSkeleton),
-                                        "hammerton");
+  shairport_sync_set_alacdecoder(SHAIRPORT_SYNC(shairportSyncSkeleton), "hammerton");
 #endif
 
 #ifdef HAVE_SOXR
-  if (config.packet_stuffing == ST_basic) 
-    shairport_sync_set_interpolation(SHAIRPORT_SYNC(shairportSyncSkeleton),
-                                        "basic");
+  if (config.packet_stuffing == ST_basic)
+    shairport_sync_set_interpolation(SHAIRPORT_SYNC(shairportSyncSkeleton), "basic");
   else
-    shairport_sync_set_interpolation(SHAIRPORT_SYNC(shairportSyncSkeleton),
-                                        "soxr");
+    shairport_sync_set_interpolation(SHAIRPORT_SYNC(shairportSyncSkeleton), "soxr");
 #else
-    shairport_sync_set_interpolation(SHAIRPORT_SYNC(shairportSyncSkeleton),
-                                        "basic");
+  shairport_sync_set_interpolation(SHAIRPORT_SYNC(shairportSyncSkeleton), "basic");
 #endif
 
-  if (config.volume_control_profile==VCP_standard) 
-    shairport_sync_set_volume_control_profile(SHAIRPORT_SYNC(shairportSyncSkeleton),
-                                        "standard");
+  if (config.volume_control_profile == VCP_standard)
+    shairport_sync_set_volume_control_profile(SHAIRPORT_SYNC(shairportSyncSkeleton), "standard");
   else
-    shairport_sync_set_volume_control_profile(SHAIRPORT_SYNC(shairportSyncSkeleton),
-                                        "flat");  
- 
+    shairport_sync_set_volume_control_profile(SHAIRPORT_SYNC(shairportSyncSkeleton), "flat");
+
   if (config.loudness == 0) {
     shairport_sync_set_loudness_filter_active(SHAIRPORT_SYNC(shairportSyncSkeleton), FALSE);
   } else {
     shairport_sync_set_loudness_filter_active(SHAIRPORT_SYNC(shairportSyncSkeleton), TRUE);
   }
-  
-  shairport_sync_set_version(SHAIRPORT_SYNC(shairportSyncSkeleton),
-                                        PACKAGE_VERSION);
-  char * vs = get_version_string();
-  shairport_sync_set_version_string(SHAIRPORT_SYNC(shairportSyncSkeleton),
-                                        vs);
+
+  shairport_sync_set_version(SHAIRPORT_SYNC(shairportSyncSkeleton), PACKAGE_VERSION);
+  char *vs = get_version_string();
+  shairport_sync_set_version_string(SHAIRPORT_SYNC(shairportSyncSkeleton), vs);
   if (vs)
     free(vs);
 
@@ -442,7 +434,7 @@ static void on_dbus_name_acquired(GDBusConnection *connection, const gchar *name
                    G_CALLBACK(notify_loudness_filter_active_callback), NULL);
   g_signal_connect(shairportSyncSkeleton, "notify::loudness-threshold",
                    G_CALLBACK(notify_loudness_threshold_callback), NULL);
- 
+
   g_signal_connect(shairportSyncSkeleton, "handle-remote-command",
                    G_CALLBACK(on_handle_remote_command), NULL);
 
