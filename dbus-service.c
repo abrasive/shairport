@@ -382,9 +382,82 @@ static void on_dbus_name_acquired(GDBusConnection *connection, const gchar *name
 
   // debug(1, "Shairport Sync native D-Bus interface \"%s\" acquired on the %s bus.", name,
   // (config.dbus_service_bus_type == DBT_session) ? "session" : "system");
+
   shairportSyncSkeleton = shairport_sync_skeleton_new();
   g_dbus_interface_skeleton_export(G_DBUS_INTERFACE_SKELETON(shairportSyncSkeleton), connection,
                                    "/org/gnome/ShairportSync", NULL);
+
+  shairportSyncDiagnosticsSkeleton = shairport_sync_diagnostics_skeleton_new();
+  g_dbus_interface_skeleton_export(G_DBUS_INTERFACE_SKELETON(shairportSyncDiagnosticsSkeleton),
+                                   connection, "/org/gnome/ShairportSync", NULL);
+
+  shairportSyncRemoteControlSkeleton = shairport_sync_remote_control_skeleton_new();
+  g_dbus_interface_skeleton_export(G_DBUS_INTERFACE_SKELETON(shairportSyncRemoteControlSkeleton),
+                                   connection, "/org/gnome/ShairportSync", NULL);
+
+  shairportSyncAdvancedRemoteControlSkeleton =
+      shairport_sync_advanced_remote_control_skeleton_new();
+  g_dbus_interface_skeleton_export(
+      G_DBUS_INTERFACE_SKELETON(shairportSyncAdvancedRemoteControlSkeleton), connection,
+      "/org/gnome/ShairportSync", NULL);
+
+  g_signal_connect(shairportSyncSkeleton, "notify::interpolation",
+                   G_CALLBACK(notify_interpolation_callback), NULL);
+  g_signal_connect(shairportSyncSkeleton, "notify::alacdecoder",
+                   G_CALLBACK(notify_alacdecoder_callback), NULL);
+  g_signal_connect(shairportSyncSkeleton, "notify::volume-control-profile",
+                   G_CALLBACK(notify_volume_control_profile_callback), NULL);
+  g_signal_connect(shairportSyncSkeleton, "notify::loudness-filter-active",
+                   G_CALLBACK(notify_loudness_filter_active_callback), NULL);
+  g_signal_connect(shairportSyncSkeleton, "notify::loudness-threshold",
+                   G_CALLBACK(notify_loudness_threshold_callback), NULL);
+
+  g_signal_connect(shairportSyncSkeleton, "handle-remote-command",
+                   G_CALLBACK(on_handle_remote_command), NULL);
+
+  g_signal_connect(shairportSyncDiagnosticsSkeleton, "notify::verbosity",
+                   G_CALLBACK(notify_verbosity_callback), NULL);
+
+  g_signal_connect(shairportSyncDiagnosticsSkeleton, "notify::statistics",
+                   G_CALLBACK(notify_statistics_callback), NULL);
+
+  g_signal_connect(shairportSyncDiagnosticsSkeleton, "notify::elapsed-time",
+                   G_CALLBACK(notify_elapsed_time_callback), NULL);
+
+  g_signal_connect(shairportSyncDiagnosticsSkeleton, "notify::delta-time",
+                   G_CALLBACK(notify_delta_time_callback), NULL);
+
+  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-fast-forward",
+                   G_CALLBACK(on_handle_fast_forward), NULL);
+  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-rewind",
+                   G_CALLBACK(on_handle_rewind), NULL);
+  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-toggle-mute",
+                   G_CALLBACK(on_handle_toggle_mute), NULL);
+  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-next", G_CALLBACK(on_handle_next),
+                   NULL);
+  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-previous",
+                   G_CALLBACK(on_handle_previous), NULL);
+  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-pause", G_CALLBACK(on_handle_pause),
+                   NULL);
+  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-play-pause",
+                   G_CALLBACK(on_handle_play_pause), NULL);
+  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-play", G_CALLBACK(on_handle_play),
+                   NULL);
+  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-stop", G_CALLBACK(on_handle_stop),
+                   NULL);
+  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-resume",
+                   G_CALLBACK(on_handle_resume), NULL);
+  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-shuffle-songs",
+                   G_CALLBACK(on_handle_shuffle_songs), NULL);
+  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-volume-up",
+                   G_CALLBACK(on_handle_volume_up), NULL);
+  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-volume-down",
+                   G_CALLBACK(on_handle_volume_down), NULL);
+
+  g_signal_connect(shairportSyncAdvancedRemoteControlSkeleton, "handle-set-volume",
+                   G_CALLBACK(on_handle_set_volume), NULL);
+
+  add_metadata_watcher(dbus_metadata_watcher, NULL);
 
   shairport_sync_set_loudness_threshold(SHAIRPORT_SYNC(shairportSyncSkeleton),
                                         config.loudness_reference_volume_db);
@@ -424,25 +497,6 @@ static void on_dbus_name_acquired(GDBusConnection *connection, const gchar *name
   if (vs)
     free(vs);
 
-  g_signal_connect(shairportSyncSkeleton, "notify::interpolation",
-                   G_CALLBACK(notify_interpolation_callback), NULL);
-  g_signal_connect(shairportSyncSkeleton, "notify::alacdecoder",
-                   G_CALLBACK(notify_alacdecoder_callback), NULL);
-  g_signal_connect(shairportSyncSkeleton, "notify::volume-control-profile",
-                   G_CALLBACK(notify_volume_control_profile_callback), NULL);
-  g_signal_connect(shairportSyncSkeleton, "notify::loudness-filter-active",
-                   G_CALLBACK(notify_loudness_filter_active_callback), NULL);
-  g_signal_connect(shairportSyncSkeleton, "notify::loudness-threshold",
-                   G_CALLBACK(notify_loudness_threshold_callback), NULL);
-
-  g_signal_connect(shairportSyncSkeleton, "handle-remote-command",
-                   G_CALLBACK(on_handle_remote_command), NULL);
-
-  // debug(1,"dbus_diagnostics_on_dbus_name_acquired");
-  shairportSyncDiagnosticsSkeleton = shairport_sync_diagnostics_skeleton_new();
-  g_dbus_interface_skeleton_export(G_DBUS_INTERFACE_SKELETON(shairportSyncDiagnosticsSkeleton),
-                                   connection, "/org/gnome/ShairportSync", NULL);
-
   shairport_sync_diagnostics_set_verbosity(
       SHAIRPORT_SYNC_DIAGNOSTICS(shairportSyncDiagnosticsSkeleton), debuglev);
 
@@ -477,63 +531,6 @@ static void on_dbus_name_acquired(GDBusConnection *connection, const gchar *name
         SHAIRPORT_SYNC_DIAGNOSTICS(shairportSyncDiagnosticsSkeleton), TRUE);
     // debug(1, ">> delta time is not included in log entries");
   }
-
-  g_signal_connect(shairportSyncDiagnosticsSkeleton, "notify::verbosity",
-                   G_CALLBACK(notify_verbosity_callback), NULL);
-
-  g_signal_connect(shairportSyncDiagnosticsSkeleton, "notify::statistics",
-                   G_CALLBACK(notify_statistics_callback), NULL);
-
-  g_signal_connect(shairportSyncDiagnosticsSkeleton, "notify::elapsed-time",
-                   G_CALLBACK(notify_elapsed_time_callback), NULL);
-
-  g_signal_connect(shairportSyncDiagnosticsSkeleton, "notify::delta-time",
-                   G_CALLBACK(notify_delta_time_callback), NULL);
-
-  // debug(1,"dbus_remote_control_on_dbus_name_acquired");
-  shairportSyncRemoteControlSkeleton = shairport_sync_remote_control_skeleton_new();
-  g_dbus_interface_skeleton_export(G_DBUS_INTERFACE_SKELETON(shairportSyncRemoteControlSkeleton),
-                                   connection, "/org/gnome/ShairportSync", NULL);
-
-  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-fast-forward",
-                   G_CALLBACK(on_handle_fast_forward), NULL);
-  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-rewind",
-                   G_CALLBACK(on_handle_rewind), NULL);
-  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-toggle-mute",
-                   G_CALLBACK(on_handle_toggle_mute), NULL);
-  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-next", G_CALLBACK(on_handle_next),
-                   NULL);
-  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-previous",
-                   G_CALLBACK(on_handle_previous), NULL);
-  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-pause", G_CALLBACK(on_handle_pause),
-                   NULL);
-  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-play-pause",
-                   G_CALLBACK(on_handle_play_pause), NULL);
-  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-play", G_CALLBACK(on_handle_play),
-                   NULL);
-  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-stop", G_CALLBACK(on_handle_stop),
-                   NULL);
-  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-resume",
-                   G_CALLBACK(on_handle_resume), NULL);
-  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-shuffle-songs",
-                   G_CALLBACK(on_handle_shuffle_songs), NULL);
-  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-volume-up",
-                   G_CALLBACK(on_handle_volume_up), NULL);
-  g_signal_connect(shairportSyncRemoteControlSkeleton, "handle-volume-down",
-                   G_CALLBACK(on_handle_volume_down), NULL);
-
-  // debug(1,"dbus_advanced_remote_control_on_dbus_name_acquired");
-  shairportSyncAdvancedRemoteControlSkeleton =
-      shairport_sync_advanced_remote_control_skeleton_new();
-
-  g_dbus_interface_skeleton_export(
-      G_DBUS_INTERFACE_SKELETON(shairportSyncAdvancedRemoteControlSkeleton), connection,
-      "/org/gnome/ShairportSync", NULL);
-
-  g_signal_connect(shairportSyncAdvancedRemoteControlSkeleton, "handle-set-volume",
-                   G_CALLBACK(on_handle_set_volume), NULL);
-
-  add_metadata_watcher(dbus_metadata_watcher, NULL);
 
   debug(1, "Shairport Sync native D-Bus service started at \"%s\" on the %s bus.", name,
         (config.dbus_service_bus_type == DBT_session) ? "session" : "system");
