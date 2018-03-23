@@ -6,6 +6,11 @@
     <method name="RemoteCommand">
       <arg name="command" type="s" direction="in" />
     </method>
+    <property name="VolumeControlProfile" type="s" access="readwrite" />
+    <property name="Interpolation" type="s" access="readwrite" />
+    <property name="ALACDecoder" type="s" access="readwrite" />
+    <property name="Version" type="s" access="read" />
+    <property name="VersionString" type="s" access="read" />
   </interface>
   <interface name="org.gnome.ShairportSync.Diagnostics">
     <property name="Verbosity" type="i" access="readwrite" />
@@ -33,8 +38,11 @@
 		<property name='Metadata' type='a{sv}' access='read'>
 			<annotation name="org.qtproject.QtDBus.QtTypeName" value="QVariantMap"/>
 		</property>
+		<property name='Available' type='b' access='read'/>
   </interface>
   <interface name="org.gnome.ShairportSync.Advanced.Remote.Control">
+		<property name='Available' type='b' access='read'/>
+		<property name='PlaybackStatus' type='s' access='read'/>
     <property name="Volume" type="i" access="read" />
     <method name="SetVolume">
       <arg name="volume" type="i" direction="in" />

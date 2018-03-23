@@ -1573,12 +1573,13 @@ static void *player_thread_func(void *arg) {
   if (tbuf == NULL)
     die("Failed to allocate memory for the transition buffer.");
   sbuf = 0;
-  if (config.packet_stuffing == ST_soxr) { // needed for stuffing
+  // initialise this, because soxr stuffing might be chosen later
+  // if (config.packet_stuffing == ST_soxr) { // needed for stuffing
     sbuf = malloc(sizeof(int32_t) * 2 * (conn->max_frames_per_packet * conn->output_sample_ratio +
                                          conn->max_frame_size_change));
     if (sbuf == NULL)
       debug(1, "Failed to allocate memory for the sbuf buffer.");
-  }
+  // }
   // We might need an output buffer and a buffer of silence.
   // The size of these dependents on the number of frames, the size of each frame and the maximum
   // size change

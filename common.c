@@ -1004,3 +1004,71 @@ int ss_pthread_mutex_timedlock(pthread_mutex_t *mutex, useconds_t dally_time,
   }
   return r;
 }
+
+char *get_version_string() {
+  char *version_string = malloc(200);
+  if (version_string) {
+    strcpy(version_string, PACKAGE_VERSION);
+#ifdef HAVE_LIBMBEDTLS
+    strcat(version_string, "-mbedTLS");
+#endif
+#ifdef HAVE_LIBPOLARSSL
+    strcat(version_string, "-PolarSSL");
+#endif
+#ifdef HAVE_LIBSSL
+    strcat(version_string, "-OpenSSL");
+#endif
+#ifdef CONFIG_TINYSVCMDNS
+    strcat(version_string, "-tinysvcmdns");
+#endif
+#ifdef CONFIG_AVAHI
+    strcat(version_string, "-Avahi");
+#endif
+#ifdef CONFIG_DNS_SD
+    strcat(version_string, "-dns_sd");
+#endif
+#ifdef CONFIG_ALSA
+    strcat(version_string, "-ALSA");
+#endif
+#ifdef CONFIG_SNDIO
+    strcat(version_string, "-sndio");
+#endif
+#ifdef CONFIG_AO
+    strcat(version_string, "-ao");
+#endif
+#ifdef CONFIG_PA
+    strcat(version_string, "-pa");
+#endif
+#ifdef CONFIG_SOUNDIO
+    strcat(version_string, "-soundio");
+#endif
+#ifdef CONFIG_DUMMY
+    strcat(version_string, "-dummy");
+#endif
+#ifdef CONFIG_STDOUT
+    strcat(version_string, "-stdout");
+#endif
+#ifdef CONFIG_PIPE
+    strcat(version_string, "-pipe");
+#endif
+#ifdef HAVE_LIBSOXR
+    strcat(version_string, "-soxr");
+#endif
+#ifdef CONFIG_CONVOLUTION
+    strcat(version_string, "-convolution");
+#endif
+#ifdef CONFIG_METADATA
+    strcat(version_string, "-metadata");
+#endif
+#ifdef HAVE_DBUS
+    strcat(version_string, "-dbus");
+#endif
+#ifdef HAVE_MPRIS
+    strcat(version_string, "-mpris");
+#endif
+    strcat(version_string, "-sysconfdir:");
+    strcat(version_string, SYSCONFDIR);
+  }
+  return version_string;
+}
+

@@ -340,6 +340,16 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
     pthread_mutex_unlock(&dacp_server_information_lock);
     // debug(1, "DACP Server ID \"%u\" at \"%s:%u\", scan %d.", dacp_server.active_remote_id,
     //      dacp_server.ip_string, dacp_server.port, scan_index);
+
+    int adv = (result == 200);
+    // a result of 200 means the advanced features of, e.g., iTunes, are available
+    // so, turn the advanced_dacp_server flag on or off and flag if it's changed.
+    metadata_hub_modify_prolog();
+    int diff = metadata_store.advanced_dacp_server_active != adv;
+    if (diff)
+      metadata_store.advanced_dacp_server_active = adv;
+    metadata_hub_modify_epilog(diff);
+    
     if (result == 200) {
       ssize_t le;
       char *response = NULL;
