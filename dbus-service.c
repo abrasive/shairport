@@ -20,13 +20,9 @@ ShairportSyncRemoteControl *shairportSyncRemoteControlSkeleton;
 ShairportSyncAdvancedRemoteControl *shairportSyncAdvancedRemoteControlSkeleton;
 
 void dbus_metadata_watcher(struct metadata_bundle *argc, __attribute__((unused)) void *userdata) {
-  // debug(1, "DBUS metadata watcher called");
+
   shairport_sync_advanced_remote_control_set_volume(shairportSyncAdvancedRemoteControlSkeleton,
                                                     argc->speaker_volume);
-
-  // debug(1, "No diagnostics watcher required");
-
-  // debug(1, "DBUS remote control watcher called");
 
   shairport_sync_remote_control_set_airplay_volume(shairportSyncRemoteControlSkeleton,
                                                    argc->airplay_volume);
@@ -45,6 +41,81 @@ void dbus_metadata_watcher(struct metadata_bundle *argc, __attribute__((unused))
   } else {
     shairport_sync_advanced_remote_control_set_available(shairportSyncAdvancedRemoteControlSkeleton,
                                                          FALSE);
+  }
+
+  switch (argc->player_state) {
+  case PS_NOT_AVAILABLE:
+    shairport_sync_remote_control_set_player_state(shairportSyncRemoteControlSkeleton,
+                                                   "Not Available");
+  case PS_STOPPED:
+    shairport_sync_remote_control_set_player_state(shairportSyncRemoteControlSkeleton, "Stopped");
+    break;
+  case PS_PAUSED:
+    shairport_sync_remote_control_set_player_state(shairportSyncRemoteControlSkeleton, "Paused");
+    break;
+  case PS_PLAYING:
+    shairport_sync_remote_control_set_player_state(shairportSyncRemoteControlSkeleton, "Playing");
+    break;
+  default:
+    debug(1, "This should never happen.");
+  }
+
+  switch (argc->play_status) {
+  case PS_NOT_AVAILABLE:
+    shairport_sync_advanced_remote_control_set_playback_status(
+        shairportSyncAdvancedRemoteControlSkeleton, "Not Available");
+  case PS_STOPPED:
+    shairport_sync_advanced_remote_control_set_playback_status(
+        shairportSyncAdvancedRemoteControlSkeleton, "Stopped");
+    break;
+  case PS_PAUSED:
+    shairport_sync_advanced_remote_control_set_playback_status(
+        shairportSyncAdvancedRemoteControlSkeleton, "Paused");
+    break;
+  case PS_PLAYING:
+    shairport_sync_advanced_remote_control_set_playback_status(
+        shairportSyncAdvancedRemoteControlSkeleton, "Playing");
+    break;
+  default:
+    debug(1, "This should never happen.");
+  }
+
+  switch (argc->repeat_status) {
+  case RS_NOT_AVAILABLE:
+    shairport_sync_advanced_remote_control_set_loop_status(
+        shairportSyncAdvancedRemoteControlSkeleton, "Not Available");
+    break;
+  case RS_OFF:
+    shairport_sync_advanced_remote_control_set_loop_status(
+        shairportSyncAdvancedRemoteControlSkeleton, "Off");
+    break;
+  case RS_ONE:
+    shairport_sync_advanced_remote_control_set_loop_status(
+        shairportSyncAdvancedRemoteControlSkeleton, "One");
+    break;
+  case RS_ALL:
+    shairport_sync_advanced_remote_control_set_loop_status(
+        shairportSyncAdvancedRemoteControlSkeleton, "All");
+    break;
+  default:
+    debug(1, "This should never happen.");
+  }
+
+  switch (argc->shuffle_status) {
+  case SS_NOT_AVAILABLE:
+    shairport_sync_advanced_remote_control_set_shuffle(shairportSyncAdvancedRemoteControlSkeleton,
+                                                       FALSE);
+    break;
+  case SS_OFF:
+    shairport_sync_advanced_remote_control_set_shuffle(shairportSyncAdvancedRemoteControlSkeleton,
+                                                       FALSE);
+    break;
+  case SS_ON:
+    shairport_sync_advanced_remote_control_set_shuffle(shairportSyncAdvancedRemoteControlSkeleton,
+                                                       TRUE);
+    break;
+  default:
+    debug(1, "This should never happen.");
   }
 
   GVariantBuilder *dict_builder, *aa;
@@ -276,6 +347,7 @@ gboolean notify_verbosity_callback(ShairportSyncDiagnostics *skeleton,
     debug(1, ">> log verbosity set to %d.", th);
   } else {
     debug(1, ">> invalid log verbosity: %d. Ignored.", th);
+    shairport_sync_diagnostics_set_verbosity(skeleton, debuglev);
   }
   return TRUE;
 }
@@ -301,6 +373,7 @@ gboolean notify_loudness_threshold_callback(ShairportSync *skeleton,
     config.loudness_reference_volume_db = th;
   } else {
     debug(1, "Invalid loudness threshhold: %f. Ignored.", th);
+    shairport_sync_set_loudness_threshold(skeleton, config.loudness_reference_volume_db);
   }
   return TRUE;
 }
@@ -313,17 +386,25 @@ gboolean notify_alacdecoder_callback(ShairportSync *skeleton,
     config.use_apple_decoder = 0;
   else if (strcasecmp(th, "apple") == 0)
     config.use_apple_decoder = 1;
-  else
-    warn("Unrecognised ALAC decoder: \"%s\".", th);
+  else {
+    warn("An unrecognised ALAC decoder: \"%s\" was requested via D-Bus interface.", th);
+    if (config.use_apple_decoder == 0)
+      shairport_sync_set_alacdecoder(skeleton, "hammerton");
+    else
+      shairport_sync_set_alacdecoder(skeleton, "apple");
+  }
 // debug(1,"Using the %s ALAC decoder.", ((config.use_apple_decoder==0) ? "Hammerton" : "Apple"));
 #else
   if (strcasecmp(th, "hammerton") == 0) {
     config.use_apple_decoder = 0;
     // debug(1,"Using the Hammerton ALAC decoder.");
-  } else
-    warn("Unrecognised ALAC decoder: \"%s\" (or else support for this decoder was not compiled "
-         "into this version of Shairport Sync).",
+  } else {
+    warn("An unrecognised ALAC decoder: \"%s\" was requested via D-Bus interface. (Possibly "
+         "support for this decoder was not compiled "
+         "into this version of Shairport Sync.)",
          th);
+    shairport_sync_set_alacdecoder(skeleton, "hammerton");
+  }
 #endif
   return TRUE;
 }
@@ -336,35 +417,106 @@ gboolean notify_interpolation_callback(ShairportSync *skeleton,
     config.packet_stuffing = ST_basic;
   else if (strcasecmp(th, "soxr") == 0)
     config.packet_stuffing = ST_soxr;
-  else
-    warn("Unrecognised interpolation: \"%s\".", th);
+  else {
+    warn("An unrecognised interpolation method: \"%s\" was requested via the D-Bus interface.", th);
+    switch (config.packet_stuffing) {
+    case ST_basic:
+      shairport_sync_set_interpolation(skeleton, "basic");
+      break;
+    case ST_soxr:
+      shairport_sync_set_interpolation(skeleton, "soxr");
+      break;
+    default:
+      debug(1, "This should never happen!");
+      shairport_sync_set_interpolation(skeleton, "basic");
+      break;
+    }
+  }
 #else
   if (strcasecmp(th, "basic") == 0)
     config.packet_stuffing = ST_basic;
-}
-else warn("Unrecognised interpolation method: \"%s\" (or else support for this interolation method "
-          "was not compiled into this version of Shairport Sync).",
-          th);
+  else {
+    warn("An unrecognised interpolation method: \"%s\" was requested via the D-Bus interface. "
+         "(Possibly support for this method was not compiled "
+         "into this version of Shairport Sync.)",
+         th);
+    shairport_sync_set_interpolation(skeleton, "basic");
+  }
 #endif
-  debug(1, "Using %s interpolation (aka \"stuffing\").",
-        ((config.packet_stuffing == ST_basic) ? "basic" : "soxr"));
   return TRUE;
 }
 
 gboolean notify_volume_control_profile_callback(ShairportSync *skeleton,
                                                 __attribute__((unused)) gpointer user_data) {
   char *th = (char *)shairport_sync_get_volume_control_profile(skeleton);
-  enum volume_control_profile_type previous_volume_control_profile = config.volume_control_profile;
+  //  enum volume_control_profile_type previous_volume_control_profile =
+  //  config.volume_control_profile;
   if (strcasecmp(th, "standard") == 0)
     config.volume_control_profile = VCP_standard;
   else if (strcasecmp(th, "flat") == 0)
     config.volume_control_profile = VCP_flat;
-  else
+  else {
     warn("Unrecognised Volume Control Profile: \"%s\".", th);
-  debug(1, "Using the %s Volume Control Profile.",
-        ((config.volume_control_profile == VCP_standard) ? "Standard" : "Flat"));
-  if (previous_volume_control_profile != config.volume_control_profile)
-    debug(1, "Should really reset volume now, maybe?");
+    switch (config.volume_control_profile) {
+    case VCP_standard:
+      shairport_sync_set_volume_control_profile(skeleton, "standard");
+      break;
+    case VCP_flat:
+      shairport_sync_set_volume_control_profile(skeleton, "flat");
+      break;
+    default:
+      debug(1, "This should never happen!");
+      shairport_sync_set_volume_control_profile(skeleton, "standard");
+      break;
+    }
+  }
+  return TRUE;
+}
+
+gboolean notify_shuffle_callback(ShairportSyncAdvancedRemoteControl *skeleton,
+                                 __attribute__((unused)) gpointer user_data) {
+  // debug(1,"notify_shuffle_callback called");
+  if (shairport_sync_advanced_remote_control_get_shuffle(skeleton))
+    send_simple_dacp_command("setproperty?dacp.shufflestate=1");
+  else
+    send_simple_dacp_command("setproperty?dacp.shufflestate=0");
+  ;
+  return TRUE;
+}
+
+gboolean notify_loop_status_callback(ShairportSyncAdvancedRemoteControl *skeleton,
+                                     __attribute__((unused)) gpointer user_data) {
+  // debug(1,"notify_loop_status_callback called");
+  char *th = (char *)shairport_sync_advanced_remote_control_get_loop_status(skeleton);
+  //  enum volume_control_profile_type previous_volume_control_profile =
+  //  config.volume_control_profile;
+  if (strcasecmp(th, "off") == 0)
+    send_simple_dacp_command("setproperty?dacp.repeatstate=0");
+  else if (strcasecmp(th, "one") == 0)
+    send_simple_dacp_command("setproperty?dacp.repeatstate=1");
+  else if (strcasecmp(th, "all") == 0)
+    send_simple_dacp_command("setproperty?dacp.repeatstate=2");
+  else if (strcasecmp(th, "not available") != 0) {
+    warn("Illegal Loop Request: \"%s\".", th);
+    switch (metadata_store.repeat_status) {
+    case RS_NOT_AVAILABLE:
+      shairport_sync_advanced_remote_control_set_loop_status(skeleton, "Not Available");
+      break;
+    case RS_OFF:
+      shairport_sync_advanced_remote_control_set_loop_status(skeleton, "Off");
+      break;
+    case RS_ONE:
+      shairport_sync_advanced_remote_control_set_loop_status(skeleton, "One");
+      break;
+    case RS_ALL:
+      shairport_sync_advanced_remote_control_set_loop_status(skeleton, "All");
+      break;
+    default:
+      debug(1, "This should never happen!");
+      shairport_sync_advanced_remote_control_set_loop_status(skeleton, "Off");
+      break;
+    }
+  }
   return TRUE;
 }
 
@@ -457,6 +609,12 @@ static void on_dbus_name_acquired(GDBusConnection *connection, const gchar *name
   g_signal_connect(shairportSyncAdvancedRemoteControlSkeleton, "handle-set-volume",
                    G_CALLBACK(on_handle_set_volume), NULL);
 
+  g_signal_connect(shairportSyncAdvancedRemoteControlSkeleton, "notify::shuffle",
+                   G_CALLBACK(notify_shuffle_callback), NULL);
+
+  g_signal_connect(shairportSyncAdvancedRemoteControlSkeleton, "notify::loop-status",
+                   G_CALLBACK(notify_loop_status_callback), NULL);
+
   add_metadata_watcher(dbus_metadata_watcher, NULL);
 
   shairport_sync_set_loudness_threshold(SHAIRPORT_SYNC(shairportSyncSkeleton),
@@ -531,6 +689,11 @@ static void on_dbus_name_acquired(GDBusConnection *connection, const gchar *name
         SHAIRPORT_SYNC_DIAGNOSTICS(shairportSyncDiagnosticsSkeleton), TRUE);
     // debug(1, ">> delta time is not included in log entries");
   }
+
+  shairport_sync_remote_control_set_player_state(shairportSyncRemoteControlSkeleton,
+                                                 "Not Available");
+  shairport_sync_advanced_remote_control_set_playback_status(
+      shairportSyncAdvancedRemoteControlSkeleton, "Not Available");
 
   debug(1, "Shairport Sync native D-Bus service started at \"%s\" on the %s bus.", name,
         (config.dbus_service_bus_type == DBT_session) ? "session" : "system");

@@ -7,8 +7,7 @@
 GMainLoop *loop;
 
 void on_properties_changed(__attribute__((unused)) GDBusProxy *proxy, GVariant *changed_properties,
-                           const gchar *const *invalidated_properties,
-                           __attribute__((unused)) gpointer user_data) {
+                           const gchar *const *invalidated_properties, gpointer user_data) {
   /* Note that we are guaranteed that changed_properties and
    * invalidated_properties are never NULL
    */
@@ -17,13 +16,15 @@ void on_properties_changed(__attribute__((unused)) GDBusProxy *proxy, GVariant *
     GVariantIter *iter;
     const gchar *key;
     GVariant *value;
-
     g_print(" *** Properties Changed:\n");
     g_variant_get(changed_properties, "a{sv}", &iter);
     while (g_variant_iter_loop(iter, "{&sv}", &key, &value)) {
       gchar *value_str;
       value_str = g_variant_print(value, TRUE);
-      g_print("      %s -> %s\n", key, value_str);
+      if (user_data)
+        g_print("      %s.%s -> %s\n", (char *)user_data, key, value_str);
+      else
+        g_print("      %s -> %s\n", key, value_str);
       g_free(value_str);
     }
     g_variant_iter_free(iter);
@@ -116,20 +117,20 @@ int main(int argc, char *argv[]) {
 
   pthread_create(&dbus_thread, NULL, &dbus_thread_func, NULL);
 
-  ShairportSyncAdvancedRemoteControl *proxy;
+  ShairportSync *proxy;
   GError *error = NULL;
 
-  proxy = shairport_sync_advanced_remote_control_proxy_new_for_bus_sync(
-      gbus_type_selected, G_DBUS_PROXY_FLAGS_NONE, "org.gnome.ShairportSync",
-      "/org/gnome/ShairportSync", NULL, &error);
+  proxy = shairport_sync_proxy_new_for_bus_sync(gbus_type_selected, G_DBUS_PROXY_FLAGS_NONE,
+                                                "org.gnome.ShairportSync",
+                                                "/org/gnome/ShairportSync", NULL, &error);
 
   // g_signal_connect(proxy, "notify::loudness-filter-active",
   // G_CALLBACK(notify_loudness_filter_active_callback), NULL);
 
-  g_signal_connect(proxy, "g-properties-changed", G_CALLBACK(on_properties_changed), NULL);
+  g_signal_connect(proxy, "g-properties-changed", G_CALLBACK(on_properties_changed),
+                   "ShairportSync");
   g_signal_connect(proxy, "notify::loudness-threshold",
-                   G_CALLBACK(notify_loudness_threshold_callback), NULL);
-  g_signal_connect(proxy, "notify::volume", G_CALLBACK(notify_volume_callback), NULL);
+                   G_CALLBACK(notify_loudness_threshold_callback), "ShairportSync");
 
   // Now, add notification of changes in diagnostics
 
@@ -138,7 +139,8 @@ int main(int argc, char *argv[]) {
   proxy2 = shairport_sync_diagnostics_proxy_new_for_bus_sync(
       gbus_type_selected, G_DBUS_PROXY_FLAGS_NONE, "org.gnome.ShairportSync",
       "/org/gnome/ShairportSync", NULL, &error2);
-  g_signal_connect(proxy2, "g-properties-changed", G_CALLBACK(on_properties_changed), NULL);
+  g_signal_connect(proxy2, "g-properties-changed", G_CALLBACK(on_properties_changed),
+                   "ShairportSync.Diagnostics");
 
   // Now, add notification of changes in remote control
 
@@ -147,21 +149,32 @@ int main(int argc, char *argv[]) {
   proxy3 = shairport_sync_remote_control_proxy_new_for_bus_sync(
       gbus_type_selected, G_DBUS_PROXY_FLAGS_NONE, "org.gnome.ShairportSync",
       "/org/gnome/ShairportSync", NULL, &error3);
-  g_signal_connect(proxy3, "g-properties-changed", G_CALLBACK(on_properties_changed), NULL);
+  g_signal_connect(proxy3, "g-properties-changed", G_CALLBACK(on_properties_changed),
+                   "ShairportSync.RemoteControl");
+
+  ShairportSyncAdvancedRemoteControl *proxy4;
+  GError *error4 = NULL;
+  proxy4 = shairport_sync_advanced_remote_control_proxy_new_for_bus_sync(
+      gbus_type_selected, G_DBUS_PROXY_FLAGS_NONE, "org.gnome.ShairportSync",
+      "/org/gnome/ShairportSync", NULL, &error4);
+  g_signal_connect(proxy4, "g-properties-changed", G_CALLBACK(on_properties_changed),
+                   "ShairportSync.AdvancedRemoteControl");
+  g_signal_connect(proxy4, "notify::volume", G_CALLBACK(notify_volume_callback),
+                   "ShairportSync.AdvancedRemoteControl");
 
   g_print("Starting test...\n");
 
   shairport_sync_advanced_remote_control_call_set_volume(
-      SHAIRPORT_SYNC_ADVANCED_REMOTE_CONTROL(proxy), 20, NULL, NULL, 0);
+      SHAIRPORT_SYNC_ADVANCED_REMOTE_CONTROL(proxy4), 20, NULL, NULL, 0);
   sleep(5);
   shairport_sync_advanced_remote_control_call_set_volume(
-      SHAIRPORT_SYNC_ADVANCED_REMOTE_CONTROL(proxy), 100, NULL, NULL, 0);
+      SHAIRPORT_SYNC_ADVANCED_REMOTE_CONTROL(proxy4), 100, NULL, NULL, 0);
   sleep(5);
   shairport_sync_advanced_remote_control_call_set_volume(
-      SHAIRPORT_SYNC_ADVANCED_REMOTE_CONTROL(proxy), 40, NULL, NULL, 0);
+      SHAIRPORT_SYNC_ADVANCED_REMOTE_CONTROL(proxy4), 40, NULL, NULL, 0);
   sleep(5);
   shairport_sync_advanced_remote_control_call_set_volume(
-      SHAIRPORT_SYNC_ADVANCED_REMOTE_CONTROL(proxy), 60, NULL, NULL, 0);
+      SHAIRPORT_SYNC_ADVANCED_REMOTE_CONTROL(proxy4), 60, NULL, NULL, 0);
   /*
   // sleep(1);
     shairport_sync_set_loudness_filter_active(SHAIRPORT_SYNC(proxy), TRUE);

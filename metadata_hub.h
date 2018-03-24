@@ -6,19 +6,22 @@
 #define number_of_watchers 2
 
 enum play_status_type {
-  PS_STOPPED = 0,
+  PS_NOT_AVAILABLE = 0,
+  PS_STOPPED,
   PS_PAUSED,
   PS_PLAYING,
 } play_status_type;
 
 enum shuffle_status_type {
-  SS_OFF = 0,
+  SS_NOT_AVAILABLE = 0,
+  SS_OFF,
   SS_ON,
 } shuffle_status_type;
 
 enum repeat_status_type {
-  RS_NONE = 0,
-  RS_SINGLE,
+  RS_NOT_AVAILABLE = 0,
+  RS_OFF,
+  RS_ONE,
   RS_ALL,
 } repeat_status_type;
 

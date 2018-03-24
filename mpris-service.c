@@ -19,10 +19,13 @@ void mpris_metadata_watcher(struct metadata_bundle *argc, __attribute__((unused)
   char response[100];
 
   switch (argc->repeat_status) {
-  case RS_NONE:
+  case RS_NOT_AVAILABLE:
+    strcpy(response, "Not Available");
+    break;
+  case RS_OFF:
     strcpy(response, "None");
     break;
-  case RS_SINGLE:
+  case RS_ONE:
     strcpy(response, "Track");
     break;
   case RS_ALL:
@@ -30,10 +33,12 @@ void mpris_metadata_watcher(struct metadata_bundle *argc, __attribute__((unused)
     break;
   }
 
-  // debug(1,"Set loop status to \"%s\"",response);
   media_player2_player_set_loop_status(mprisPlayerPlayerSkeleton, response);
 
   switch (argc->player_state) {
+  case PS_NOT_AVAILABLE:
+    strcpy(response, "Not Available");
+    break;
   case PS_STOPPED:
     strcpy(response, "Stopped");
     break;
@@ -45,8 +50,37 @@ void mpris_metadata_watcher(struct metadata_bundle *argc, __attribute__((unused)
     break;
   }
 
-  // debug(1,"From player_state, set playback status to \"%s\"",response);
   media_player2_player_set_playback_status(mprisPlayerPlayerSkeleton, response);
+
+  /*
+    switch (argc->shuffle_state) {
+    case SS_NOT_AVAILABLE:
+      strcpy(response, "Not Available");
+      break;
+    case SS_OFF:
+      strcpy(response, "Off");
+      break;
+    case SS_ON:
+      strcpy(response, "On");
+      break;
+    }
+
+     media_player2_player_set_shuffle_status(mprisPlayerPlayerSkeleton, response);
+  */
+
+  switch (argc->shuffle_status) {
+  case SS_NOT_AVAILABLE:
+    media_player2_player_set_shuffle(mprisPlayerPlayerSkeleton, FALSE);
+    break;
+  case SS_OFF:
+    media_player2_player_set_shuffle(mprisPlayerPlayerSkeleton, FALSE);
+    break;
+  case SS_ON:
+    media_player2_player_set_shuffle(mprisPlayerPlayerSkeleton, TRUE);
+    break;
+  default:
+    debug(1, "This should never happen.");
+  }
 
   GVariantBuilder *dict_builder, *aa;
 

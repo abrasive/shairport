@@ -455,6 +455,8 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
         metadata_hub_modify_epilog(1);
       }
       break;
+    // these could tell us about play / pause etc. but will only occur if metadata is enabled, so
+    // we'll just ignore them
     case 'pbeg':
     case 'pend':
     case 'pfls':

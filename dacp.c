@@ -328,7 +328,8 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
       pthread_cond_wait(&dacp_server_information_cv, &dacp_server_information_lock);
     }
     scan_index++;
-    result = dacp_get_volume(NULL); // just want the http code
+    int32_t the_volume;
+    result = dacp_get_volume(&the_volume); // just want the http code
     if ((result == 496) || (result == 403) || (result == 501)) {
       // debug(1,"Stopping scan because the response to \"dacp_get_volume(NULL)\" is %d.",result);
       dacp_server.scan_enable = 0;
@@ -351,6 +352,13 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
     metadata_hub_modify_epilog(diff);
 
     if (result == 200) {
+
+      metadata_hub_modify_prolog();
+      int diff = metadata_store.speaker_volume != the_volume;
+      if (diff)
+        metadata_store.speaker_volume = the_volume;
+      metadata_hub_modify_epilog(diff);
+
       ssize_t le;
       char *response = NULL;
       int32_t item_size;
@@ -360,17 +368,17 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
       // debug(1,"Command: \"%s\"",command);
       result = dacp_send_command(command, &response, &le);
       // debug(1,"Response to \"%s\" is %d.",command,result);
-      //      if (result == 200) {
-      if (0) {
+      if (result == 200) {
+        // if (0) {
         char *sp = response;
         if (le >= 8) {
           // here start looking for the contents of the status update
           if (dacp_tlv_crawl(&sp, &item_size) == 'cmst') { // status
             // here, we know that we are receiving playerstatusupdates, so set a flag
             metadata_hub_modify_prolog();
-            debug(1, "playstatusupdate release track metadata");
-            metadata_hub_reset_track_metadata();
-            metadata_store.playerstatusupdates_are_received = 1;
+            // debug(1, "playstatusupdate release track metadata");
+            // metadata_hub_reset_track_metadata();
+            // metadata_store.playerstatusupdates_are_received = 1;
             sp -= item_size; // drop down into the array -- don't skip over it
             le -= 8;
             // char typestring[5];
@@ -454,18 +462,18 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
                 r = *(unsigned char *)(t);
                 switch (r) {
                 case 0:
-                  if (metadata_store.repeat_status != RS_NONE) {
-                    metadata_store.repeat_status = RS_NONE;
+                  if (metadata_store.repeat_status != RS_OFF) {
+                    metadata_store.repeat_status = RS_OFF;
                     metadata_store.repeat_status_changed = 1;
                     debug(1, "Repeat status changed to \"none\".");
                     metadata_store.changed = 1;
                   }
                   break;
                 case 1:
-                  if (metadata_store.repeat_status != RS_SINGLE) {
-                    metadata_store.repeat_status = RS_SINGLE;
+                  if (metadata_store.repeat_status != RS_ONE) {
+                    metadata_store.repeat_status = RS_ONE;
                     metadata_store.repeat_status_changed = 1;
-                    debug(1, "Repeat status changed to \"single\".");
+                    debug(1, "Repeat status changed to \"one\".");
                     metadata_store.changed = 1;
                   }
                   break;
@@ -482,6 +490,7 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
                   break;
                 }
                 break;
+              /*
               case 'cann': // track name
                 t = sp - item_size;
                 if ((metadata_store.track_name == NULL) ||
@@ -551,6 +560,7 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
                   metadata_store.changed = 1;
                 }
                 break;
+              */
               case 'astm':
                 t = sp - item_size;
                 r = ntohl(*(uint32_t *)(t));

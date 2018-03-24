@@ -18,7 +18,7 @@
     <property name="ElapsedTime" type="b" access="readwrite" />
     <property name="DeltaTime" type="b" access="readwrite" />
   </interface>
-  <interface name="org.gnome.ShairportSync.Remote.Control">
+  <interface name="org.gnome.ShairportSync.RemoteControl">
 		<method name='FastForward'/>
 		<method name='Rewind'/>
 		<method name='ToggleMute'/>
@@ -32,7 +32,7 @@
 		<method name='ShuffleSongs'/>
 		<method name='VolumeUp'/>
 		<method name='VolumeDown'/>
-		<property name='PlaybackStatus' type='s' access='read'/>
+		<property name='PlayerState' type='s' access='read'/>
 		<property name='Server' type='s' access='read'/>
 		<property name='AirplayVolume' type='d' access='read'/>
 		<property name='Metadata' type='a{sv}' access='read'>
@@ -40,9 +40,11 @@
 		</property>
 		<property name='Available' type='b' access='read'/>
   </interface>
-  <interface name="org.gnome.ShairportSync.Advanced.Remote.Control">
+  <interface name="org.gnome.ShairportSync.AdvancedRemoteControl">
 		<property name='Available' type='b' access='read'/>
 		<property name='PlaybackStatus' type='s' access='read'/>
+		<property name='Shuffle' type='b' access='readwrite'/>
+		<property name='LoopStatus' type='s' access='readwrite'/>
     <property name="Volume" type="i" access="read" />
     <method name="SetVolume">
       <arg name="volume" type="i" direction="in" />

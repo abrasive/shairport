@@ -829,8 +829,9 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
 // say we have started playing here
 #ifdef HAVE_METADATA_HUB
             metadata_hub_modify_prolog();
+            int changed = (metadata_store.player_state != PS_PLAYING);
             metadata_store.player_state = PS_PLAYING;
-            metadata_hub_modify_epilog(1);
+            metadata_hub_modify_epilog(changed);
 #endif
             if (reference_timestamp) { // if we have a reference time
               // debug(1,"First frame seen with timestamp...");
@@ -1064,8 +1065,9 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
 #endif
 #ifdef HAVE_METADATA_HUB
             metadata_hub_modify_prolog();
+            int changed = (metadata_store.player_state != PS_PLAYING);
             metadata_store.player_state = PS_PLAYING;
-            metadata_hub_modify_epilog(1);
+            metadata_hub_modify_epilog(changed);
 #endif
           }
         }
@@ -1659,7 +1661,7 @@ static void *player_thread_func(void *arg) {
 
   player_volume(config.airplay_volume, conn);
   int64_t frames_to_drop = 0;
-  debug(1, "Play begin");
+  // debug(1, "Play begin");
   if (play_number % 100 == 0)
     debug(3, "Play frame %d.", play_number);
   while (!conn->player_thread_please_stop) {
@@ -2551,8 +2553,9 @@ void player_flush(int64_t timestamp, rtsp_conn_info *conn) {
 
 #ifdef HAVE_METADATA_HUB
   metadata_hub_modify_prolog();
+  int changed = (metadata_store.player_state != PS_PAUSED);
   metadata_store.player_state = PS_PAUSED;
-  metadata_hub_modify_epilog(1);
+  metadata_hub_modify_epilog(changed);
 #endif
 }
 
@@ -2581,8 +2584,9 @@ int player_play(rtsp_conn_info *conn) {
   pthread_attr_destroy(&tattr);
 #ifdef HAVE_METADATA_HUB
   metadata_hub_modify_prolog();
+  int changed = (metadata_store.player_state != PS_PLAYING);
   metadata_store.player_state = PS_PLAYING;
-  metadata_hub_modify_epilog(1);
+  metadata_hub_modify_epilog(changed);
 #endif
   return 0;
 }
