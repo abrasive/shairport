@@ -27,7 +27,7 @@ $ touch ssh
 ```
 dtoverlay=hifiberry-dac
 ```
-* Next, some modifications need to be done to the `rootfs` drive to make the Pi connect to your main WiFi network. (This is a temporary measure to enable you to connect the Pi to your main network so that you can do all the software installation and updating of the software necessary. Later, the Pi will be configured to start its own isolated network.) Edit the file `/etc/wpa_supplicant/wpa_supplicant.conf` (you'll need root privileges) and add the name and password of your main WiFi network (substitute your own network name and password in, but keep the quotation marks):
+* Next, some modifications need to be done to the `rootfs` drive to make the Pi connect to your main WiFi network. (This is a temporary measure to enable you to connect the Pi to your main network so that you can do all the software installation and updating of the software necessary. Later, the Pi will be configured to start its own isolated network.) On the `rootfs` drive, edit the file `etc/wpa_supplicant/wpa_supplicant.conf` (you'll need root privileges) and add the name and password of your main WiFi network (substitute your own network name and password in, but keep the quotation marks):
 ```
 network={
     ssid="Network Name"
