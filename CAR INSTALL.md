@@ -157,12 +157,6 @@ Second, modify the INTERFACESv4 entry at the end of the file `/etc/default/isc-d
 INTERFACESv4="wlan0"
 INTERFACESv6=""
 ```
-Third, allow `wlan0` to be configured with a static IP number by removing it from the control of the `dhcpcp` service. Edit `/etc/dhcpcd.conf` and insert the following line at the start:
-```
-denyinterfaces wlan0
-```
-(Note that from this point on, at least on the Raspberry Pi, if you reboot the machine, it will not reconnect to your network.)
-
 ### Set up the Startup Sequence
 Configure the startup sequence by adding commands to `/etc/rc.local` to start `hostapd` and the `dhcp` server and then to start `shairport-sync` automatically after startup. Its contents should look like this:
 ```
@@ -179,12 +173,6 @@ Configure the startup sequence by adding commands to `/etc/rc.local` to start `h
 #
 # By default this script does nothing.
 
-# Print the IP address
-_IP=$(hostname -I) || true
-if [ "$_IP" ]; then
-  printf "My IP address is %s\n" "$_IP"
-fi
-
 /sbin/iw dev wlan0 set power_save off
 /usr/sbin/hostapd -B -P /run/hostapd.pid /etc/hostapd/hostapd.conf
 /sbin/ip addr add 10.0.10.1/24 dev wlan0
@@ -196,6 +184,13 @@ fi
 exit 0
 ```
 As you can see, the effect of these commands is to start the WiFi transmitter, give the base station the IP address `10.0.10.1`, start a DHCP server and finally start the Shairport Sync service.
+
+### Final Steps
+Up to now, if you reboot the Pi, it will connect to your WiFi network, ignoring the instruction to act as a base station. That is because the `wlan0` interface is still under the control of the `dhcpcd` service. So, the final step is to instruct the `dhcpcd` service not to manage `wlan0`. To do this, edit `/etc/dhcpcd.conf` and insert the following line at the start:
+```
+denyinterfaces wlan0
+```
+From this point on, at least on the Raspberry Pi, if you reboot the machine, it will not reconnect to your network – instead, it will act as a WiFi base station.
 
 ### Ready
 Install the Raspberry Pi in your car. It should be powered from a source that is switched off when you leave the car, otherwise the slight current drain will eventually flatten the car's battery.
