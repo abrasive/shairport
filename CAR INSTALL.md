@@ -1,13 +1,13 @@
 # Shairport Sync for Cars
-If your car audio has an AUX input, you can get AirPlay in your car using Shairport Sync. Together, Shairport Sync and an iPhone can give you access to internet radio, YouTube, Apple Music, Spotify, etc. on the move. While Shairport Sync is not a substitute for CarPlay, the audio quality is often much better than Bluetooth. Your passengers can enjoy movies while listening to the sound track on the car audio. You can even listen to Siri's traffic directions on your car audio. 
+If your car audio has an AUX input, you can get AirPlay in your car using Shairport Sync. Together, Shairport Sync and an iPhone can give you access to internet radio, YouTube, Apple Music, Spotify, etc. on the move. While Shairport Sync is  no substitute for CarPlay, the audio quality is often much better than Bluetooth. Your passengers can enjoy movies with the sound track on the car's speakers. You can even listen to Siri's traffic directions on your car audio. 
 
 ## The Basic Idea
 
-The basic idea is to use a small Linux computer to create an isolated WiFi network for the car and to run Shairport Sync on it to provide an AirPlay service. The audio goes via a DAC to the AUX input of your car stereo.
+The basic idea is to use a small Linux computer to create an isolated WiFi network for the car and to run Shairport Sync on it to provide an AirPlay service. The audio goes via a DAC to the AUX input of your car audio system.
 
-The car WiFi network is isolated and local to your car, and since it isn't connected to the Internet, you don't really need to secure it with a password. Likewise, you don't really have to use a password to connect to the AirPlay service.
+The car WiFi network you create is isolated and local to your car, and since it isn't connected to the Internet, you don't really need to secure it with a password. Likewise, you don't really have to use a password to connect to the AirPlay service.
 
-When an iPhone or an iPad with cellular capability is connected to an isolated WiFi network like this, it can use the cellular network to connect to the Internet.
+When an iPhone or an iPad with cellular capability is connected to an isolated WiFi network like this, it can use its cellular connection to access the Internet.
 This means it can connect to internet radio, YouTube, Apple Music, Spotify, etc. over the cellular network and play the audio through the car network to the AirPlay service provided by Shairport Sync.
 
 Note that Android devices can not, so far, do this trick of using the two networks simultaneously.
@@ -186,11 +186,11 @@ exit 0
 As you can see, the effect of these commands is to start the WiFi transmitter, give the base station the IP address `10.0.10.1`, start a DHCP server and finally start the Shairport Sync service.
 
 ### Final Steps
-Up to now, if you reboot the Pi, it will reconnect to your WiFi network, ignoring the instruction to act as a base station. That is because the `wlan0` interface is still under the control of the `dhcpcd` service. So, the final step is to instruct the `dhcpcd` service not to manage `wlan0`. To do this, edit `/etc/dhcpcd.conf` and insert the following line at the start:
+Up to now, if you reboot the Pi, it will reconnect to your WiFi network, ignoring the instructions and settings you have given it to act as a base station. That is because the `wlan0` interface is still under the control of the `dhcpcd` service. So, the final step is to instruct the `dhcpcd` service not to manage `wlan0`. To do this, edit `/etc/dhcpcd.conf` and insert the following line at the start:
 ```
 denyinterfaces wlan0
 ```
-From this point on, at least on the Raspberry Pi, if you reboot the machine, it will not reconnect to your network – instead, it will act as a WiFi base station.
+From this point on, at least on the Raspberry Pi, if you reboot the machine, it will not reconnect to your network – instead, it will act as the WiFi base station you have configured with `hostapd` and `isc-dhcp-server`.
 
 ### Ready
 Install the Raspberry Pi in your car. It should be powered from a source that is switched off when you leave the car, otherwise the slight current drain will eventually flatten the car's battery.
