@@ -14,7 +14,7 @@ Note that Android devices can not, so far, do this trick of using the two networ
 
 ## Example
 
-In this example, we are using a Raspberry Pi Zero W and a Pimoroni PHAT DAC. This combination has been tested for well over a year. Please note that some of the details of setting up networks are specific to the version of Linux used. In particular, the treatment of networks is different in Stretch from Jessie.
+In this example, a Raspberry Pi Zero W and a Pimoroni PHAT DAC are used. This combination has been tested for well over a year. Please note that some of the details of setting up networks are specific to the version of Linux used -- Raspbian Stretch.
 
 ### Prepare the initial SD Image
 * Download the latest version of Raspbian Lite -- Stretch Lite of 2018-03-13 at the time of writing -- and install it onto an SD Card.
@@ -186,7 +186,7 @@ exit 0
 As you can see, the effect of these commands is to start the WiFi transmitter, give the base station the IP address `10.0.10.1`, start a DHCP server and finally start the Shairport Sync service.
 
 ### Final Steps
-Up to now, if you reboot the Pi, it will connect to your WiFi network, ignoring the instruction to act as a base station. That is because the `wlan0` interface is still under the control of the `dhcpcd` service. So, the final step is to instruct the `dhcpcd` service not to manage `wlan0`. To do this, edit `/etc/dhcpcd.conf` and insert the following line at the start:
+Up to now, if you reboot the Pi, it will reconnect to your WiFi network, ignoring the instruction to act as a base station. That is because the `wlan0` interface is still under the control of the `dhcpcd` service. So, the final step is to instruct the `dhcpcd` service not to manage `wlan0`. To do this, edit `/etc/dhcpcd.conf` and insert the following line at the start:
 ```
 denyinterfaces wlan0
 ```
