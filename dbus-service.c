@@ -15,184 +15,179 @@
 
 #include "dbus-service.h"
 
-int initialised = 0;
 ShairportSyncDiagnostics *shairportSyncDiagnosticsSkeleton = NULL;
 ShairportSyncRemoteControl *shairportSyncRemoteControlSkeleton = NULL;
 ShairportSyncAdvancedRemoteControl *shairportSyncAdvancedRemoteControlSkeleton = NULL;
 
 void dbus_metadata_watcher(struct metadata_bundle *argc, __attribute__((unused)) void *userdata) {
 	char response[100];
-	if (initialised) {
-		shairport_sync_advanced_remote_control_set_volume(shairportSyncAdvancedRemoteControlSkeleton,
-																											argc->speaker_volume);
 
-		shairport_sync_remote_control_set_airplay_volume(shairportSyncRemoteControlSkeleton,
-																										 argc->airplay_volume);
+	shairport_sync_advanced_remote_control_set_volume(shairportSyncAdvancedRemoteControlSkeleton,
+																										argc->speaker_volume);
 
-		shairport_sync_remote_control_set_server(shairportSyncRemoteControlSkeleton, argc->client_ip);
+	shairport_sync_remote_control_set_airplay_volume(shairportSyncRemoteControlSkeleton,
+																									 argc->airplay_volume);
 
-		if (argc->dacp_server_active) {
-			shairport_sync_remote_control_set_available(shairportSyncRemoteControlSkeleton, TRUE);
-		} else {
-			shairport_sync_remote_control_set_available(shairportSyncRemoteControlSkeleton, FALSE);
-		}
+	shairport_sync_remote_control_set_server(shairportSyncRemoteControlSkeleton, argc->client_ip);
 
-		if (argc->advanced_dacp_server_active) {
-			shairport_sync_advanced_remote_control_set_available(shairportSyncAdvancedRemoteControlSkeleton,
-																													 TRUE);
-		} else {
-			shairport_sync_advanced_remote_control_set_available(shairportSyncAdvancedRemoteControlSkeleton,
-																													 FALSE);
-		}
+	if (argc->dacp_server_active) {
+		shairport_sync_remote_control_set_available(shairportSyncRemoteControlSkeleton, TRUE);
+	} else {
+		shairport_sync_remote_control_set_available(shairportSyncRemoteControlSkeleton, FALSE);
+	}
 
-		switch (argc->player_state) {
-		case PS_NOT_AVAILABLE:
-			shairport_sync_remote_control_set_player_state(shairportSyncRemoteControlSkeleton,
-																										 "Not Available");
-		case PS_STOPPED:
-			shairport_sync_remote_control_set_player_state(shairportSyncRemoteControlSkeleton, "Stopped");
-			break;
-		case PS_PAUSED:
-			shairport_sync_remote_control_set_player_state(shairportSyncRemoteControlSkeleton, "Paused");
-			break;
-		case PS_PLAYING:
-			shairport_sync_remote_control_set_player_state(shairportSyncRemoteControlSkeleton, "Playing");
-			break;
-		default:
-			debug(1, "This should never happen.");
-		}
-
-		switch (argc->play_status) {
-		case PS_NOT_AVAILABLE:
-			shairport_sync_advanced_remote_control_set_playback_status(
-					shairportSyncAdvancedRemoteControlSkeleton, "Not Available");
-		case PS_STOPPED:
-			shairport_sync_advanced_remote_control_set_playback_status(
-					shairportSyncAdvancedRemoteControlSkeleton, "Stopped");
-			break;
-		case PS_PAUSED:
-			shairport_sync_advanced_remote_control_set_playback_status(
-					shairportSyncAdvancedRemoteControlSkeleton, "Paused");
-			break;
-		case PS_PLAYING:
-			shairport_sync_advanced_remote_control_set_playback_status(
-					shairportSyncAdvancedRemoteControlSkeleton, "Playing");
-			break;
-		default:
-			debug(1, "This should never happen.");
-		}
-
-		switch (argc->repeat_status) {
-		case RS_NOT_AVAILABLE:
-			strcpy(response,"Not Available");
-			break;
-		case RS_OFF:
-			strcpy(response,"Off");
-			break;
-		case RS_ONE:
-			strcpy(response,"One");
-			break;
-		case RS_ALL:
-			strcpy(response,"All");
-			break;
-		default:
-			debug(1, "This should never happen.");
-		}
-		const char *th = shairport_sync_advanced_remote_control_get_loop_status(shairportSyncAdvancedRemoteControlSkeleton);
-		if (th)
-			debug(1,"Reported loop status is \"%s\".",th);
-		else
-			debug(1,"Null loop status.");
-			
-		// only set this if it's different
-		if ((th==NULL) || (strcasecmp(th,response)!=0)) {
-			debug(1,"Loop Status should be changed");
-			shairport_sync_advanced_remote_control_set_loop_status(shairportSyncAdvancedRemoteControlSkeleton, response);  
-		}
-
-		switch (argc->shuffle_status) {
-		case SS_NOT_AVAILABLE:
-			shairport_sync_advanced_remote_control_set_shuffle(shairportSyncAdvancedRemoteControlSkeleton,
-																												 FALSE);
-			break;
-		case SS_OFF:
-			shairport_sync_advanced_remote_control_set_shuffle(shairportSyncAdvancedRemoteControlSkeleton,
-																												 FALSE);
-			break;
-		case SS_ON:
-			shairport_sync_advanced_remote_control_set_shuffle(shairportSyncAdvancedRemoteControlSkeleton,
+	if (argc->advanced_dacp_server_active) {
+		shairport_sync_advanced_remote_control_set_available(shairportSyncAdvancedRemoteControlSkeleton,
 																												 TRUE);
-			break;
-		default:
-			debug(1, "This should never happen.");
-		}
+	} else {
+		shairport_sync_advanced_remote_control_set_available(shairportSyncAdvancedRemoteControlSkeleton,
+																												 FALSE);
+	}
 
-		GVariantBuilder *dict_builder, *aa;
+	switch (argc->player_state) {
+	case PS_NOT_AVAILABLE:
+		shairport_sync_remote_control_set_player_state(shairportSyncRemoteControlSkeleton,
+																									 "Not Available");
+	case PS_STOPPED:
+		shairport_sync_remote_control_set_player_state(shairportSyncRemoteControlSkeleton, "Stopped");
+		break;
+	case PS_PAUSED:
+		shairport_sync_remote_control_set_player_state(shairportSyncRemoteControlSkeleton, "Paused");
+		break;
+	case PS_PLAYING:
+		shairport_sync_remote_control_set_player_state(shairportSyncRemoteControlSkeleton, "Playing");
+		break;
+	default:
+		debug(1, "This should never happen.");
+	}
 
-		/* Build the metadata array */
-		// debug(1,"Build metadata");
-		dict_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
+	switch (argc->play_status) {
+	case PS_NOT_AVAILABLE:
+		shairport_sync_advanced_remote_control_set_playback_status(
+				shairportSyncAdvancedRemoteControlSkeleton, "Not Available");
+	case PS_STOPPED:
+		shairport_sync_advanced_remote_control_set_playback_status(
+				shairportSyncAdvancedRemoteControlSkeleton, "Stopped");
+		break;
+	case PS_PAUSED:
+		shairport_sync_advanced_remote_control_set_playback_status(
+				shairportSyncAdvancedRemoteControlSkeleton, "Paused");
+		break;
+	case PS_PLAYING:
+		shairport_sync_advanced_remote_control_set_playback_status(
+				shairportSyncAdvancedRemoteControlSkeleton, "Playing");
+		break;
+	default:
+		debug(1, "This should never happen.");
+	}
 
-		// Make up the artwork URI if we have one
-		if (argc->cover_art_pathname) {
-			char artURIstring[1024];
-			sprintf(artURIstring, "file://%s", argc->cover_art_pathname);
-			// sprintf(artURIstring,"");
-			// debug(1,"artURI String: \"%s\".",artURIstring);
-			GVariant *artUrl = g_variant_new("s", artURIstring);
-			g_variant_builder_add(dict_builder, "{sv}", "mpris:artUrl", artUrl);
-		}
+	switch (argc->repeat_status) {
+	case RS_NOT_AVAILABLE:
+		strcpy(response,"Not Available");
+		break;
+	case RS_OFF:
+		strcpy(response,"Off");
+		break;
+	case RS_ONE:
+		strcpy(response,"One");
+		break;
+	case RS_ALL:
+		strcpy(response,"All");
+		break;
+	default:
+		debug(1, "This should never happen.");
+	}
+	const char *th = shairport_sync_advanced_remote_control_get_loop_status(shairportSyncAdvancedRemoteControlSkeleton);
 
-		// Add the TrackID if we have one
-		if (argc->item_id) {
-			char trackidstring[128];
-			// debug(1, "Set ID using mper ID: \"%u\".",argc->item_id);
-			sprintf(trackidstring, "/org/gnome/ShairportSync/mper_%u", argc->item_id);
-			GVariant *trackid = g_variant_new("o", trackidstring);
-			g_variant_builder_add(dict_builder, "{sv}", "mpris:trackid", trackid);
-		}
+	// only set this if it's different
+	if ((th==NULL) || (strcasecmp(th,response)!=0)) {
+		debug(1,"Loop Status should be changed");
+		shairport_sync_advanced_remote_control_set_loop_status(shairportSyncAdvancedRemoteControlSkeleton, response);  
+	}
 
-		// Add the track name if there is one
-		if (argc->track_name) {
-			// debug(1, "Track name set to \"%s\".", argc->track_name);
-			GVariant *trackname = g_variant_new("s", argc->track_name);
-			g_variant_builder_add(dict_builder, "{sv}", "xesam:title", trackname);
-		}
+	switch (argc->shuffle_status) {
+	case SS_NOT_AVAILABLE:
+		shairport_sync_advanced_remote_control_set_shuffle(shairportSyncAdvancedRemoteControlSkeleton,
+																											 FALSE);
+		break;
+	case SS_OFF:
+		shairport_sync_advanced_remote_control_set_shuffle(shairportSyncAdvancedRemoteControlSkeleton,
+																											 FALSE);
+		break;
+	case SS_ON:
+		shairport_sync_advanced_remote_control_set_shuffle(shairportSyncAdvancedRemoteControlSkeleton,
+																											 TRUE);
+		break;
+	default:
+		debug(1, "This should never happen.");
+	}
 
-		// Add the album name if there is one
-		if (argc->album_name) {
-			// debug(1, "Album name set to \"%s\".", argc->album_name);
-			GVariant *albumname = g_variant_new("s", argc->album_name);
-			g_variant_builder_add(dict_builder, "{sv}", "xesam:album", albumname);
-		}
+	GVariantBuilder *dict_builder, *aa;
 
-		// Add the artists if there are any (actually there will be at most one, but put it in an array)
-		if (argc->artist_name) {
-			/* Build the artists array */
-			// debug(1,"Build artist array");
-			aa = g_variant_builder_new(G_VARIANT_TYPE("as"));
-			g_variant_builder_add(aa, "s", argc->artist_name);
-			GVariant *artists = g_variant_builder_end(aa);
-			g_variant_builder_unref(aa);
-			g_variant_builder_add(dict_builder, "{sv}", "xesam:artist", artists);
-		}
+	/* Build the metadata array */
+	// debug(1,"Build metadata");
+	dict_builder = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
 
-		// Add the genres if there are any (actually there will be at most one, but put it in an array)
-		if (argc->genre) {
-			// debug(1,"Build genre");
-			aa = g_variant_builder_new(G_VARIANT_TYPE("as"));
-			g_variant_builder_add(aa, "s", argc->genre);
-			GVariant *genres = g_variant_builder_end(aa);
-			g_variant_builder_unref(aa);
-			g_variant_builder_add(dict_builder, "{sv}", "xesam:genre", genres);
-		}
+	// Make up the artwork URI if we have one
+	if (argc->cover_art_pathname) {
+		char artURIstring[1024];
+		sprintf(artURIstring, "file://%s", argc->cover_art_pathname);
+		// sprintf(artURIstring,"");
+		// debug(1,"artURI String: \"%s\".",artURIstring);
+		GVariant *artUrl = g_variant_new("s", artURIstring);
+		g_variant_builder_add(dict_builder, "{sv}", "mpris:artUrl", artUrl);
+	}
 
-		GVariant *dict = g_variant_builder_end(dict_builder);
-		g_variant_builder_unref(dict_builder);
+	// Add the TrackID if we have one
+	if (argc->item_id) {
+		char trackidstring[128];
+		// debug(1, "Set ID using mper ID: \"%u\".",argc->item_id);
+		sprintf(trackidstring, "/org/gnome/ShairportSync/mper_%u", argc->item_id);
+		GVariant *trackid = g_variant_new("o", trackidstring);
+		g_variant_builder_add(dict_builder, "{sv}", "mpris:trackid", trackid);
+	}
 
-		// debug(1,"Set metadata");
-		shairport_sync_remote_control_set_metadata(shairportSyncRemoteControlSkeleton, dict);
-  }
+	// Add the track name if there is one
+	if (argc->track_name) {
+		// debug(1, "Track name set to \"%s\".", argc->track_name);
+		GVariant *trackname = g_variant_new("s", argc->track_name);
+		g_variant_builder_add(dict_builder, "{sv}", "xesam:title", trackname);
+	}
+
+	// Add the album name if there is one
+	if (argc->album_name) {
+		// debug(1, "Album name set to \"%s\".", argc->album_name);
+		GVariant *albumname = g_variant_new("s", argc->album_name);
+		g_variant_builder_add(dict_builder, "{sv}", "xesam:album", albumname);
+	}
+
+	// Add the artists if there are any (actually there will be at most one, but put it in an array)
+	if (argc->artist_name) {
+		/* Build the artists array */
+		// debug(1,"Build artist array");
+		aa = g_variant_builder_new(G_VARIANT_TYPE("as"));
+		g_variant_builder_add(aa, "s", argc->artist_name);
+		GVariant *artists = g_variant_builder_end(aa);
+		g_variant_builder_unref(aa);
+		g_variant_builder_add(dict_builder, "{sv}", "xesam:artist", artists);
+	}
+
+	// Add the genres if there are any (actually there will be at most one, but put it in an array)
+	if (argc->genre) {
+		// debug(1,"Build genre");
+		aa = g_variant_builder_new(G_VARIANT_TYPE("as"));
+		g_variant_builder_add(aa, "s", argc->genre);
+		GVariant *genres = g_variant_builder_end(aa);
+		g_variant_builder_unref(aa);
+		g_variant_builder_add(dict_builder, "{sv}", "xesam:genre", genres);
+	}
+
+	GVariant *dict = g_variant_builder_end(dict_builder);
+	g_variant_builder_unref(dict_builder);
+
+	// debug(1,"Set metadata");
+	shairport_sync_remote_control_set_metadata(shairportSyncRemoteControlSkeleton, dict);
+		
 }
 
 static gboolean on_handle_set_volume(ShairportSyncAdvancedRemoteControl *skeleton,
@@ -629,8 +624,6 @@ static void on_dbus_name_acquired(GDBusConnection *connection, const gchar *name
 
   add_metadata_watcher(dbus_metadata_watcher, NULL);
   
-  initialised = 1;
-
   shairport_sync_set_loudness_threshold(SHAIRPORT_SYNC(shairportSyncSkeleton),
                                         config.loudness_reference_volume_db);
 
