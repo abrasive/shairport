@@ -42,6 +42,7 @@
 #include "common.h"
 #include "player.h"
 #include "rtp.h"
+#include "rtsp.h"
 
 uint64_t local_to_remote_time_jitters;
 uint64_t local_to_remote_time_jitters_count;
@@ -246,10 +247,10 @@ void *rtp_control_receiver(void *arg) {
 
           if (la != conn->latency) {
             conn->latency = la;
-            debug(1, "New latency: %lld, sync latency: %lld, minimum latency: %lld, maximum "
-                     "latency: %lld, fixed offset: %lld.",
-                  la, sync_rtp_timestamp - rtp_timestamp_less_latency, conn->minimum_latency,
-                  conn->maximum_latency, config.fixedLatencyOffset);
+            // debug(1, "New latency: %lld, sync latency: %lld, minimum latency: %lld, maximum "
+            //         "latency: %lld, fixed offset: %lld.",
+            //      la, sync_rtp_timestamp - rtp_timestamp_less_latency, conn->minimum_latency,
+            //      conn->maximum_latency, config.fixedLatencyOffset);
           }
         }
 
@@ -799,6 +800,11 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, int *lsp
 
   conn->request_sent = 0;
   conn->rtp_running = 1;
+
+#ifdef CONFIG_METADATA
+  send_ssnc_metadata('clip', strdup(conn->client_ip_string), strlen(conn->client_ip_string), 1);
+  send_ssnc_metadata('svip', strdup(conn->self_ip_string), strlen(conn->self_ip_string), 1);
+#endif
 }
 
 void get_reference_timestamp_stuff(int64_t *timestamp, uint64_t *timestamp_time,

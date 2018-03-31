@@ -768,7 +768,7 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
 
   char *ar = msg_get_header(req, "Active-Remote");
   if (ar) {
-    debug(1, "Active-Remote string seen: \"%s\".", ar);
+    debug(2, "Active-Remote string seen: \"%s\".", ar);
     // get the active remote
     char *p;
     conn->dacp_active_remote = strtoul(ar, &p, 10);
@@ -779,7 +779,7 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
 
   ar = msg_get_header(req, "DACP-ID");
   if (ar) {
-    debug(1, "DACP-ID string seen: \"%s\".", ar);
+    debug(2, "DACP-ID string seen: \"%s\".", ar);
     conn->dacp_id = strdup(ar);
 #ifdef CONFIG_METADATA
     send_metadata('ssnc', 'daid', ar, strlen(ar), req, 1);
@@ -915,7 +915,7 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn, rtsp_message *r
 //    'pfls' -- play stream flush. No arguments
 //    'prsm' -- play stream resume. No arguments
 //		`pffr` -- the first frame of a play session has been received and has been validly
-//timed.
+// timed.
 //    'pvol' -- play volume. The volume is sent as a string --
 //    "airplay_volume,volume,lowest_volume,highest_volume"
 //              volume, lowest_volume and highest_volume are given in dB.
@@ -1579,7 +1579,7 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
     }
     hdr = msg_get_header(req, "User-Agent");
     if (hdr) {
-      debug(1, "Play connection from user agent \"%s\" on RTSP conversation thread %d.", hdr,
+      debug(2, "Play connection from user agent \"%s\" on RTSP conversation thread %d.", hdr,
             conn->connection_number);
 #ifdef CONFIG_METADATA
       send_metadata('ssnc', 'snua', hdr, strlen(hdr), req, 1);
@@ -2118,11 +2118,7 @@ void rtsp_listen_loop(void) {
           sa = (struct sockaddr_in *)&conn->remote;
           inet_ntop(AF_INET, &(sa->sin_addr), remote_ip4, INET_ADDRSTRLEN);
           unsigned short int rport = ntohs(sa->sin_port);
-#ifdef CONFIG_METADATA
-          send_ssnc_metadata('clip', strdup(remote_ip4), strlen(remote_ip4), 1);
-          send_ssnc_metadata('svip', strdup(ip4), strlen(ip4), 1);
-#endif
-          debug(1, "New RTSP connection from %s:%u to self at %s:%u on conversation thread %d.",
+          debug(2, "New RTSP connection from %s:%u to self at %s:%u on conversation thread %d.",
                 remote_ip4, rport, ip4, tport, conn->connection_number);
         }
 #ifdef AF_INET6
@@ -2139,11 +2135,7 @@ void rtsp_listen_loop(void) {
           sa6 = (struct sockaddr_in6 *)&conn->remote; // pretend this is loaded with something
           inet_ntop(AF_INET6, &(sa6->sin6_addr), remote_ip6, INET6_ADDRSTRLEN);
           u_int16_t rport = ntohs(sa6->sin6_port);
-#ifdef CONFIG_METADATA
-          send_ssnc_metadata('clip', strdup(remote_ip6), strlen(remote_ip6), 1);
-          send_ssnc_metadata('svip', strdup(ip6), strlen(ip6), 1);
-#endif
-          debug(1, "New RTSP connection from [%s]:%u to self at [%s]:%u on conversation thread %d.",
+          debug(2, "New RTSP connection from [%s]:%u to self at [%s]:%u on conversation thread %d.",
                 remote_ip6, rport, ip6, tport, conn->connection_number);
         }
 #endif

@@ -503,14 +503,14 @@ int open_alsa_device(void) {
       (snd_pcm_hw_params_set_access(alsa_handle, alsa_params, SND_PCM_ACCESS_MMAP_INTERLEAVED) >=
        0)) {
     if (output_method_signalled == 0) {
-      debug(1, "Output written using MMAP");
+      debug(3, "Output written using MMAP");
       output_method_signalled = 1;
     }
     access = SND_PCM_ACCESS_MMAP_INTERLEAVED;
     alsa_pcm_write = snd_pcm_mmap_writei;
   } else {
     if (output_method_signalled == 0) {
-      debug(1, "Output written with RW");
+      debug(3, "Output written with RW");
       output_method_signalled = 1;
     }
     access = SND_PCM_ACCESS_RW_INTERLEAVED;

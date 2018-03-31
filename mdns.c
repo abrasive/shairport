@@ -104,21 +104,23 @@ void mdns_unregister(void) {
   }
 }
 
-void mdns_dacp_monitor(rtsp_conn_info *conn) {
+void *mdns_dacp_monitor(char *dacp_id) {
+  void *reply = NULL;
   if ((config.mdns) && (config.mdns->mdns_dacp_monitor)) {
-    int error = config.mdns->mdns_dacp_monitor(conn);
-    if (error) {
+    reply = config.mdns->mdns_dacp_monitor(dacp_id);
+    if (reply == NULL) {
       debug(1, "Error starting a DACP monitor.");
     }
   } else
-    debug(1, "Can't start a DACP monitor.");
+    debug(1, "Can't start a DACP monitor -- none registered.");
+  return reply;
 }
 
-void mdns_dacp_dont_monitor(rtsp_conn_info *conn) {
+void mdns_dacp_dont_monitor(void *userdata) {
   if ((config.mdns) && (config.mdns->mdns_dacp_dont_monitor)) {
-    config.mdns->mdns_dacp_dont_monitor(conn);
+    config.mdns->mdns_dacp_dont_monitor(userdata);
   } else
-    debug(1, "Can't stop a DACP monitor.");
+    debug(1, "Can't stop a DACP monitor -- none registered.");
 }
 void mdns_ls_backends(void) {
   mdns_backend **b = NULL;

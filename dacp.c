@@ -49,11 +49,13 @@ typedef struct {
   int players_connection_thread_index; // the connection thread index when a player thread is
                                        // associated with this, zero otherwise
   int scan_enable;                     // set to 1 if if sacanning should be considered
+  char dacp_id[256];                   // the DACP ID string
   uint16_t port;                       // zero if no port discovered
   short connection_family;             // AF_INET6 or AF_INET
   uint32_t scope_id;                   // if it's an ipv6 connection, this will be its scope id
   char ip_string[INET6_ADDRSTRLEN];    // the ip string pointing to the client
   uint32_t active_remote_id;           // send this when you want to send remote control commands
+  void *port_monitor_private_storage;
 } dacp_server_record;
 
 pthread_t dacp_monitor_thread;
@@ -175,8 +177,8 @@ int dacp_send_command(const char *command, char **body, ssize_t *bodysize) {
         response.code = 497; // Can't establish a socket to the DACP server
       } else {
         struct timeval tv;
-        tv.tv_sec = 0;
-        tv.tv_usec = 250000;
+        tv.tv_sec = 1;
+        tv.tv_usec = 0;
         if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof tv) == -1)
           debug(1, "Error %d setting receive timeout for DACP service.", errno);
         if (setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, (const char *)&tv, sizeof tv) == -1)
@@ -294,43 +296,69 @@ void relinquish_dacp_server_information(rtsp_conn_info *conn) {
 }
 
 // this will be running on the thread of its caller, not of the conversation thread...
-void set_dacp_server_information(rtsp_conn_info *conn) { // tell the DACP conversation thread that
-                                                         // the port has been set or changed
+// tell the DACP conversation thread what DACP server we are listening to
+// if the active_remote_id is the same we don't change anything apart from
+// the conversation number
+// Thus, we can keep the DACP port that might have previously been discovered
+void set_dacp_server_information(rtsp_conn_info *conn) {
   sps_pthread_mutex_timedlock(
       &dacp_server_information_lock, 500000,
       "set_dacp_server_information couldn't get DACP server information lock in 0.5 second!.", 1);
   dacp_server.players_connection_thread_index = conn->connection_number;
-  dacp_server.port = conn->dacp_port;
-  dacp_server.connection_family = conn->connection_ip_family;
-  dacp_server.scope_id = conn->self_scope_id;
-  strncpy(dacp_server.ip_string, conn->client_ip_string, INET6_ADDRSTRLEN);
-  dacp_server.active_remote_id = conn->dacp_active_remote;
-  if (dacp_server.port)
-    dacp_server.scan_enable = 1;
-  else {
-    debug(1, "DACP server port has been set to zero.");
+  if (strcmp(conn->dacp_id, dacp_server.dacp_id) != 0) {
+    strncpy(dacp_server.dacp_id, conn->dacp_id, sizeof(dacp_server.dacp_id));
+    dacp_server.port = 0;
     dacp_server.scan_enable = 0;
-  }
-  metadata_hub_modify_prolog();
-  int ch = metadata_store.dacp_server_active != dacp_server.scan_enable;
-  metadata_store.dacp_server_active = dacp_server.scan_enable;
+    dacp_server.connection_family = conn->connection_ip_family;
+    dacp_server.scope_id = conn->self_scope_id;
+    strncpy(dacp_server.ip_string, conn->client_ip_string, INET6_ADDRSTRLEN);
+    dacp_server.active_remote_id = conn->dacp_active_remote;
 
-  if ((metadata_store.client_ip == NULL) ||
-      (strncmp(metadata_store.client_ip, conn->client_ip_string, INET6_ADDRSTRLEN) != 0)) {
-    if (metadata_store.client_ip)
-      free(metadata_store.client_ip);
-    metadata_store.client_ip = strndup(conn->client_ip_string, INET6_ADDRSTRLEN);
-    debug(1, "MH Client IP set to: \"%s\"", metadata_store.client_ip);
-    metadata_store.client_ip_changed = 1;
-    metadata_store.changed = 1;
-    ch = 1;
-  }
-  metadata_hub_modify_epilog(ch);
+    if (dacp_server.port_monitor_private_storage) // if there's is a monitor already active...
+      mdns_dacp_dont_monitor(dacp_server.port_monitor_private_storage); // let it go.
+    dacp_server.port_monitor_private_storage =
+        mdns_dacp_monitor(dacp_server.dacp_id); // create a new one for us
 
+    metadata_hub_modify_prolog();
+    int ch = metadata_store.dacp_server_active != dacp_server.scan_enable;
+    metadata_store.dacp_server_active = dacp_server.scan_enable;
+    if ((metadata_store.client_ip == NULL) ||
+        (strncmp(metadata_store.client_ip, conn->client_ip_string, INET6_ADDRSTRLEN) != 0)) {
+      if (metadata_store.client_ip)
+        free(metadata_store.client_ip);
+      metadata_store.client_ip = strndup(conn->client_ip_string, INET6_ADDRSTRLEN);
+      debug(3, "MH Client IP set to: \"%s\"", metadata_store.client_ip);
+      ch = 1;
+    }
+    metadata_hub_modify_epilog(ch);
+  }
   pthread_cond_signal(&dacp_server_information_cv);
   pthread_mutex_unlock(&dacp_server_information_lock);
 }
 
+void dacp_monitor_port_update_callback(char *dacp_id, uint16_t port) {
+  debug(3, "dacp_monitor_port_update_callback with Remote ID \"%s\" and port number %d.", dacp_id,
+        port);
+  sps_pthread_mutex_timedlock(
+      &dacp_server_information_lock, 500000,
+      "dacp_monitor_port_update_callback couldn't get DACP server information lock in 0.5 second!.",
+      1);
+  if (strcmp(dacp_id, dacp_server.dacp_id) == 0) {
+    dacp_server.port = port;
+    if (port == 0)
+      dacp_server.scan_enable = 0;
+    else
+      dacp_server.scan_enable = 1;
+    metadata_hub_modify_prolog();
+    int ch = metadata_store.dacp_server_active != dacp_server.scan_enable;
+    metadata_store.dacp_server_active = dacp_server.scan_enable;
+    metadata_hub_modify_epilog(ch);
+    pthread_cond_signal(&dacp_server_information_cv);
+  } else {
+    debug(1, "dacp port monitor reporting on and out-of-use remote.");
+  }
+  pthread_mutex_unlock(&dacp_server_information_lock);
+}
 void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
   int scan_index = 0;
   // char server_reply[10000];
@@ -361,8 +389,10 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
     // debug(1, "DACP Server ID \"%u\" at \"%s:%u\", scan %d.", dacp_server.active_remote_id,
     //      dacp_server.ip_string, dacp_server.port, scan_index);
 
-    if (result != 494) { // this just means that it couldn't send the query because something else
-                         // was sending a command
+    int transient_problem = (result == 494) || (result == 495);
+    if (!transient_problem) { // this just means that it couldn't send the query because something
+                              // else
+                              // was sending a command or something
       int adv = (result == 200);
       // a result of 200 means the advanced features of, e.g., iTunes, are available
       // so, turn the advanced_dacp_server flag on or off and flag if it's changed.

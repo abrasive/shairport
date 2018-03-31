@@ -9,8 +9,8 @@ extern int mdns_pid;
 
 void mdns_unregister(void);
 void mdns_register(void);
-void mdns_dacp_monitor(rtsp_conn_info *conn);
-void mdns_dacp_dont_monitor(rtsp_conn_info *conn);
+void *mdns_dacp_monitor(char *dacp_id);
+void mdns_dacp_dont_monitor(void *userdata);
 
 void mdns_ls_backends(void);
 
@@ -18,8 +18,8 @@ typedef struct {
   char *name;
   int (*mdns_register)(char *apname, int port);
   void (*mdns_unregister)(void);
-  int (*mdns_dacp_monitor)(rtsp_conn_info *conn);
-  void (*mdns_dacp_dont_monitor)(rtsp_conn_info *conn);
+  void *(*mdns_dacp_monitor)(char *);
+  void (*mdns_dacp_dont_monitor)(void *);
 } mdns_backend;
 
 #ifdef CONFIG_METADATA

@@ -277,7 +277,7 @@ static int alac_decode(short *dest, int *destlen, uint8_t *buf, int len, rtsp_co
 #ifdef HAVE_APPLE_ALAC
     if (config.use_apple_decoder) {
       if (conn->decoder_in_use != 1 << decoder_apple_alac) {
-        debug(1, "Apple ALAC Decoder used on encrypted audio.");
+        debug(2, "Apple ALAC Decoder used on encrypted audio.");
         conn->decoder_in_use = 1 << decoder_apple_alac;
       }
       apple_alac_decode_frame(packet, len, (unsigned char *)dest, &outsize);
@@ -286,7 +286,7 @@ static int alac_decode(short *dest, int *destlen, uint8_t *buf, int len, rtsp_co
 #endif
     {
       if (conn->decoder_in_use != 1 << decoder_hammerton) {
-        debug(1, "Hammerton Decoder used on encrypted audio.");
+        debug(2, "Hammerton Decoder used on encrypted audio.");
         conn->decoder_in_use = 1 << decoder_hammerton;
       }
       alac_decode_frame(conn->decoder_info, packet, (unsigned char *)dest, &outsize);
@@ -296,7 +296,7 @@ static int alac_decode(short *dest, int *destlen, uint8_t *buf, int len, rtsp_co
 #ifdef HAVE_APPLE_ALAC
     if (config.use_apple_decoder) {
       if (conn->decoder_in_use != 1 << decoder_apple_alac) {
-        debug(1, "Apple ALAC Decoder used on unencrypted audio.");
+        debug(2, "Apple ALAC Decoder used on unencrypted audio.");
         conn->decoder_in_use = 1 << decoder_apple_alac;
       }
       apple_alac_decode_frame(buf, len, (unsigned char *)dest, &outsize);
@@ -305,7 +305,7 @@ static int alac_decode(short *dest, int *destlen, uint8_t *buf, int len, rtsp_co
 #endif
     {
       if (conn->decoder_in_use != 1 << decoder_hammerton) {
-        debug(1, "Hammerton Decoder used on unencrypted audio.");
+        debug(2, "Hammerton Decoder used on unencrypted audio.");
         conn->decoder_in_use = 1 << decoder_hammerton;
       }
       alac_decode_frame(conn->decoder_info, buf, dest, &outsize);
@@ -824,13 +824,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
           reference_timestamp *= conn->output_sample_ratio;
           if (conn->first_packet_timestamp == 0) { // if this is the very first packet
                                                    // debug(1,"First frame seen, time %u, with %d
-// frames...",curframe->timestamp,seq_diff(ab_read, ab_write));
-
-// say we have started playing here
-#ifdef CONFIG_METADATA
-            send_ssnc_metadata('pffr', NULL, 0,
-                               0); // "first frame received", but don't wait if the queue is locked
-#endif
+            // frames...",curframe->timestamp,seq_diff(ab_read, ab_write));
 
             if (reference_timestamp) { // if we have a reference time
               // debug(1,"First frame seen with timestamp...");
@@ -839,6 +833,13 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
                                        // supposed to start playing this
               have_sent_prefiller_silence = 0;
 
+// say we have started playing here
+#ifdef CONFIG_METADATA
+              debug(1, "pffr");
+              send_ssnc_metadata(
+                  'pffr', NULL, 0,
+                  0); // "first frame received", but don't wait if the queue is locked
+#endif
               // Here, calculate when we should start playing. We need to know when to allow the
               // packets to be sent to the player.
               // We will send packets of silence from now until that time and then we will send the
@@ -1059,6 +1060,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
                                           &conn->play_segment_reference_frame_remote_time, conn);
             conn->play_segment_reference_frame *= conn->output_sample_ratio;
 #ifdef CONFIG_METADATA
+            debug(1, "prsm");
             send_ssnc_metadata('prsm', NULL, 0,
                                0); // "resume", but don't wait if the queue is locked
 #endif
@@ -1384,9 +1386,9 @@ static void *player_thread_func(void *arg) {
   conn->fix_volume = 0x10000;
 
   if (conn->latency == 0) {
-    debug(1,
-          "No latency has (yet) been specified. Setting 99225 (2.25 seconds) frames as a default.");
-    conn->latency = 99225;
+    debug(3, "No latency has (yet) been specified. Setting 99,226 (2.25 seconds + 1 frame) frames "
+             "as a default.");
+    conn->latency = 99226;
   }
 
   int rc = pthread_mutex_init(&conn->ab_mutex, NULL);
@@ -1463,7 +1465,7 @@ static void *player_thread_func(void *arg) {
     conn->output_bytes_per_frame = 4;
   }
 
-  debug(1, "Output frame bytes is %d.", conn->output_bytes_per_frame);
+  debug(3, "Output frame bytes is %d.", conn->output_bytes_per_frame);
 
   // create and start the timing, control and audio receiver threads
   pthread_t rtp_audio_thread, rtp_control_thread, rtp_timing_thread;
@@ -1548,7 +1550,7 @@ static void *player_thread_func(void *arg) {
     die("Unknown format choosing output bit depth");
   }
 
-  debug(1, "Output bit depth is %d.", output_bit_depth);
+  debug(3, "Output bit depth is %d.", output_bit_depth);
 
   if (conn->input_bit_depth > output_bit_depth) {
     debug(1, "Dithering will be enabled because the input bit depth is greater than the output bit "
@@ -1601,11 +1603,12 @@ static void *player_thread_func(void *arg) {
 #ifdef HAVE_DACP_CLIENT
   set_dacp_server_information(conn); // this will start scanning when a port is registered by the
                                      // code initiated by the mdns_dacp_monitor
-#endif
+#else
+  // this is only used for compatability, if dacp stuff isn't enabled.
   // start an mdns/zeroconf thread to look for DACP messages containing our DACP_ID and getting the
   // port number
-  // mdns_dacp_monitor(conn->dacp_id, &conn->dacp_port, &conn->dacp_private);
-  mdns_dacp_monitor(conn);
+  conn->dapo_private_storage = mdns_dacp_monitor(conn->dacp_id);
+#endif
 
   conn->framesProcessedInThisEpoch = 0;
   conn->framesGeneratedInThisEpoch = 0;
@@ -2223,10 +2226,11 @@ static void *player_thread_func(void *arg) {
            elapsedSec);
   }
 
+#ifndef HAVE_DACP_CLIENT
   // stop watching for DACP port number stuff
-  mdns_dacp_dont_monitor(conn); // begin looking out for information about the client
-                                // as a remote control. Specifically we might need
-                                // the port number
+  // this is only used for compatability, if dacp stuff isn't enabled.
+  mdns_dacp_dont_monitor(conn->dapo_private_storage);
+#endif
 
   if (config.output->stop)
     config.output->stop();
@@ -2525,7 +2529,12 @@ void player_flush(int64_t timestamp, rtsp_conn_info *conn) {
   conn->play_segment_reference_frame = 0;
   conn->play_number_after_flush = 0;
 #ifdef CONFIG_METADATA
-  send_ssnc_metadata('pfls', NULL, 0, 1);
+  // only send a flush metadata message if the first packet has been seen -- it's a bogus message
+  // otherwise
+  if (conn->first_packet_timestamp) {
+    debug(1, "pfls");
+    send_ssnc_metadata('pfls', NULL, 0, 1);
+  }
 #endif
 }
 
@@ -2538,6 +2547,7 @@ int player_play(rtsp_conn_info *conn) {
         BUFFER_FRAMES);
   command_start();
 #ifdef CONFIG_METADATA
+  debug(1, "pbeg");
   send_ssnc_metadata('pbeg', NULL, 0, 1);
 #endif
   pthread_t *pt = malloc(sizeof(pthread_t));
@@ -2562,6 +2572,7 @@ void player_stop(rtsp_conn_info *conn) {
     pthread_kill(*conn->player_thread, SIGUSR1);
     pthread_join(*conn->player_thread, NULL);
 #ifdef CONFIG_METADATA
+    debug(1, "pend");
     send_ssnc_metadata('pend', NULL, 0, 1);
 #endif
     command_stop();

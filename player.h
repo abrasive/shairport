@@ -173,11 +173,11 @@ typedef struct {
   // mdns to find it.
   // at present, only avahi can do this
 
-  char *dacp_id;               // id of the client -- used to find the port to be used
-  uint16_t dacp_port;          // port on the client to send remote control messages to, else zero
+  char *dacp_id; // id of the client -- used to find the port to be used
+  //  uint16_t dacp_port;          // port on the client to send remote control messages to, else
+  //  zero
   uint32_t dacp_active_remote; // key to send to the remote controller
-  void *mdns_private_pointer;  // private storage (just a pointer) for the dacp_port resolver
-
+  void *dapo_private_storage;  // this is used for compatibility, if dacp stuff isn't enabled.
 } rtsp_conn_info;
 
 int player_play(rtsp_conn_info *conn);
