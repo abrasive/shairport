@@ -947,7 +947,7 @@ void do_volume(double vol) { // caller is assumed to have the alsa_mutex when us
         // debug(1,"Set alsa volume.");
         do_snd_mixer_selem_set_playback_dB_all(alsa_mix_elem, vol);
       } else {
-        debug(1, "Not setting volume because volume-based mute is active");
+        debug(2, "Not setting volume because volume-based mute is active");
       }
     }
     volume_set_request = 0; // any external request that has been made is now satisfied

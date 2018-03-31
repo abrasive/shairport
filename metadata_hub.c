@@ -457,11 +457,49 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
       break;
     // these could tell us about play / pause etc. but will only occur if metadata is enabled, so
     // we'll just ignore them
-    case 'pbeg':
-    case 'pend':
-    case 'pfls':
-    case 'prsm':
-      break;
+    case 'pbeg': {
+      metadata_hub_modify_prolog();
+      int changed = (metadata_store.player_state != PS_PLAYING);
+      metadata_store.player_state = PS_PLAYING;
+      metadata_hub_modify_epilog(changed);
+    } break;
+    case 'pend': {
+      metadata_hub_modify_prolog();
+      metadata_store.player_state = PS_STOPPED;
+      // debug(1,"player_stop release track metadata and artwork");
+      metadata_hub_reset_track_metadata();
+      metadata_hub_release_track_artwork();
+      metadata_hub_modify_epilog(1);
+    } break;
+    case 'pfls': {
+      metadata_hub_modify_prolog();
+      int changed = (metadata_store.player_state != PS_PAUSED);
+      metadata_store.player_state = PS_PAUSED;
+      metadata_hub_modify_epilog(changed);
+    } break;
+    case 'pffr': // this is sent when the first frame has been received
+    case 'prsm': {
+      metadata_hub_modify_prolog();
+      int changed = (metadata_store.player_state != PS_PLAYING);
+      metadata_store.player_state = PS_PLAYING;
+      metadata_hub_modify_epilog(changed);
+    } break;
+    case 'pvol': {
+      // Note: it's assumed that the config.airplay volume has already been correctly set.
+      int modified = 0;
+      int32_t actual_volume;
+      int gv = dacp_get_volume(&actual_volume);
+      metadata_hub_modify_prolog();
+      if ((gv == 200) && (metadata_store.speaker_volume != actual_volume)) {
+        metadata_store.speaker_volume = actual_volume;
+        modified = 1;
+      }
+      if (metadata_store.airplay_volume != config.airplay_volume) {
+        metadata_store.airplay_volume = config.airplay_volume;
+        modified = 1;
+      }
+      metadata_hub_modify_epilog(modified); // change
+    } break;
 
     default: {
       char typestring[5];

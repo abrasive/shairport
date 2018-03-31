@@ -188,7 +188,7 @@ int pc_queue_add_item(pc_queue *the_queue, const void *the_stuff, int block) {
     the_queue->eoq = i;
     the_queue->count++;
     if (the_queue->count == the_queue->capacity)
-      debug(1, "pc_queue is full!");
+      debug(1, "pc_queue is full with %d items in it!", the_queue->count);
     rc = pthread_cond_signal(&the_queue->pc_queue_item_added_signal);
     if (rc)
       debug(1, "Error signalling after pc_queue_add_item");
@@ -914,6 +914,8 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn, rtsp_message *r
 //    'pend' -- play stream end. No arguments
 //    'pfls' -- play stream flush. No arguments
 //    'prsm' -- play stream resume. No arguments
+//		`pffr` -- the first frame of a play session has been received and has been validly
+//timed.
 //    'pvol' -- play volume. The volume is sent as a string --
 //    "airplay_volume,volume,lowest_volume,highest_volume"
 //              volume, lowest_volume and highest_volume are given in dB.
@@ -952,7 +954,6 @@ static void handle_set_parameter_parameter(rtsp_conn_info *conn, rtsp_message *r
 //		Can be an IPv4 or an IPv6 number.
 //		`dapo` -- the payload is the port number (as text) on the server to which remote
 // control commands should be sent. It is 3689 for iTunes but varies for iOS devices.
-
 //		A special sub-protocol is used for sending large data items over UDP
 //    If the payload exceeded 4 MB, it is chunked using the following format:
 //    "ssnc", "chnk", packet_ix, packet_counts, packet_tag, packet_type, chunked_data.

@@ -984,16 +984,29 @@ void memory_barrier() {
   pthread_mutex_unlock(&barrier_mutex);
 }
 
-int ss_pthread_mutex_timedlock(pthread_mutex_t *mutex, useconds_t dally_time,
-                               const char *debugmessage, int debuglevel) {
+void sps_nanosleep(const time_t sec, const long nanosec) {
+  struct timespec req, rem;
+  int result;
+  req.tv_sec = sec;
+  req.tv_nsec = nanosec;
+  do {
+    result = nanosleep(&req, &rem);
+    rem = req;
+  } while ((result == -1) && (errno == EINTR));
+  if (result == -1)
+    debug(1, "Error in sps_nanosleep of %d sec and %ld nanoseconds: %d.", sec, nanosec, errno);
+}
 
-  int time_to_wait = dally_time;
+int sps_pthread_mutex_timedlock(pthread_mutex_t *mutex, useconds_t dally_time,
+                                const char *debugmessage, int debuglevel) {
+
+  useconds_t time_to_wait = dally_time;
   int r = pthread_mutex_trylock(mutex);
   while ((r) && (time_to_wait > 0)) {
-    int st = time_to_wait;
+    useconds_t st = time_to_wait;
     if (st > 20000)
       st = 20000;
-    usleep(st);
+    sps_nanosleep(0, st * 1000);
     time_to_wait -= st;
     r = pthread_mutex_trylock(mutex);
   }

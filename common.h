@@ -251,9 +251,12 @@ void shairport_shutdown();
 extern sigset_t pselect_sigset;
 
 // wait for the specified time in microseconds -- it checks every 20 milliseconds
-int ss_pthread_mutex_timedlock(pthread_mutex_t *mutex, useconds_t dally_time,
-                               const char *debugmessage, int debuglevel);
+int sps_pthread_mutex_timedlock(pthread_mutex_t *mutex, useconds_t dally_time,
+                                const char *debugmessage, int debuglevel);
 
 char *get_version_string(); // mallocs a string space -- remember to free it afterwards
+
+void sps_nanosleep(const time_t sec,
+                   const long nanosec); // waits for this time, even through interruptions
 
 #endif // _COMMON_H

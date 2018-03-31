@@ -1,3 +1,7 @@
+Version 3.2d33
+====
+A new metadata token -- 'pffr' The First Frame of a play session has been Received. Not sure we'll keep it...
+
 Version 3.2d30
 ====
 **Enhancements**

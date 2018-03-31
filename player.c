@@ -827,12 +827,11 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
 // frames...",curframe->timestamp,seq_diff(ab_read, ab_write));
 
 // say we have started playing here
-#ifdef HAVE_METADATA_HUB
-            metadata_hub_modify_prolog();
-            int changed = (metadata_store.player_state != PS_PLAYING);
-            metadata_store.player_state = PS_PLAYING;
-            metadata_hub_modify_epilog(changed);
+#ifdef CONFIG_METADATA
+            send_ssnc_metadata('pffr', NULL, 0,
+                               0); // "first frame received", but don't wait if the queue is locked
 #endif
+
             if (reference_timestamp) { // if we have a reference time
               // debug(1,"First frame seen with timestamp...");
               conn->first_packet_timestamp =
@@ -1062,12 +1061,6 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
 #ifdef CONFIG_METADATA
             send_ssnc_metadata('prsm', NULL, 0,
                                0); // "resume", but don't wait if the queue is locked
-#endif
-#ifdef HAVE_METADATA_HUB
-            metadata_hub_modify_prolog();
-            int changed = (metadata_store.player_state != PS_PLAYING);
-            metadata_store.player_state = PS_PLAYING;
-            metadata_hub_modify_epilog(changed);
 #endif
           }
         }
@@ -1604,10 +1597,9 @@ static void *player_thread_func(void *arg) {
   int sync_error_out_of_bounds =
       0; // number of times in a row that there's been a serious sync error
 
-  // stop looking elsewhere for DACP stuff
-  conn->dacp_port = 0;
+// stop looking elsewhere for DACP stuff
 #ifdef HAVE_DACP_CLIENT
-  set_dacp_server_information(conn); // this will stop scanning until a port is registered by the
+  set_dacp_server_information(conn); // this will start scanning when a port is registered by the
                                      // code initiated by the mdns_dacp_monitor
 #endif
   // start an mdns/zeroconf thread to look for DACP messages containing our DACP_ID and getting the
@@ -2520,21 +2512,6 @@ void player_volume_without_notification(double airplay_volume, rtsp_conn_info *c
 
 void player_volume(double airplay_volume, rtsp_conn_info *conn) {
   command_set_volume(airplay_volume);
-#ifdef HAVE_METADATA_HUB
-  int modified = 0;
-  int32_t actual_volume;
-  int gv = dacp_get_volume(&actual_volume);
-  metadata_hub_modify_prolog();
-  if ((gv == 200) && (metadata_store.speaker_volume != actual_volume)) {
-    metadata_store.speaker_volume = actual_volume;
-    modified = 1;
-  }
-  if (metadata_store.airplay_volume != airplay_volume) {
-    metadata_store.airplay_volume = airplay_volume;
-    modified = 1;
-  }
-  metadata_hub_modify_epilog(modified); // change
-#endif
   player_volume_without_notification(airplay_volume, conn);
 }
 
@@ -2549,13 +2526,6 @@ void player_flush(int64_t timestamp, rtsp_conn_info *conn) {
   conn->play_number_after_flush = 0;
 #ifdef CONFIG_METADATA
   send_ssnc_metadata('pfls', NULL, 0, 1);
-#endif
-
-#ifdef HAVE_METADATA_HUB
-  metadata_hub_modify_prolog();
-  int changed = (metadata_store.player_state != PS_PAUSED);
-  metadata_store.player_state = PS_PAUSED;
-  metadata_hub_modify_epilog(changed);
 #endif
 }
 
@@ -2582,12 +2552,6 @@ int player_play(rtsp_conn_info *conn) {
     debug(1, "Error setting stack size for player_thread: %s", strerror(errno));
   pthread_create(pt, &tattr, player_thread_func, (void *)conn);
   pthread_attr_destroy(&tattr);
-#ifdef HAVE_METADATA_HUB
-  metadata_hub_modify_prolog();
-  int changed = (metadata_store.player_state != PS_PLAYING);
-  metadata_store.player_state = PS_PLAYING;
-  metadata_hub_modify_epilog(changed);
-#endif
   return 0;
 }
 
@@ -2603,14 +2567,6 @@ void player_stop(rtsp_conn_info *conn) {
     command_stop();
     free(conn->player_thread);
     conn->player_thread = NULL;
-#ifdef HAVE_METADATA_HUB
-    metadata_hub_modify_prolog();
-    metadata_store.player_state = PS_STOPPED;
-    // debug(1,"player_stop release track metadata and artwork");
-    metadata_hub_reset_track_metadata();
-    metadata_hub_release_track_artwork();
-    metadata_hub_modify_epilog(1);
-#endif
   } else {
     debug(3, "player thread of RTSP conversation %d is already deleted.", conn->connection_number);
   }
