@@ -58,6 +58,7 @@
 #endif
 
 pthread_rwlock_t metadata_hub_re_lock = PTHREAD_RWLOCK_INITIALIZER;
+struct track_metadata_bundle *track_metadata; // used for a temporary track metadata store
 
 void release_char_string(char **str) {
   if (*str) {
@@ -66,9 +67,29 @@ void release_char_string(char **str) {
   }
 }
 
+void metadata_hub_release_track_metadata(struct track_metadata_bundle *track_metadata) {
+  // debug(1,"release track metadata");
+  if (track_metadata) {
+    release_char_string(&track_metadata->track_name);
+    release_char_string(&track_metadata->artist_name);
+    release_char_string(&track_metadata->album_name);
+    release_char_string(&track_metadata->genre);
+    release_char_string(&track_metadata->comment);
+    release_char_string(&track_metadata->composer);
+    release_char_string(&track_metadata->file_kind);
+    release_char_string(&track_metadata->song_description);
+    release_char_string(&track_metadata->song_album_artist);
+    release_char_string(&track_metadata->sort_as);
+    free((char *)track_metadata);
+  } else {
+    debug(1, "Releasing non-existent track metadata");
+  }
+}
+
 void metadata_hub_init(void) {
   // debug(1, "Metadata bundle initialisation.");
   memset(&metadata_store, 0, sizeof(metadata_store));
+  track_metadata = NULL;
 }
 
 void add_metadata_watcher(metadata_watcher fn, void *userdata) {
@@ -96,20 +117,6 @@ void metadata_hub_modify_prolog(void) {
 void metadata_hub_release_track_artwork(void) {
   // debug(1,"release track artwork");
   release_char_string(&metadata_store.cover_art_pathname);
-}
-
-void metadata_hub_reset_track_metadata(void) {
-  // debug(1,"release track metadata");
-  release_char_string(&metadata_store.track_name);
-  release_char_string(&metadata_store.artist_name);
-  release_char_string(&metadata_store.album_name);
-  release_char_string(&metadata_store.genre);
-  release_char_string(&metadata_store.comment);
-  release_char_string(&metadata_store.composer);
-  release_char_string(&metadata_store.file_kind);
-  release_char_string(&metadata_store.sort_as);
-  metadata_store.item_id = 0;
-  metadata_store.songtime_in_milliseconds = 0;
 }
 
 void run_metadata_watchers(void) {
@@ -279,105 +286,85 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
   if (type == 'core') {
     switch (code) {
     case 'mper':
-      metadata_store.item_id = ntohl(*(uint32_t *)data);
-      debug(2, "MH Item ID set to: \"%u\"", metadata_store.item_id);
+      if (track_metadata) {
+        track_metadata->item_id = ntohl(*(uint32_t *)data);
+        track_metadata->item_id_received = 1;
+        debug(2, "MH Item ID set to: \"%u\"", track_metadata->item_id);
+      } else {
+        debug(1, "No track metadata memory allocated when item id received!");
+      }
       break;
     case 'asal':
-      if ((metadata_store.album_name == NULL) ||
-          (strncmp(metadata_store.album_name, data, length) != 0)) {
-        if (metadata_store.album_name)
-          free(metadata_store.album_name);
-        metadata_store.album_name = strndup(data, length);
-        debug(2, "MH Album name set to: \"%s\"", metadata_store.album_name);
-        metadata_store.album_name_changed = 1;
-        metadata_store.changed = 1;
+      if (track_metadata) {
+        track_metadata->album_name = strndup(data, length);
+        debug(2, "MH Album name set to: \"%s\"", track_metadata->album_name);
+      } else {
+        debug(1, "No track metadata memory allocated when album name received!");
       }
       break;
     case 'asar':
-      if ((metadata_store.artist_name == NULL) ||
-          (strncmp(metadata_store.artist_name, data, length) != 0)) {
-        if (metadata_store.artist_name)
-          free(metadata_store.artist_name);
-        metadata_store.artist_name = strndup(data, length);
-        debug(2, "MH Artist name set to: \"%s\"", metadata_store.artist_name);
-        metadata_store.artist_name_changed = 1;
-        metadata_store.changed = 1;
+      if (track_metadata) {
+        track_metadata->artist_name = strndup(data, length);
+        debug(2, "MH Artist name set to: \"%s\"", track_metadata->artist_name);
+      } else {
+        debug(1, "No track metadata memory allocated when artist name received!");
       }
       break;
     case 'ascm':
-      if ((metadata_store.comment == NULL) ||
-          (strncmp(metadata_store.comment, data, length) != 0)) {
-        if (metadata_store.comment)
-          free(metadata_store.comment);
-        metadata_store.comment = strndup(data, length);
-        debug(2, "MH Comment set to: \"%s\"", metadata_store.comment);
-        metadata_store.comment_changed = 1;
-        metadata_store.changed = 1;
+      if (track_metadata) {
+        track_metadata->comment = strndup(data, length);
+        debug(2, "MH Comment set to: \"%s\"", track_metadata->comment);
+      } else {
+        debug(1, "No track metadata memory allocated when comment received!");
       }
       break;
     case 'asgn':
-      if ((metadata_store.genre == NULL) || (strncmp(metadata_store.genre, data, length) != 0)) {
-        if (metadata_store.genre)
-          free(metadata_store.genre);
-        metadata_store.genre = strndup(data, length);
-        debug(2, "MH Genre set to: \"%s\"", metadata_store.genre);
-        metadata_store.genre_changed = 1;
-        metadata_store.changed = 1;
+      if (track_metadata) {
+        track_metadata->genre = strndup(data, length);
+        debug(2, "MH Genre set to: \"%s\"", track_metadata->genre);
+      } else {
+        debug(1, "No track metadata memory allocated when genre received!");
       }
       break;
     case 'minm':
-      if ((metadata_store.track_name == NULL) ||
-          (strncmp(metadata_store.track_name, data, length) != 0)) {
-        if (metadata_store.track_name)
-          free(metadata_store.track_name);
-        metadata_store.track_name = strndup(data, length);
-        debug(2, "MH Track name set to: \"%s\"", metadata_store.track_name);
-        metadata_store.track_name_changed = 1;
-        metadata_store.changed = 1;
+      if (track_metadata) {
+        track_metadata->track_name = strndup(data, length);
+        debug(2, "MH Track name set to: \"%s\"", track_metadata->track_name);
+      } else {
+        debug(1, "No track metadata memory allocated when track name received!");
       }
       break;
     case 'ascp':
-      if ((metadata_store.composer == NULL) ||
-          (strncmp(metadata_store.composer, data, length) != 0)) {
-        if (metadata_store.composer)
-          free(metadata_store.composer);
-        metadata_store.composer = strndup(data, length);
-        debug(2, "MH Composer set to: \"%s\"", metadata_store.composer);
-        metadata_store.composer_changed = 1;
-        metadata_store.changed = 1;
+      if (track_metadata) {
+        track_metadata->composer = strndup(data, length);
+        debug(2, "MH Composer set to: \"%s\"", track_metadata->composer);
+      } else {
+        debug(1, "No track metadata memory allocated when track name received!");
       }
       break;
     case 'asdt':
-      if ((metadata_store.file_kind == NULL) ||
-          (strncmp(metadata_store.file_kind, data, length) != 0)) {
-        if (metadata_store.file_kind)
-          free(metadata_store.file_kind);
-        metadata_store.file_kind = strndup(data, length);
-        debug(2, "MH Song Description set to: \"%s\"", metadata_store.file_kind);
-        metadata_store.file_kind_changed = 1;
-        metadata_store.changed = 1;
+      if (track_metadata) {
+        track_metadata->song_description = strndup(data, length);
+        debug(2, "MH Song Description set to: \"%s\"", track_metadata->song_description);
+      } else {
+        debug(1, "No track metadata memory allocated when song description received!");
       }
       break;
     case 'asaa':
-      if ((metadata_store.file_kind == NULL) ||
-          (strncmp(metadata_store.file_kind, data, length) != 0)) {
-        if (metadata_store.file_kind)
-          free(metadata_store.file_kind);
-        metadata_store.file_kind = strndup(data, length);
-        debug(2, "MH File Kind set to: \"%s\"", metadata_store.file_kind);
-        metadata_store.file_kind_changed = 1;
-        metadata_store.changed = 1;
+      if (track_metadata) {
+        track_metadata->song_album_artist = strndup(data, length);
+        debug(2, "MH Song Album Artist set to: \"%s\"", track_metadata->song_album_artist);
+      } else {
+        debug(1, "No track metadata memory allocated when song description received!");
       }
       break;
     case 'assn':
-      if ((metadata_store.sort_as == NULL) ||
-          (strncmp(metadata_store.sort_as, data, length) != 0)) {
-        if (metadata_store.sort_as)
-          free(metadata_store.sort_as);
-        metadata_store.sort_as = strndup(data, length);
-        debug(2, "MH Sort As set to: \"%s\"", metadata_store.sort_as);
-        metadata_store.sort_as_changed = 1;
-        metadata_store.changed = 1;
+      if (track_metadata) {
+        track_metadata->sort_as = strndup(data, length);
+        debug(2, "MH Sort As set to: \"%s\"", track_metadata->sort_as);
+      } else {
+        debug(1,
+              "No track metadata memory allocated when sort as (sort name) description received!");
       }
       break;
 
@@ -411,20 +398,42 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
 
     case 'mdst':
       debug(2, "MH Metadata stream processing start.");
-      metadata_hub_modify_prolog();
-      metadata_hub_reset_track_metadata();
-      metadata_hub_release_track_artwork();
+      if (track_metadata) {
+        debug(1, "This track metadata bundle still seems to exist -- releasing it");
+        metadata_hub_release_track_metadata(track_metadata);
+      }
+      track_metadata = (struct track_metadata_bundle *)malloc(sizeof(struct track_metadata_bundle));
+      if (track_metadata == NULL)
+        die("Could not allocate memory for track metadata.");
+      memset(track_metadata, 0, sizeof(struct track_metadata_bundle)); // now we have a valid track
+                                                                       // metadata space, but the
+                                                                       // metadata itself
+      // might turin out to be invalid. Specifically, YouTube on iOS can generate a sequence of
+      // track metadata that is invalid.
+      // it is distinguished by having an item_id of zero.
       break;
     case 'mden':
-      metadata_hub_modify_epilog(1);
+      if (track_metadata) {
+        if ((track_metadata->item_id_received == 0) || (track_metadata->item_id != 0)) {
+          // i.e. it's only invalid if it has definitely been given an item_id of zero
+          metadata_hub_modify_prolog();
+          metadata_hub_release_track_metadata(metadata_store.track_metadata);
+          metadata_store.track_metadata = track_metadata;
+          track_metadata = NULL;
+          metadata_hub_modify_epilog(1);
+        } else {
+          debug(1, "The track information received is invalid -- dropping it");
+          metadata_hub_release_track_metadata(track_metadata);
+          track_metadata = NULL;
+        }
+      }
       debug(2, "MH Metadata stream processing end.");
       break;
     case 'PICT':
       if (length > 16) {
         metadata_hub_modify_prolog();
         debug(2, "MH Picture received, length %u bytes.", length);
-        if (metadata_store.cover_art_pathname)
-          free(metadata_store.cover_art_pathname);
+        release_char_string(&metadata_store.cover_art_pathname);
         metadata_store.cover_art_pathname = metadata_write_image_file(data, length);
         metadata_hub_modify_epilog(1);
       }
@@ -448,8 +457,7 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
       if ((metadata_store.server_ip == NULL) ||
           (strncmp(metadata_store.server_ip, data, length) != 0)) {
         metadata_hub_modify_prolog();
-        if (metadata_store.server_ip)
-          free(metadata_store.server_ip);
+        release_char_string(&metadata_store.server_ip);
         metadata_store.server_ip = strndup(data, length);
         // debug(1, "MH Server IP set to: \"%s\"", metadata_store.server_ip);
         metadata_hub_modify_epilog(1);
@@ -467,7 +475,8 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
       metadata_hub_modify_prolog();
       metadata_store.player_state = PS_STOPPED;
       // debug(1,"player_stop release track metadata and artwork");
-      metadata_hub_reset_track_metadata();
+      metadata_hub_release_track_metadata(metadata_store.track_metadata);
+      metadata_store.track_metadata = NULL;
       metadata_hub_release_track_artwork();
       metadata_hub_modify_epilog(1);
     } break;

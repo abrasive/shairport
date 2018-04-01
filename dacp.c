@@ -187,7 +187,7 @@ int dacp_send_command(const char *command, char **body, ssize_t *bodysize) {
         // connect!
         // debug(1, "DACP socket created.");
         if (connect(sockfd, res->ai_addr, res->ai_addrlen) < 0) {
-          debug(3, "DACP connect failed with errno %d.",errno);
+          debug(3, "DACP connect failed with errno %d.", errno);
           response.code = 496; // Can't connect to the DACP server
         } else {
           // debug(1,"DACP connect succeeded.");
@@ -367,7 +367,6 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
   int32_t revision_number = 1;
   while (1) {
     int result;
-    int changed = 0;
     sps_pthread_mutex_timedlock(
         &dacp_server_information_lock, 500000,
         "dacp_monitor_thread_code couldn't get DACP server information lock in 0.5 second!.", 1);
@@ -461,21 +460,18 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
                   if (metadata_store.play_status != PS_STOPPED) {
                     metadata_store.play_status = PS_STOPPED;
                     debug(1, "Play status is \"stopped\".");
-                    metadata_store.changed = 1;
                   }
                   break;
                 case 3:
                   if (metadata_store.play_status != PS_PAUSED) {
                     metadata_store.play_status = PS_PAUSED;
                     debug(1, "Play status is \"paused\".");
-                    metadata_store.changed = 1;
                   }
                   break;
                 case 4:
                   if (metadata_store.play_status != PS_PLAYING) {
                     metadata_store.play_status = PS_PLAYING;
                     debug(1, "Play status changed to \"playing\".");
-                    metadata_store.changed = 1;
                   }
                   break;
                 default:
@@ -491,14 +487,12 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
                   if (metadata_store.shuffle_status != SS_OFF) {
                     metadata_store.shuffle_status = SS_OFF;
                     debug(1, "Shuffle status is \"off\".");
-                    metadata_store.changed = 1;
                   }
                   break;
                 case 1:
                   if (metadata_store.shuffle_status != SS_ON) {
                     metadata_store.shuffle_status = SS_ON;
                     debug(1, "Shuffle status is \"on\".");
-                    metadata_store.changed = 1;
                   }
                   break;
                 default:
@@ -514,21 +508,18 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
                   if (metadata_store.repeat_status != RS_OFF) {
                     metadata_store.repeat_status = RS_OFF;
                     debug(1, "Repeat status is \"none\".");
-                    metadata_store.changed = 1;
                   }
                   break;
                 case 1:
                   if (metadata_store.repeat_status != RS_ONE) {
                     metadata_store.repeat_status = RS_ONE;
                     debug(1, "Repeat status is \"one\".");
-                    metadata_store.changed = 1;
                   }
                   break;
                 case 2:
                   if (metadata_store.repeat_status != RS_ALL) {
                     metadata_store.repeat_status = RS_ALL;
                     debug(1, "Repeat status is \"all\".");
-                    metadata_store.changed = 1;
                   }
                   break;
                 default:
@@ -610,8 +601,8 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
               case 'astm':
                 t = sp - item_size;
                 r = ntohl(*(uint32_t *)(t));
-                metadata_store.songtime_in_milliseconds = ntohl(*(uint32_t *)(t));
-                metadata_store.changed = 1;
+                if (metadata_store.track_metadata)
+                  metadata_store.track_metadata->songtime_in_milliseconds = ntohl(*(uint32_t *)(t));
                 break;
 
               /*
