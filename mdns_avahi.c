@@ -78,7 +78,7 @@ static void resolve_callback(AvahiServiceResolver *r, AVAHI_GCC_UNUSED AvahiIfIn
   /* Called whenever a service has been resolved successfully or timed out */
   switch (event) {
   case AVAHI_RESOLVER_FAILURE:
-    debug(1, "(Resolver) Failed to resolve service '%s' of type '%s' in domain '%s': %s.", name,
+    debug(2, "(Resolver) Failed to resolve service '%s' of type '%s' in domain '%s': %s.", name,
           type, domain, avahi_strerror(avahi_client_errno(avahi_service_resolver_get_client(r))));
     break;
   case AVAHI_RESOLVER_FOUND: {
@@ -131,7 +131,7 @@ static void browse_callback(AvahiServiceBrowser *b, AvahiIfIndex interface, Avah
             avahi_strerror(avahi_client_errno(dbs->service_client)));
     break;
   case AVAHI_BROWSER_REMOVE:
-    debug(1, "(Browser) REMOVE: service '%s' of type '%s' in domain '%s'.", name, type, domain);
+    debug(3, "(Browser) REMOVE: service '%s' of type '%s' in domain '%s'.", name, type, domain);
 #ifdef HAVE_DACP_CLIENT
     char *dacpid = strstr(name, "iTunes_Ctrl_");
     if (dacpid) {

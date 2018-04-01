@@ -21,7 +21,7 @@ ShairportSyncAdvancedRemoteControl *shairportSyncAdvancedRemoteControlSkeleton =
 
 void dbus_metadata_watcher(struct metadata_bundle *argc, __attribute__((unused)) void *userdata) {
   char response[100];
-
+  char *th;
   shairport_sync_advanced_remote_control_set_volume(shairportSyncAdvancedRemoteControlSkeleton,
                                                     argc->speaker_volume);
 
@@ -48,6 +48,7 @@ void dbus_metadata_watcher(struct metadata_bundle *argc, __attribute__((unused))
   case PS_NOT_AVAILABLE:
     shairport_sync_remote_control_set_player_state(shairportSyncRemoteControlSkeleton,
                                                    "Not Available");
+    break;
   case PS_STOPPED:
     shairport_sync_remote_control_set_player_state(shairportSyncRemoteControlSkeleton, "Stopped");
     break;
@@ -63,22 +64,29 @@ void dbus_metadata_watcher(struct metadata_bundle *argc, __attribute__((unused))
 
   switch (argc->play_status) {
   case PS_NOT_AVAILABLE:
-    shairport_sync_advanced_remote_control_set_playback_status(
-        shairportSyncAdvancedRemoteControlSkeleton, "Not Available");
+    strcpy(response, "Not Available");
+    break;
   case PS_STOPPED:
-    shairport_sync_advanced_remote_control_set_playback_status(
-        shairportSyncAdvancedRemoteControlSkeleton, "Stopped");
+    strcpy(response, "Stopped");
     break;
   case PS_PAUSED:
-    shairport_sync_advanced_remote_control_set_playback_status(
-        shairportSyncAdvancedRemoteControlSkeleton, "Paused");
+    strcpy(response, "Paused");
     break;
   case PS_PLAYING:
-    shairport_sync_advanced_remote_control_set_playback_status(
-        shairportSyncAdvancedRemoteControlSkeleton, "Playing");
+    strcpy(response, "Playing");
     break;
   default:
     debug(1, "This should never happen.");
+  }
+
+  th = shairport_sync_advanced_remote_control_get_playback_status(
+      shairportSyncAdvancedRemoteControlSkeleton);
+
+  // only set this if it's different
+  if ((th == NULL) || (strcasecmp(th, response) != 0)) {
+    debug(3, "Playback Status should be changed");
+    shairport_sync_advanced_remote_control_set_playback_status(
+        shairportSyncAdvancedRemoteControlSkeleton, response);
   }
 
   switch (argc->repeat_status) {
@@ -97,12 +105,12 @@ void dbus_metadata_watcher(struct metadata_bundle *argc, __attribute__((unused))
   default:
     debug(1, "This should never happen.");
   }
-  const char *th = shairport_sync_advanced_remote_control_get_loop_status(
+  th = shairport_sync_advanced_remote_control_get_loop_status(
       shairportSyncAdvancedRemoteControlSkeleton);
 
   // only set this if it's different
   if ((th == NULL) || (strcasecmp(th, response) != 0)) {
-    debug(1, "Loop Status should be changed");
+    debug(3, "Loop Status should be changed");
     shairport_sync_advanced_remote_control_set_loop_status(
         shairportSyncAdvancedRemoteControlSkeleton, response);
   }
