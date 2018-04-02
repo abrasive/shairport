@@ -1,3 +1,15 @@
+Version 3.2d34
+====
+**Enhancements**
+* Better compatibility with TuneBlade -- Shairport Sync honours the latency settings properly now.
+* Big cleanup of D-Bus and MPRIS interface messages -- it's a lot less noisy. More to be done here.
+* The brokey YouTube iOS app, which generates a great deal of invalid metadata (do they even know?), is handled a bit better. If valid metadata is there, Shairport Sync can process it.
+* `clip` and `svip` messages are now only emitted for a play connection, not for all connections (e.g. connections that just enquire if the sertvice it there without starting to play).
+* `pfls` and `prsm` messages are less frequent, especially when a play session starts.
+
+**Other Developments**
+* Shairport Sync now uses about an extra half megabyte of RAM.
+
 Version 3.2d33
 ====
 A new metadata token -- 'pffr' The First Frame of a play session has been Received. Not sure we'll keep it...
