@@ -45,7 +45,7 @@ typedef struct audio_buffer_entry { // decoded audio packets
 
 // default buffer size
 // needs to be a power of 2 because of the way BUFIDX(seqno) works
-#define BUFFER_FRAMES 512
+#define BUFFER_FRAMES 1024
 
 typedef struct {
   int encrypted;
@@ -141,6 +141,7 @@ typedef struct {
   int control_socket;                 // our local [server] control socket
   int timing_socket;                  // local timing socket
 
+  int64_t latency_delayed_timestamp;  // this is for debugging only...
   int64_t reference_timestamp;
   uint64_t reference_timestamp_time;
   uint64_t remote_reference_timestamp_time;

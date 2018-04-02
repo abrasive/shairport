@@ -178,7 +178,9 @@ typedef struct {
 
 } shairport_cfg;
 
-uint32_t nctohl(const uint8_t *p); // read 4 characters from the p and do ntohl on them
+uint32_t nctohl(const uint8_t *p); // read 4 characters from *p and do ntohl on them
+uint16_t nctohs(const uint8_t *p); // read 2 characters from *p and do ntohs on them
+
 void memory_barrier();
 
 // true if Shairport Sync is supposed to be sending output to the output device, false otherwise

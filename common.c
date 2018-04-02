@@ -970,11 +970,18 @@ uint64_t ranarray64u() { return (ranarrayval()); }
 
 int64_t ranarray64i() { return (ranarrayval() >> 1); }
 
-uint32_t nctohl(const uint8_t *p) { // read 4 characters from the p and do ntohl on them
+uint32_t nctohl(const uint8_t *p) { // read 4 characters from *p and do ntohl on them
   // this is to avoid possible aliasing violations
   uint32_t holder;
   memcpy(&holder, p, sizeof(holder));
   return ntohl(holder);
+}
+
+uint16_t nctohs(const uint8_t *p) { // read 2 characters from *p and do ntohs on them
+  // this is to avoid possible aliasing violations
+  uint16_t holder;
+  memcpy(&holder, p, sizeof(holder));
+  return ntohs(holder);
 }
 
 pthread_mutex_t barrier_mutex = PTHREAD_MUTEX_INITIALIZER;

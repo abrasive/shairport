@@ -82,7 +82,7 @@ void metadata_hub_release_track_metadata(struct track_metadata_bundle *track_met
     release_char_string(&track_metadata->sort_as);
     free((char *)track_metadata);
   } else {
-    debug(1, "Releasing non-existent track metadata");
+    debug(3, "Asked to release non-existent track metadata");
   }
 }
 

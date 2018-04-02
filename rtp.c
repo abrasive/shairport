@@ -25,9 +25,14 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include "rtp.h"
+#include "common.h"
+#include "player.h"
+#include "rtsp.h"
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <math.h>
 #include <memory.h>
 #include <netdb.h>
@@ -38,11 +43,6 @@
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
-
-#include "common.h"
-#include "player.h"
-#include "rtp.h"
-#include "rtsp.h"
 
 uint64_t local_to_remote_time_jitters;
 uint64_t local_to_remote_time_jitters_count;
@@ -56,6 +56,7 @@ void rtp_initialise(rtsp_conn_info *conn) {
   int rc = pthread_mutex_init(&conn->reference_time_mutex, NULL);
   if (rc)
     debug(1, "Error initialising reference_time_mutex.");
+  
 }
 
 void rtp_terminate(rtsp_conn_info *conn) {
@@ -209,17 +210,38 @@ void *rtp_control_receiver(void *arg) {
 
     ssize_t plen = nread;
     if (packet[1] == 0xd4) { // sync data
-      /*
-      char obf[4096];
-      char *obfp = obf;
-      int obfc;
-      for (obfc=0;obfc<plen;obfc++) {
-        sprintf(obfp,"%02X",packet[obfc]);
-        obfp+=2;
-      };
-      *obfp=0;
-      debug(1,"Sync Packet Received: \"%s\"",obf);
-      */
+/*
+      // the following stanza is for debugging only -- normally commented out.
+      {
+        char obf[4096];
+        char *obfp = obf;
+        int obfc;
+        for (obfc = 0; obfc < plen; obfc++) {
+          sprintf(obfp, "%02X", packet[obfc]);
+          obfp += 2;
+        };
+        *obfp = 0;
+
+
+        // get raw timestamp information
+        // I think that a good way to understand these timestamps is that
+        // (1) the rtlt below is the timestamp of the frame that should be playing at the client-time specified in the packet if there was no delay
+        // and (2) that the rt below is the timestamp of the frame that should be playing at the client-time specified in the packet on this device taking account of the delay
+        // Thus, (3) the latency can be calculated by subtracting the second from the first.
+        // There must be more to it -- there something missing.
+        
+        // In addition, it seems that if the value of the short represented by the second pair of bytes in the packe is 7
+        // then an extra time lag is expected to be added, presumably by the AirPort Express. Best guess is that this delay is 11,025 frames.
+        
+        uint32_t rtlt = nctohl(&packet[4]); // raw timestamp less latency
+        uint32_t rt = nctohl(&packet[16]);  // raw timestamp
+
+        uint32_t fl = nctohs(&packet[2]); //
+
+        // debug(1,"Sync Packet of %d bytes received: \"%s\", flags: %d, timestamps %u and %u, giving a latency of %d frames.",plen,obf,fl,rt,rtlt,rt-rtlt);
+        // debug(1,"Monotonic timestamps are: %" PRId64 " and %" PRId64 " respectively.",monotonic_timestamp(rt, conn),monotonic_timestamp(rtlt, conn));
+      }
+*/
       if (conn->local_to_remote_time_difference) { // need a time packet to be interchanged first...
 
         remote_time_of_sync = (uint64_t)nctohl(&packet[8]) << 32;
@@ -228,48 +250,83 @@ void *rtp_control_receiver(void *arg) {
         // debug(1,"Remote Sync Time: %0llx.",remote_time_of_sync);
 
         sync_rtp_timestamp = monotonic_timestamp(nctohl(&packet[16]), conn);
+        int64_t rtp_timestamp_less_latency = monotonic_timestamp(nctohl(&packet[4]), conn);
 
         // debug(1,"Sync timestamp is %u.",ntohl(*((uint32_t *)&packet[16])));
 
         if (config.userSuppliedLatency) {
           if (config.userSuppliedLatency != conn->latency) {
-            debug(1, "Using the user-supplied latency: %lld.", config.userSuppliedLatency);
+            debug(1, "Using the user-supplied latency: %" PRId64 ".", config.userSuppliedLatency);
           }
           conn->latency = config.userSuppliedLatency;
-        } else if (packet[0] &
-                   0x10) { // only set latency if it's a packet just after a flush or resume
-          int64_t rtp_timestamp_less_latency = monotonic_timestamp(nctohl(&packet[4]), conn);
-          int64_t la = sync_rtp_timestamp - rtp_timestamp_less_latency + config.fixedLatencyOffset;
+        } else {
+
+          // It seems that the second pair of bytes in the packet indicate whether a fixed
+          // delay of 11,025 frames should be added -- iTunes set this field to 7 and
+          // AirPlay sets it to 4.
+
+          // The value of 11,025 (0.25 seconds) is a guess based on the "Audio-Latency" parameter
+          // returned by an AE.
+
+          // Sigh, it would be nice to have a published protocol...
+
+          uint16_t flags = nctohs(&packet[2]);
+          int64_t la = sync_rtp_timestamp - rtp_timestamp_less_latency;
+          if (flags == 7)
+            la += config.fixedLatencyOffset;
+          // debug(1,"Latency calculated from the sync packet is %" PRId64 " frames.",la);
           if ((conn->maximum_latency) && (conn->maximum_latency < la))
             la = conn->maximum_latency;
           if ((conn->minimum_latency) && (conn->minimum_latency > la))
             la = conn->minimum_latency;
+            
+          
+          const int max_frames = ((3 * BUFFER_FRAMES * 352)/4)-11025;
 
-          if (la != conn->latency) {
-            conn->latency = la;
-            // debug(1, "New latency: %lld, sync latency: %lld, minimum latency: %lld, maximum "
-            //         "latency: %lld, fixed offset: %lld.",
-            //      la, sync_rtp_timestamp - rtp_timestamp_less_latency, conn->minimum_latency,
-            //      conn->maximum_latency, config.fixedLatencyOffset);
+          if ((la < 0) || (la > max_frames)) {
+            warn("An out-of-range latency request of %" PRId64
+                 " frames was ignored. Must be %d frames or less (44,100 frames per second). Latency remains at %" PRId64
+                 " frames.",
+                 la,max_frames,conn->latency);
+          } else {
+
+            if (la != conn->latency) {
+              conn->latency = la;
+              debug(2, "New latency detected: %" PRId64 ", sync latency: %" PRId64
+                       ", minimum latency: %" PRId64 ", maximum "
+                       "latency: %" PRId64 ", fixed offset: %" PRId64 ".",
+                    la, sync_rtp_timestamp - rtp_timestamp_less_latency, conn->minimum_latency,
+                    conn->maximum_latency, config.fixedLatencyOffset);
+            }
           }
         }
 
-        // need to clarify this.
-
-        if (packet[0] & 0x10) {
-          // if it's a packet right after a flush or resume
-          sync_rtp_timestamp += 352; // add frame_size -- can't see a reference to this anywhere,
-                                     // but it seems to get everything into sync.
-          // it's as if the first sync after a flush or resume is the timing of the next packet
-          // after the one whose RTP is given. Weird.
-        }
-
         pthread_mutex_lock(&conn->reference_time_mutex);
+        
+        //this is for debugging
+        //uint64_t old_remote_reference_time = conn->remote_reference_timestamp_time;
+        //int64_t old_reference_timestamp = conn->reference_timestamp;
+        //int64_t old_latency_delayed_timestamp = conn->latency_delayed_timestamp;
         conn->remote_reference_timestamp_time = remote_time_of_sync;
         conn->reference_timestamp_time =
             remote_time_of_sync - conn->local_to_remote_time_difference;
         conn->reference_timestamp = sync_rtp_timestamp;
+        conn->latency_delayed_timestamp = rtp_timestamp_less_latency;
         pthread_mutex_unlock(&conn->reference_time_mutex);
+        
+        // this is for debugging
+        /*
+        uint64_t time_difference = remote_time_of_sync - old_remote_reference_time;
+        int64_t reference_frame_difference = sync_rtp_timestamp - old_reference_timestamp;
+        int64_t delayed_frame_difference = rtp_timestamp_less_latency - old_latency_delayed_timestamp;
+        
+        if (old_remote_reference_time)
+          debug(1,"Time difference: %" PRIu64 " reference and delayed frame differences: %" PRId64 " and %" PRId64 ", giving rates of %f and %f respectively.",
+            (time_difference*1000000)>>32,reference_frame_difference,delayed_frame_difference,(1.0*(reference_frame_difference*10000000))/((time_difference*10000000)>>32),(1.0*(delayed_frame_difference*10000000))/((time_difference*10000000)>>32));
+        else
+          debug(1,"First sync received");
+        */
+        
         // debug(1,"New Reference timestamp and timestamp time...");
         // get estimated remote time now
         // remote_time_now = local_time_now + local_to_remote_time_difference;
@@ -734,7 +791,7 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, int *lsp
   inet_ntop(conn->connection_ip_family, self_addr, conn->self_ip_string,
             sizeof(conn->self_ip_string));
 
-  debug(1, "Set up play connection from %s to self at %s on RTSP conversation thread %d.",
+  debug(2, "Set up play connection from %s to self at %s on RTSP conversation thread %d.",
         conn->client_ip_string, conn->self_ip_string, conn->connection_number);
 
   // set up a the record of the remote's control socket

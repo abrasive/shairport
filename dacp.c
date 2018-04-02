@@ -223,7 +223,7 @@ int dacp_send_command(const char *command, char **body, ssize_t *bodysize) {
               int ndata = recv(sockfd, buffer, sizeof(buffer), 0);
               // debug(1,"Received %d bytes: \"%s\".",ndata,buffer);
               if (ndata <= 0) {
-                debug(1, "Error receiving data.");
+                debug(2, "dacp_send_command -- error receiving response for command \"%s\".",command);
                 free(response.body);
                 response.body = NULL;
                 response.malloced_size = 0;
@@ -258,7 +258,7 @@ int dacp_send_command(const char *command, char **body, ssize_t *bodysize) {
       // debug(1,"Sent command\"%s\" with a response body of size %d.",command,response.size);
       // debug(1,"dacp_conversation_lock released.");
     } else {
-      debug(1, "Could not acquire a lock on the dacp transmit/receive section when attempting to "
+      debug(3, "Could not acquire a lock on the dacp transmit/receive section when attempting to "
                "send the command \"%s\". Possible timeout?",
             command);
       response.code = 494; // This client is already busy
@@ -289,7 +289,7 @@ void relinquish_dacp_server_information(rtsp_conn_info *conn) {
   // index) hasn't already taken over the dacp service
   sps_pthread_mutex_timedlock(
       &dacp_server_information_lock, 500000,
-      "set_dacp_server_information couldn't get DACP server information lock in 0.5 second!.", 1);
+      "set_dacp_server_information couldn't get DACP server information lock in 0.5 second!.", 2);
   if (dacp_server.players_connection_thread_index == conn->connection_number)
     dacp_server.players_connection_thread_index = 0;
   pthread_mutex_unlock(&dacp_server_information_lock);
@@ -303,7 +303,7 @@ void relinquish_dacp_server_information(rtsp_conn_info *conn) {
 void set_dacp_server_information(rtsp_conn_info *conn) {
   sps_pthread_mutex_timedlock(
       &dacp_server_information_lock, 500000,
-      "set_dacp_server_information couldn't get DACP server information lock in 0.5 second!.", 1);
+      "set_dacp_server_information couldn't get DACP server information lock in 0.5 second!.", 2);
   dacp_server.players_connection_thread_index = conn->connection_number;
   if (strcmp(conn->dacp_id, dacp_server.dacp_id) != 0) {
     strncpy(dacp_server.dacp_id, conn->dacp_id, sizeof(dacp_server.dacp_id));
@@ -342,7 +342,7 @@ void dacp_monitor_port_update_callback(char *dacp_id, uint16_t port) {
   sps_pthread_mutex_timedlock(
       &dacp_server_information_lock, 500000,
       "dacp_monitor_port_update_callback couldn't get DACP server information lock in 0.5 second!.",
-      1);
+      2);
   if (strcmp(dacp_id, dacp_server.dacp_id) == 0) {
     dacp_server.port = port;
     if (port == 0)
@@ -355,7 +355,7 @@ void dacp_monitor_port_update_callback(char *dacp_id, uint16_t port) {
     metadata_hub_modify_epilog(ch);
     pthread_cond_signal(&dacp_server_information_cv);
   } else {
-    debug(1, "dacp port monitor reporting on and out-of-use remote.");
+    debug(1, "dacp port monitor reporting on an out-of-use remote.");
   }
   pthread_mutex_unlock(&dacp_server_information_lock);
 }
@@ -369,7 +369,7 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
     int result;
     sps_pthread_mutex_timedlock(
         &dacp_server_information_lock, 500000,
-        "dacp_monitor_thread_code couldn't get DACP server information lock in 0.5 second!.", 1);
+        "dacp_monitor_thread_code couldn't get DACP server information lock in 0.5 second!.", 2);
     while (dacp_server.scan_enable == 0) {
       // debug(1, "Wait for a valid DACP port");
       pthread_cond_wait(&dacp_server_information_cv, &dacp_server_information_lock);
@@ -459,19 +459,19 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
                 case 2:
                   if (metadata_store.play_status != PS_STOPPED) {
                     metadata_store.play_status = PS_STOPPED;
-                    debug(1, "Play status is \"stopped\".");
+                    debug(2, "Play status is \"stopped\".");
                   }
                   break;
                 case 3:
                   if (metadata_store.play_status != PS_PAUSED) {
                     metadata_store.play_status = PS_PAUSED;
-                    debug(1, "Play status is \"paused\".");
+                    debug(2, "Play status is \"paused\".");
                   }
                   break;
                 case 4:
                   if (metadata_store.play_status != PS_PLAYING) {
                     metadata_store.play_status = PS_PLAYING;
-                    debug(1, "Play status changed to \"playing\".");
+                    debug(2, "Play status changed to \"playing\".");
                   }
                   break;
                 default:
@@ -486,13 +486,13 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
                 case 0:
                   if (metadata_store.shuffle_status != SS_OFF) {
                     metadata_store.shuffle_status = SS_OFF;
-                    debug(1, "Shuffle status is \"off\".");
+                    debug(2, "Shuffle status is \"off\".");
                   }
                   break;
                 case 1:
                   if (metadata_store.shuffle_status != SS_ON) {
                     metadata_store.shuffle_status = SS_ON;
-                    debug(1, "Shuffle status is \"on\".");
+                    debug(2, "Shuffle status is \"on\".");
                   }
                   break;
                 default:
@@ -507,19 +507,19 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
                 case 0:
                   if (metadata_store.repeat_status != RS_OFF) {
                     metadata_store.repeat_status = RS_OFF;
-                    debug(1, "Repeat status is \"none\".");
+                    debug(2, "Repeat status is \"none\".");
                   }
                   break;
                 case 1:
                   if (metadata_store.repeat_status != RS_ONE) {
                     metadata_store.repeat_status = RS_ONE;
-                    debug(1, "Repeat status is \"one\".");
+                    debug(2, "Repeat status is \"one\".");
                   }
                   break;
                 case 2:
                   if (metadata_store.repeat_status != RS_ALL) {
                     metadata_store.repeat_status = RS_ALL;
-                    debug(1, "Repeat status is \"all\".");
+                    debug(2, "Repeat status is \"all\".");
                   }
                   break;
                 default:

@@ -503,7 +503,7 @@ gboolean notify_loop_status_callback(ShairportSyncAdvancedRemoteControl *skeleto
   char *th = (char *)shairport_sync_advanced_remote_control_get_loop_status(skeleton);
   //  enum volume_control_profile_type previous_volume_control_profile =
   //  config.volume_control_profile;
-  debug(1, "notify_loop_status_callback called with loop status of \"%s\".", th);
+  // debug(1, "notify_loop_status_callback called with loop status of \"%s\".", th);
   if (strcasecmp(th, "off") == 0)
     send_simple_dacp_command("setproperty?dacp.repeatstate=0");
   else if (strcasecmp(th, "one") == 0)

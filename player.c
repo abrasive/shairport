@@ -833,9 +833,11 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
                                        // supposed to start playing this
               have_sent_prefiller_silence = 0;
 
+              // debug(1, "First packet timestamp is %" PRId64 ".", conn->first_packet_timestamp);
+
 // say we have started playing here
 #ifdef CONFIG_METADATA
-              debug(1, "pffr");
+              debug(2, "pffr");
               send_ssnc_metadata(
                   'pffr', NULL, 0,
                   0); // "first frame received", but don't wait if the queue is locked
@@ -1060,7 +1062,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
                                           &conn->play_segment_reference_frame_remote_time, conn);
             conn->play_segment_reference_frame *= conn->output_sample_ratio;
 #ifdef CONFIG_METADATA
-            debug(1, "prsm");
+            debug(2, "prsm");
             send_ssnc_metadata('prsm', NULL, 0,
                                0); // "resume", but don't wait if the queue is locked
 #endif
@@ -1386,9 +1388,9 @@ static void *player_thread_func(void *arg) {
   conn->fix_volume = 0x10000;
 
   if (conn->latency == 0) {
-    debug(3, "No latency has (yet) been specified. Setting 99,226 (2.25 seconds + 1 frame) frames "
+    debug(3, "No latency has (yet) been specified. Setting 88,200 (2 seconds) frames "
              "as a default.");
-    conn->latency = 99226;
+    conn->latency = 88200;
   }
 
   int rc = pthread_mutex_init(&conn->ab_mutex, NULL);
@@ -2532,7 +2534,7 @@ void player_flush(int64_t timestamp, rtsp_conn_info *conn) {
   // only send a flush metadata message if the first packet has been seen -- it's a bogus message
   // otherwise
   if (conn->first_packet_timestamp) {
-    debug(1, "pfls");
+    debug(2, "pfls");
     send_ssnc_metadata('pfls', NULL, 0, 1);
   }
 #endif
@@ -2547,7 +2549,7 @@ int player_play(rtsp_conn_info *conn) {
         BUFFER_FRAMES);
   command_start();
 #ifdef CONFIG_METADATA
-  debug(1, "pbeg");
+  debug(2, "pbeg");
   send_ssnc_metadata('pbeg', NULL, 0, 1);
 #endif
   pthread_t *pt = malloc(sizeof(pthread_t));
@@ -2572,7 +2574,7 @@ void player_stop(rtsp_conn_info *conn) {
     pthread_kill(*conn->player_thread, SIGUSR1);
     pthread_join(*conn->player_thread, NULL);
 #ifdef CONFIG_METADATA
-    debug(1, "pend");
+    debug(2, "pend");
     send_ssnc_metadata('pend', NULL, 0, 1);
 #endif
     command_stop();
