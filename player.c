@@ -833,7 +833,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
                                        // supposed to start playing this
               have_sent_prefiller_silence = 0;
 
-              // debug(1, "First packet timestamp is %" PRId64 ".", conn->first_packet_timestamp);
+// debug(1, "First packet timestamp is %" PRId64 ".", conn->first_packet_timestamp);
 
 // say we have started playing here
 #ifdef CONFIG_METADATA
