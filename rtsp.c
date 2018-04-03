@@ -675,7 +675,7 @@ static void handle_record(rtsp_conn_info *conn, rtsp_message *req, rtsp_message 
   // actually is,
   // and when the client specifies a latency, it should be added to this figure.
 
-  // Thus, AirPlay's latency figure of 77175, when added to 11025 gives you
+  // Thus, [the old version of] AirPlay's latency figure of 77175, when added to 11025 gives you
   // exactly 88200
   // and iTunes' latency figure of 88553, when added to 11025 gives you 99578,
   // pretty close to the 99400 we guessed.
