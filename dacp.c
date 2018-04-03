@@ -206,8 +206,8 @@ int dacp_send_command(const char *command, char **body, ssize_t *bodysize) {
 
           } else {
 
-            response.body = malloc(32768); // it can resize this if necessary
-            response.malloced_size = 32768;
+            response.body = malloc(2048); // it can resize this if necessary
+            response.malloced_size = 2048;
 
             struct http_roundtripper rt;
             http_init(&rt, responseFuncs, &response);
@@ -223,7 +223,7 @@ int dacp_send_command(const char *command, char **body, ssize_t *bodysize) {
               int ndata = recv(sockfd, buffer, sizeof(buffer), 0);
               // debug(1,"Received %d bytes: \"%s\".",ndata,buffer);
               if (ndata <= 0) {
-                debug(2, "dacp_send_command -- error receiving response for command \"%s\".",
+                debug(1, "dacp_send_command -- error receiving response for command \"%s\".",
                       command);
                 free(response.body);
                 response.body = NULL;
@@ -302,6 +302,7 @@ void relinquish_dacp_server_information(rtsp_conn_info *conn) {
 // the conversation number
 // Thus, we can keep the DACP port that might have previously been discovered
 void set_dacp_server_information(rtsp_conn_info *conn) {
+  debug(1, "set_dacp_server_information.");  
   sps_pthread_mutex_timedlock(
       &dacp_server_information_lock, 500000,
       "set_dacp_server_information couldn't get DACP server information lock in 0.5 second!.", 2);
@@ -313,7 +314,6 @@ void set_dacp_server_information(rtsp_conn_info *conn) {
     dacp_server.connection_family = conn->connection_ip_family;
     dacp_server.scope_id = conn->self_scope_id;
     strncpy(dacp_server.ip_string, conn->client_ip_string, INET6_ADDRSTRLEN);
-    dacp_server.active_remote_id = conn->dacp_active_remote;
 
     if (dacp_server.port_monitor_private_storage) // if there's is a monitor already active...
       mdns_dacp_dont_monitor(dacp_server.port_monitor_private_storage); // let it go.
@@ -333,13 +333,14 @@ void set_dacp_server_information(rtsp_conn_info *conn) {
     }
     metadata_hub_modify_epilog(ch);
   }
+  dacp_server.active_remote_id = conn->dacp_active_remote; // even if the dacp_id remains the same, the active remote will change.
   pthread_cond_signal(&dacp_server_information_cv);
   pthread_mutex_unlock(&dacp_server_information_lock);
 }
 
 void dacp_monitor_port_update_callback(char *dacp_id, uint16_t port) {
-  debug(3, "dacp_monitor_port_update_callback with Remote ID \"%s\" and port number %d.", dacp_id,
-        port);
+  //debug(1, "dacp_monitor_port_update_callback with Remote ID \"%s\" and port number %d.", dacp_id,
+  //      port);
   sps_pthread_mutex_timedlock(
       &dacp_server_information_lock, 500000,
       "dacp_monitor_port_update_callback couldn't get DACP server information lock in 0.5 second!.",
@@ -366,8 +367,10 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
   // debug(1, "DACP monitor thread started.");
   // wait until we get a valid port number to begin monitoring it
   int32_t revision_number = 1;
+  int bad_result_count = 0;
+  int idle_scan_count = 0;
   while (1) {
-    int result;
+    int result = 0;
     sps_pthread_mutex_timedlock(
         &dacp_server_information_lock, 500000,
         "dacp_monitor_thread_code couldn't get DACP server information lock in 0.5 second!.", 2);
@@ -378,9 +381,25 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
     scan_index++;
     int32_t the_volume;
     result = dacp_get_volume(&the_volume); // just want the http code
+    
     if ((result == 496) || (result == 403) || (result == 501)) {
-      debug(1, "Stopping scan because the response to \"dacp_get_volume(NULL)\" is %d.", result);
+      bad_result_count++;
+      // debug(1,"Bad Scan : %d.",result);
+    } else
+      bad_result_count=0;
+    
+    if (metadata_store.player_thread_active==0)
+      idle_scan_count++;
+    else
+      idle_scan_count = 0;
+      
+    // debug(1,"Bad Scan Count: %d, Idle Scan Count: %d.",bad_result_count,idle_scan_count);
+
+    if ((bad_result_count == config.scan_max_bad_response_count) || (idle_scan_count == config.scan_max_inactive_count)) {
+      debug(1,"DACP server status scanning stopped.");
       dacp_server.scan_enable = 0;
+      bad_result_count = 0;
+      idle_scan_count = 0;
       metadata_hub_modify_prolog();
       int ch = metadata_store.dacp_server_active != 0;
       metadata_store.dacp_server_active = 0;
@@ -692,7 +711,10 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
       response = NULL;
     }
     */
-    sleep(5); // check every five seconds
+    if (metadata_store.player_thread_active)
+      sleep(config.scan_interval_when_active);
+    else
+      sleep(config.scan_interval_when_inactive);
   }
   debug(1, "DACP monitor thread exiting.");
   pthread_exit(NULL);

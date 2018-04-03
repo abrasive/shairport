@@ -469,10 +469,12 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
       metadata_hub_modify_prolog();
       int changed = (metadata_store.player_state != PS_PLAYING);
       metadata_store.player_state = PS_PLAYING;
+      metadata_store.player_thread_active = 1;
       metadata_hub_modify_epilog(changed);
     } break;
     case 'pend': {
       metadata_hub_modify_prolog();
+      metadata_store.player_thread_active = 0;
       metadata_store.player_state = PS_STOPPED;
       // debug(1,"player_stop release track metadata and artwork");
       metadata_hub_release_track_metadata(metadata_store.track_metadata);

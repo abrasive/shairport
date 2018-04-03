@@ -173,6 +173,10 @@ typedef struct {
 
 #ifdef HAVE_METADATA_HUB
   char *cover_art_cache_dir;
+  int scan_interval_when_active; // number of seconds between DACP server scans when playing something (1)
+  int scan_interval_when_inactive; // number of seconds between DACP server scans playing nothing (3)
+  int scan_max_bad_response_count; // number of successive bad results to ignore before giving up (10) 
+  int scan_max_inactive_count; // number of scans to do before stopping if not made active again (about 15 minutes worth)
 #endif
   int disable_resend_requests; // set this to stop resend request being made for missing packets
 

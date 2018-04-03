@@ -288,7 +288,6 @@ AC_ARG_WITH(dbus-test-client, [  --with-dbus-test-client = compile dbus test cli
   AC_MSG_RESULT(>>Including dbus test client)
   HAS_DBUS_CLIENT=1
   AC_DEFINE([HAVE_DBUS_CLIENT], 1, [Needed by the compiler.])
-#  AC_DEFINE([CONFIG_DACP], 1, [Needed by the compiler.])
   PKG_CHECK_MODULES([GIO_UNIX], [gio-unix-2.0 >= 2.30.0],[CFLAGS="${GIO_UNIX_CFLAGS} ${CFLAGS}" LIBS="${GIO_UNIX_LIBS} ${LIBS}"],[AC_MSG_ERROR(dbus client support requires the glib 2.0 library -- libglib2.0-dev suggested!)])
   ], )
 AM_CONDITIONAL([USE_DBUS_CLIENT], [test "x$HAS_DBUS_CLIENT" = "x1"])
@@ -298,7 +297,6 @@ AC_ARG_WITH(mpris, [  --with-mpris-interface = include support for a Shairport S
   AC_MSG_RESULT(>>Including the MPRIS D-Bus Interface)
   HAS_MPRIS=1
   AC_DEFINE([HAVE_MPRIS], 1, [Needed by the compiler.])
-  AC_DEFINE([CONFIG_DACP], 1, [Needed by the compiler.])
   PKG_CHECK_MODULES([GIO_UNIX], [gio-unix-2.0 >= 2.30.0],[CFLAGS="${GIO_UNIX_CFLAGS} ${CFLAGS}" LIBS="${GIO_UNIX_LIBS} ${LIBS}"],[AC_MSG_ERROR(dbus messaging support for mpris requires the glib 2.0 library -- libglib2.0-dev suggested!)])
   ], )
 AM_CONDITIONAL([USE_MPRIS], [test "x$HAS_MPRIS" = "x1"])
