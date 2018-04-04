@@ -302,7 +302,7 @@ void relinquish_dacp_server_information(rtsp_conn_info *conn) {
 // the conversation number
 // Thus, we can keep the DACP port that might have previously been discovered
 void set_dacp_server_information(rtsp_conn_info *conn) {
-  // debug(1, "set_dacp_server_information.");  
+  debug(1, "set_dacp_server_information.");  
   sps_pthread_mutex_timedlock(
       &dacp_server_information_lock, 500000,
       "set_dacp_server_information couldn't get DACP server information lock in 0.5 second!.", 2);
@@ -332,6 +332,15 @@ void set_dacp_server_information(rtsp_conn_info *conn) {
       ch = 1;
     }
     metadata_hub_modify_epilog(ch);
+  } else {
+    if (dacp_server.port) {
+      debug(1,"Enable scanning.");
+      dacp_server.scan_enable = 1;
+      metadata_hub_modify_prolog();
+      int ch = metadata_store.dacp_server_active != dacp_server.scan_enable;
+      metadata_store.dacp_server_active = dacp_server.scan_enable;
+      metadata_hub_modify_epilog(ch);
+    }
   }
   dacp_server.active_remote_id = conn->dacp_active_remote; // even if the dacp_id remains the same, the active remote will change.
   pthread_cond_signal(&dacp_server_information_cv);
@@ -339,8 +348,8 @@ void set_dacp_server_information(rtsp_conn_info *conn) {
 }
 
 void dacp_monitor_port_update_callback(char *dacp_id, uint16_t port) {
-  //debug(1, "dacp_monitor_port_update_callback with Remote ID \"%s\" and port number %d.", dacp_id,
-  //      port);
+  debug(1, "dacp_monitor_port_update_callback with Remote ID \"%s\" and port number %d.", dacp_id,
+        port);
   sps_pthread_mutex_timedlock(
       &dacp_server_information_lock, 500000,
       "dacp_monitor_port_update_callback couldn't get DACP server information lock in 0.5 second!.",
@@ -359,6 +368,7 @@ void dacp_monitor_port_update_callback(char *dacp_id, uint16_t port) {
   } else {
     debug(1, "dacp port monitor reporting on an out-of-use remote.");
   }
+  pthread_cond_signal(&dacp_server_information_cv);
   pthread_mutex_unlock(&dacp_server_information_lock);
 }
 void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
@@ -377,6 +387,7 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
     while (dacp_server.scan_enable == 0) {
       // debug(1, "Wait for a valid DACP port");
       pthread_cond_wait(&dacp_server_information_cv, &dacp_server_information_lock);
+      debug(1,"Wake up with dacp_server.scan_enable == %d.",dacp_server.scan_enable);
     }
     scan_index++;
     int32_t the_volume;
@@ -393,7 +404,7 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
     else
       idle_scan_count = 0;
       
-    // debug(1,"Bad Scan Count: %d, Idle Scan Count: %d.",bad_result_count,idle_scan_count);
+    debug(1,"Bad Scan Count: %d, Idle Scan Count: %d.",bad_result_count,idle_scan_count);
 
     if ((bad_result_count == config.scan_max_bad_response_count) || (idle_scan_count == config.scan_max_inactive_count)) {
       debug(1,"DACP server status scanning stopped.");
@@ -403,6 +414,7 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
       metadata_hub_modify_prolog();
       int ch = metadata_store.dacp_server_active != 0;
       metadata_store.dacp_server_active = 0;
+      debug(1,"setting dacp_server_active to %d with an update flag value of %d",metadata_store.dacp_server_active,ch);
       metadata_hub_modify_epilog(ch);
     }
     pthread_mutex_unlock(&dacp_server_information_lock);
