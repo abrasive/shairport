@@ -409,7 +409,7 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
     else
       idle_scan_count = 0;
 
-    debug(1, "HTTP Result: %d, Bad Scan Count: %d, Idle Scan Count: %d.", result, bad_result_count,
+    debug(3, "Scan Result: %d, Bad Scan Count: %d, Idle Scan Count: %d.", result, bad_result_count,
           idle_scan_count);
 
     if ((bad_result_count == config.scan_max_bad_response_count) ||
@@ -454,8 +454,8 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
         int same = metadata_store.advanced_dacp_server_active == (result == 200);
         if (!same) {
           metadata_store.advanced_dacp_server_active = (result == 200);
-          debug(1, "Setting dacp_advanced_server_active to %d because of a response of %d.", (result == 200),
-                result);
+          debug(1, "Setting dacp_advanced_server_active to %d because of a response of %d.",
+                (result == 200), result);
         }
         metadata_hub_modify_epilog(inactive + (!same));
       }
