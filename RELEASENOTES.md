@@ -1,3 +1,11 @@
+Version 3.2d35
+====
+**Enhancements**
+* More cleaning up of the D-Bus and MPRIS interface messages -- they are quieter now.
+
+**Bug Fix**
+* Thanks are due to [yejun](https://github.com/yejun) for noticing and proposing a fix for the bug that dithering is left on wven when the volume control should be ignored and audio samples should pass through without alteration. (The fix was already in the `development` branch though.)
+
 Version 3.2d34
 ====
 **Enhancements**
@@ -8,7 +16,7 @@ Version 3.2d34
 * `pfls` and `prsm` messages are less frequent, especially when a play session starts.
 
 **Other Developments**
-* Shairport Sync now uses about an extra half megabyte of RAM.
+* Shairport Sync now uses about an extra half megabyte of RAM for compatability with TuneBlade's option to have a very long latency -- up to five seconds.
 
 Version 3.2d33
 ====
