@@ -313,7 +313,7 @@ void set_dacp_server_information(rtsp_conn_info *conn) {
     dacp_server.connection_family = conn->connection_ip_family;
     dacp_server.scope_id = conn->self_scope_id;
     strncpy(dacp_server.ip_string, conn->client_ip_string, INET6_ADDRSTRLEN);
-    debug(1, "set_dacp_server_information set IP to \"%s\" and DACP id to \"%s\".",
+    debug(2, "set_dacp_server_information set IP to \"%s\" and DACP id to \"%s\".",
           dacp_server.ip_string, dacp_server.dacp_id);
 
     if (dacp_server.port_monitor_private_storage) // if there's is a monitor already active...
@@ -345,7 +345,7 @@ void set_dacp_server_information(rtsp_conn_info *conn) {
   }
   dacp_server.active_remote_id = conn->dacp_active_remote; // even if the dacp_id remains the same,
                                                            // the active remote will change.
-  debug(1, "set_dacp_server_information set active-remote id to %" PRIu32 ".",
+  debug(2, "set_dacp_server_information set active-remote id to %" PRIu32 ".",
         dacp_server.active_remote_id);
   pthread_cond_signal(&dacp_server_information_cv);
   pthread_mutex_unlock(&dacp_server_information_lock);
@@ -364,7 +364,7 @@ void dacp_monitor_port_update_callback(char *dacp_id, uint16_t port) {
       dacp_server.scan_enable = 0;
     else {
       dacp_server.scan_enable = 1;
-      debug(1, "dacp_monitor_port_update_callback enables scan");
+      debug(2, "dacp_monitor_port_update_callback enables scan");
     }
     //    metadata_hub_modify_prolog();
     //    int ch = metadata_store.dacp_server_active != dacp_server.scan_enable;
@@ -395,7 +395,7 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
                (metadata_store.advanced_dacp_server_active != 0);
       metadata_store.dacp_server_active = 0;
       metadata_store.advanced_dacp_server_active = 0;
-      debug(1, "setting dacp_server_active and advanced_dacp_server_active to 0 with an update "
+      debug(2, "setting dacp_server_active and advanced_dacp_server_active to 0 with an update "
                "flag value of %d",
             ch);
       metadata_hub_modify_epilog(ch);
@@ -451,12 +451,12 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
         int inactive = metadata_store.dacp_server_active == 0;
         if (inactive) {
           metadata_store.dacp_server_active = 1;
-          debug(1, "Setting dacp_server_active to active because of a response of %d.", result);
+          debug(2, "Setting dacp_server_active to active because of a response of %d.", result);
         }
         int same = metadata_store.advanced_dacp_server_active == (result == 200);
         if (!same) {
           metadata_store.advanced_dacp_server_active = (result == 200);
-          debug(1, "Setting dacp_advanced_server_active to %d because of a response of %d.",
+          debug(2, "Setting dacp_advanced_server_active to %d because of a response of %d.",
                 (result == 200), result);
         }
         metadata_hub_modify_epilog(inactive + (!same));

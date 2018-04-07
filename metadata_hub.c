@@ -149,7 +149,7 @@ void metadata_hub_modify_epilog(int modified) {
       metadata_hub_release_track_artwork();
     }
     if (m)
-      debug(1, "Release track metadata after dacp server goes inactive.");
+      debug(2, "Release track metadata after dacp server goes inactive.");
     modified += m;
   }
   pthread_rwlock_unlock(&metadata_hub_re_lock);
