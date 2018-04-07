@@ -4,7 +4,7 @@ Version 3.2d35
 * More cleaning up of the D-Bus and MPRIS interface messages -- they are quieter now.
 
 **Bug Fix**
-* Thanks are due to [yejun](https://github.com/yejun) for noticing and proposing a fix for the bug that dithering is left on wven when the volume control should be ignored and audio samples should pass through without alteration. (The fix was already in the `development` branch though.)
+* Thanks are due to [yejun](https://github.com/yejun) for noticing and proposing a fix for the bug that dithering is left on when the volume control is ignored. Audio samples should pass through without alteration. (The fix was already in the `development` branch though.)
 
 Version 3.2d34
 ====
