@@ -1,0 +1,18 @@
+# Get Log Verbosity
+dbus-send --print-reply --system --dest=org.gnome.ShairportSync /org/gnome/ShairportSync org.freedesktop.DBus.Properties.Get string:org.gnome.ShairportSync.Diagnostics string:Verbosity
+# Return Log Verbosity
+echo `dbus-send --print-reply=literal --system --dest=org.gnome.ShairportSync /org/gnome/ShairportSync org.freedesktop.DBus.Properties.Get string:org.gnome.ShairportSync.Diagnostics string:Verbosity`
+# Set Log Verbosity to 2
+dbus-send --print-reply --system --dest=org.gnome.ShairportSync /org/gnome/ShairportSync org.freedesktop.DBus.Properties.Set string:org.gnome.ShairportSync.Diagnostics string:Verbosity variant:int32:2
+
+# Get Statistics-Requested Status
+dbus-send --print-reply --system --dest=org.gnome.ShairportSync /org/gnome/ShairportSync org.freedesktop.DBus.Properties.Get string:org.gnome.ShairportSync.Diagnostics string:Statistics
+# Set Statistics-Requested Status to true
+dbus-send --print-reply --system --dest=org.gnome.ShairportSync /org/gnome/ShairportSync org.freedesktop.DBus.Properties.Set string:org.gnome.ShairportSync.Diagnostics string:Statistics variant:boolean:true
+
+# Is Elapsed Time included in Log Entries?
+dbus-send --print-reply --system --dest=org.gnome.ShairportSync /org/gnome/ShairportSync org.freedesktop.DBus.Properties.Get string:org.gnome.ShairportSync.Diagnostics string:ElapsedTime
+# Include Elapsed Time in Log Entries
+dbus-send --print-reply --system --dest=org.gnome.ShairportSync /org/gnome/ShairportSync org.freedesktop.DBus.Properties.Set string:org.gnome.ShairportSync.Diagnostics string:ElapsedTime variant:boolean:true
+
+

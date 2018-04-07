@@ -41,9 +41,9 @@ static void help(void) {
 }
 
 static int init(int argc, char **argv) {
-  const char *str;
-  int value;
-  double dvalue;
+  // const char *str;
+  // int value;
+  // double dvalue;
   ao_initialize();
   int driver = ao_default_driver_id();
   ao_option *ao_opts = NULL;
@@ -118,7 +118,8 @@ static void deinit(void) {
   ao_shutdown();
 }
 
-static void start(int sample_rate, int sample_format) {}
+static void start(__attribute__((unused)) int sample_rate,
+                  __attribute__((unused)) int sample_format) {}
 
 static void play(short buf[], int samples) { ao_play(dev, (char *)buf, samples * 4); }
 

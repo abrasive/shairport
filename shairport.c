@@ -36,6 +36,7 @@
 #include <popt.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -59,8 +60,12 @@
 #include <glib.h>
 #endif
 
-#if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
+#if defined(HAVE_DACP_CLIENT)
 #include "dacp.h"
+#endif
+
+#if defined(HAVE_METADATA_HUB)
+#include "metadata_hub.h"
 #endif
 
 #ifdef HAVE_DBUS
@@ -100,8 +105,10 @@ void shairport_shutdown() {
     config.output->deinit();
 }
 
-static void sig_ignore(int foo, siginfo_t *bar, void *baz) {}
-static void sig_shutdown(int foo, siginfo_t *bar, void *baz) {
+static void sig_ignore(__attribute__((unused)) int foo, __attribute__((unused)) siginfo_t *bar,
+                       __attribute__((unused)) void *baz) {}
+static void sig_shutdown(__attribute__((unused)) int foo, __attribute__((unused)) siginfo_t *bar,
+                         __attribute__((unused)) void *baz) {
   debug(1, "shutdown requested...");
   shairport_shutdown();
   //  daemon_log(LOG_NOTICE, "exit...");
@@ -110,7 +117,8 @@ static void sig_shutdown(int foo, siginfo_t *bar, void *baz) {
   exit(0);
 }
 
-static void sig_child(int foo, siginfo_t *bar, void *baz) {
+static void sig_child(__attribute__((unused)) int foo, __attribute__((unused)) siginfo_t *bar,
+                      __attribute__((unused)) void *baz) {
   pid_t pid;
   while ((pid = waitpid((pid_t)-1, 0, WNOHANG)) > 0) {
     if (pid == mdns_pid && !shutting_down) {
@@ -119,129 +127,18 @@ static void sig_child(int foo, siginfo_t *bar, void *baz) {
   }
 }
 
-static void sig_disconnect_audio_output(int foo, siginfo_t *bar, void *baz) {
+static void sig_disconnect_audio_output(__attribute__((unused)) int foo,
+                                        __attribute__((unused)) siginfo_t *bar,
+                                        __attribute__((unused)) void *baz) {
   debug(1, "disconnect audio output requested.");
   set_requested_connection_state_to_output(0);
 }
 
-static void sig_connect_audio_output(int foo, siginfo_t *bar, void *baz) {
+static void sig_connect_audio_output(__attribute__((unused)) int foo,
+                                     __attribute__((unused)) siginfo_t *bar,
+                                     __attribute__((unused)) void *baz) {
   debug(1, "connect audio output requested.");
   set_requested_connection_state_to_output(1);
-}
-
-// The following two functions are adapted slightly and with thanks from Jonathan Leffler's sample
-// code at
-// https://stackoverflow.com/questions/675039/how-can-i-create-directory-tree-in-c-linux
-
-int do_mkdir(const char *path, mode_t mode) {
-  struct stat st;
-  int status = 0;
-
-  if (stat(path, &st) != 0) {
-    /* Directory does not exist. EEXIST for race condition */
-    if (mkdir(path, mode) != 0 && errno != EEXIST)
-      status = -1;
-  } else if (!S_ISDIR(st.st_mode)) {
-    errno = ENOTDIR;
-    status = -1;
-  }
-
-  return (status);
-}
-
-// mkpath - ensure all directories in path exist
-// Algorithm takes the pessimistic view and works top-down to ensure
-// each directory in path exists, rather than optimistically creating
-// the last element and working backwards.
-
-int mkpath(const char *path, mode_t mode) {
-  char *pp;
-  char *sp;
-  int status;
-  char *copypath = strdup(path);
-
-  status = 0;
-  pp = copypath;
-  while (status == 0 && (sp = strchr(pp, '/')) != 0) {
-    if (sp != pp) {
-      /* Neither root nor double slash in path */
-      *sp = '\0';
-      status = do_mkdir(copypath, mode);
-      *sp = '/';
-    }
-    pp = sp + 1;
-  }
-  if (status == 0)
-    status = do_mkdir(path, mode);
-  free(copypath);
-  return (status);
-}
-
-char *get_version_string() {
-  char *version_string = malloc(200);
-  if (version_string) {
-    strcpy(version_string, PACKAGE_VERSION);
-#ifdef HAVE_LIBMBEDTLS
-    strcat(version_string, "-mbedTLS");
-#endif
-#ifdef HAVE_LIBPOLARSSL
-    strcat(version_string, "-PolarSSL");
-#endif
-#ifdef HAVE_LIBSSL
-    strcat(version_string, "-OpenSSL");
-#endif
-#ifdef CONFIG_TINYSVCMDNS
-    strcat(version_string, "-tinysvcmdns");
-#endif
-#ifdef CONFIG_AVAHI
-    strcat(version_string, "-Avahi");
-#endif
-#ifdef CONFIG_DNS_SD
-    strcat(version_string, "-dns_sd");
-#endif
-#ifdef CONFIG_ALSA
-    strcat(version_string, "-ALSA");
-#endif
-#ifdef CONFIG_SNDIO
-    strcat(version_string, "-sndio");
-#endif
-#ifdef CONFIG_AO
-    strcat(version_string, "-ao");
-#endif
-#ifdef CONFIG_PA
-    strcat(version_string, "-pa");
-#endif
-#ifdef CONFIG_SOUNDIO
-    strcat(version_string, "-soundio");
-#endif
-#ifdef CONFIG_DUMMY
-    strcat(version_string, "-dummy");
-#endif
-#ifdef CONFIG_STDOUT
-    strcat(version_string, "-stdout");
-#endif
-#ifdef CONFIG_PIPE
-    strcat(version_string, "-pipe");
-#endif
-#ifdef HAVE_LIBSOXR
-    strcat(version_string, "-soxr");
-#endif
-#ifdef CONFIG_CONVOLUTION
-    strcat(version_string, "-convolution");
-#endif
-#ifdef CONFIG_METADATA
-    strcat(version_string, "-metadata");
-#endif
-#ifdef HAVE_DBUS
-    strcat(version_string, "-dbus");
-#endif
-#ifdef HAVE_MPRIS
-    strcat(version_string, "-mpris");
-#endif
-    strcat(version_string, "-sysconfdir:");
-    strcat(version_string, SYSCONFDIR);
-  }
-  return version_string;
 }
 
 void print_version(void) {
@@ -275,18 +172,9 @@ void usage(char *progname) {
   printf("    -v, --verbose           -v print debug information; -vv more; -vvv lots.\n");
   printf("    -p, --port=PORT         set RTSP listening port.\n");
   printf("    -a, --name=NAME         set advertised name.\n");
-  //  printf("    -A, --AirPlayLatency=FRAMES [Deprecated] Set the latency for audio sent from an "
-  //         "AirPlay device.\n");
-  //  printf("                            The default is to set it automatically.\n");
-  //  printf("    -i, --iTunesLatency=FRAMES [Deprecated] Set the latency for audio sent from iTunes
-  //  "
-  //         "10 or later.\n");
-  //  printf("                            The default is to set it automatically.\n");
   printf("    -L, --latency=FRAMES    [Deprecated] Set the latency for audio sent from an unknown "
          "device.\n");
   printf("                            The default is to set it automatically.\n");
-  printf("    --forkedDaapdLatency=FRAMES [Deprecated] Set the latency for audio sent from "
-         "forked-daapd.\n");
   printf("                            The default is to set it automatically.\n");
   printf("    -S, --stuffing=MODE set how to adjust current latency to match desired latency, "
          "where \n");
@@ -300,8 +188,9 @@ void usage(char *progname) {
   printf("    -E, --on-stop=PROGRAM   run PROGRAM when playback has ended.\n");
   printf("                            For -B and -E options, specify the full path to the program, "
          "e.g. /usr/bin/logger.\n");
-  printf("                            Executable scripts work, but must have #!/bin/sh (or "
-         "whatever) in the headline.\n");
+  printf(
+      "                            Executable scripts work, but must have the appropriate shebang "
+      "(#!/bin/sh) in the headline.\n");
   printf(
       "    -w, --wait-cmd          wait until the -B or -E programs finish before continuing.\n");
   printf("    -o, --output=BACKEND    select audio output method.\n");
@@ -340,44 +229,41 @@ int parse_options(int argc, char **argv) {
   char *raw_service_name = NULL; /* Used to pick up the service name before possibly expanding it */
   char *stuffing = NULL;         /* used for picking up the stuffing option */
   signed char c;                 /* used for argument parsing */
-  int i = 0;                     /* used for tracking options */
+  // int i = 0;                     /* used for tracking options */
   int fResyncthreshold = (int)(config.resyncthreshold * 44100);
   int fTolerance = (int)(config.tolerance * 44100);
   poptContext optCon; /* context for parsing command-line options */
   int daemonisewith = 0;
   int daemonisewithout = 0;
   struct poptOption optionsTable[] = {
-      {"verbose", 'v', POPT_ARG_NONE, NULL, 'v', NULL},
-      {"disconnectFromOutput", 'D', POPT_ARG_NONE, NULL, 0, NULL},
-      {"reconnectToOutput", 'R', POPT_ARG_NONE, NULL, 0, NULL},
-      {"kill", 'k', POPT_ARG_NONE, NULL, 0, NULL},
-      {"daemon", 'd', POPT_ARG_NONE, &daemonisewith, 0, NULL},
-      {"justDaemoniseNoPIDFile", 'j', POPT_ARG_NONE, &daemonisewithout, 0, NULL},
-      {"configfile", 'c', POPT_ARG_STRING, &config.configfile, 0, NULL},
-      {"statistics", 0, POPT_ARG_NONE, &config.statistics_requested, 0, NULL},
-      {"logOutputLevel", 0, POPT_ARG_NONE, &config.logOutputLevel, 0, NULL},
-      {"version", 'V', POPT_ARG_NONE, NULL, 0, NULL},
-      {"port", 'p', POPT_ARG_INT, &config.port, 0, NULL},
-      {"name", 'a', POPT_ARG_STRING, &raw_service_name, 0, NULL},
-      {"output", 'o', POPT_ARG_STRING, &config.output_name, 0, NULL},
-      {"on-start", 'B', POPT_ARG_STRING, &config.cmd_start, 0, NULL},
-      {"on-stop", 'E', POPT_ARG_STRING, &config.cmd_stop, 0, NULL},
-      {"wait-cmd", 'w', POPT_ARG_NONE, &config.cmd_blocking, 0, NULL},
-      {"mdns", 'm', POPT_ARG_STRING, &config.mdns_name, 0, NULL},
-      {"latency", 'L', POPT_ARG_INT, &config.userSuppliedLatency, 0, NULL},
-      {"AirPlayLatency", 'A', POPT_ARG_INT, &config.AirPlayLatency, 0, NULL},
-      {"iTunesLatency", 'i', POPT_ARG_INT, &config.iTunesLatency, 0, NULL},
-      {"forkedDaapdLatency", 'f', POPT_ARG_INT, &config.ForkedDaapdLatency, 0, NULL},
-      {"stuffing", 'S', POPT_ARG_STRING, &stuffing, 'S', NULL},
-      {"resync", 'r', POPT_ARG_INT, &fResyncthreshold, 0, NULL},
-      {"timeout", 't', POPT_ARG_INT, &config.timeout, 't', NULL},
-      {"password", 0, POPT_ARG_STRING, &config.password, 0, NULL},
-      {"tolerance", 'z', POPT_ARG_INT, &fTolerance, 0, NULL},
+      {"verbose", 'v', POPT_ARG_NONE, NULL, 'v', NULL, NULL},
+      {"disconnectFromOutput", 'D', POPT_ARG_NONE, NULL, 0, NULL, NULL},
+      {"reconnectToOutput", 'R', POPT_ARG_NONE, NULL, 0, NULL, NULL},
+      {"kill", 'k', POPT_ARG_NONE, NULL, 0, NULL, NULL},
+      {"daemon", 'd', POPT_ARG_NONE, &daemonisewith, 0, NULL, NULL},
+      {"justDaemoniseNoPIDFile", 'j', POPT_ARG_NONE, &daemonisewithout, 0, NULL, NULL},
+      {"configfile", 'c', POPT_ARG_STRING, &config.configfile, 0, NULL, NULL},
+      {"statistics", 0, POPT_ARG_NONE, &config.statistics_requested, 0, NULL, NULL},
+      {"logOutputLevel", 0, POPT_ARG_NONE, &config.logOutputLevel, 0, NULL, NULL},
+      {"version", 'V', POPT_ARG_NONE, NULL, 0, NULL, NULL},
+      {"port", 'p', POPT_ARG_INT, &config.port, 0, NULL, NULL},
+      {"name", 'a', POPT_ARG_STRING, &raw_service_name, 0, NULL, NULL},
+      {"output", 'o', POPT_ARG_STRING, &config.output_name, 0, NULL, NULL},
+      {"on-start", 'B', POPT_ARG_STRING, &config.cmd_start, 0, NULL, NULL},
+      {"on-stop", 'E', POPT_ARG_STRING, &config.cmd_stop, 0, NULL, NULL},
+      {"wait-cmd", 'w', POPT_ARG_NONE, &config.cmd_blocking, 0, NULL, NULL},
+      {"mdns", 'm', POPT_ARG_STRING, &config.mdns_name, 0, NULL, NULL},
+      {"latency", 'L', POPT_ARG_INT, &config.userSuppliedLatency, 0, NULL, NULL},
+      {"stuffing", 'S', POPT_ARG_STRING, &stuffing, 'S', NULL, NULL},
+      {"resync", 'r', POPT_ARG_INT, &fResyncthreshold, 0, NULL, NULL},
+      {"timeout", 't', POPT_ARG_INT, &config.timeout, 't', NULL, NULL},
+      {"password", 0, POPT_ARG_STRING, &config.password, 0, NULL, NULL},
+      {"tolerance", 'z', POPT_ARG_INT, &fTolerance, 0, NULL, NULL},
 #ifdef CONFIG_METADATA
-      {"metadata-pipename", 'M', POPT_ARG_STRING, &config.metadata_pipename, 'M', NULL},
-      {"get-coverart", 'g', POPT_ARG_NONE, &config.get_coverart, 'g', NULL},
+      {"metadata-pipename", 'M', POPT_ARG_STRING, &config.metadata_pipename, 'M', NULL, NULL},
+      {"get-coverart", 'g', POPT_ARG_NONE, &config.get_coverart, 'g', NULL, NULL},
 #endif
-      POPT_AUTOHELP{NULL, 0, 0, NULL, 0}};
+      POPT_AUTOHELP{NULL, 0, 0, NULL, 0, NULL, NULL}};
 
   // we have to parse the command line arguments to look for a config file
   int optind;
@@ -404,16 +290,19 @@ int parse_options(int argc, char **argv) {
       inform("Warning: the option -R or --reconnectToOutput is deprecated.");
       break;
     case 'A':
-      inform("Warning: the option -A or --AirPlayLatency is deprecated. This setting is now "
+      inform("Warning: the option -A or --AirPlayLatency is deprecated and ignored. This setting "
+             "is now "
              "automatically received from the AirPlay device.");
       break;
     case 'i':
-      inform("Warning: the option -i or --iTunesLatency is deprecated. This setting is now "
+      inform("Warning: the option -i or --iTunesLatency is deprecated and ignored. This setting is "
+             "now "
              "automatically received from iTunes");
       break;
     case 'f':
-      inform("Warning: the option --forkedDaapdLatency is deprecated. This setting is now "
-             "automatically received from forkedDaapd");
+      inform(
+          "Warning: the option --forkedDaapdLatency is deprecated and ignored. This setting is now "
+          "automatically received from forkedDaapd");
       break;
     case 'r':
       inform("Warning: the option -r or --resync is deprecated. Please use the "
@@ -441,9 +330,25 @@ int parse_options(int argc, char **argv) {
   config.resyncthreshold = 1.0 * fResyncthreshold / 44100;
   config.tolerance = 1.0 * fTolerance / 44100;
   config.audio_backend_silent_lead_in_time = -1.0; // flag to indicate it has not been set
-  config.airplay_volume = -18.0; // if no volume is ever set, default to initial default value if nothing else comes in first.
-  
-  config_setting_t *setting;
+  config.airplay_volume = -18.0; // if no volume is ever set, default to initial default value if
+                                 // nothing else comes in first.
+  config.fixedLatencyOffset = 11025; // this sounds like it works properly.
+#ifdef HAVE_METADATA_HUB
+  config.cover_art_cache_dir = "/tmp/shairport-sync/.cache/coverart";
+  config.scan_interval_when_active =
+      1; // number of seconds between DACP server scans when playing something
+  config.scan_interval_when_inactive =
+      3; // number of seconds between DACP server scans playing nothing
+  config.scan_max_bad_response_count =
+      5; // number of successive bad results to ignore before giving up
+  config.scan_max_inactive_count =
+      (15 * 60) / config.scan_interval_when_inactive; // number of scans to do before stopping if
+                                                      // not made active again (15 minutes)
+//  config.scan_max_inactive_count = 5; // number of scans to do before stopping if not made active
+//  again (15 minutes )
+#endif
+
+  // config_setting_t *setting;
   const char *str = 0;
   int value = 0;
   double dvalue = 0.0;
@@ -557,6 +462,8 @@ int parse_options(int argc, char **argv) {
 
       /* Get the statistics setting. */
       if (config_lookup_string(config.cfg, "general.statistics", &str)) {
+        warn("The \"general\" \"statistics\" setting is deprecated. Please use the \"diagnostics\" "
+             "\"statistics\" setting instead.");
         if (strcasecmp(str, "no") == 0)
           config.statistics_requested = 0;
         else if (strcasecmp(str, "yes") == 0)
@@ -589,12 +496,71 @@ int parse_options(int argc, char **argv) {
 
       /* Get the verbosity setting. */
       if (config_lookup_int(config.cfg, "general.log_verbosity", &value)) {
+        warn("The \"general\" \"log_verbosity\" setting is deprecated. Please use the "
+             "\"diagnostics\" \"log_verbosity\" setting instead.");
         if ((value >= 0) && (value <= 3))
           debuglev = value;
         else
           die("Invalid log verbosity setting option choice \"%d\". It should be between 0 and 3, "
               "inclusive.",
               value);
+      }
+
+      /* Get the verbosity setting. */
+      if (config_lookup_int(config.cfg, "diagnostics.log_verbosity", &value)) {
+        if ((value >= 0) && (value <= 3))
+          debuglev = value;
+        else
+          die("Invalid diagnostics log_verbosity setting option choice \"%d\". It should be "
+              "between 0 and 3, "
+              "inclusive.",
+              value);
+      }
+
+      /* Get the show elapsed time in debug messages setting. */
+      if (config_lookup_string(config.cfg, "diagnostics.log_show_time_since_startup", &str)) {
+        if (strcasecmp(str, "no") == 0)
+          config.debugger_show_elapsed_time = 0;
+        else if (strcasecmp(str, "yes") == 0)
+          config.debugger_show_elapsed_time = 1;
+        else
+          die("Invalid diagnostics log_show_time_since_startup option choice \"%s\". It should be "
+              "\"yes\" or \"no\"");
+      }
+
+      /* Get the show relative time in debug messages setting. */
+      if (config_lookup_string(config.cfg, "diagnostics.log_show_time_since_last_message", &str)) {
+        if (strcasecmp(str, "no") == 0)
+          config.debugger_show_relative_time = 0;
+        else if (strcasecmp(str, "yes") == 0)
+          config.debugger_show_relative_time = 1;
+        else
+          die("Invalid diagnostics log_show_time_since_last_message option choice \"%s\". It "
+              "should be \"yes\" or \"no\"");
+      }
+
+      /* Get the statistics setting. */
+      if (config_lookup_string(config.cfg, "diagnostics.statistics", &str)) {
+        if (strcasecmp(str, "no") == 0)
+          config.statistics_requested = 0;
+        else if (strcasecmp(str, "yes") == 0)
+          config.statistics_requested = 1;
+        else
+          die("Invalid diagnostics statistics option choice \"%s\". It should be \"yes\" or "
+              "\"no\"");
+      }
+
+      /* Get the disable_resend_requests setting. */
+      if (config_lookup_string(config.cfg, "diagnostics.disable_resend_requests", &str)) {
+        config.disable_resend_requests = 0; // this is for legacy -- only set by -t 0
+        if (strcasecmp(str, "no") == 0)
+          config.disable_resend_requests = 0;
+        else if (strcasecmp(str, "yes") == 0)
+          config.disable_resend_requests = 1;
+        else
+          die("Invalid diagnostic disable_resend_requests option choice \"%s\". It should be "
+              "\"yes\" "
+              "or \"no\"");
       }
 
       /* Get the ignore_volume_control setting. */
@@ -633,6 +599,17 @@ int parse_options(int argc, char **argv) {
         else
           die("Invalid playback_mode choice \"%s\". It should be \"stereo\" (default), \"mono\", "
               "\"reverse stereo\", \"both left\", \"both right\"");
+      }
+
+      /* Get the volume control profile setting -- "standard" or "flat" */
+      if (config_lookup_string(config.cfg, "general.volume_control_profile", &str)) {
+        if (strcasecmp(str, "standard") == 0)
+          config.volume_control_profile = VCP_standard;
+        else if (strcasecmp(str, "flat") == 0)
+          config.volume_control_profile = VCP_flat;
+        else
+          die("Invalid volume_control_profile choice \"%s\". It should be \"standard\" (default) "
+              "or \"flat\"");
       }
 
       /* Get the interface to listen on, if specified Default is all interfaces */
@@ -704,18 +681,6 @@ int parse_options(int argc, char **argv) {
       /* Get the default latency. Deprecated! */
       if (config_lookup_int(config.cfg, "latencies.default", &value))
         config.userSuppliedLatency = value;
-
-      /* Get the itunes latency. Deprecated! */
-      if (config_lookup_int(config.cfg, "latencies.itunes", &value))
-        config.iTunesLatency = value;
-
-      /* Get the AirPlay latency. Deprecated! */
-      if (config_lookup_int(config.cfg, "latencies.airplay", &value))
-        config.AirPlayLatency = value;
-
-      /* Get the forkedDaapd latency. Deprecated! */
-      if (config_lookup_int(config.cfg, "latencies.forkedDaapd", &value))
-        config.ForkedDaapdLatency = value;
 
 #ifdef CONFIG_METADATA
       /* Get the metadata setting. */
@@ -1006,7 +971,7 @@ int parse_options(int argc, char **argv) {
 GMainLoop *loop;
 
 pthread_t dbus_thread;
-void *dbus_thread_func(void *arg) {
+void *dbus_thread_func(__attribute__((unused)) void *arg) {
   loop = g_main_loop_new(NULL, FALSE);
   g_main_loop_run(loop);
   return NULL;
@@ -1080,7 +1045,9 @@ void exit_function() {
 }
 
 int main(int argc, char **argv) {
-
+  fp_time_at_startup = get_absolute_time_in_fp();
+  fp_time_at_last_debug_message = fp_time_at_startup;
+  //  debug(1,"startup");
   daemon_set_verbosity(LOG_DEBUG);
   memset(&config, 0, sizeof(config)); // also clears all strings, BTW
   atexit(exit_function);
@@ -1126,19 +1093,9 @@ int main(int argc, char **argv) {
   strcat(configuration_file_path, ".conf");
   config.configfile = configuration_file_path;
 
-  config.statistics_requested = 0; // don't print stats in the log
-  config.latency = -1; // -1 means not set. 88200 works well. This is also reset in rtsp.c when play
-                       // is about to start
-  config.userSuppliedLatency = 0; // zero means none supplied
-  config.iTunesLatency =
-      -1; // -1 means not supplied. 99400 seems to work pretty well for iTunes from Version 10 (?)
-          // upwards-- two left-ear headphones, one from the iMac jack, one
-          // from an NSLU2 running a cheap "3D Sound" USB Soundcard
-  config.AirPlayLatency =
-      -1; // -1 means not set. 88200 seems to work well for AirPlay -- Syncs sound and
-          // vision on AppleTV, but also used for iPhone/iPod/iPad sources
-  config.ForkedDaapdLatency = -1; // -1 means not set. 99400 seems to be right
-  config.resyncthreshold = 0.05;  // 50 ms
+  // config.statistics_requested = 0; // don't print stats in the log
+  // config.userSuppliedLatency = 0; // zero means none supplied
+  config.resyncthreshold = 0.05; // 50 ms
   config.timeout = 120; // this number of seconds to wait for [more] audio before switching to idle.
   config.tolerance =
       0.002; // this number of seconds of timing error before attempting to correct it.
@@ -1369,54 +1326,13 @@ int main(int argc, char **argv) {
   }
 
   /* Mess around with the latency options */
-  // Basically, we used to rely on static latencies -- 99400 for iTunes 10 or later and forkedDaapd,
-  // 88200 for everything else
-  // Nowadays we allow the source to set the latency, which works out at 99651 for iTunes 10 and
-  // forkedDaapd and 88220 for everything else
-  // What we want to do here is allow the source to set the latency unless the user has specified an
-  // non-standard latency.
-  // If the user has specified a standard latency, we suggest to them to stop doing it.
+  // Basically, we expect the source to set the latency and add a fixed offset of 11025 frames to
+  // it, which sounds right
+  // If this latency is outside the max and min latensies that may be set by the source, clamp it to
+  // fit.
+
   // If they specify a non-standard latency, we suggest the user to use the
   // audio_backend_latency_offset instead.
-
-  if (config.AirPlayLatency != -1) {
-    if (config.AirPlayLatency == 88200) {
-      inform("It is not necessary to set the AirPlay latency to 88200 -- you should remove this "
-             "setting or configuration option, as it is deprecated.");
-      config.AirPlayLatency = -1;
-    } else {
-      inform("The AirPlay latency setting is deprecated, as Shairport Sync can now get the correct "
-             "latency from the source.");
-      inform("Please remove this setting and use the relevant audio_backend_latency_offset "
-             "setting, if necessary, to compensate for delays elsewhere.");
-    }
-  }
-
-  if (config.iTunesLatency != -1) {
-    if (config.iTunesLatency == 99400) {
-      inform("It is not necessary to set the iTunes latency to 99400 -- you should remove this "
-             "setting or configuration option, as it is deprecated and ignored.");
-      config.iTunesLatency = -1;
-    } else {
-      inform("The iTunes latency setting is deprecated, as Shairport Sync can now get the correct "
-             "latency from the source.");
-      inform("Please remove this setting and use the relevant audio_backend_latency_offset "
-             "setting, if necessary, to compensate for delays elsewhere.");
-    }
-  }
-
-  if (config.ForkedDaapdLatency != -1) {
-    if (config.ForkedDaapdLatency == 99400) {
-      inform("It is not necessary to set the forkedDaapd latency to 99400 -- you should remove "
-             "this setting or configuration option, as it is deprecated and ignored.");
-      config.ForkedDaapdLatency = -1;
-    } else {
-      inform("The forkedDaapd latency setting is deprecated, as Shairport Sync can now get the "
-             "correct latency from the source.");
-      inform("Please remove this setting and use the relevant audio_backend_latency_offset "
-             "setting, if necessary, to compensate for delays elsewhere.");
-    }
-  }
 
   if (config.userSuppliedLatency) {
     inform("The default latency setting is deprecated, as Shairport Sync can now get the correct "
@@ -1450,9 +1366,6 @@ int main(int argc, char **argv) {
   debug(1, "on-start returns output is %d.", config.cmd_start_returns_output);
   debug(1, "mdns backend \"%s\".", config.mdns_name);
   debug(2, "userSuppliedLatency is %d.", config.userSuppliedLatency);
-  debug(2, "AirPlayLatency is %d.", config.AirPlayLatency);
-  debug(2, "iTunesLatency is %d.", config.iTunesLatency);
-  debug(2, "forkedDaapdLatency is %d.", config.ForkedDaapdLatency);
   debug(1, "stuffing option is \"%d\" (0-basic, 1-soxr).", config.packet_stuffing);
   debug(1, "resync time is %f seconds.", config.resyncthreshold);
   debug(1, "allow a session to be interrupted: %d.", config.allow_session_interruption);
@@ -1512,6 +1425,8 @@ int main(int argc, char **argv) {
 #endif
   debug(1, "loudness is %d.", config.loudness);
   debug(1, "loudness reference level is %f", config.loudness_reference_volume_db);
+  debug(1, "disable resend requests is %d -- non-zero means \"yes\"",
+        config.disable_resend_requests);
 
   uint8_t ap_md5[16];
 
@@ -1540,14 +1455,19 @@ int main(int argc, char **argv) {
   metadata_init(); // create the metadata pipe if necessary
 #endif
 
-#if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
-  debug(1,"Requesting DACP Monitor");
+#ifdef HAVE_METADATA_HUB
+  // debug(1, "Initialising metadata hub");
+  metadata_hub_init();
+#endif
+
+#ifdef HAVE_DACP_CLIENT
+  // debug(1, "Requesting DACP Monitor");
   dacp_monitor_start();
 #endif
 
 #if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
   // Start up DBUS services after initial settings are all made
-  debug(1, "Starting up D-Bus services");
+  // debug(1, "Starting up D-Bus services");
   pthread_create(&dbus_thread, NULL, &dbus_thread_func, NULL);
 #ifdef HAVE_DBUS
   start_dbus_service();
@@ -1557,7 +1477,7 @@ int main(int argc, char **argv) {
 #endif
 #endif
 
-  daemon_log(LOG_INFO, "Successful Startup");
+  // daemon_log(LOG_INFO, "Successful Startup");
   rtsp_listen_loop();
 
   // should not reach this...

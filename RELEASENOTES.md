@@ -1,15 +1,44 @@
-Version 3.1.7
+Version 3.2drc1
 ====
+**Enhancements**
+* Shairport Sync now offers an IPC interface via D-Bus. It provides an incomplete but functional MPRIS interface and also provides a native Shairport Sync interface. Both provide some metadata and some remote control. The native D-Bus interface permits remote control of the current AirPlay or iTunes client. It includes status information about whether the remote control connection is viable or not, i.e. whether it can still be used to control the client. A remote control connection to the audio client becomes valid when the client starts AirPlaying to Shairport Sync. The connections remains valid until the audio source deselects Shairport Sync for AirPlay, or until the client disappears, or until another client starts AirPlaying to Shairport Sync. After 15 minutes of inactivity, the remote contol connection will be dropped. 
+* OpenBSD compatibility. Shairport Sync now compiles on OpenBSD - please consult the OpenBSD note for details.
+* A new `general` option `volume_control_profile`, for advanced use only, with two options: `"standard"` which uses the standard volume control profile -- this has a higher transfer profile at low volumes and a lower transfer profile at high volumes --  or `"flat"` which uses a uniform transfer profile to linearly scale the output mixer's dB according to the AirPlay volume.
+* Some DACs have a feature that the lowest permissible "attenuation" value that the built-in hardware mixer can be set to is not an attenuation value at all – it is in fact a command to mute the output completely. Shairport Sync has always checked for this feature, basically in order to ignore it when getting the true range of attenuation values offered by the mixer.
+However, with this enhancement, Shairport Sync can actually use this feature to mute the output where appropriate.
+* Added compatibility with [Swinsian](https://swinsian.com), a Mac music player.
 
 **Bug Fixes**
-* In recent versions of iOS (11.2) and mac OS (10.13.2), when play is resumed after a pause, the volume level is not always restored, and, if software volume control is being used, Shairport Sync plays at full volume. This issue has been addressed by storing the last airplay volume setting when a play session ends and using it as a default when a new play session begins.
-* Better AirPlay synchronisation. Older versions of Shairport Sync added an 11,025 frame (0.25 seconds) offset to all the latencies negotiated with the sender. This seems now only to be correct for iTunes and ForkedDaapd sources, but incorrect for AirPlay sources. Accordingly, the offset is only added for iTunes and ForkedDaapd. The result is better sync with videos, e.g, YouTube, while iTunes and ForkedDaapd synchronisation is unaffected.
-* A bug in the hardware volume control affected output devices that have hardware mixers but that do not allow the volume to be set in dB. One example is the Softvol plugin in ALSA. Shairport Sync failed silently when presented with such a device when hardware volume control is enabled: the volume events have no effect. The bug has been fixed by adding two missing lines of code to the `init()` function in `audio_alsa.c`. Thanks to [Jakub Nabaglo](https://github.com/nbgl) for finding and fixing the bug.
+* Better AirPlay synchronisation. Older versions of Shairport Sync added an 11,025 frame (0.25 seconds) offset to all the latencies negotiated with the sender. This seems now  incorrect for AirPlay sources. Accordingly, the logic Shairport Sync uses to determine the extra delay has been revised. The result is better sync with videos, e.g, YouTube, while iTunes and ForkedDaapd synchronisation is unaffected.
+* Much faster termination of a play session, leading to increased stability playing YouTube audio, etc.
+* Improved resynchronisation logic should improve performance with slow-to-download YouTube videos.
+* Dithering is now off when ignore_volume_control is true. Thanks to [yejun](https://github.com/yejun) for working on this.
+* Better compatibility with TuneBlade -- Shairport Sync honours the latency settings properly now.
+* Fix timing error when using Airfoil as a source.
+* Better handling of missing timing packets.
+* Shairport Sync will now log an unexpectedy dropped or faulty RTSP connection. This might be useful on noisy networks.
+* Better volume level continuity. In recent versions of iOS (11.2) and mac OS (10.13.2), when play is resumed after a pause, the volume level is not always restored, and, if software volume control is being used, Shairport Sync plays at full volume. This issue has been addressed by storing the last airplay volume setting when a play session ends and using it as a default when a new play session begins.
+* Better mixer compatibility. A bug in the hardware volume control affected output devices that have hardware mixers but that do not allow the volume to be set in dB. One example is the Softvol plugin in ALSA. Shairport Sync failed silently when presented with such a device when hardware volume control is enabled: the volume events have no effect. The bug has been fixed by adding two missing lines of code to the `init()` function in `audio_alsa.c`. Thanks to [Jakub Nabaglo](https://github.com/nbgl) for finding and fixing the bug.
 * A number of bug fixes due to [belboj](https://github.com/belboj). Many thanks for these!
 * Enhancements to the handling of quit requests by threads, thanks(again) to [belboj](https://github.com/belboj)!
 
-**Other Stuff**
+**Other Changes**
+* `clip` and `svip` metadata messages are now only generated for a play connection, not for all connections (e.g. connections that just enquire if the service is present).
+* `pfls` and `prsm` metadata messages are less frequent, especially when a play session starts.
+* Shairport Sync now uses about an extra half megabyte of RAM for compatability with TuneBlade's option to have a very long latency -- up to five seconds.
+* Only ask for missing packets to be resent once, and if any error occurs making the request, stop for 10 seconds.
+* Include the `-pthread` flag -- including the pthread library with `-lpthread` isn't always enough.
+* Add optional timing annotations to debug messages -- see the new settings in the diagnostic stanza of the configuration file.
+
+**Updated Documentation**
+* CAR INSTALL and OPENBSD notes added.
+* Improvements in the documentation relating to scripts -- thanks to [Niklas Janz](https://github.com/Alphakilo).
 * Typo fix! Thanks to [corbinsantin](https://github.com/corbinsantin).
+
+
+
+Version 3.1.7
+====
 * Stable 3.1.5 and 3.1.6 skipped to synchronise the shairport-sync.spec file contents with the release.
 
 **Enhancement**
@@ -22,6 +51,9 @@ Version 3.1.4
 
 * The version of `tinysvcmdns` bundled in Shairport Sync has a buffer overflow bug: *"An exploitable heap overflow vulnerability exists in the tinysvcmdns library version 2016-07-18. A specially crafted packet can make the library overwrite an arbitrary amount of data on the heap with attacker controlled values. An attacker needs send a dns packet to trigger this vulnerability."* The vulnerability is addressed  by additional checking on packet sizes. See also [CVE-2017-12087](https://bugs.launchpad.net/bugs/cve/2017-12087) and [Vulnerability in tinysvcmdns](https://bugs.launchpad.net/ubuntu/+source/shairport-sync/+bug/1729668).
 Thanks and [Chris Boot](https://github.com/bootc) for fixing this bug.
+
+**Enhancement**
+* The metadata output stream can include a `dapo` message carrying the DACP port number to be used when communicating with the DACP remote control. This might be useful because the port number is actually pretty hard to find and requires the use of asynchronous mdns operations. You must be using the Avahi mdns back end.
 
 **Bug Fix**
 

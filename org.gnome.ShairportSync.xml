@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<node name="/" xmlns:doc="http://www.freedesktop.org/dbus/1.0/doc.dtd">
+  <interface name="org.gnome.ShairportSync">
+    <property name="LoudnessFilterActive" type="b" access="readwrite" />
+    <property name="LoudnessThreshold" type="d" access="readwrite" />
+    <method name="RemoteCommand">
+      <arg name="command" type="s" direction="in" />
+    </method>
+    <property name="VolumeControlProfile" type="s" access="readwrite" />
+    <property name="Interpolation" type="s" access="readwrite" />
+    <property name="ALACDecoder" type="s" access="readwrite" />
+    <property name="Version" type="s" access="read" />
+    <property name="VersionString" type="s" access="read" />
+  </interface>
+  <interface name="org.gnome.ShairportSync.Diagnostics">
+    <property name="Verbosity" type="i" access="readwrite" />
+    <property name="Statistics" type="b" access="readwrite" />
+    <property name="ElapsedTime" type="b" access="readwrite" />
+    <property name="DeltaTime" type="b" access="readwrite" />
+  </interface>
+  <interface name="org.gnome.ShairportSync.RemoteControl">
+		<method name='FastForward'/>
+		<method name='Rewind'/>
+		<method name='ToggleMute'/>
+		<method name='Next'/>
+		<method name='Previous'/>
+		<method name='Pause'/>
+		<method name='PlayPause'/>
+		<method name='Play'/>
+		<method name='Stop'/>
+		<method name='Resume'/>
+		<method name='ShuffleSongs'/>
+		<method name='VolumeUp'/>
+		<method name='VolumeDown'/>
+		<property name='PlayerState' type='s' access='read'/>
+		<property name='Server' type='s' access='read'/>
+		<property name='AirplayVolume' type='d' access='read'/>
+		<property name='Metadata' type='a{sv}' access='read'>
+			<annotation name="org.qtproject.QtDBus.QtTypeName" value="QVariantMap"/>
+		</property>
+		<property name='Available' type='b' access='read'/>
+  </interface>
+  <interface name="org.gnome.ShairportSync.AdvancedRemoteControl">
+		<property name='Available' type='b' access='read'/>
+		<property name='PlaybackStatus' type='s' access='read'/>
+		<property name='Shuffle' type='b' access='readwrite'/>
+		<property name='LoopStatus' type='s' access='readwrite'/>
+    <property name="Volume" type="i" access="read" />
+    <method name="SetVolume">
+      <arg name="volume" type="i" direction="in" />
+    </method>
+  </interface>
+</node>

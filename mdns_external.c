@@ -63,7 +63,8 @@ static int fork_execvp(const char *file, char *const argv[]) {
 
     // If we reach this point then execve has failed.
     // Write erno's value into the pipe and exit.
-    int ignore = write(execpipe[1], &errno, sizeof(errno));
+    if (write(execpipe[1], &errno, sizeof(errno)) != sizeof(errno))
+      debug(1, "Execve has failed and there was a further error writing an error message, duh.");
     debug(1, "execve has failed.");
     _exit(-1);
     return 0;           // Just to make the compiler happy.
@@ -82,7 +83,7 @@ static int fork_execvp(const char *file, char *const argv[]) {
   }
 }
 
-static int mdns_external_avahi_register(char *apname, int port) {
+static int mdns_external_avahi_register(char *apname, __attribute__((unused)) int port) {
   char mdns_port[6];
   sprintf(mdns_port, "%d", config.port);
 
@@ -121,7 +122,7 @@ static int mdns_external_avahi_register(char *apname, int port) {
   return -1;
 }
 
-static int mdns_external_dns_sd_register(char *apname, int port) {
+static int mdns_external_dns_sd_register(char *apname, __attribute__((unused)) int port) {
   char mdns_port[6];
   sprintf(mdns_port, "%d", config.port);
 

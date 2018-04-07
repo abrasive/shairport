@@ -4,7 +4,7 @@
 
   <!--
   This man page source file is part of shairport-sync.
-  Copyright (c) Mike Brady 2014-2017
+  Copyright (c) Mike Brady 2014-2018
 
   All rights reserved.
  
@@ -65,15 +65,16 @@
   <description>
     <p>shairport-sync  plays  audio  streamed  from  iTunes or from an AirPlay
     device to an ALSA compatible audio output device (available on Linux and FreeBSD) , to a "sndio" output device (available on OpenBSD, FreeBSD and Linux) or to a PulseAudio output stream (available on Linux).</p>
-
-    <p>A feature of shairport-sync is that the audio is played synchronously.
+    <p>A feature of shairport-sync is that it offers full audio synchronisation.
+    Full audio synchronisation means that audio is played on the output device at exactly the time specified by the audio source.
     This means that if many devices are playing the same stream at the same
     time, all the outputs will stay in step with one another.
     This allows multiple devices to play the same source without getting out of phase with one another,
     enabling, for example, simultaneous multi-room operation.
     </p>
     
-    <p>shairport-sync can be compiled to stream audio, without synchronisation, to a pipe, to stdout or to a libao output device (an "AO" device). It can also be compiled to stream metadata to a pipe or socket.</p>
+    <p>shairport-sync can be compiled to stream audio synchronised audio output to a unix pipe or to standard output, or to audio systems that do not provide timing information. This could perhaps be described as partial audio synchronisation, where synchronised audio is provided by shairport-sync, but what happens to it in the subsequent processing chain, before it reaches the listener's ear, is outside the control of shairport-sync.</p>
+    <p>shairport-sync can be compiled to stream metadata to a pipe or socket.</p>
     
     <p>Settings can be made using the configuration file (recommended for all new installations) or by using command-line options.</p>
  
@@ -274,8 +275,8 @@
     <option>
     <p><opt>run_this_when_volume_is_set=</opt><arg>"/full/path/to/application/and/args"</arg><opt>;</opt></p>
     <optdesc><p>Here you can specify a program and its arguments that will be run when the volume is set or changed. Be careful to include the full path to the application.
-    The application must be marked as executable and, if it is a script, its first line must begin with the standard <file>#!/bin/...</file> as appropriate.</p>
-    <p>The desired AirPlay volume is appended to the end of the command line – leave a space if you want it treated as an extra argument.
+    The application must be marked as executable and, if it is a script, its first line must begin with the standard shebang <file>#!/bin/...</file> as appropriate.</p>
+    <p>The desired AirPlay volume is appended to the end of the command line - leave a space if you want it treated as an extra argument.
     AirPlay volume goes from 0.0 to -30.0 and -144.0 means "mute".</p></optdesc>
     </option>
 
@@ -334,12 +335,12 @@
     </option>
     
     <option>
-    <p><opt>mute_using_playback_switch=</opt><arg>"yes"</arg><opt>;</opt></p>
+    <p><opt>mute_using_playback_switch=</opt><arg>"no"</arg><opt>;</opt></p>
     <optdesc>
-    <p>This is an advanced setting and the default is <arg>"yes"</arg>, which means that hardware mute will be implemented using a feature called a 'playback switch', where one is available;
-    set it to <arg>"no"</arg> to prevent the playback switch being used.</p>
-    <p>The motivation for this is to avoid using the alsa function call
-    "snd_mixer_selem_set_playback_switch_all", which is incorrectly implemented on certain soundcards, including the emulated card in VMWare Fusion 8.5.</p>
+    <p>This is an advanced setting and the default is <arg>"no"</arg>. If it is set to <arg>"yes"</arg>, hardware mute will be implemented using a feature called a 'playback switch', where one is available. Set it to <arg>"no"</arg> to prevent the playback switch being used.</p>
+    <p>If Shairport Sync is sharing the output device with other applications, it is best to leave this set to <arg>"no"</arg> for compatibility with those applications.</p>
+    <p>Another motivation for this is to allow the alsa function call
+    "snd_mixer_selem_set_playback_switch_all" to be avoided. It is incorrectly implemented on certain soundcards, including the emulated card in VMWare Fusion 8.5.</p>
     </optdesc>
     </option>
     <option><p><opt>"SNDIO" SETTINGS</opt></p></option>
@@ -445,12 +446,12 @@
     <option>
     <p><opt>run_this_before_play_begins=</opt><arg>"/path/to/application and args"</arg><opt>;</opt></p>
     <optdesc><p>Here you can specify a program and its arguments that will be run just before a play session begins. Be careful to include the full path to the application.
-    The application must be marked as executable and, if it is a script, its first line must begin with the standard <file>#!/bin/...</file> as appropriate.</p></optdesc>
+    The application must be marked as executable and, if it is a script, its first line must begin with the standard shebang <file>#!/bin/...</file> as appropriate.</p></optdesc>
     </option>
     <option>
     <p><opt>run_this_after_play_ends=</opt><arg>"/path/to/application and args"</arg><opt>;</opt></p>
     <optdesc><p>Here you can specify a program and its arguments that will be run just after a play session ends. Be careful to include the full path to the application.
-    The application must be marked as executable and, if it is a script, its first line must begin with the standard <file>#!/bin/...</file> as appropriate.</p></optdesc>
+    The application must be marked as executable and, if it is a script, its first line must begin with the standard shebang <file>#!/bin/...</file> as appropriate.</p></optdesc>
     </option>
     <option>
     <p><opt>wait_for_completion=</opt><arg>"choice"</arg><opt>;</opt></p>
@@ -510,8 +511,8 @@
 		<optdesc><p>
 		Execute <arg>program</arg> when playback is about to begin. Specify the 
 		full path to the program, e.g. <file>/usr/bin/logger</file>.
-		Executable scripts can be used, but they must have <file>#!/bin/sh</file> (or
-		whatever is appropriate) in the headline.</p>
+		Executable scripts can be used, but they must have the appropriate shebang
+    (<file>#!/bin/sh</file> in the headline.</p>
 		
 		<p>If you want shairport-sync to wait until the command has
 		completed before starting to play, select the <opt>-w</opt> option as well.
@@ -553,8 +554,8 @@
 		<optdesc><p>
 		Execute <arg>program</arg> when playback has ended. Specify the 
 		full path to the program, e.g. <file>/usr/bin/logger</file>.
-		Executable scripts can be used, but they must have <file>#!/bin/sh</file> (or
-		whatever is appropriate) in the headline.</p>		
+		Executable scripts can be used, but they must have the appropriate shebang
+    (<file>#!/bin/sh</file> in the headline.</p>
 		<p>If you want shairport-sync to wait until the command has
 		completed before continuing, select the <opt>-w</opt> option as well.
 		</p></optdesc>
@@ -850,3 +851,4 @@
 	</section>
 
   </manpage>
+

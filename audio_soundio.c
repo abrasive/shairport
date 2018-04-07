@@ -20,7 +20,7 @@ static int min_int(int a, int b) { return (a < b) ? a : b; }
 static void write_callback(struct SoundIoOutStream *outstream, int frame_count_min,
                            int frame_count_max) {
   struct SoundIoChannelArea *areas;
-  int frame_count;
+  // int frame_count;
   int err;
 
   char *read_ptr = soundio_ring_buffer_read_ptr(ring_buffer);
@@ -77,12 +77,12 @@ static void write_callback(struct SoundIoOutStream *outstream, int frame_count_m
   soundio_ring_buffer_advance_read_ptr(ring_buffer, read_count * outstream->bytes_per_frame);
 }
 
-static void underflow_callback(struct SoundIoOutStream *outstream) {
+static void underflow_callback(__attribute__((unused)) struct SoundIoOutStream *outstream) {
   static int count = 0;
   debug(0, "underflow %d\n", ++count);
 }
 
-static int init(int argc, char **argv) {
+static int init(__attribute__((unused)) int argc, __attribute__((unused)) char **argv) {
   int err;
 
   config.audio_backend_buffer_desired_length = 2.0;
@@ -168,7 +168,7 @@ static void start(int sample_rate, int sample_format) {
 }
 
 static void play(short buf[], int samples) {
-  int err;
+  // int err;
   int free_bytes = soundio_ring_buffer_free_count(ring_buffer);
   int written_bytes = 0;
   int write_bytes = 0;

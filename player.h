@@ -26,14 +26,6 @@
 
 #define time_ping_history 8
 
-#if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
-enum session_status_type {
-  SST_stopped = 0, // not playing anything
-  SST_paused,      // paused
-  SST_playing,
-} sst_type;
-#endif
-
 typedef struct time_ping_record {
   uint64_t local_to_remote_difference;
   uint64_t dispersion;
@@ -53,7 +45,7 @@ typedef struct audio_buffer_entry { // decoded audio packets
 
 // default buffer size
 // needs to be a power of 2 because of the way BUFIDX(seqno) works
-#define BUFFER_FRAMES 512
+#define BUFFER_FRAMES 1024
 
 typedef struct {
   int encrypted;
@@ -62,11 +54,13 @@ typedef struct {
 } stream_cfg;
 
 typedef struct {
-  int connection_number; // for debug ID purposes, nothing else...
-  int64_t staticLatencyCorrection; // it seems iTunes needs some offset before it's more or less right. Odd.
-#if defined(HAVE_DBUS) || defined(HAVE_MPRIS)
-  enum session_status_type play_state;
-#endif
+  int connection_number;   // for debug ID purposes, nothing else...
+  int64_t latency;         // the actual latency used for this play session
+  int64_t minimum_latency; // set if an a=min-latency: line appears in the ANNOUNCE message; zero
+                           // otherwise
+  int64_t maximum_latency; // set if an a=max-latency: line appears in the ANNOUNCE message; zero
+                           // otherwise
+
   int fd;
   int authorized; // set if a password is required and has been supplied
   stream_cfg stream;
@@ -88,8 +82,9 @@ typedef struct {
   uint64_t packet_count;
   int connection_state_to_output;
   int player_thread_please_stop;
-  int64_t first_packet_time_to_play, time_since_play_started; // nanoseconds
-                                                              // stats
+  uint64_t first_packet_time_to_play;
+  int64_t time_since_play_started; // nanoseconds
+                                   // stats
   uint64_t missing_packets, late_packets, too_late_packets, resend_requests;
   int decoder_in_use;
   // debug variables
@@ -121,10 +116,6 @@ typedef struct {
   AES_KEY aes;
 #endif
 
-#ifdef HAVE_DBUS
-  int32_t dacp_volume;
-#endif
-
   int amountStuffed;
 
   int32_t framesProcessedInThisEpoch;
@@ -135,6 +126,7 @@ typedef struct {
   // RTP stuff
   // only one RTP session can be active at a time.
   int rtp_running;
+  uint64_t rtp_time_of_last_resend_request_error_fp;
 
   char client_ip_string[INET6_ADDRSTRLEN]; // the ip string pointing to the client
   char self_ip_string[INET6_ADDRSTRLEN];   // the ip string being used by this program -- it
@@ -149,6 +141,7 @@ typedef struct {
   int control_socket;                 // our local [server] control socket
   int timing_socket;                  // local timing socket
 
+  int64_t latency_delayed_timestamp; // this is for debugging only...
   int64_t reference_timestamp;
   uint64_t reference_timestamp_time;
   uint64_t remote_reference_timestamp_time;
@@ -181,11 +174,11 @@ typedef struct {
   // mdns to find it.
   // at present, only avahi can do this
 
-  char *dacp_id;               // id of the client -- used to find the port to be used
-  uint16_t dacp_port;          // port on the client to send remote control messages to, else zero
+  char *dacp_id; // id of the client -- used to find the port to be used
+  //  uint16_t dacp_port;          // port on the client to send remote control messages to, else
+  //  zero
   uint32_t dacp_active_remote; // key to send to the remote controller
-  void *mdns_private_pointer;  // private storage (just a pointer) for the dacp_port resolver
-
+  void *dapo_private_storage;  // this is used for compatibility, if dacp stuff isn't enabled.
 } rtsp_conn_info;
 
 int player_play(rtsp_conn_info *conn);

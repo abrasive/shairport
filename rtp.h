@@ -22,7 +22,4 @@ void get_reference_timestamp_stuff(int64_t *timestamp, uint64_t *timestamp_time,
                                    uint64_t *remote_timestamp_time, rtsp_conn_info *conn);
 void clear_reference_timestamp(rtsp_conn_info *conn);
 
-uint64_t static local_to_remote_time_jitters;
-uint64_t static local_to_remote_time_jitters_count;
-
 #endif // _RTP_H

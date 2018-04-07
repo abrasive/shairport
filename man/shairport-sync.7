@@ -17,9 +17,11 @@ shairport-sync -V\fB
 .SH DESCRIPTION
 shairport-sync plays audio streamed from iTunes or from an AirPlay device to an ALSA compatible audio output device (available on Linux and FreeBSD) , to a "sndio" output device (available on OpenBSD, FreeBSD and Linux) or to a PulseAudio output stream (available on Linux).
 
-A feature of shairport-sync is that the audio is played synchronously. This means that if many devices are playing the same stream at the same time, all the outputs will stay in step with one another. This allows multiple devices to play the same source without getting out of phase with one another, enabling, for example, simultaneous multi-room operation. 
+A feature of shairport-sync is that it offers full audio synchronisation. Full audio synchronisation means that audio is played on the output device at exactly the time specified by the audio source. This means that if many devices are playing the same stream at the same time, all the outputs will stay in step with one another. This allows multiple devices to play the same source without getting out of phase with one another, enabling, for example, simultaneous multi-room operation. 
 
-shairport-sync can be compiled to stream audio, without synchronisation, to a pipe, to stdout or to a libao output device (an "AO" device). It can also be compiled to stream metadata to a pipe or socket.
+shairport-sync can be compiled to stream audio synchronised audio output to a unix pipe or to standard output, or to audio systems that do not provide timing information. This could perhaps be described as partial audio synchronisation, where synchronised audio is provided by shairport-sync, but what happens to it in the subsequent processing chain, before it reaches the listener's ear, is outside the control of shairport-sync.
+
+shairport-sync can be compiled to stream metadata to a pipe or socket.
 
 Settings can be made using the configuration file (recommended for all new installations) or by using command-line options.
 .SH CONFIGURATION FILE SETTINGS
@@ -149,9 +151,9 @@ The purpose of this silent lead-in is to give the backend sufficient time to pre
 If the value chosen is too short for synchronised backends such as the ALSA, sndio or PA backends, then audio will not be synchronised correctly at the start of play. The default is to have a silent lead-in of approximately the same time as the latency set by the client.
 .TP
 \fBrun_this_when_volume_is_set=\f1\fI"/full/path/to/application/and/args"\f1\fB;\f1
-Here you can specify a program and its arguments that will be run when the volume is set or changed. Be careful to include the full path to the application. The application must be marked as executable and, if it is a script, its first line must begin with the standard \fI#!/bin/...\f1 as appropriate.
+Here you can specify a program and its arguments that will be run when the volume is set or changed. Be careful to include the full path to the application. The application must be marked as executable and, if it is a script, its first line must begin with the standard shebang \fI#!/bin/...\f1 as appropriate.
 
-The desired AirPlay volume is appended to the end of the command line – leave a space if you want it treated as an extra argument. AirPlay volume goes from 0.0 to -30.0 and -144.0 means "mute".
+The desired AirPlay volume is appended to the end of the command line - leave a space if you want it treated as an extra argument. AirPlay volume goes from 0.0 to -30.0 and -144.0 means "mute".
 .TP
 \fB"ALSA" SETTINGS\f1
 These settings are for the ALSA back end, used to communicate with audio output devices in the ALSA system. (By the way, you can use tools such as \fBalsamixer\f1 or \fBaplay\f1 to discover what devices are available.) Use these settings to select the output device and the mixer control to be used to control the output volume. You can additionally set the desired size of the output buffer and you can adjust overall latency. Here are the \fBalsa\f1 group settings:
@@ -187,10 +189,12 @@ Use this optional advanced setting to set the alsa buffer size near to this valu
 \fBuse_mmap_if_available=\f1\fI"yes"\f1\fB;\f1
 Use this optional advanced setting to control whether MMAP-based output is used to communicate with the DAC. Default is \fI"yes"\f1.
 .TP
-\fBmute_using_playback_switch=\f1\fI"yes"\f1\fB;\f1
-This is an advanced setting and the default is \fI"yes"\f1, which means that hardware mute will be implemented using a feature called a 'playback switch', where one is available; set it to \fI"no"\f1 to prevent the playback switch being used.
+\fBmute_using_playback_switch=\f1\fI"no"\f1\fB;\f1
+This is an advanced setting and the default is \fI"no"\f1. If it is set to \fI"yes"\f1, hardware mute will be implemented using a feature called a 'playback switch', where one is available. Set it to \fI"no"\f1 to prevent the playback switch being used.
 
-The motivation for this is to avoid using the alsa function call "snd_mixer_selem_set_playback_switch_all", which is incorrectly implemented on certain soundcards, including the emulated card in VMWare Fusion 8.5.
+If Shairport Sync is sharing the output device with other applications, it is best to leave this set to \fI"no"\f1 for compatibility with those applications.
+
+Another motivation for this is to allow the alsa function call "snd_mixer_selem_set_playback_switch_all" to be avoided. It is incorrectly implemented on certain soundcards, including the emulated card in VMWare Fusion 8.5.
 .TP
 \fB"SNDIO" SETTINGS\f1
 These settings are for the SNDIO back end, used to communicate with audio output devices in the SNDIO system.
@@ -263,10 +267,10 @@ The maximum packet size for any UDP metadata. This must be between 500 or 65000.
 shairport-sync can run programs just before it starts to play an audio stream and just after it finishes. You specify them using the sessioncontrol group settings run_this_before_play_begins and run_this_after_play_ends.
 .TP
 \fBrun_this_before_play_begins=\f1\fI"/path/to/application and args"\f1\fB;\f1
-Here you can specify a program and its arguments that will be run just before a play session begins. Be careful to include the full path to the application. The application must be marked as executable and, if it is a script, its first line must begin with the standard \fI#!/bin/...\f1 as appropriate.
+Here you can specify a program and its arguments that will be run just before a play session begins. Be careful to include the full path to the application. The application must be marked as executable and, if it is a script, its first line must begin with the standard shebang \fI#!/bin/...\f1 as appropriate.
 .TP
 \fBrun_this_after_play_ends=\f1\fI"/path/to/application and args"\f1\fB;\f1
-Here you can specify a program and its arguments that will be run just after a play session ends. Be careful to include the full path to the application. The application must be marked as executable and, if it is a script, its first line must begin with the standard \fI#!/bin/...\f1 as appropriate.
+Here you can specify a program and its arguments that will be run just after a play session ends. Be careful to include the full path to the application. The application must be marked as executable and, if it is a script, its first line must begin with the standard shebang \fI#!/bin/...\f1 as appropriate.
 .TP
 \fBwait_for_completion=\f1\fI"choice"\f1\fB;\f1
 Set \fIchoice\f1 to "yes" to make shairport-sync wait until the programs specified in the \fBrun_this_before_play_begins\f1, \fBrun_this_after_play_ends\f1 and \fBrun_this_when_volume_is_set\f1 have completed execution before continuing. The default is "no".
@@ -295,7 +299,7 @@ The following substitutions are allowed: \fB%h\f1 for the computer's hostname, \
 The default is "%H", which is replaced by the hostname with the first letter capitalised.
 .TP
 \fB-B \f1\fIprogram\f1\fB | --on-start=\f1\fIprogram\f1
-Execute \fIprogram\f1 when playback is about to begin. Specify the full path to the program, e.g. \fI/usr/bin/logger\f1. Executable scripts can be used, but they must have \fI#!/bin/sh\f1 (or whatever is appropriate) in the headline.
+Execute \fIprogram\f1 when playback is about to begin. Specify the full path to the program, e.g. \fI/usr/bin/logger\f1. Executable scripts can be used, but they must have the appropriate shebang (\fI#!/bin/sh\f1 in the headline.
 
 If you want shairport-sync to wait until the command has completed before starting to play, select the \fB-w\f1 option as well. 
 .TP
@@ -311,7 +315,7 @@ Please note that this feature is deprecated and will be removed in a future vers
 Instruct shairport-sync to demonise itself. It will write its Process ID (PID) to a file, usually at \fI/var/run/shairport-sync/shairport-sync.pid\f1, which is used by the \fB-k\f1, \fB-D\f1 and \fB-R\f1 options to locate the daemon at a later time. See also the \fB-j\f1 option. 
 .TP
 \fB-E \f1\fIprogram\f1\fB | --on-stop=\f1\fIprogram\f1
-Execute \fIprogram\f1 when playback has ended. Specify the full path to the program, e.g. \fI/usr/bin/logger\f1. Executable scripts can be used, but they must have \fI#!/bin/sh\f1 (or whatever is appropriate) in the headline.
+Execute \fIprogram\f1 when playback has ended. Specify the full path to the program, e.g. \fI/usr/bin/logger\f1. Executable scripts can be used, but they must have the appropriate shebang (\fI#!/bin/sh\f1 in the headline.
 
 If you want shairport-sync to wait until the command has completed before continuing, select the \fB-w\f1 option as well. 
 .TP

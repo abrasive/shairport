@@ -82,7 +82,8 @@ static struct sndio_formats formats[] = {{"S8", SPS_FORMAT_S8, 8, 1, 1, SIO_LE_N
 static void help() { printf("    -d output-device    set the output device [default*|...]\n"); }
 
 static int init(int argc, char **argv) {
-  int i, found, opt, round, rate, bufsz;
+  int found, opt, round, rate, bufsz;
+  unsigned int i;
   const char *devname, *tmp;
 
   // set up default values first
@@ -210,7 +211,8 @@ static void deinit() {
   pthread_mutex_unlock(&sndio_mutex);
 }
 
-static void start(int sample_rate, int sample_format) {
+static void start(__attribute__((unused)) int sample_rate,
+                  __attribute__((unused)) int sample_format) {
   pthread_mutex_lock(&sndio_mutex);
   if (!sio_start(hdl))
     die("sndio: unable to start");
@@ -236,7 +238,7 @@ static void stop() {
   pthread_mutex_unlock(&sndio_mutex);
 }
 
-static void onmove_cb(void *arg, int delta) {
+static void onmove_cb(__attribute__((unused)) void *arg, int delta) {
   time_of_last_onmove_cb = get_absolute_time_in_fp();
   at_least_one_onmove_cb_seen = 1;
   played += delta;

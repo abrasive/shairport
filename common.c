@@ -25,6 +25,8 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include "common.h"
+#include <assert.h>
 #include <errno.h>
 #include <memory.h>
 #include <poll.h>
@@ -37,9 +39,6 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
-
-#include "common.h"
-#include <assert.h>
 
 #ifdef COMPILE_FOR_OSX
 #include <CoreServices/CoreServices.h>
@@ -101,11 +100,26 @@ void set_requested_connection_state_to_output(int v) { requested_connection_stat
 void die(const char *format, ...) {
   char s[1024];
   s[0] = 0;
+  uint64_t time_now = get_absolute_time_in_fp();
+  uint64_t time_since_start = time_now - fp_time_at_startup;
+  uint64_t time_since_last_debug_message = time_now - fp_time_at_last_debug_message;
+  fp_time_at_last_debug_message = time_now;
+  uint64_t divisor = (uint64_t)1 << 32;
+  double tss = 1.0 * time_since_start / divisor;
+  double tsl = 1.0 * time_since_last_debug_message / divisor;
   va_list args;
   va_start(args, format);
   vsnprintf(s, sizeof(s), format, args);
   va_end(args);
-  daemon_log(LOG_EMERG, "fatal error: %s", s);
+
+  if ((debuglev) && (config.debugger_show_elapsed_time) && (config.debugger_show_relative_time))
+    daemon_log(LOG_EMERG, "|% 20.9f|% 20.9f|*fatal error: %s", tss, tsl, s);
+  else if ((debuglev) && (config.debugger_show_relative_time))
+    daemon_log(LOG_EMERG, "% 20.9f|*fatal error: %s", tsl, s);
+  else if ((debuglev) && (config.debugger_show_elapsed_time))
+    daemon_log(LOG_EMERG, "% 20.9f|*fatal error: %s", tss, s);
+  else
+    daemon_log(LOG_EMERG, "fatal error: %s", s);
   shairport_shutdown();
   exit(1);
 }
@@ -113,11 +127,26 @@ void die(const char *format, ...) {
 void warn(const char *format, ...) {
   char s[1024];
   s[0] = 0;
+  uint64_t time_now = get_absolute_time_in_fp();
+  uint64_t time_since_start = time_now - fp_time_at_startup;
+  uint64_t time_since_last_debug_message = time_now - fp_time_at_last_debug_message;
+  fp_time_at_last_debug_message = time_now;
+  uint64_t divisor = (uint64_t)1 << 32;
+  double tss = 1.0 * time_since_start / divisor;
+  double tsl = 1.0 * time_since_last_debug_message / divisor;
   va_list args;
   va_start(args, format);
   vsnprintf(s, sizeof(s), format, args);
   va_end(args);
-  daemon_log(LOG_WARNING, "%s", s);
+
+  if ((debuglev) && (config.debugger_show_elapsed_time) && (config.debugger_show_relative_time))
+    daemon_log(LOG_WARNING, "|% 20.9f|% 20.9f|*warning: %s", tss, tsl, s);
+  else if ((debuglev) && (config.debugger_show_relative_time))
+    daemon_log(LOG_WARNING, "% 20.9f|*warning: %s", tsl, s);
+  else if ((debuglev) && (config.debugger_show_elapsed_time))
+    daemon_log(LOG_WARNING, "% 20.9f|*warning: %s", tss, s);
+  else
+    daemon_log(LOG_WARNING, "%s", s);
 }
 
 void debug(int level, const char *format, ...) {
@@ -125,11 +154,25 @@ void debug(int level, const char *format, ...) {
     return;
   char s[1024];
   s[0] = 0;
+  uint64_t time_now = get_absolute_time_in_fp();
+  uint64_t time_since_start = time_now - fp_time_at_startup;
+  uint64_t time_since_last_debug_message = time_now - fp_time_at_last_debug_message;
+  fp_time_at_last_debug_message = time_now;
+  uint64_t divisor = (uint64_t)1 << 32;
+  double tss = 1.0 * time_since_start / divisor;
+  double tsl = 1.0 * time_since_last_debug_message / divisor;
   va_list args;
   va_start(args, format);
   vsnprintf(s, sizeof(s), format, args);
   va_end(args);
-  daemon_log(LOG_DEBUG, "%s", s);
+  if ((config.debugger_show_elapsed_time) && (config.debugger_show_relative_time))
+    daemon_log(LOG_DEBUG, "|% 20.9f|% 20.9f|%s", tss, tsl, s);
+  else if (config.debugger_show_relative_time)
+    daemon_log(LOG_DEBUG, "% 20.9f|%s", tsl, s);
+  else if (config.debugger_show_elapsed_time)
+    daemon_log(LOG_DEBUG, "% 20.9f|%s", tss, s);
+  else
+    daemon_log(LOG_DEBUG, "%s", s);
 }
 
 void inform(const char *format, ...) {
@@ -140,6 +183,54 @@ void inform(const char *format, ...) {
   vsnprintf(s, sizeof(s), format, args);
   va_end(args);
   daemon_log(LOG_INFO, "%s", s);
+}
+
+// The following two functions are adapted slightly and with thanks from Jonathan Leffler's sample
+// code at
+// https://stackoverflow.com/questions/675039/how-can-i-create-directory-tree-in-c-linux
+
+int do_mkdir(const char *path, mode_t mode) {
+  struct stat st;
+  int status = 0;
+
+  if (stat(path, &st) != 0) {
+    /* Directory does not exist. EEXIST for race condition */
+    if (mkdir(path, mode) != 0 && errno != EEXIST)
+      status = -1;
+  } else if (!S_ISDIR(st.st_mode)) {
+    errno = ENOTDIR;
+    status = -1;
+  }
+
+  return (status);
+}
+
+// mkpath - ensure all directories in path exist
+// Algorithm takes the pessimistic view and works top-down to ensure
+// each directory in path exists, rather than optimistically creating
+// the last element and working backwards.
+
+int mkpath(const char *path, mode_t mode) {
+  char *pp;
+  char *sp;
+  int status;
+  char *copypath = strdup(path);
+
+  status = 0;
+  pp = copypath;
+  while (status == 0 && (sp = strchr(pp, '/')) != 0) {
+    if (sp != pp) {
+      /* Neither root nor double slash in path */
+      *sp = '\0';
+      status = do_mkdir(copypath, mode);
+      *sp = '/';
+    }
+    pp = sp + 1;
+  }
+  if (status == 0)
+    status = do_mkdir(path, mode);
+  free(copypath);
+  return (status);
 }
 
 #ifdef HAVE_LIBMBEDTLS
@@ -617,6 +708,20 @@ uint32_t uatoi(const char *nptr) {
   return r;
 }
 
+double flat_vol2attn(double vol, long max_db, long min_db) {
+  double vol_setting = min_db; // if all else fails, set this, for safety
+
+  if ((vol <= 0.0) && (vol >= -30.0)) {
+    vol_setting = ((max_db - min_db) * (30.0 + vol) / 30) + min_db;
+    // debug(2, "Linear profile Volume Setting: %f in range %ld to %ld.", vol_setting, min_db,
+    // max_db);
+  } else if (vol != -144.0) {
+    debug(1,
+          "Linear volume request value %f is out of range: should be from 0.0 to -30.0 or -144.0.",
+          vol);
+  }
+  return vol_setting;
+}
 // Given a volume (0 to -30) and high and low attenuations available in the mixer in dB, return an
 // attenuation depending on the volume and the function's transfer function
 // See http://tangentsoft.net/audio/atten.html for data on good attenuators.
@@ -678,6 +783,8 @@ double vol2attn(double vol, long max_db, long min_db) {
     vol_setting = min_db; // for safety, return the lowest setting...
   }
   // debug(1,"returning an attenuation of %f.",vol_setting);
+  // debug(2, "Standard profile Volume Setting for Airplay vol %f: %f in range %ld to %ld.", vol,
+  //      vol_setting, min_db, max_db);
   return vol_setting;
 }
 
@@ -862,3 +969,125 @@ void r64arrayinit() { ranarrayinit(); }
 uint64_t ranarray64u() { return (ranarrayval()); }
 
 int64_t ranarray64i() { return (ranarrayval() >> 1); }
+
+uint32_t nctohl(const uint8_t *p) { // read 4 characters from *p and do ntohl on them
+  // this is to avoid possible aliasing violations
+  uint32_t holder;
+  memcpy(&holder, p, sizeof(holder));
+  return ntohl(holder);
+}
+
+uint16_t nctohs(const uint8_t *p) { // read 2 characters from *p and do ntohs on them
+  // this is to avoid possible aliasing violations
+  uint16_t holder;
+  memcpy(&holder, p, sizeof(holder));
+  return ntohs(holder);
+}
+
+pthread_mutex_t barrier_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+void memory_barrier() {
+  pthread_mutex_lock(&barrier_mutex);
+  pthread_mutex_unlock(&barrier_mutex);
+}
+
+void sps_nanosleep(const time_t sec, const long nanosec) {
+  struct timespec req, rem;
+  int result;
+  req.tv_sec = sec;
+  req.tv_nsec = nanosec;
+  do {
+    result = nanosleep(&req, &rem);
+    rem = req;
+  } while ((result == -1) && (errno == EINTR));
+  if (result == -1)
+    debug(1, "Error in sps_nanosleep of %d sec and %ld nanoseconds: %d.", sec, nanosec, errno);
+}
+
+int sps_pthread_mutex_timedlock(pthread_mutex_t *mutex, useconds_t dally_time,
+                                const char *debugmessage, int debuglevel) {
+
+  useconds_t time_to_wait = dally_time;
+  int r = pthread_mutex_trylock(mutex);
+  while ((r) && (time_to_wait > 0)) {
+    useconds_t st = time_to_wait;
+    if (st > 20000)
+      st = 20000;
+    sps_nanosleep(0, st * 1000);
+    time_to_wait -= st;
+    r = pthread_mutex_trylock(mutex);
+  }
+  if (r != 0) {
+    char errstr[1000];
+    debug(debuglevel, "error %d: \"%s\" waiting for a mutex: \"%s\".", r,
+          strerror_r(r, errstr, sizeof(errstr)), debugmessage);
+  }
+  return r;
+}
+
+char *get_version_string() {
+  char *version_string = malloc(200);
+  if (version_string) {
+    strcpy(version_string, PACKAGE_VERSION);
+#ifdef HAVE_LIBMBEDTLS
+    strcat(version_string, "-mbedTLS");
+#endif
+#ifdef HAVE_LIBPOLARSSL
+    strcat(version_string, "-PolarSSL");
+#endif
+#ifdef HAVE_LIBSSL
+    strcat(version_string, "-OpenSSL");
+#endif
+#ifdef CONFIG_TINYSVCMDNS
+    strcat(version_string, "-tinysvcmdns");
+#endif
+#ifdef CONFIG_AVAHI
+    strcat(version_string, "-Avahi");
+#endif
+#ifdef CONFIG_DNS_SD
+    strcat(version_string, "-dns_sd");
+#endif
+#ifdef CONFIG_ALSA
+    strcat(version_string, "-ALSA");
+#endif
+#ifdef CONFIG_SNDIO
+    strcat(version_string, "-sndio");
+#endif
+#ifdef CONFIG_AO
+    strcat(version_string, "-ao");
+#endif
+#ifdef CONFIG_PA
+    strcat(version_string, "-pa");
+#endif
+#ifdef CONFIG_SOUNDIO
+    strcat(version_string, "-soundio");
+#endif
+#ifdef CONFIG_DUMMY
+    strcat(version_string, "-dummy");
+#endif
+#ifdef CONFIG_STDOUT
+    strcat(version_string, "-stdout");
+#endif
+#ifdef CONFIG_PIPE
+    strcat(version_string, "-pipe");
+#endif
+#ifdef HAVE_LIBSOXR
+    strcat(version_string, "-soxr");
+#endif
+#ifdef CONFIG_CONVOLUTION
+    strcat(version_string, "-convolution");
+#endif
+#ifdef CONFIG_METADATA
+    strcat(version_string, "-metadata");
+#endif
+#ifdef HAVE_DBUS
+    strcat(version_string, "-dbus");
+#endif
+#ifdef HAVE_MPRIS
+    strcat(version_string, "-mpris");
+#endif
+    strcat(version_string, "-sysconfdir:");
+    strcat(version_string, SYSCONFDIR);
+  }
+  return version_string;
+}

@@ -44,7 +44,8 @@ static int fd = -1;
 char *pipename = NULL;
 int warned = 0;
 
-static void start(int sample_rate, int sample_format) {
+static void start(__attribute__((unused)) int sample_rate,
+                  __attribute__((unused)) int sample_format) {
   // this will leave fd as -1 if a reader hasn't been attached
   fd = open(pipename, O_WRONLY | O_NONBLOCK);
   if ((fd < -1) && (warned == 0)) {
@@ -82,9 +83,9 @@ static void stop(void) {
 
 static int init(int argc, char **argv) {
   debug(1, "pipe init");
-  const char *str;
-  int value;
-  double dvalue;
+  //  const char *str;
+  //  int value;
+  //  double dvalue;
 
   // set up default values first
 

@@ -38,7 +38,10 @@
 
 static int fd = -1;
 
-static void start(int sample_rate, int sample_format) { fd = STDOUT_FILENO; }
+static void start(__attribute__((unused)) int sample_rate,
+                  __attribute__((unused)) int sample_format) {
+  fd = STDOUT_FILENO;
+}
 
 static void play(short buf[], int samples) {
   char errorstring[1024];
@@ -55,7 +58,7 @@ static void stop(void) {
   // don't close stdout
 }
 
-static int init(int argc, char **argv) {
+static int init(__attribute__((unused)) int argc, __attribute__((unused)) char **argv) {
   // set up default values first
   config.audio_backend_buffer_desired_length = 1.0;
   config.audio_backend_latency_offset = 0;

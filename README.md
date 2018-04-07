@@ -39,22 +39,25 @@ What else?
 * Metadata — Shairport Sync can deliver metadata supplied by the source, such as Album Name, Artist Name, Cover Art, etc. through a pipe or UDP socket to a recipient application program — see https://github.com/mikebrady/shairport-sync-metadata-reader for a sample recipient. Sources that supply metadata include iTunes and the Music app in iOS.
 * Raw Audio — Shairport Sync can deliver raw PCM audio to standard output or to a pipe. This output is delivered synchronously with the source after the appropriate latency and is not interpolated or "stuffed" on its way through Shairport Sync.
 * Autotools and Libtool Support — the Shairport Sync build process uses GNU `autotools` and `libtool` to examine and configure the build environment — important for portability and for cross compilation. Previous versions of Shairport looked at the current system to determine which packages were available, instead of looking at the target system for what packages were available.
-
+* Compilers on Linux, FreeBSD, OpenBSD.
+* An MPRIS interface, partially complete and very functional.
+* A native D-Bus interface.
+ 
 Heritage
 -------
 Shairport Sync is a substantial rewrite of the fantastic work done in Shairport 1.0 by James Laird and others — please see https://github.com/abrasive/shairport/blob/master/README.md#contributors-to-version-1x for a list of the contributors to Shairport 1.x and Shairport 0.x. From a "heritage" point of view, Shairport Sync is a fork of Shairport 1.0.
 
 Status
 ------
-Shairport Sync works on a wide variety of Linux devices and FreeBSD. It works on standard Ubuntu laptops, on the Raspberry Pi with Raspbian Stretch, Jessie and Wheezy, Arch Linux and OpenWrt, and it runs on a Linksys NSLU2 and a TP-Link 710N using OpenWrt. It works with built-in audio and with a variety of USB-connected audio amplifiers and DACs, including a cheapo USB "3D Sound" dongle, a first generation iMic and a Topping TP30 amplifier with a USB DAC input.
+Shairport Sync works on a wide variety of Linux devices, FreeBSD and OpenBSD. It works on standard Ubuntu laptops, on the Raspberry Pi with Raspbian Stretch, Jessie and Wheezy, Arch Linux and OpenWrt, and it runs on a Linksys NSLU2 and a TP-Link 710N using OpenWrt. It works with built-in audio and with a variety of USB-connected audio amplifiers and DACs, including a cheapo USB "3D Sound" dongle, a first generation iMic and a Topping TP30 amplifier with a USB DAC input.
 
 Shairport Sync will work with PulseAudio, which is installed in many desktop Linuxes. PulseAudio normally runs in the *user mode* but can be configured to run in *system mode*, though this is not recommended. Shairport Sync can work with it in either mode.
 
 Shairport Sync runs well on the Raspberry Pi on USB and I2S cards. It can drive the built-in sound card – see the note below on configuring the Raspberry Pi to make best use of it. It runs well on the Raspberry Pi Zero W with a suitable USB or I2S card.
 
-Shairport Sync runs natively on FreeBSD using the `sndio` sound system.
+Shairport Sync runs natively on FreeBSD and OpenBSD using the `sndio` sound system.
 
-Shairport Sync runs on Ubuntu, OpenWrt, Debian, Arch Linux, Fedora and FreeBSD inside VMWare Fusion on a Mac, but synchronisation in inaccurate — possibly because the sound card is being emulated.
+Shairport Sync runs on Ubuntu, OpenWrt, Debian, Arch Linux, Fedora, FreeBSD and OpenBSD inside VMWare Fusion on a Mac, but synchronisation in inaccurate — possibly because the sound card is being emulated.
 
 In addition, Shairport Sync can output to standard output, pipes, `soundio` and `ao` devices using appropriate backends.
 
@@ -343,9 +346,9 @@ The `pa` group is used to specify settings relevant to the PulseAudio backend. Y
 
 Shairport Sync can run programs just before it starts to play an audio stream and just after it finishes. You specify them using the `sessioncontrol` group settings `run_this_before_play_begins` and `run_this_after_play_ends`. This is to facilitate situations where something has to be done before and after playing, e.g. switching on an amplifier beforehand and switching it off afterwards. Set the `wait_for_completion` value to `"yes"` for Shairport Sync to wait until the respective commands have been completed before continuing.
 
-Note that the full path to the programs must be specified, and script files will not be executed unless they are marked as executable and have the standard `#!/bin/...` first line. (This behaviour may be different from other Shairports.)
+Note that the full path to the programs must be specified, and script files will not be executed unless they are marked as executable and have the appropriate shebang `#!/bin/...` as the first line. (This behaviour may be different from other Shairports.)
 
-Shairport Sync can run a program whenever the volume is set or changed. You specify them using the `general` group settings `run_this_when_volume_changes`. This is to facilitate situations where something has to be done when the volume changes, e.g. adjust an external mixer value. Set the `wait_for_completion` value to `"yes"` for Shairport Sync to wait until the command has been completed before continuing. Again, please note that the full path to the program must be specified, and script files will not be executed unless they are marked as executable and have the standard `#!/bin/...` first line.
+Shairport Sync can run a program whenever the volume is set or changed. You specify them using the `general` group settings `run_this_when_volume_changes`. This is to facilitate situations where something has to be done when the volume changes, e.g. adjust an external mixer value. Set the `wait_for_completion` value to `"yes"` for Shairport Sync to wait until the command has been completed before continuing. Again, please note that the full path to the program must be specified, and script files will not be executed unless they are marked as executable and have the appropriate shebang `#!/bin/...` as the first line.
 
 Note: Shairport Sync can take configuration settings from command line options. This is mainly for backward compatibility, but sometimes still useful. For normal use, it is strongly recommended that you use the configuration file method.
 
@@ -356,7 +359,7 @@ The Raspberry Pi has a built-in audio DAC that is connected to the device's head
 audio_pwm_mode=2
 ```
 to `/boot/config.txt` and reboot.
-Apart from a loud click when used for the first time after power-up, it is quite adequate for casual listening. A problem is that it declares itself to have a very large mixer volume control range – all the way from -102.38dB up to +4dB, a range of 106.38 dB. In reality, only the top 40dB of it is in any way usable. To help get the most from the DAC, consider using the `volume_range_db` setting in the `general` group to instruct Shairport Sync to use the top of the DAC mixer's declared range. For example, if you set the `volume_range_db` figure to 40, the top 40 dB of the range will the used. With this setting on the Raspberry Pi, maximum volume will be +4dB and minimum volume will be -36dB, below which muting will occur.
+Apart from a loud click when used for the first time after power-up, it is quite adequate for casual listening. A problem is that it declares itself to have a very large mixer volume control range – all the way from -102.38dB up to +4dB, a range of 106.38 dB. In reality, only the top 50 dB of it is in any way usable. To help get the most from the DAC, consider using the `volume_range_db` setting in the `general` group to instruct Shairport Sync to use the top of the DAC mixer's declared range. For example, if you set the `volume_range_db` figure to 50, the top 50 dB of the range will the used. With this setting on the Raspberry Pi, maximum volume will be +4dB and minimum volume will be -46dB, below which muting will occur.
 
 From a user's point of view, the effect of using this setting is to move the minimum usable volume all the way down to the bottom of the user's volume control, rather than have the minimum usable volume concentrated very close to the maximum volume.
 

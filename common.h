@@ -5,6 +5,8 @@
 #include <signal.h>
 #include <stdint.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "audio.h"
 #include "config.h"
@@ -46,6 +48,11 @@ enum playback_mode_type {
   ST_right_only,
 } playback_mode_type;
 
+enum volume_control_profile_type {
+  VCP_standard = 0,
+  VCP_flat,
+} volume_control_profile_type;
+
 enum decoders_supported_type {
   decoder_hammerton = 0,
   decoder_apple_alac,
@@ -68,7 +75,7 @@ enum sps_format_t {
 typedef struct {
   config_t *cfg;
   double airplay_volume; // stored here for reloading when necessary
-  char *appName; // normally the app is called shairport-syn, but it may be symlinked
+  char *appName;         // normally the app is called shairport-syn, but it may be symlinked
   char *password;
   char *service_name; // the name for the shairport service, e.g. "Shairport Sync Version %v running
                       // on host %h"
@@ -82,7 +89,7 @@ typedef struct {
   char *metadata_pipename;
   char *metadata_sockaddr;
   int metadata_sockport;
-  int metadata_sockmsglength;
+  size_t metadata_sockmsglength;
   int get_coverart;
 #endif
   uint8_t hw_addr[6];
@@ -107,16 +114,18 @@ typedef struct {
   char *mdns_name;
   mdns_backend *mdns;
   int buffer_start_fill;
-  int64_t latency;
   int64_t userSuppliedLatency; // overrides all other latencies -- use with caution
-  int64_t iTunesLatency;       // supplied with --iTunesLatency option
-  int64_t AirPlayLatency;      // supplied with --AirPlayLatency option
-  int64_t ForkedDaapdLatency;  // supplied with --ForkedDaapdLatency option
+  int64_t fixedLatencyOffset;  // add this to all automatic latencies supplied to get the actual
+                               // total latency
+  // the total latency will be limited to the min and max-latency values, if supplied
   int daemonise;
   int daemonise_store_pid; // don't try to save a PID file
   char *piddir;
   char *computed_piddir; // the actual pid directory to create, if any
-  int logOutputLevel;    // log output level
+
+  int logOutputLevel;              // log output level
+  int debugger_show_elapsed_time;  // in the debug message, display the time since startup
+  int debugger_show_relative_time; // in the debug message, display the time since the last one
   int statistics_requested, use_negotiated_latencies;
   enum playback_mode_type playback_mode;
   char *cmd_start, *cmd_stop, *cmd_set_volume;
@@ -142,6 +151,7 @@ typedef struct {
   uint32_t volume_range_db; // the range, in dB, from max dB to min dB. Zero means use the mixer's
                             // native range.
   enum sps_format_t output_format;
+  enum volume_control_profile_type volume_control_profile;
   int output_rate;
 
 #ifdef CONFIG_CONVOLUTION
@@ -161,7 +171,25 @@ typedef struct {
   enum dbus_session_type mpris_service_bus_type;
 #endif
 
+#ifdef HAVE_METADATA_HUB
+  char *cover_art_cache_dir;
+  int scan_interval_when_active;   // number of seconds between DACP server scans when playing
+                                   // something (1)
+  int scan_interval_when_inactive; // number of seconds between DACP server scans playing nothing
+                                   // (3)
+  int scan_max_bad_response_count; // number of successive bad results to ignore before giving up
+                                   // (10)
+  int scan_max_inactive_count;     // number of scans to do before stopping if not made active again
+                                   // (about 15 minutes worth)
+#endif
+  int disable_resend_requests; // set this to stop resend request being made for missing packets
+
 } shairport_cfg;
+
+uint32_t nctohl(const uint8_t *p); // read 4 characters from *p and do ntohl on them
+uint16_t nctohs(const uint8_t *p); // read 2 characters from *p and do ntohs on them
+
+void memory_barrier();
 
 // true if Shairport Sync is supposed to be sending output to the output device, false otherwise
 
@@ -200,12 +228,18 @@ char *base64_enc(uint8_t *input, int length);
 uint8_t *rsa_apply(uint8_t *input, int inlen, int *outlen, int mode);
 
 // given a volume (0 to -30) and high and low attenuations in dB*100 (e.g. 0 to -6000 for 0 to -60
+// dB), return an attenuation depending on a linear interpolation along along the range
+double flat_vol2attn(double vol, long max_db, long min_db);
+
+// given a volume (0 to -30) and high and low attenuations in dB*100 (e.g. 0 to -6000 for 0 to -60
 // dB), return an attenuation depending on the transfer function
 double vol2attn(double vol, long max_db, long min_db);
 
 // return a monolithic (always increasing) time in nanoseconds
-
 uint64_t get_absolute_time_in_fp(void);
+
+// time at startup for debugging timing
+uint64_t fp_time_at_startup, fp_time_at_last_debug_message;
 
 // this is for reading an unsigned 32 bit number, such as an RTP timestamp
 
@@ -219,9 +253,20 @@ void command_start(void);
 void command_stop(void);
 void command_set_volume(double volume);
 
+int mkpath(const char *path, mode_t mode);
+
 void shairport_shutdown();
 // void shairport_startup_complete(void);
 
 extern sigset_t pselect_sigset;
+
+// wait for the specified time in microseconds -- it checks every 20 milliseconds
+int sps_pthread_mutex_timedlock(pthread_mutex_t *mutex, useconds_t dally_time,
+                                const char *debugmessage, int debuglevel);
+
+char *get_version_string(); // mallocs a string space -- remember to free it afterwards
+
+void sps_nanosleep(const time_t sec,
+                   const long nanosec); // waits for this time, even through interruptions
 
 #endif // _COMMON_H
