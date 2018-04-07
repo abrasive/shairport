@@ -368,7 +368,6 @@ void dacp_monitor_port_update_callback(char *dacp_id, uint16_t port) {
   } else {
     debug(1, "dacp port monitor reporting on an out-of-use remote.");
   }
-  pthread_cond_signal(&dacp_server_information_cv);
   pthread_mutex_unlock(&dacp_server_information_lock);
 }
 void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
@@ -404,7 +403,7 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
     else
       idle_scan_count = 0;
       
-    debug(1,"Bad Scan Count: %d, Idle Scan Count: %d.",bad_result_count,idle_scan_count);
+    debug(1,"HTTP Result: %d, Bad Scan Count: %d, Idle Scan Count: %d.",result,bad_result_count,idle_scan_count);
 
     if ((bad_result_count == config.scan_max_bad_response_count) || (idle_scan_count == config.scan_max_inactive_count)) {
       debug(1,"DACP server status scanning stopped.");
