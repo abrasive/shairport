@@ -6,7 +6,7 @@ bin_PROGRAMS = shairport-sync
 
 shairport_sync_SOURCES = shairport.c rtsp.c mdns.c mdns_external.c common.c rtp.c player.c alac.c audio.c loudness.c
 
-AM_CFLAGS = -Wno-multichar -Wall -pthread -DSYSCONFDIR=\"$(sysconfdir)\"
+AM_CFLAGS = -Wno-multichar -Wall -Wextra -pthread -DSYSCONFDIR=\"$(sysconfdir)\"
 if BUILD_FOR_FREEBSD
   AM_CPPFLAGS = -I/usr/local/include -Wno-multichar -DSYSCONFDIR=\"$(sysconfdir)\" -O2
 else
