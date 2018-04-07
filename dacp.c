@@ -352,7 +352,7 @@ void set_dacp_server_information(rtsp_conn_info *conn) {
 }
 
 void dacp_monitor_port_update_callback(char *dacp_id, uint16_t port) {
-  debug(1, "dacp_monitor_port_update_callback with Remote ID \"%s\" and port number %d.", dacp_id,
+  debug(2, "dacp_monitor_port_update_callback with Remote ID \"%s\" and port number %d.", dacp_id,
         port);
   sps_pthread_mutex_timedlock(
       &dacp_server_information_lock, 500000,
@@ -389,10 +389,23 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
     sps_pthread_mutex_timedlock(
         &dacp_server_information_lock, 500000,
         "dacp_monitor_thread_code couldn't get DACP server information lock in 0.5 second!.", 2);
-    while (dacp_server.scan_enable == 0) {
-      // debug(1, "Wait for a valid DACP port");
-      pthread_cond_wait(&dacp_server_information_cv, &dacp_server_information_lock);
-      //      debug(1,"Wake up with dacp_server.scan_enable == %d.",dacp_server.scan_enable);
+    if (dacp_server.scan_enable == 0) {
+      metadata_hub_modify_prolog();
+      int ch = (metadata_store.dacp_server_active != 0) ||
+               (metadata_store.advanced_dacp_server_active != 0);
+      metadata_store.dacp_server_active = 0;
+      metadata_store.advanced_dacp_server_active = 0;
+      debug(1, "setting dacp_server_active and advanced_dacp_server_active to 0 with an update "
+               "flag value of %d",
+            ch);
+      metadata_hub_modify_epilog(ch);
+      while (dacp_server.scan_enable == 0) {
+        // debug(1, "dacp_monitor_thread_code wait for an event to possible enable scan");
+        pthread_cond_wait(&dacp_server_information_cv, &dacp_server_information_lock);
+        //      debug(1,"dacp_monitor_thread_code wake up.");
+      }
+      bad_result_count = 0;
+      idle_scan_count = 0;
     }
     scan_index++;
     int32_t the_volume;
@@ -416,17 +429,6 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
         (idle_scan_count == config.scan_max_inactive_count)) {
       debug(1, "DACP server status scanning stopped.");
       dacp_server.scan_enable = 0;
-      bad_result_count = 0;
-      idle_scan_count = 0;
-      metadata_hub_modify_prolog();
-      int ch = (metadata_store.dacp_server_active != 0) ||
-               (metadata_store.advanced_dacp_server_active != 0);
-      metadata_store.dacp_server_active = 0;
-      metadata_store.advanced_dacp_server_active = 0;
-      debug(1, "setting dacp_server_active and advanced_dacp_server_active to 0 with an update "
-               "flag value of %d",
-            ch);
-      metadata_hub_modify_epilog(ch);
     }
     pthread_mutex_unlock(&dacp_server_information_lock);
     // debug(1, "DACP Server ID \"%u\" at \"%s:%u\", scan %d.", dacp_server.active_remote_id,
