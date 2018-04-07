@@ -161,11 +161,11 @@ AC_ARG_WITH(ssl, [ choose --with-ssl=openssl, --with-ssl=mbedtls or --with-ssl=p
     fi
   elif test "x${with_ssl}" = xmbedtls ; then
     AC_CHECK_LIB([mbedtls],[mbedtls_ssl_init],,
-		[AC_MSG_ERROR([Cannot find required libray: libmbedtls],1)])
+		[AC_MSG_ERROR([mbed tls support requires the mbedtls library -- libmbedtls-dev suggested],1)])
     AC_CHECK_LIB([mbedcrypto], [mbedtls_entropy_func],,
-                [AC_MSG_ERROR([Cannot find required library: libmbedcrypto],1)])
+                [AC_MSG_ERROR([mbed tls support requires the mbedcrypto library -- libmbedcrypto0 suggested],1)])
     AC_CHECK_LIB([mbedx509], [mbedtls_pk_init],,
-                [AC_MSG_ERROR([Cannot find required library: libmbedx509],1)])
+                [AC_MSG_ERROR([mbed tls support requires the mbedx509 library -- libmbedx509-0 suggested],1)])
   elif test "x${with_ssl}" = xpolarssl ; then
     AC_CHECK_LIB([polarssl],[ssl_init], , AC_MSG_ERROR(PolarSSL is selected but the library cannot be found and is deprecated. Consider selecting mbed TLS instead using --with-ssl=mbedtls.))
   else
