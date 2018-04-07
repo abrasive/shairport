@@ -106,15 +106,15 @@ void mpris_metadata_watcher(struct metadata_bundle *argc, __attribute__((unused)
   int it;
   int non_zero = 0;
   if (argc->track_metadata) {
-  for (it = 0; it < 16; it++) {
-    if (argc->track_metadata->item_composite_id[it])
-      non_zero = 1;
-    sprintf(pt, "%02X", argc->track_metadata->item_composite_id[it]);
-    pt += 2;
-  }
+    for (it = 0; it < 16; it++) {
+      if (argc->track_metadata->item_composite_id[it])
+        non_zero = 1;
+      sprintf(pt, "%02X", argc->track_metadata->item_composite_id[it]);
+      pt += 2;
+    }
   }
   *pt = 0;
-  
+
   if (non_zero) {
     // debug(1, "Set ID using composite ID: \"0x%s\".", st);
     char trackidstring[1024];

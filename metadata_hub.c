@@ -135,6 +135,23 @@ void run_metadata_watchers(void) {
 void metadata_hub_modify_epilog(int modified) {
   // always run this after changing an entry or a sequence of entries in the metadata_hub
   // debug(1, "unlocking metadata hub for writing");
+  int m = 0;
+  if (metadata_store.dacp_server_active==0) {
+      // debug(1,"player_stop release track metadata and artwork");
+      // 
+    if (metadata_store.track_metadata) {
+      m = 1;
+      metadata_hub_release_track_metadata(metadata_store.track_metadata);
+      metadata_store.track_metadata = NULL;
+    }
+    if (metadata_store.cover_art_pathname) {
+      m = 1;
+      metadata_hub_release_track_artwork();  
+    }
+    if (m)
+      debug(1,"Release track metadata after dacp server goes inactive.");
+    modified += m;
+  }
   pthread_rwlock_unlock(&metadata_hub_re_lock);
   if (modified) {
     run_metadata_watchers();
@@ -476,10 +493,6 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
       metadata_hub_modify_prolog();
       metadata_store.player_thread_active = 0;
       metadata_store.player_state = PS_STOPPED;
-      // debug(1,"player_stop release track metadata and artwork");
-      //metadata_hub_release_track_metadata(metadata_store.track_metadata);
-      //metadata_store.track_metadata = NULL;
-      //metadata_hub_release_track_artwork();
       metadata_hub_modify_epilog(1);
     } break;
     case 'pfls': {

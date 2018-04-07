@@ -334,11 +334,17 @@ int parse_options(int argc, char **argv) {
   config.fixedLatencyOffset = 11025; // this sounds like it works properly.
 #ifdef HAVE_METADATA_HUB
   config.cover_art_cache_dir = "/tmp/shairport-sync/.cache/coverart";
-  config.scan_interval_when_active = 1; // number of seconds between DACP server scans when playing something
-  config.scan_interval_when_inactive = 3; // number of seconds between DACP server scans playing nothing
-  config.scan_max_bad_response_count = 10; // number of successive bad results to ignore before giving up 
-  config.scan_max_inactive_count = (24*60*60)/config.scan_interval_when_inactive; // number of scans to do before stopping if not made active again (24 hours )
-//  config.scan_max_inactive_count = 5; // number of scans to do before stopping if not made active again (15 minutes )
+  config.scan_interval_when_active =
+      1; // number of seconds between DACP server scans when playing something
+  config.scan_interval_when_inactive =
+      3; // number of seconds between DACP server scans playing nothing
+  config.scan_max_bad_response_count =
+      5; // number of successive bad results to ignore before giving up
+  config.scan_max_inactive_count =
+      (15 * 60) / config.scan_interval_when_inactive; // number of scans to do before stopping if
+                                                      // not made active again (15 minutes)
+//  config.scan_max_inactive_count = 5; // number of scans to do before stopping if not made active
+//  again (15 minutes )
 #endif
 
   // config_setting_t *setting;

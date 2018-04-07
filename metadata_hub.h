@@ -53,8 +53,8 @@ typedef struct metadata_bundle {
                    // server
   char *server_ip; // IP number used by Shairport Sync
   int player_thread_active; // true if a play thread is running
-  int dacp_server_active; // true if there's a reachable DACP server (assumed to be the Airplay
-                          // client) ; false otherwise
+  int dacp_server_active;   // true if there's a reachable DACP server (assumed to be the Airplay
+                            // client) ; false otherwise
   int advanced_dacp_server_active; // true if there's a reachable DACP server with iTunes
                                    // capabilitiues
                                    // ; false otherwise
