@@ -1004,12 +1004,18 @@ void sps_nanosleep(const time_t sec, const long nanosec) {
     debug(1, "Error in sps_nanosleep of %d sec and %ld nanoseconds: %d.", sec, nanosec, errno);
 }
 
+char *previous_debug_message = NULL;
+
 int sps_pthread_mutex_timedlock(pthread_mutex_t *mutex, useconds_t dally_time,
                                 const char *debugmessage, int debuglevel) {
 
+  if (previous_debug_message)
+    free(previous_debug_message);
+  previous_debug_message = strdup(debugmessage);
+
   useconds_t time_to_wait = dally_time;
   int r = pthread_mutex_trylock(mutex);
-  while ((r==EBUSY) && (time_to_wait > 0)) {
+  while ((r == EBUSY) && (time_to_wait > 0)) {
     useconds_t st = time_to_wait;
     if (st > 20000)
       st = 20000;
@@ -1019,11 +1025,14 @@ int sps_pthread_mutex_timedlock(pthread_mutex_t *mutex, useconds_t dally_time,
   }
   if (r != 0) {
     char errstr[1000];
-    if (r==EBUSY)
-      debug(debuglevel, "error EBUSY waiting for a mutex: \"%s\".", debugmessage);
-    else   
-      debug(debuglevel, "error %d: \"%s\" waiting for a mutex: \"%s\".", r,
-            strerror_r(r, errstr, sizeof(errstr)), debugmessage);
+    if (r == EBUSY)
+      debug(debuglevel,
+            "error EBUSY waiting for a mutex: \"%s\". Previous debug message was: \"%s\".",
+            debugmessage, previous_debug_message);
+    else
+      debug(debuglevel,
+            "error %d: \"%s\" waiting for a mutex: \"%s\". Previous debug message was: \"%s\".", r,
+            strerror_r(r, errstr, sizeof(errstr)), debugmessage, previous_debug_message);
   }
   return r;
 }
