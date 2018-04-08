@@ -648,7 +648,7 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
                     char *pt = st;
                     int it;
                     for (it = 0; it < 16; it++) {
-                      sprintf(pt, "%02X", metadata_store.item_composite_id[it]);
+                      snprintf(pt, 3, "%02X", metadata_store.item_composite_id[it]);
                       pt += 2;
                     }
                     *pt = 0;

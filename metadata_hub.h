@@ -32,6 +32,7 @@ typedef struct track_metadata_bundle {
       item_composite_id[16]; // seems to be nowplaying 4 ids: dbid, plid, playlistItem, itemid
   char *track_name;          // a malloced string -- if non-zero, free it before replacing it
   char *artist_name;         // a malloced string -- if non-zero, free it before replacing it
+  char *album_artist_name;   // a malloced string -- if non-zero, free it before replacing it
   char *album_name;          // a malloced string -- if non-zero, free it before replacing it
   char *genre;               // a malloced string -- if non-zero, free it before replacing it
   char *comment;             // a malloced string -- if non-zero, free it before replacing it
@@ -39,7 +40,10 @@ typedef struct track_metadata_bundle {
   char *file_kind;           // a malloced string -- if non-zero, free it before replacing it
   char *song_description;    // a malloced string -- if non-zero, free it before replacing it
   char *song_album_artist;   // a malloced string -- if non-zero, free it before replacing it
-  char *sort_as;             // a malloced string -- if non-zero, free it before replacing it
+  char *sort_name;           // a malloced string -- if non-zero, free it before replacing it
+  char *sort_artist;         // a malloced string -- if non-zero, free it before replacing it
+  char *sort_album;          // a malloced string -- if non-zero, free it before replacing it
+  char *sort_composer;       // a malloced string -- if non-zero, free it before replacing it
   uint32_t songtime_in_milliseconds;
 } track_metadata_bundle;
 

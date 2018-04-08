@@ -95,7 +95,7 @@ static void resolve_callback(AvahiServiceResolver *r, AVAHI_GCC_UNUSED AvahiIfIn
 #ifdef CONFIG_METADATA
         char portstring[20];
         memset(portstring, 0, sizeof(portstring));
-        sprintf(portstring, "%u", port);
+        snprintf(portstring, sizeof(portstring), "%u", port);
         send_ssnc_metadata('dapo', strdup(portstring), strlen(portstring), 0);
 #endif
       }

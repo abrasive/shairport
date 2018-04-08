@@ -378,7 +378,7 @@ static void debug_print_msg_content(int level, rtsp_message *msg) {
       char *obfp = obf;
       int obfc;
       for (obfc = 0; obfc < msg->contentlength; obfc++) {
-        sprintf(obfp, "%02X", msg->content[obfc]);
+        snprintf(obfp, 3, "%02X", msg->content[obfc]);
         obfp += 2;
       };
       *obfp = 0;
@@ -823,9 +823,8 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
       strcat(hdr, q); // should unsplice the timing port entry
   }
 
-  char *resphdr = alloca(200);
-  *resphdr = 0;
-  sprintf(resphdr, "RTP/AVP/"
+  char resphdr[256] = "";
+  snprintf(resphdr, sizeof(resphdr), "RTP/AVP/"
                    "UDP;unicast;interleaved=0-1;mode=record;control_port=%d;"
                    "timing_port=%d;server_"
                    "port=%d",
@@ -1328,7 +1327,7 @@ static void handle_get_parameter(__attribute__((unused)) rtsp_conn_info *conn, r
     char *p = malloc(128); // will be automatically deallocated with the response is deleted
     if (p) {
       resp->content = p;
-      resp->contentlength = sprintf(p, "\r\nvolume: %.6f\r\n", config.airplay_volume);
+      resp->contentlength = snprintf(p, 128, "\r\nvolume: %.6f\r\n", config.airplay_volume);
     } else {
       debug(1, "Couldn't allocate space for a response.");
     }
@@ -1779,7 +1778,7 @@ static int rtsp_auth(char **nonce, rtsp_message *req, rtsp_message *resp) {
   int i;
   unsigned char buf[33];
   for (i = 0; i < 16; i++)
-    sprintf((char *)buf + 2 * i, "%02x", digest_urp[i]);
+    snprintf((char *)buf + 2 * i, 3, "%02x", digest_urp[i]);
 
 #ifdef HAVE_LIBSSL
   MD5_Init(&ctx);
@@ -1788,7 +1787,7 @@ static int rtsp_auth(char **nonce, rtsp_message *req, rtsp_message *resp) {
   MD5_Update(&ctx, *nonce, strlen(*nonce));
   MD5_Update(&ctx, ":", 1);
   for (i = 0; i < 16; i++)
-    sprintf((char *)buf + 2 * i, "%02x", digest_mu[i]);
+    snprintf((char *)buf + 2 * i, 3, "%02x", digest_mu[i]);
   MD5_Update(&ctx, buf, 32);
   MD5_Final(digest_total, &ctx);
 #endif
@@ -1800,7 +1799,7 @@ static int rtsp_auth(char **nonce, rtsp_message *req, rtsp_message *resp) {
   mbedtls_md5_update(&tctx, (const unsigned char *)*nonce, strlen(*nonce));
   mbedtls_md5_update(&tctx, (unsigned char *)":", 1);
   for (i = 0; i < 16; i++)
-    sprintf((char *)buf + 2 * i, "%02x", digest_mu[i]);
+    snprintf((char *)buf + 2 * i, 3, "%02x", digest_mu[i]);
   mbedtls_md5_update(&tctx, buf, 32);
   mbedtls_md5_finish(&tctx, digest_total);
 #endif
@@ -1812,13 +1811,13 @@ static int rtsp_auth(char **nonce, rtsp_message *req, rtsp_message *resp) {
   md5_update(&tctx, (const unsigned char *)*nonce, strlen(*nonce));
   md5_update(&tctx, (unsigned char *)":", 1);
   for (i = 0; i < 16; i++)
-    sprintf((char *)buf + 2 * i, "%02x", digest_mu[i]);
+    snprintf((char *)buf + 2 * i, 3, "%02x", digest_mu[i]);
   md5_update(&tctx, buf, 32);
   md5_finish(&tctx, digest_total);
 #endif
 
   for (i = 0; i < 16; i++)
-    sprintf((char *)buf + 2 * i, "%02x", digest_total[i]);
+    snprintf((char *)buf + 2 * i, 3, "%02x", digest_total[i]);
 
   if (!strcmp(response, (const char *)buf))
     return 0;

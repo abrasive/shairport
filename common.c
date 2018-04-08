@@ -565,7 +565,7 @@ void command_set_volume(double volume) {
         inform("Couldn't allocate memory for set_volume argument string");
       } else {
         memset(command_buffer, 0, command_buffer_size);
-        sprintf(command_buffer, "%s%f", config.cmd_set_volume, volume);
+        snprintf(command_buffer, command_buffer_size, "%s%f", config.cmd_set_volume, volume);
         // debug(1,"command_buffer is \"%s\".",command_buffer);
         int argC;
         char **argV;

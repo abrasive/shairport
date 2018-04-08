@@ -141,8 +141,7 @@ void dbus_metadata_watcher(struct metadata_bundle *argc, __attribute__((unused))
   // Make up the artwork URI if we have one
   if (argc->cover_art_pathname) {
     char artURIstring[1024];
-    sprintf(artURIstring, "file://%s", argc->cover_art_pathname);
-    // sprintf(artURIstring,"");
+    snprintf(artURIstring, sizeof(artURIstring), "file://%s", argc->cover_art_pathname);
     // debug(1,"artURI String: \"%s\".",artURIstring);
     GVariant *artUrl = g_variant_new("s", artURIstring);
     g_variant_builder_add(dict_builder, "{sv}", "mpris:artUrl", artUrl);
@@ -152,7 +151,7 @@ void dbus_metadata_watcher(struct metadata_bundle *argc, __attribute__((unused))
   if ((argc->track_metadata) && (argc->track_metadata->item_id)) {
     char trackidstring[128];
     // debug(1, "Set ID using mper ID: \"%u\".",argc->item_id);
-    sprintf(trackidstring, "/org/gnome/ShairportSync/mper_%u", argc->track_metadata->item_id);
+    snprintf(trackidstring, sizeof(trackidstring), "/org/gnome/ShairportSync/mper_%u", argc->track_metadata->item_id);
     GVariant *trackid = g_variant_new("o", trackidstring);
     g_variant_builder_add(dict_builder, "{sv}", "mpris:trackid", trackid);
   }
@@ -733,7 +732,7 @@ static void on_dbus_name_lost(__attribute__((unused)) GDBusConnection *connectio
   //      name, (config.dbus_service_bus_type == DBT_session) ? "session" : "system");
   pid_t pid = getpid();
   char interface_name[256] = "";
-  sprintf(interface_name, "org.gnome.ShairportSync.i%d", pid);
+  snprintf(interface_name, sizeof(interface_name), "org.gnome.ShairportSync.i%d", pid);
   GBusType dbus_bus_type = G_BUS_TYPE_SYSTEM;
   if (config.dbus_service_bus_type == DBT_session)
     dbus_bus_type = G_BUS_TYPE_SESSION;

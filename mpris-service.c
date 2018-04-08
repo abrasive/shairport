@@ -91,8 +91,7 @@ void mpris_metadata_watcher(struct metadata_bundle *argc, __attribute__((unused)
   // Make up the artwork URI if we have one
   if (argc->cover_art_pathname) {
     char artURIstring[1024];
-    sprintf(artURIstring, "file://%s", argc->cover_art_pathname);
-    // sprintf(artURIstring,"");
+    snprintf(artURIstring, sizeof(artURIstring), "file://%s", argc->cover_art_pathname);
     // debug(1,"artURI String: \"%s\".",artURIstring);
     GVariant *artUrl = g_variant_new("s", artURIstring);
     g_variant_builder_add(dict_builder, "{sv}", "mpris:artUrl", artUrl);
@@ -109,7 +108,7 @@ void mpris_metadata_watcher(struct metadata_bundle *argc, __attribute__((unused)
     for (it = 0; it < 16; it++) {
       if (argc->track_metadata->item_composite_id[it])
         non_zero = 1;
-      sprintf(pt, "%02X", argc->track_metadata->item_composite_id[it]);
+      snprintf(pt, 3, "%02X", argc->track_metadata->item_composite_id[it]);
       pt += 2;
     }
   }
@@ -118,13 +117,13 @@ void mpris_metadata_watcher(struct metadata_bundle *argc, __attribute__((unused)
   if (non_zero) {
     // debug(1, "Set ID using composite ID: \"0x%s\".", st);
     char trackidstring[1024];
-    sprintf(trackidstring, "/org/gnome/ShairportSync/%s", st);
+    snprintf(trackidstring, sizeof(trackidstring), "/org/gnome/ShairportSync/%s", st);
     GVariant *trackid = g_variant_new("o", trackidstring);
     g_variant_builder_add(dict_builder, "{sv}", "mpris:trackid", trackid);
   } else if ((argc->track_metadata) && (argc->track_metadata->item_id)) {
     char trackidstring[128];
     // debug(1, "Set ID using mper ID: \"%u\".",argc->item_id);
-    sprintf(trackidstring, "/org/gnome/ShairportSync/mper_%u", argc->track_metadata->item_id);
+    snprintf(trackidstring, sizeof(trackidstring), "/org/gnome/ShairportSync/mper_%u", argc->track_metadata->item_id);
     GVariant *trackid = g_variant_new("o", trackidstring);
     g_variant_builder_add(dict_builder, "{sv}", "mpris:trackid", trackid);
   }
@@ -292,7 +291,7 @@ static void on_mpris_name_lost(__attribute__((unused)) GDBusConnection *connecti
   //      name,(mpris_bus_type==G_BUS_TYPE_SESSION) ? "session" : "system");
   pid_t pid = getpid();
   char interface_name[256] = "";
-  sprintf(interface_name, "org.mpris.MediaPlayer2.ShairportSync.i%d", pid);
+  snprintf(interface_name,  sizeof(interface_name), "org.mpris.MediaPlayer2.ShairportSync.i%d", pid);
   GBusType mpris_bus_type = G_BUS_TYPE_SYSTEM;
   if (config.mpris_service_bus_type == DBT_session)
     mpris_bus_type = G_BUS_TYPE_SESSION;

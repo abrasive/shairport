@@ -216,7 +216,7 @@ void *rtp_control_receiver(void *arg) {
                                                            char *obfp = obf;
                                                            int obfc;
                                                            for (obfc = 0; obfc < plen; obfc++) {
-                                                             sprintf(obfp, "%02X", packet[obfc]);
+                                                             snprintf(obfp, 3, "%02X", packet[obfc]);
                                                              obfp += 2;
                                                            };
                                                            *obfp = 0;
@@ -500,7 +500,7 @@ void *rtp_timing_receiver(void *arg) {
       char *obfp = obf;
       int obfc;
       for (obfc=0;obfc<plen;obfc++) {
-        sprintf(obfp,"%02X",packet[obfc]);
+        snprintf(obfp, 3, "%02X", packet[obfc]);
         obfp+=2;
       };
       *obfp=0;

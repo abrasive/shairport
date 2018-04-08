@@ -63,7 +63,7 @@ void mdns_register(void) {
   char *p = mdns_service_name;
   int i;
   for (i = 0; i < 6; i++) {
-    sprintf(p, "%02X", config.hw_addr[i]);
+    snprintf(p, 3, "%02X", config.hw_addr[i]);
     p += 2;
   }
   *p++ = '@';
