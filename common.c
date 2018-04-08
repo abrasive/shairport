@@ -1009,7 +1009,7 @@ int sps_pthread_mutex_timedlock(pthread_mutex_t *mutex, useconds_t dally_time,
 
   useconds_t time_to_wait = dally_time;
   int r = pthread_mutex_trylock(mutex);
-  while ((r) && (time_to_wait > 0)) {
+  while ((r==EBUSY) && (time_to_wait > 0)) {
     useconds_t st = time_to_wait;
     if (st > 20000)
       st = 20000;
@@ -1019,8 +1019,11 @@ int sps_pthread_mutex_timedlock(pthread_mutex_t *mutex, useconds_t dally_time,
   }
   if (r != 0) {
     char errstr[1000];
-    debug(debuglevel, "error %d: \"%s\" waiting for a mutex: \"%s\".", r,
-          strerror_r(r, errstr, sizeof(errstr)), debugmessage);
+    if (r==EBUSY)
+      debug(debuglevel, "error EBUSY waiting for a mutex: \"%s\".", debugmessage);
+    else   
+      debug(debuglevel, "error %d: \"%s\" waiting for a mutex: \"%s\".", r,
+            strerror_r(r, errstr, sizeof(errstr)), debugmessage);
   }
   return r;
 }
