@@ -337,7 +337,7 @@ void set_dacp_server_information(rtsp_conn_info *conn) {
     metadata_hub_modify_epilog(ch);
   } else {
     if (dacp_server.port) {
-      debug(1, "Enable scanning.");
+      // debug(1, "Re-enable scanning.");
       dacp_server.scan_enable = 1;
       //      metadata_hub_modify_prolog();
       //      int ch = metadata_store.dacp_server_active != dacp_server.scan_enable;
