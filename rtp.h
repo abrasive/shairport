@@ -12,8 +12,7 @@ void *rtp_audio_receiver(void *arg);
 void *rtp_control_receiver(void *arg);
 void *rtp_timing_receiver(void *arg);
 
-void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int controlport, int timingport,
-               int *local_server_port, int *local_control_port, int *local_timing_port,
+void rtp_setup(SOCKADDR *local, SOCKADDR *remote, uint16_t controlport, uint16_t timingport,
                rtsp_conn_info *conn);
 void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn);
 void rtp_request_client_pause(rtsp_conn_info *conn); // ask the client to pause

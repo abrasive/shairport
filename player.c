@@ -1659,8 +1659,6 @@ static void *player_thread_func(void *arg) {
   player_volume(config.airplay_volume, conn);
   int64_t frames_to_drop = 0;
   // debug(1, "Play begin");
-  if (play_number % 100 == 0)
-    debug(3, "Play frame %d.", play_number);
   while (!conn->player_thread_please_stop) {
     abuf_t *inframe = buffer_get_frame(conn);
     if (inframe) {
@@ -1668,9 +1666,11 @@ static void *player_thread_func(void *arg) {
       inbuflength = inframe->length;
       if (inbuf) {
         play_number++;
+        if (play_number % 100 == 0)
+          debug(3, "Play frame %d.", play_number);
         conn->play_number_after_flush++;
         if (inframe->timestamp == 0) {
-          // debug(1,"Player has a supplied silent frame.");
+          debug(3, "Player has a supplied silent frame.");
           conn->last_seqno_read = (SUCCESSOR(conn->last_seqno_read) &
                                    0xffff); // manage the packet out of sequence minder
           config.output->play(silence, conn->max_frames_per_packet * conn->output_sample_ratio);
@@ -1685,7 +1685,9 @@ static void *player_thread_func(void *arg) {
           */
           config.output->play(silence, conn->max_frames_per_packet * conn->output_sample_ratio);
         } else if (frames_to_drop) {
-          // debug(2,"%lld frames to drop.",frames_to_drop);
+          if (frames_to_drop > 3 * config.output_rate)
+            warn("Very large number of frames to drop: %" PRId64 ".");
+          debug(3, "%" PRId64 " frames to drop.", frames_to_drop);
           frames_to_drop -= inframe->length;
           if (frames_to_drop < 0)
             frames_to_drop = 0;
@@ -1885,6 +1887,9 @@ static void *player_thread_func(void *arg) {
             if ((config.no_sync == 0) && (inframe->timestamp != 0) &&
                 (!conn->player_thread_please_stop) && (config.resyncthreshold > 0.0) &&
                 (abs_sync_error > config.resyncthreshold * config.output_rate)) {
+              if (abs_sync_error > 3 * config.output_rate) {
+                warn("The sync error is very large: %" PRId64 " frames.");
+              }
               sync_error_out_of_bounds++;
             } else {
               sync_error_out_of_bounds = 0;

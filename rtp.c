@@ -691,9 +691,10 @@ void *rtp_timing_receiver(void *arg) {
   return NULL;
 }
 
-static int bind_port(int ip_family, const char *self_ip_address, uint32_t scope_id, int *sock) {
+static uint16_t bind_port(int ip_family, const char *self_ip_address, uint32_t scope_id,
+                          int *sock) {
   // look for a port in the range, if any was specified.
-  int desired_port = config.udp_port_base;
+  uint16_t desired_port = config.udp_port_base;
   int ret;
 
   int local_socket = socket(ip_family, SOCK_DGRAM, IPPROTO_UDP);
@@ -731,7 +732,7 @@ static int bind_port(int ip_family, const char *self_ip_address, uint32_t scope_
         "check for restrictive firewall settings or a bad router!");
   }
 
-  int sport;
+  uint16_t sport;
   SOCKADDR local;
   socklen_t local_len = sizeof(local);
   getsockname(local_socket, (struct sockaddr *)&local, &local_len);
@@ -751,123 +752,128 @@ static int bind_port(int ip_family, const char *self_ip_address, uint32_t scope_
   return sport;
 }
 
-void rtp_setup(SOCKADDR *local, SOCKADDR *remote, int cport, int tport, int *lsport, int *lcport,
-               int *ltport, rtsp_conn_info *conn) {
+void rtp_setup(SOCKADDR *local, SOCKADDR *remote, uint16_t cport, uint16_t tport,
+               rtsp_conn_info *conn) {
 
   // this gets the local and remote ip numbers (and ports used for the TCD stuff)
   // we use the local stuff to specify the address we are coming from and
   // we use the remote stuff to specify where we're goint to
 
   if (conn->rtp_running)
-    die("rtp_setup called with active stream!");
+    warn("rtp_setup has been called with al already-active stream -- ignored. Possible duplicate "
+         "SETUP call?");
+  else {
 
-  debug(2, "rtp_setup: cport=%d tport=%d.", cport, tport);
+    debug(2, "rtp_setup: cport=%d tport=%d.", cport, tport);
 
-  // print out what we know about the client
-  void *client_addr = NULL, *self_addr = NULL;
-  // int client_port, self_port;
-  // char client_port_str[64];
-  // char self_addr_str[64];
+    // print out what we know about the client
+    void *client_addr = NULL, *self_addr = NULL;
+    // int client_port, self_port;
+    // char client_port_str[64];
+    // char self_addr_str[64];
 
-  conn->connection_ip_family =
-      remote->SAFAMILY; // keep information about the kind of ip of the client
-
-#ifdef AF_INET6
-  if (conn->connection_ip_family == AF_INET6) {
-    struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)remote;
-    client_addr = &(sa6->sin6_addr);
-    // client_port = ntohs(sa6->sin6_port);
-    sa6 = (struct sockaddr_in6 *)local;
-    self_addr = &(sa6->sin6_addr);
-    // self_port = ntohs(sa6->sin6_port);
-    conn->self_scope_id = sa6->sin6_scope_id;
-  }
-#endif
-  if (conn->connection_ip_family == AF_INET) {
-    struct sockaddr_in *sa4 = (struct sockaddr_in *)remote;
-    client_addr = &(sa4->sin_addr);
-    // client_port = ntohs(sa4->sin_port);
-    sa4 = (struct sockaddr_in *)local;
-    self_addr = &(sa4->sin_addr);
-    // self_port = ntohs(sa4->sin_port);
-  }
-
-  inet_ntop(conn->connection_ip_family, client_addr, conn->client_ip_string,
-            sizeof(conn->client_ip_string));
-  inet_ntop(conn->connection_ip_family, self_addr, conn->self_ip_string,
-            sizeof(conn->self_ip_string));
-
-  debug(2, "Set up play connection from %s to self at %s on RTSP conversation thread %d.",
-        conn->client_ip_string, conn->self_ip_string, conn->connection_number);
-
-  // set up a the record of the remote's control socket
-  struct addrinfo hints;
-  struct addrinfo *servinfo;
-
-  memset(&conn->rtp_client_control_socket, 0, sizeof(conn->rtp_client_control_socket));
-  memset(&hints, 0, sizeof hints);
-  hints.ai_family = conn->connection_ip_family;
-  hints.ai_socktype = SOCK_DGRAM;
-  char portstr[20];
-  snprintf(portstr, 20, "%d", cport);
-  if (getaddrinfo(conn->client_ip_string, portstr, &hints, &servinfo) != 0)
-    die("Can't get address of client's control port");
+    conn->connection_ip_family =
+        remote->SAFAMILY; // keep information about the kind of ip of the client
 
 #ifdef AF_INET6
-  if (servinfo->ai_family == AF_INET6) {
-    memcpy(&conn->rtp_client_control_socket, servinfo->ai_addr, sizeof(struct sockaddr_in6));
-    // ensure the scope id matches that of remote. this is needed for link-local addresses.
-    struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)&conn->rtp_client_control_socket;
-    sa6->sin6_scope_id = conn->self_scope_id;
-  } else
+    if (conn->connection_ip_family == AF_INET6) {
+      struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)remote;
+      client_addr = &(sa6->sin6_addr);
+      // client_port = ntohs(sa6->sin6_port);
+      sa6 = (struct sockaddr_in6 *)local;
+      self_addr = &(sa6->sin6_addr);
+      // self_port = ntohs(sa6->sin6_port);
+      conn->self_scope_id = sa6->sin6_scope_id;
+    }
 #endif
-    memcpy(&conn->rtp_client_control_socket, servinfo->ai_addr, sizeof(struct sockaddr_in));
-  freeaddrinfo(servinfo);
+    if (conn->connection_ip_family == AF_INET) {
+      struct sockaddr_in *sa4 = (struct sockaddr_in *)remote;
+      client_addr = &(sa4->sin_addr);
+      // client_port = ntohs(sa4->sin_port);
+      sa4 = (struct sockaddr_in *)local;
+      self_addr = &(sa4->sin_addr);
+      // self_port = ntohs(sa4->sin_port);
+    }
 
-  // set up a the record of the remote's timing socket
-  memset(&conn->rtp_client_timing_socket, 0, sizeof(conn->rtp_client_timing_socket));
-  memset(&hints, 0, sizeof hints);
-  hints.ai_family = conn->connection_ip_family;
-  hints.ai_socktype = SOCK_DGRAM;
-  snprintf(portstr, 20, "%d", tport);
-  if (getaddrinfo(conn->client_ip_string, portstr, &hints, &servinfo) != 0)
-    die("Can't get address of client's timing port");
+    inet_ntop(conn->connection_ip_family, client_addr, conn->client_ip_string,
+              sizeof(conn->client_ip_string));
+    inet_ntop(conn->connection_ip_family, self_addr, conn->self_ip_string,
+              sizeof(conn->self_ip_string));
+
+    debug(2, "Set up play connection from %s to self at %s on RTSP conversation thread %d.",
+          conn->client_ip_string, conn->self_ip_string, conn->connection_number);
+
+    // set up a the record of the remote's control socket
+    struct addrinfo hints;
+    struct addrinfo *servinfo;
+
+    memset(&conn->rtp_client_control_socket, 0, sizeof(conn->rtp_client_control_socket));
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = conn->connection_ip_family;
+    hints.ai_socktype = SOCK_DGRAM;
+    char portstr[20];
+    snprintf(portstr, 20, "%d", cport);
+    if (getaddrinfo(conn->client_ip_string, portstr, &hints, &servinfo) != 0)
+      die("Can't get address of client's control port");
+
 #ifdef AF_INET6
-  if (servinfo->ai_family == AF_INET6) {
-    memcpy(&conn->rtp_client_timing_socket, servinfo->ai_addr, sizeof(struct sockaddr_in6));
-    // ensure the scope id matches that of remote. this is needed for link-local addresses.
-    struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)&conn->rtp_client_timing_socket;
-    sa6->sin6_scope_id = conn->self_scope_id;
-  } else
+    if (servinfo->ai_family == AF_INET6) {
+      memcpy(&conn->rtp_client_control_socket, servinfo->ai_addr, sizeof(struct sockaddr_in6));
+      // ensure the scope id matches that of remote. this is needed for link-local addresses.
+      struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)&conn->rtp_client_control_socket;
+      sa6->sin6_scope_id = conn->self_scope_id;
+    } else
 #endif
-    memcpy(&conn->rtp_client_timing_socket, servinfo->ai_addr, sizeof(struct sockaddr_in));
-  freeaddrinfo(servinfo);
+      memcpy(&conn->rtp_client_control_socket, servinfo->ai_addr, sizeof(struct sockaddr_in));
+    freeaddrinfo(servinfo);
 
-  // now, we open three sockets -- one for the audio stream, one for the timing and one for the
-  // control
+    // set up a the record of the remote's timing socket
+    memset(&conn->rtp_client_timing_socket, 0, sizeof(conn->rtp_client_timing_socket));
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = conn->connection_ip_family;
+    hints.ai_socktype = SOCK_DGRAM;
+    snprintf(portstr, 20, "%d", tport);
+    if (getaddrinfo(conn->client_ip_string, portstr, &hints, &servinfo) != 0)
+      die("Can't get address of client's timing port");
+#ifdef AF_INET6
+    if (servinfo->ai_family == AF_INET6) {
+      memcpy(&conn->rtp_client_timing_socket, servinfo->ai_addr, sizeof(struct sockaddr_in6));
+      // ensure the scope id matches that of remote. this is needed for link-local addresses.
+      struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)&conn->rtp_client_timing_socket;
+      sa6->sin6_scope_id = conn->self_scope_id;
+    } else
+#endif
+      memcpy(&conn->rtp_client_timing_socket, servinfo->ai_addr, sizeof(struct sockaddr_in));
+    freeaddrinfo(servinfo);
 
-  *lsport = bind_port(conn->connection_ip_family, conn->self_ip_string, conn->self_scope_id,
-                      &conn->audio_socket);
-  *lcport = bind_port(conn->connection_ip_family, conn->self_ip_string, conn->self_scope_id,
-                      &conn->control_socket);
-  *ltport = bind_port(conn->connection_ip_family, conn->self_ip_string, conn->self_scope_id,
-                      &conn->timing_socket);
+    // now, we open three sockets -- one for the audio stream, one for the timing and one for the
+    // control
+    conn->remote_control_port = cport;
+    conn->remote_timing_port = tport;
 
-  debug(2, "listening for audio, control and timing on ports %d, %d, %d.", *lsport, *lcport,
-        *ltport);
+    conn->local_audio_port = bind_port(conn->connection_ip_family, conn->self_ip_string,
+                                       conn->self_scope_id, &conn->audio_socket);
+    conn->local_control_port = bind_port(conn->connection_ip_family, conn->self_ip_string,
+                                         conn->self_scope_id, &conn->control_socket);
+    conn->local_timing_port = bind_port(conn->connection_ip_family, conn->self_ip_string,
+                                        conn->self_scope_id, &conn->timing_socket);
 
-  conn->reference_timestamp = 0;
-  // pthread_create(&rtp_audio_thread, NULL, &rtp_audio_receiver, NULL);
-  // pthread_create(&rtp_control_thread, NULL, &rtp_control_receiver, NULL);
-  // pthread_create(&rtp_timing_thread, NULL, &rtp_timing_receiver, NULL);
+    debug(2, "listening for audio, control and timing on ports %d, %d, %d.", conn->local_audio_port,
+          conn->local_control_port, conn->local_timing_port);
 
-  conn->request_sent = 0;
-  conn->rtp_running = 1;
+    conn->reference_timestamp = 0;
+    // pthread_create(&rtp_audio_thread, NULL, &rtp_audio_receiver, NULL);
+    // pthread_create(&rtp_control_thread, NULL, &rtp_control_receiver, NULL);
+    // pthread_create(&rtp_timing_thread, NULL, &rtp_timing_receiver, NULL);
+
+    conn->request_sent = 0;
+    conn->rtp_running = 1;
 
 #ifdef CONFIG_METADATA
-  send_ssnc_metadata('clip', strdup(conn->client_ip_string), strlen(conn->client_ip_string), 1);
-  send_ssnc_metadata('svip', strdup(conn->self_ip_string), strlen(conn->self_ip_string), 1);
+    send_ssnc_metadata('clip', strdup(conn->client_ip_string), strlen(conn->client_ip_string), 1);
+    send_ssnc_metadata('svip', strdup(conn->self_ip_string), strlen(conn->self_ip_string), 1);
 #endif
+  }
 }
 
 void get_reference_timestamp_stuff(int64_t *timestamp, uint64_t *timestamp_time,
