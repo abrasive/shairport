@@ -134,7 +134,7 @@ void *rtp_audio_receiver(void *arg) {
       if (type == 0x56) {
         pktp += 4;
         plen -= 4;
-        debug(1, "resent packet %u received in audio port.", ntohs(*(uint16_t *)(pktp + 2)));
+        debug(3,"resent packet %u received in audio port.",ntohs(*(uint16_t *)(pktp + 2)));
       }
       seq_t seqno = ntohs(*(uint16_t *)(pktp + 2));
       // increment last_seqno and see if it's the same as the incoming seqno
@@ -347,22 +347,21 @@ void *rtp_control_receiver(void *arg) {
       }
     } else {
       uint8_t type = packet[1] & ~0x80;
-      if ((type == 0x60) ||
-          (type == 0x56)) { // audio data / resent audio data in the control path -- whaale only?
+      if ((type == 0x60) || (type == 0x56)) { // audio data / resent audio data in the control path -- whaale only?
         pktp = packet;
-
+        
         if (type == 0x56) { // resent audio data in the control path -- whaale only?
           // debug(1, "Control Port -- Retransmitted Audio Data Packet received.");
           pktp = packet + 4;
           plen -= 4;
-        }
-
+        } 
+        
         seq_t seqno = ntohs(*(uint16_t *)(pktp + 2));
-        if (type == 0x56)
-          debug(1, "Resent audio packet %u received in the control port.", seqno);
+        if (type==0x56)
+          debug(3,"Resent audio packet %u received in the control port.",seqno);
         else
-          debug(1, "Audio packet %u received in the control port.", seqno);
-
+          debug(1,"Audio packet %u received in the control port.",seqno);
+        
         int64_t timestamp = monotonic_timestamp(ntohl(*(uint32_t *)(pktp + 4)), conn);
 
         pktp += 12;

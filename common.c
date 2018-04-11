@@ -795,7 +795,11 @@ uint64_t get_absolute_time_in_fp() {
   // can't use CLOCK_MONOTONIC_RAW as it's not implemented in OpenWrt
   clock_gettime(CLOCK_MONOTONIC, &tn);
   uint64_t tnfpsec = tn.tv_sec;
+  if (tnfpsec>0x100000000)
+    warn("clock_gettime seconds overflow!");
   uint64_t tnfpnsec = tn.tv_nsec;
+  if (tnfpnsec>0x100000000)
+    warn("clock_gettime nanoseconds seconds overflow!");
   tnfpsec = tnfpsec<<32;
   tnfpnsec = tnfpnsec<<32;
   tnfpnsec = tnfpnsec/1000000000;
