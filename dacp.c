@@ -304,18 +304,13 @@ void relinquish_dacp_server_information(rtsp_conn_info *conn) {
 // the conversation number
 // Thus, we can keep the DACP port that might have previously been discovered
 void set_dacp_server_information(rtsp_conn_info *conn) {
-  debug(1, "set_dacp_server_information");
+  // debug(1, "set_dacp_server_information");
   sps_pthread_mutex_timedlock(
       &dacp_server_information_lock, 500000,
       "set_dacp_server_information couldn't get DACP server information lock in 0.5 second!.", 2);
-  debug(1, "got lock");
   dacp_server.players_connection_thread_index = conn->connection_number;
-  debug(1, "do comparison");
-  debug(1, "conn->dacp_id is \"%s\"", conn->dacp_id);
-  debug(1, "dacp_server.dacp_id is \"%s\"", dacp_server.dacp_id);
 
   if ((conn->dacp_id == NULL) || (strcmp(conn->dacp_id, dacp_server.dacp_id) != 0)) {
-    debug(1, "comparison failed");
     if (conn->dacp_id)
       strncpy(dacp_server.dacp_id, conn->dacp_id, sizeof(dacp_server.dacp_id));
     else
@@ -347,7 +342,6 @@ void set_dacp_server_information(rtsp_conn_info *conn) {
     }
     metadata_hub_modify_epilog(ch);
   } else {
-    debug(1, "comparison succeeded");
     if (dacp_server.port) {
       // debug(1, "Re-enable scanning.");
       dacp_server.scan_enable = 1;
@@ -357,14 +351,12 @@ void set_dacp_server_information(rtsp_conn_info *conn) {
       //      metadata_hub_modify_epilog(ch);
     }
   }
-  debug(1, "doing something else");
   dacp_server.active_remote_id = conn->dacp_active_remote; // even if the dacp_id remains the same,
                                                            // the active remote will change.
   debug(2, "set_dacp_server_information set active-remote id to %" PRIu32 ".",
         dacp_server.active_remote_id);
   pthread_cond_signal(&dacp_server_information_cv);
   pthread_mutex_unlock(&dacp_server_information_lock);
-  debug(1, "Done gettin' Ready");
 }
 
 void dacp_monitor_port_update_callback(char *dacp_id, uint16_t port) {
