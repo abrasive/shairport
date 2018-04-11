@@ -1173,7 +1173,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
 
   if (!conn->ab_buffering) {
     // check once, after a short period of has elapsed, assuming 352 frames per packet
-    i = ((250 * 44100) / 352) / 1000; // approx 250 ms
+    i = ((125 * 44100) / 352) / 1000; // approx 125 ms
     if (i < seq_diff(conn->ab_read, conn->ab_write, conn->ab_read)) {
       seq_t next = seq_sum(conn->ab_read, i);
       abuf = conn->audio_buffer + BUFIDX(next);
@@ -1686,7 +1686,7 @@ static void *player_thread_func(void *arg) {
           config.output->play(silence, conn->max_frames_per_packet * conn->output_sample_ratio);
         } else if (frames_to_drop) {
           if (frames_to_drop > 3 * config.output_rate)
-            warn("Very large number of frames to drop: %" PRId64 ".",frames_to_drop);
+            warn("Very large number of frames to drop: %" PRId64 ".", frames_to_drop);
           debug(3, "%" PRId64 " frames to drop.", frames_to_drop);
           frames_to_drop -= inframe->length;
           if (frames_to_drop < 0)
@@ -1888,7 +1888,10 @@ static void *player_thread_func(void *arg) {
                 (!conn->player_thread_please_stop) && (config.resyncthreshold > 0.0) &&
                 (abs_sync_error > config.resyncthreshold * config.output_rate)) {
               if (abs_sync_error > 3 * config.output_rate) {
-                warn("Very large sync error: %" PRId64 " frames, with a delay of %" PRId64 "frames.",sync_error,delay);
+                warn("Very large sync error: %" PRId64 " frames, with delay: %" PRId64
+                     ", td_in_frames: %" PRId64 ", rt: %" PRId64 ", nt: %" PRId64
+                     ", current_delay: %" PRId64 ", frames.",
+                     sync_error, delay, td_in_frames, rt, nt, current_delay);
               }
               sync_error_out_of_bounds++;
             } else {

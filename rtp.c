@@ -134,6 +134,7 @@ void *rtp_audio_receiver(void *arg) {
       if (type == 0x56) {
         pktp += 4;
         plen -= 4;
+        debug(1, "resent packet %u received in audio port.", ntohs(*(uint16_t *)(pktp + 2)));
       }
       seq_t seqno = ntohs(*(uint16_t *)(pktp + 2));
       // increment last_seqno and see if it's the same as the incoming seqno
@@ -344,27 +345,42 @@ void *rtp_control_receiver(void *arg) {
       } else {
         debug(1, "Sync packet received before we got a timing packet back.");
       }
-    } else if (packet[1] == 0xd6) { // resent audio data in the control path -- whaale only?
-      // debug(1, "Control Port -- Retransmitted Audio Data Packet received.");
-      pktp = packet + 4;
-      plen -= 4;
-      seq_t seqno = ntohs(*(uint16_t *)(pktp + 2));
+    } else {
+      uint8_t type = packet[1] & ~0x80;
+      if ((type == 0x60) ||
+          (type == 0x56)) { // audio data / resent audio data in the control path -- whaale only?
+        pktp = packet;
 
-      int64_t timestamp = monotonic_timestamp(ntohl(*(uint32_t *)(pktp + 4)), conn);
+        if (type == 0x56) { // resent audio data in the control path -- whaale only?
+          // debug(1, "Control Port -- Retransmitted Audio Data Packet received.");
+          pktp = packet + 4;
+          plen -= 4;
+        }
 
-      pktp += 12;
-      plen -= 12;
+        seq_t seqno = ntohs(*(uint16_t *)(pktp + 2));
+        if (type == 0x56)
+          debug(1, "Resent audio packet %u received in the control port.", seqno);
+        else
+          debug(1, "Audio packet %u received in the control port.", seqno);
 
-      // check if packet contains enough content to be reasonable
-      if (plen >= 16) {
-        player_put_packet(seqno, timestamp, pktp, plen, conn);
-        continue;
+        int64_t timestamp = monotonic_timestamp(ntohl(*(uint32_t *)(pktp + 4)), conn);
+
+        pktp += 12;
+        plen -= 12;
+
+        // check if packet contains enough content to be reasonable
+
+        if (plen >= 16) {
+          player_put_packet(seqno, timestamp, pktp, plen, conn);
+          continue;
+        } else {
+          debug(3, "Too-short retransmitted audio packet received in control port, ignored.");
+        }
       } else {
-        debug(3, "Too-short retransmitted audio packet received in control port, ignored.");
+        debug(1, "Control Port -- Unknown RTP packet of type 0x%02X length %d, ignored.", packet[1],
+              nread);
       }
-    } else
-      debug(1, "Control Port -- Unknown RTP packet of type 0x%02X length %d, ignored.", packet[1],
-            nread);
+    }
   }
 
   debug(3, "Control RTP thread interrupted. terminating.");
