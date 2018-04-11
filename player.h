@@ -141,6 +141,12 @@ typedef struct {
   int control_socket;                 // our local [server] control socket
   int timing_socket;                  // local timing socket
 
+  uint16_t remote_control_port;
+  uint16_t remote_timing_port;
+  uint16_t local_audio_port;
+  uint16_t local_control_port;
+  uint16_t local_timing_port;
+
   int64_t latency_delayed_timestamp; // this is for debugging only...
   int64_t reference_timestamp;
   uint64_t reference_timestamp_time;

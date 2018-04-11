@@ -113,8 +113,10 @@ static const struct http_funcs responseFuncs = {
     response_realloc, response_body, response_header, response_code,
 };
 
-static pthread_mutex_t dacp_conversation_lock = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t dacp_server_information_lock = PTHREAD_MUTEX_INITIALIZER;
+// static pthread_mutex_t dacp_conversation_lock = PTHREAD_MUTEX_INITIALIZER;
+// static pthread_mutex_t dacp_server_information_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t dacp_conversation_lock;
+static pthread_mutex_t dacp_server_information_lock;
 static pthread_cond_t dacp_server_information_cv = PTHREAD_COND_INITIALIZER;
 
 int dacp_send_command(const char *command, char **body, ssize_t *bodysize) {
@@ -139,14 +141,14 @@ int dacp_send_command(const char *command, char **body, ssize_t *bodysize) {
   response.size = 0;
   response.code = 0;
 
-  char portstring[10], server[256], message[1024];
+  char portstring[10], server[1024], message[1024];
   memset(&portstring, 0, sizeof(portstring));
   if (dacp_server.connection_family == AF_INET6) {
-    sprintf(server, "%s%%%u", dacp_server.ip_string, dacp_server.scope_id);
+    snprintf(server, sizeof(server), "%s%%%u", dacp_server.ip_string, dacp_server.scope_id);
   } else {
     strcpy(server, dacp_server.ip_string);
   }
-  sprintf(portstring, "%u", dacp_server.port);
+  snprintf(portstring, sizeof(portstring), "%u", dacp_server.port);
 
   // first, load up address structs with getaddrinfo():
 
@@ -192,9 +194,9 @@ int dacp_send_command(const char *command, char **body, ssize_t *bodysize) {
         } else {
           // debug(1,"DACP connect succeeded.");
 
-          sprintf(message,
-                  "GET /ctrl-int/1/%s HTTP/1.1\r\nHost: %s:%u\r\nActive-Remote: %u\r\n\r\n",
-                  command, dacp_server.ip_string, dacp_server.port, dacp_server.active_remote_id);
+          snprintf(message, sizeof(message),
+                   "GET /ctrl-int/1/%s HTTP/1.1\r\nHost: %s:%u\r\nActive-Remote: %u\r\n\r\n",
+                   command, dacp_server.ip_string, dacp_server.port, dacp_server.active_remote_id);
 
           // Send command
           // debug(1,"DACP connect message: \"%s\".",message);
@@ -221,7 +223,7 @@ int dacp_send_command(const char *command, char **body, ssize_t *bodysize) {
               if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof tv) == -1)
                 debug(1, "Error %d setting receive timeout for DACP service.", errno);
               int ndata = recv(sockfd, buffer, sizeof(buffer), 0);
-              // debug(1,"Received %d bytes: \"%s\".",ndata,buffer);
+              debug(3, "Received %d bytes: \"%s\".", ndata, buffer);
               if (ndata <= 0) {
                 debug(1, "dacp_send_command -- error receiving response for command \"%s\".",
                       command);
@@ -302,12 +304,22 @@ void relinquish_dacp_server_information(rtsp_conn_info *conn) {
 // the conversation number
 // Thus, we can keep the DACP port that might have previously been discovered
 void set_dacp_server_information(rtsp_conn_info *conn) {
+  debug(1, "set_dacp_server_information");
   sps_pthread_mutex_timedlock(
       &dacp_server_information_lock, 500000,
       "set_dacp_server_information couldn't get DACP server information lock in 0.5 second!.", 2);
+  debug(1, "got lock");
   dacp_server.players_connection_thread_index = conn->connection_number;
-  if (strcmp(conn->dacp_id, dacp_server.dacp_id) != 0) {
-    strncpy(dacp_server.dacp_id, conn->dacp_id, sizeof(dacp_server.dacp_id));
+  debug(1, "do comparison");
+  debug(1, "conn->dacp_id is \"%s\"", conn->dacp_id);
+  debug(1, "dacp_server.dacp_id is \"%s\"", dacp_server.dacp_id);
+
+  if ((conn->dacp_id == NULL) || (strcmp(conn->dacp_id, dacp_server.dacp_id) != 0)) {
+    debug(1, "comparison failed");
+    if (conn->dacp_id)
+      strncpy(dacp_server.dacp_id, conn->dacp_id, sizeof(dacp_server.dacp_id));
+    else
+      dacp_server.dacp_id[0] = '\0';
     dacp_server.port = 0;
     dacp_server.scan_enable = 0;
     dacp_server.connection_family = conn->connection_ip_family;
@@ -319,7 +331,8 @@ void set_dacp_server_information(rtsp_conn_info *conn) {
     if (dacp_server.port_monitor_private_storage) // if there's is a monitor already active...
       mdns_dacp_dont_monitor(dacp_server.port_monitor_private_storage); // let it go.
     dacp_server.port_monitor_private_storage =
-        mdns_dacp_monitor(dacp_server.dacp_id); // create a new one for us
+        mdns_dacp_monitor(dacp_server.dacp_id); // create a new one for us if a DACP-ID is provided,
+                                                // otherwise will return a NULL
 
     metadata_hub_modify_prolog();
     int ch = metadata_store.dacp_server_active != dacp_server.scan_enable;
@@ -334,8 +347,9 @@ void set_dacp_server_information(rtsp_conn_info *conn) {
     }
     metadata_hub_modify_epilog(ch);
   } else {
+    debug(1, "comparison succeeded");
     if (dacp_server.port) {
-      debug(1, "Enable scanning.");
+      // debug(1, "Re-enable scanning.");
       dacp_server.scan_enable = 1;
       //      metadata_hub_modify_prolog();
       //      int ch = metadata_store.dacp_server_active != dacp_server.scan_enable;
@@ -343,12 +357,14 @@ void set_dacp_server_information(rtsp_conn_info *conn) {
       //      metadata_hub_modify_epilog(ch);
     }
   }
+  debug(1, "doing something else");
   dacp_server.active_remote_id = conn->dacp_active_remote; // even if the dacp_id remains the same,
                                                            // the active remote will change.
   debug(2, "set_dacp_server_information set active-remote id to %" PRIu32 ".",
         dacp_server.active_remote_id);
   pthread_cond_signal(&dacp_server_information_cv);
   pthread_mutex_unlock(&dacp_server_information_lock);
+  debug(1, "Done gettin' Ready");
 }
 
 void dacp_monitor_port_update_callback(char *dacp_id, uint16_t port) {
@@ -422,7 +438,7 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
     else
       idle_scan_count = 0;
 
-    debug(3, "Scan Result: %d, Bad Scan Count: %d, Idle Scan Count: %d.", result, bad_result_count,
+    debug(2, "Scan Result: %d, Bad Scan Count: %d, Idle Scan Count: %d.", result, bad_result_count,
           idle_scan_count);
 
     if ((bad_result_count == config.scan_max_bad_response_count) ||
@@ -646,7 +662,7 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
                     char *pt = st;
                     int it;
                     for (it = 0; it < 16; it++) {
-                      sprintf(pt, "%02X", metadata_store.item_composite_id[it]);
+                      snprintf(pt, 3, "%02X", metadata_store.item_composite_id[it]);
                       pt += 2;
                     }
                     *pt = 0;
@@ -761,6 +777,49 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
 }
 
 void dacp_monitor_start() {
+  int rc;
+  pthread_mutexattr_t mta;
+
+  rc = pthread_mutexattr_init(&mta);
+  if (rc)
+    debug(1, "Error creating the DACP Conversation Lock Mutex Att Init");
+
+  rc = pthread_mutexattr_settype(&mta, PTHREAD_MUTEX_ERRORCHECK);
+  if (rc)
+    debug(1, "Error creating the DACP Conversation Lock Mutex Errorcheck");
+
+  // rc = pthread_mutexattr_setname_np(&mta, "DACP Conversation Lock");
+  // if (rc)
+  //  debug(1,"Error creating the DACP Conversation Lock Mutex Set Name");
+
+  rc = pthread_mutex_init(&dacp_conversation_lock, &mta);
+  if (rc)
+    debug(1, "Error creating the DACP Conversation Lock Mutex Init");
+
+  rc = pthread_mutexattr_destroy(&mta);
+  if (rc)
+    debug(1, "Error creating the DACP Conversation Lock Attr Destroy");
+
+  rc = pthread_mutexattr_init(&mta);
+  if (rc)
+    debug(1, "Error creating the DACP Server Information Lock Mutex Att Init");
+
+  rc = pthread_mutexattr_settype(&mta, PTHREAD_MUTEX_ERRORCHECK);
+  if (rc)
+    debug(1, "Error creating the DACP Server Information Lock Mutex Errorcheck");
+
+  // rc = pthread_mutexattr_setname_np(&mta, "DACP Conversation Lock");
+  // if (rc)
+  //  debug(1,"Error creating the DACP Server Information Lock Mutex Set Name");
+
+  rc = pthread_mutex_init(&dacp_server_information_lock, &mta);
+  if (rc)
+    debug(1, "Error creating the DACP Server Information Lock Mutex Init");
+
+  rc = pthread_mutexattr_destroy(&mta);
+  if (rc)
+    debug(1, "Error creating the DACP Server Information Lock Attr Destroy");
+
   memset(&dacp_server, 0, sizeof(dacp_server_record));
   pthread_create(&dacp_monitor_thread, NULL, dacp_monitor_thread_code, NULL);
 }
@@ -821,8 +880,9 @@ int dacp_set_include_speaker_volume(int64_t machine_number, int32_t vo) {
   debug(2, "dacp_set_include_speaker_volume to %" PRId32 ".", vo);
   char message[1000];
   memset(message, 0, sizeof(message));
-  sprintf(message, "setproperty?include-speaker-id=%" PRId64 "&dmcp.volume=%" PRId32 "",
-          machine_number, vo);
+  snprintf(message, sizeof(message),
+           "setproperty?include-speaker-id=%" PRId64 "&dmcp.volume=%" PRId32 "", machine_number,
+           vo);
   debug(2, "sending \"%s\"", message);
   return send_simple_dacp_command(message);
   // should return 204
@@ -831,8 +891,8 @@ int dacp_set_include_speaker_volume(int64_t machine_number, int32_t vo) {
 int dacp_set_speaker_volume(int64_t machine_number, int32_t vo) {
   char message[1000];
   memset(message, 0, sizeof(message));
-  sprintf(message, "setproperty?speaker-id=%" PRId64 "&dmcp.volume=%" PRId32 "", machine_number,
-          vo);
+  snprintf(message, sizeof(message), "setproperty?speaker-id=%" PRId64 "&dmcp.volume=%" PRId32 "",
+           machine_number, vo);
   debug(2, "sending \"%s\"", message);
   return send_simple_dacp_command(message);
   // should return 204

@@ -378,7 +378,7 @@ static void debug_print_msg_content(int level, rtsp_message *msg) {
       char *obfp = obf;
       int obfc;
       for (obfc = 0; obfc < msg->contentlength; obfc++) {
-        sprintf(obfp, "%02X", msg->content[obfc]);
+        snprintf(obfp, 3, "%02X", msg->content[obfc]);
         obfp += 2;
       };
       *obfp = 0;
@@ -668,7 +668,10 @@ static void msg_write_response(int fd, rtsp_message *resp) {
 static void handle_record(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
   debug(2, "Connection %d: RECORD", conn->connection_number);
 
-  player_play(conn); // the thread better be 0
+  if (conn->player_thread)
+    warn("Duplicate RECORD message -- ignored");
+  else
+    player_play(conn); // the thread better be 0
 
   resp->respcode = 200;
   // I think this is for telling the client what the absolute minimum latency
@@ -700,7 +703,6 @@ static void handle_record(rtsp_conn_info *conn, rtsp_message *req, rtsp_message 
       }
     }
   }
-  // usleep(500000);
 }
 
 static void handle_options(rtsp_conn_info *conn, __attribute__((unused)) rtsp_message *req,
@@ -724,11 +726,9 @@ static void handle_teardown(rtsp_conn_info *conn, __attribute__((unused)) rtsp_m
   debug(3,
         "TEARDOWN: synchronously terminating the player thread of RTSP conversation thread %d (2).",
         conn->connection_number);
-  // if (rtsp_playing()) {
   player_stop(conn);
   debug(3, "TEARDOWN: successful termination of playing thread of RTSP conversation thread %d.",
         conn->connection_number);
-  //}
 }
 
 static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
@@ -763,8 +763,7 @@ static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
 
 static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
   debug(2, "Connection %d: SETUP", conn->connection_number);
-  int cport, tport;
-  int lsport, lcport, ltport;
+  uint16_t cport, tport;
 
   char *ar = msg_get_header(req, "Active-Remote");
   if (ar) {
@@ -775,61 +774,74 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
 #ifdef CONFIG_METADATA
     send_metadata('ssnc', 'acre', ar, strlen(ar), req, 1);
 #endif
+  } else {
+    debug(2, "Note: no Active-Remote information  the SETUP Record.");
+    conn->dacp_active_remote = 0;
   }
 
   ar = msg_get_header(req, "DACP-ID");
   if (ar) {
     debug(2, "DACP-ID string seen: \"%s\".", ar);
+    if (conn->dacp_id) // this is in case SETUP was previously called
+      free(conn->dacp_id);
     conn->dacp_id = strdup(ar);
 #ifdef CONFIG_METADATA
     send_metadata('ssnc', 'daid', ar, strlen(ar), req, 1);
 #endif
+  } else {
+    debug(2, "Note: no DACP-ID string information in the SETUP Record.");
+    if (conn->dacp_id) // this is in case SETUP was previously called
+      free(conn->dacp_id);
+    conn->dacp_id = NULL;
   }
 
   char *hdr = msg_get_header(req, "Transport");
-  if (!hdr)
+  if (!hdr) {
+    debug(1, "SETUP doesn't contain a Transport header.");
     goto error;
+  }
 
   char *p;
   p = strstr(hdr, "control_port=");
-  if (!p)
+  if (!p) {
+    debug(1, "SETUP doesn't specify a control_port.");
     goto error;
+  }
   p = strchr(p, '=') + 1;
   cport = atoi(p);
 
   p = strstr(hdr, "timing_port=");
-  if (!p)
+  if (!p) {
+    debug(1, "SETUP doesn't specify a timing_port.");
     goto error;
+  }
   p = strchr(p, '=') + 1;
   tport = atoi(p);
 
-  //  rtsp_take_player();
-  rtp_setup(&conn->local, &conn->remote, cport, tport, &lsport, &lcport, &ltport, conn);
-  if (!lsport)
-    goto error;
-  char *q;
-  p = strstr(hdr, "control_port=");
-  if (p) {
-    q = strchr(p, ';'); // get past the control port entry
-    *p++ = 0;
-    if (q++)
-      strcat(hdr, q); // should unsplice the control port entry
+  if (conn->rtp_running) {
+    if ((conn->remote_control_port != cport) || (conn->remote_timing_port != tport)) {
+      warn("Duplicate SETUP message with different control (old %u, new %u) or timing (old %u, new "
+           "%u) ports! This is probably fatal!",
+           conn->remote_control_port, cport, conn->remote_timing_port, tport);
+    } else {
+      warn("Duplicate SETUP message with the same control (%u) and timing (%u) ports. This is "
+           "probably not fatal.",
+           conn->remote_control_port, conn->remote_timing_port);
+    }
+  } else {
+    rtp_setup(&conn->local, &conn->remote, cport, tport, conn);
   }
-  p = strstr(hdr, "timing_port=");
-  if (p) {
-    q = strchr(p, ';'); // get past the timing port entry
-    *p++ = 0;
-    if (q++)
-      strcat(hdr, q); // should unsplice the timing port entry
+  if (conn->local_audio_port == 0) {
+    debug(1, "SETUP seems to specify a null audio port.");
+    goto error;
   }
 
-  char *resphdr = alloca(200);
-  *resphdr = 0;
-  sprintf(resphdr, "RTP/AVP/"
-                   "UDP;unicast;interleaved=0-1;mode=record;control_port=%d;"
-                   "timing_port=%d;server_"
-                   "port=%d",
-          lcport, ltport, lsport);
+  char resphdr[256] = "";
+  snprintf(resphdr, sizeof(resphdr), "RTP/AVP/"
+                                     "UDP;unicast;interleaved=0-1;mode=record;control_port=%d;"
+                                     "timing_port=%d;server_"
+                                     "port=%d",
+           conn->local_control_port, conn->local_timing_port, conn->local_audio_port);
 
   msg_add_header(resp, "Transport", resphdr);
 
@@ -1328,7 +1340,7 @@ static void handle_get_parameter(__attribute__((unused)) rtsp_conn_info *conn, r
     char *p = malloc(128); // will be automatically deallocated with the response is deleted
     if (p) {
       resp->content = p;
-      resp->contentlength = sprintf(p, "\r\nvolume: %.6f\r\n", config.airplay_volume);
+      resp->contentlength = snprintf(p, 128, "\r\nvolume: %.6f\r\n", config.airplay_volume);
     } else {
       debug(1, "Couldn't allocate space for a response.");
     }
@@ -1436,7 +1448,7 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
     have_the_player = 1;
   } else if ((playing_conn) &&
              (playing_conn->connection_number == conn->connection_number)) { // duplicate ANNOUNCE
-    debug(1, "Duplicate ANNOUNCE, by the look of it!");
+    warn("Duplicate ANNOUNCE, by the look of it!");
     have_the_player = 1;
   } else {
     int should_wait = 0;
@@ -1779,7 +1791,7 @@ static int rtsp_auth(char **nonce, rtsp_message *req, rtsp_message *resp) {
   int i;
   unsigned char buf[33];
   for (i = 0; i < 16; i++)
-    sprintf((char *)buf + 2 * i, "%02x", digest_urp[i]);
+    snprintf((char *)buf + 2 * i, 3, "%02x", digest_urp[i]);
 
 #ifdef HAVE_LIBSSL
   MD5_Init(&ctx);
@@ -1788,7 +1800,7 @@ static int rtsp_auth(char **nonce, rtsp_message *req, rtsp_message *resp) {
   MD5_Update(&ctx, *nonce, strlen(*nonce));
   MD5_Update(&ctx, ":", 1);
   for (i = 0; i < 16; i++)
-    sprintf((char *)buf + 2 * i, "%02x", digest_mu[i]);
+    snprintf((char *)buf + 2 * i, 3, "%02x", digest_mu[i]);
   MD5_Update(&ctx, buf, 32);
   MD5_Final(digest_total, &ctx);
 #endif
@@ -1800,7 +1812,7 @@ static int rtsp_auth(char **nonce, rtsp_message *req, rtsp_message *resp) {
   mbedtls_md5_update(&tctx, (const unsigned char *)*nonce, strlen(*nonce));
   mbedtls_md5_update(&tctx, (unsigned char *)":", 1);
   for (i = 0; i < 16; i++)
-    sprintf((char *)buf + 2 * i, "%02x", digest_mu[i]);
+    snprintf((char *)buf + 2 * i, 3, "%02x", digest_mu[i]);
   mbedtls_md5_update(&tctx, buf, 32);
   mbedtls_md5_finish(&tctx, digest_total);
 #endif
@@ -1812,13 +1824,13 @@ static int rtsp_auth(char **nonce, rtsp_message *req, rtsp_message *resp) {
   md5_update(&tctx, (const unsigned char *)*nonce, strlen(*nonce));
   md5_update(&tctx, (unsigned char *)":", 1);
   for (i = 0; i < 16; i++)
-    sprintf((char *)buf + 2 * i, "%02x", digest_mu[i]);
+    snprintf((char *)buf + 2 * i, 3, "%02x", digest_mu[i]);
   md5_update(&tctx, buf, 32);
   md5_finish(&tctx, digest_total);
 #endif
 
   for (i = 0; i < 16; i++)
-    sprintf((char *)buf + 2 * i, "%02x", digest_total[i]);
+    snprintf((char *)buf + 2 * i, 3, "%02x", digest_total[i]);
 
   if (!strcmp(response, (const char *)buf))
     return 0;

@@ -72,6 +72,7 @@ void metadata_hub_release_track_metadata(struct track_metadata_bundle *track_met
   if (track_metadata) {
     release_char_string(&track_metadata->track_name);
     release_char_string(&track_metadata->artist_name);
+    release_char_string(&track_metadata->album_artist_name);
     release_char_string(&track_metadata->album_name);
     release_char_string(&track_metadata->genre);
     release_char_string(&track_metadata->comment);
@@ -79,7 +80,10 @@ void metadata_hub_release_track_metadata(struct track_metadata_bundle *track_met
     release_char_string(&track_metadata->file_kind);
     release_char_string(&track_metadata->song_description);
     release_char_string(&track_metadata->song_album_artist);
-    release_char_string(&track_metadata->sort_as);
+    release_char_string(&track_metadata->sort_name);
+    release_char_string(&track_metadata->sort_artist);
+    release_char_string(&track_metadata->sort_album);
+    release_char_string(&track_metadata->sort_composer);
     free((char *)track_metadata);
   } else {
     debug(3, "Asked to release non-existent track metadata");
@@ -213,7 +217,7 @@ char *metadata_write_image_file(const char *buf, int len) {
   char jpg[] = "jpg";
   int i;
   for (i = 0; i < 16; i++)
-    sprintf(&img_md5_str[i * 2], "%02x", (uint8_t)img_md5[i]);
+    snprintf(&img_md5_str[i * 2], 3, "%02x", (uint8_t)img_md5[i]);
   // see if the file is a jpeg or a png
   if (strncmp(buf, "\xFF\xD8\xFF", 3) == 0)
     ext = jpg;
@@ -327,6 +331,14 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
         debug(1, "No track metadata memory allocated when artist name received!");
       }
       break;
+    case 'assl':
+      if (track_metadata) {
+        track_metadata->album_artist_name = strndup(data, length);
+        debug(2, "MH Album Artist name set to: \"%s\"", track_metadata->album_artist_name);
+      } else {
+        debug(1, "No track metadata memory allocated when album artist name received!");
+      }
+      break;
     case 'ascm':
       if (track_metadata) {
         track_metadata->comment = strndup(data, length);
@@ -372,21 +384,48 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
         track_metadata->song_album_artist = strndup(data, length);
         debug(2, "MH Song Album Artist set to: \"%s\"", track_metadata->song_album_artist);
       } else {
-        debug(1, "No track metadata memory allocated when song description received!");
+        debug(1, "No track metadata memory allocated when song artist received!");
       }
       break;
     case 'assn':
       if (track_metadata) {
-        track_metadata->sort_as = strndup(data, length);
-        debug(2, "MH Sort As set to: \"%s\"", track_metadata->sort_as);
+        track_metadata->sort_name = strndup(data, length);
+        debug(2, "MH Sort Name set to: \"%s\"", track_metadata->sort_name);
       } else {
         debug(1,
-              "No track metadata memory allocated when sort as (sort name) description received!");
+              "No track metadata memory allocated when sort name description received!");
+      }
+      break;
+    case 'assa':
+      if (track_metadata) {
+        track_metadata->sort_artist = strndup(data, length);
+        debug(2, "MH Sort Artist set to: \"%s\"", track_metadata->sort_artist);
+      } else {
+        debug(1,
+              "No track metadata memory allocated when sort artist description received!");
+      }
+      break;
+    case 'assu':
+      if (track_metadata) {
+        track_metadata->sort_album = strndup(data, length);
+        debug(2, "MH Sort Album set to: \"%s\"", track_metadata->sort_album);
+      } else {
+        debug(1,
+              "No track metadata memory allocated when sort album description received!");
+      }
+      break;
+    case 'assc':
+      if (track_metadata) {
+        track_metadata->sort_composer = strndup(data, length);
+        debug(2, "MH Sort Composer set to: \"%s\"", track_metadata->sort_composer);
+      } else {
+        debug(1,
+              "No track metadata memory allocated when sort composer description received!");
       }
       break;
 
-      //   default:
-      /*
+    default:  
+    /*    
         {
           char typestring[5];
           *(uint32_t *)typestring = htonl(type);
@@ -403,7 +442,9 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
           if (payload)
             free(payload);
         }
-      */
+    */
+      break;
+      
     }
   } else if (type == 'ssnc') {
     switch (code) {
