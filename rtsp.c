@@ -774,15 +774,25 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
 #ifdef CONFIG_METADATA
     send_metadata('ssnc', 'acre', ar, strlen(ar), req, 1);
 #endif
+  } else {
+    debug(2, "Note: no Active-Remote information  the SETUP Record.");
+    conn->dacp_active_remote = 0;
   }
 
   ar = msg_get_header(req, "DACP-ID");
   if (ar) {
     debug(2, "DACP-ID string seen: \"%s\".", ar);
+    if (conn->dacp_id) // this is in case SETUP was previously called
+      free(conn->dacp_id);
     conn->dacp_id = strdup(ar);
 #ifdef CONFIG_METADATA
     send_metadata('ssnc', 'daid', ar, strlen(ar), req, 1);
 #endif
+  } else {
+    debug(2, "Note: no DACP-ID string information in the SETUP Record.");
+    if (conn->dacp_id) // this is in case SETUP was previously called
+      free(conn->dacp_id);
+    conn->dacp_id = NULL;
   }
 
   char *hdr = msg_get_header(req, "Transport");

@@ -106,6 +106,9 @@ void mdns_unregister(void) {
 
 void *mdns_dacp_monitor(char *dacp_id) {
   void *reply = NULL;
+  if ((dacp_id==NULL) || (*dacp_id=='\0'))
+    debug(1, "A null or zero-length DACP-ID string was provided for monitoring -- nothing done.");
+  else {
   if ((config.mdns) && (config.mdns->mdns_dacp_monitor)) {
     reply = config.mdns->mdns_dacp_monitor(dacp_id);
     if (reply == NULL) {
@@ -113,6 +116,7 @@ void *mdns_dacp_monitor(char *dacp_id) {
     }
   } else
     debug(1, "Can't start a DACP monitor -- none registered.");
+  }
   return reply;
 }
 
