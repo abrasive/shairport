@@ -137,15 +137,20 @@ void *rtp_audio_receiver(void *arg) {
       }
       seq_t seqno = ntohs(*(uint16_t *)(pktp + 2));
       // increment last_seqno and see if it's the same as the incoming seqno
-
-      if (last_seqno == -1)
-        last_seqno = seqno;
-      else {
-        last_seqno = (last_seqno + 1) & 0xffff;
-        // if (seqno != last_seqno)
-        //  debug(3, "RTP: Packets out of sequence: expected: %d, got %d.", last_seqno, seqno);
+      
+      if ( type==0x60) { // regular audio data
+        if (last_seqno == -1)
+          last_seqno = seqno;
+        else {
+          last_seqno = (last_seqno + 1) & 0xffff;
+          // if (seqno != last_seqno)
+          //  debug(3, "RTP: Packets out of sequence: expected: %d, got %d.", last_seqno, seqno);
         last_seqno = seqno; // reset warning...
+        }
+      } else {
+            debug(1, "Audio Port -- Retransmitted Audio Data Packet %u received.",seqno);
       }
+            
       int64_t timestamp = monotonic_timestamp(ntohl(*(uint32_t *)(pktp + 4)), conn);
 
       // if (packet[1]&0x10)
@@ -345,10 +350,10 @@ void *rtp_control_receiver(void *arg) {
         debug(1, "Sync packet received before we got a timing packet back.");
       }
     } else if (packet[1] == 0xd6) { // resent audio data in the control path -- whaale only?
-      // debug(1, "Control Port -- Retransmitted Audio Data Packet received.");
       pktp = packet + 4;
       plen -= 4;
       seq_t seqno = ntohs(*(uint16_t *)(pktp + 2));
+      debug(1, "Control Port -- Retransmitted Audio Data Packet %u received.",seqno);
 
       int64_t timestamp = monotonic_timestamp(ntohl(*(uint32_t *)(pktp + 4)), conn);
 
@@ -851,12 +856,12 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, uint16_t cport, uint16_t tport
     conn->remote_control_port = cport;
     conn->remote_timing_port = tport;
 
-    conn->local_audio_port = bind_port(conn->connection_ip_family, conn->self_ip_string,
-                                       conn->self_scope_id, &conn->audio_socket);
     conn->local_control_port = bind_port(conn->connection_ip_family, conn->self_ip_string,
                                          conn->self_scope_id, &conn->control_socket);
     conn->local_timing_port = bind_port(conn->connection_ip_family, conn->self_ip_string,
                                         conn->self_scope_id, &conn->timing_socket);
+    conn->local_audio_port = bind_port(conn->connection_ip_family, conn->self_ip_string,
+                                       conn->self_scope_id, &conn->audio_socket);
 
     debug(2, "listening for audio, control and timing on ports %d, %d, %d.", conn->local_audio_port,
           conn->local_control_port, conn->local_timing_port);
@@ -899,7 +904,7 @@ void clear_reference_timestamp(rtsp_conn_info *conn) {
 void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
   if (conn->rtp_running) {
     // if (!request_sent) {
-    debug(3, "requesting resend of %d packets starting at %u.", count, first);
+    debug(1, "requesting resend of %d packets starting at %u.", count, first);
     //  request_sent = 1;
     //}
 

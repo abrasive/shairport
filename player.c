@@ -1666,11 +1666,11 @@ static void *player_thread_func(void *arg) {
       inbuflength = inframe->length;
       if (inbuf) {
         play_number++;
-        if (play_number % 100 == 0)
-          debug(3, "Play frame %d.", play_number);
+//        if (play_number % 100 == 0)
+//          debug(3, "Play frame %d.", play_number);
         conn->play_number_after_flush++;
         if (inframe->timestamp == 0) {
-          debug(3, "Player has a supplied silent frame.");
+          debug(1, "Player has a supplied silent frame.");
           conn->last_seqno_read = (SUCCESSOR(conn->last_seqno_read) &
                                    0xffff); // manage the packet out of sequence minder
           config.output->play(silence, conn->max_frames_per_packet * conn->output_sample_ratio);
