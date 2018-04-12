@@ -462,10 +462,11 @@ static void free_audio_buffers(rtsp_conn_info *conn) {
     free(conn->audio_buffer[i].data);
 }
 
-void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len,
+void player_put_packet(seq_t seqno, uint32_t actual_timestamp, int64_t timestamp, uint8_t *data, int len,
                        rtsp_conn_info *conn) {
 
   // all timestamps are done at the output rate
+  // the "actual_timestamp" is the one that comes in the packet, and is carried over for debugging and checking only.
 
   int64_t ltimestamp = timestamp * conn->output_sample_ratio;
 
@@ -518,6 +519,7 @@ void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len,
           abuf = conn->audio_buffer + BUFIDX(seq_sum(conn->ab_write, i));
           abuf->ready = 0; // to be sure, to be sure
           abuf->timestamp = 0;
+          abuf->given_timestamp = 0;
           abuf->sequence_number = 0;
         }
         // debug(1,"N %d s %u.",seq_diff(ab_write,PREDECESSOR(seqno))+1,ab_write);
@@ -550,11 +552,13 @@ void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len,
           abuf->ready = 1;
           abuf->length = datalen;
           abuf->timestamp = ltimestamp;
+          abuf->given_timestamp = actual_timestamp;
           abuf->sequence_number = seqno;
         } else {
           debug(1, "Bad audio packet detected and discarded.");
           abuf->ready = 0;
           abuf->timestamp = 0;
+          abuf->given_timestamp = 0;
           abuf->sequence_number = 0;
         }
       }
@@ -1890,8 +1894,8 @@ static void *player_thread_func(void *arg) {
               if (abs_sync_error > 3 * config.output_rate) {
                 warn("Very large sync error: %" PRId64 " frames, with delay: %" PRId64
                      ", td_in_frames: %" PRId64 ", rt: %" PRId64 ", nt: %" PRId64
-                     ", current_delay: %" PRId64 ", frames.",
-                     sync_error, delay, td_in_frames, rt, nt, current_delay);
+                     ", current_delay: %" PRId64 ", seqno: %u, given timestamp: %" PRIu32 ".",
+                     sync_error, delay, td_in_frames, rt, nt, current_delay, inframe->sequence_number, inframe->given_timestamp);
               }
               sync_error_out_of_bounds++;
             } else {

@@ -147,7 +147,8 @@ void *rtp_audio_receiver(void *arg) {
         //  debug(3, "RTP: Packets out of sequence: expected: %d, got %d.", last_seqno, seqno);
         last_seqno = seqno; // reset warning...
       }
-      int64_t timestamp = monotonic_timestamp(ntohl(*(uint32_t *)(pktp + 4)), conn);
+      uint32_t actual_timestamp = ntohl(*(uint32_t *)(pktp + 4));      
+      int64_t timestamp = monotonic_timestamp(actual_timestamp, conn);
 
       // if (packet[1]&0x10)
       //	debug(1,"Audio packet Extension bit set.");
@@ -157,7 +158,7 @@ void *rtp_audio_receiver(void *arg) {
 
       // check if packet contains enough content to be reasonable
       if (plen >= 16) {
-        player_put_packet(seqno, timestamp, pktp, plen, conn);
+        player_put_packet(seqno, actual_timestamp, timestamp, pktp, plen, conn);
         continue;
       }
       if (type == 0x56 && seqno == 0) {
@@ -361,8 +362,9 @@ void *rtp_control_receiver(void *arg) {
           debug(3,"Resent audio packet %u received in the control port.",seqno);
         else
           debug(1,"Audio packet %u received in the control port.",seqno);
+        uint32_t actual_timestamp = ntohl(*(uint32_t *)(pktp + 4));
         
-        int64_t timestamp = monotonic_timestamp(ntohl(*(uint32_t *)(pktp + 4)), conn);
+        int64_t timestamp = monotonic_timestamp(actual_timestamp, conn);
 
         pktp += 12;
         plen -= 12;
@@ -370,7 +372,7 @@ void *rtp_control_receiver(void *arg) {
         // check if packet contains enough content to be reasonable
 
         if (plen >= 16) {
-          player_put_packet(seqno, timestamp, pktp, plen, conn);
+          player_put_packet(seqno, actual_timestamp, timestamp, pktp, plen, conn);
           continue;
         } else {
           debug(3, "Too-short retransmitted audio packet received in control port, ignored.");
