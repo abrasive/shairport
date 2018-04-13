@@ -183,7 +183,8 @@ typedef struct {
                                    // (about 15 minutes worth)
 #endif
   int disable_resend_requests; // set this to stop resend request being made for missing packets
-
+  double diagnostic_drop_packet_fraction; // pseudo randomly drop this fraction of packets, for
+                                          // debugging. Currently audio packets only...
 } shairport_cfg;
 
 uint32_t nctohl(const uint8_t *p); // read 4 characters from *p and do ntohl on them

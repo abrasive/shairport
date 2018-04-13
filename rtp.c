@@ -39,6 +39,7 @@
 #include <netinet/in.h>
 #include <pthread.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <time.h>
@@ -137,20 +138,20 @@ void *rtp_audio_receiver(void *arg) {
       }
       seq_t seqno = ntohs(*(uint16_t *)(pktp + 2));
       // increment last_seqno and see if it's the same as the incoming seqno
-      
-      if ( type==0x60) { // regular audio data
+
+      if (type == 0x60) { // regular audio data
         if (last_seqno == -1)
           last_seqno = seqno;
         else {
           last_seqno = (last_seqno + 1) & 0xffff;
           // if (seqno != last_seqno)
           //  debug(3, "RTP: Packets out of sequence: expected: %d, got %d.", last_seqno, seqno);
-        last_seqno = seqno; // reset warning...
+          last_seqno = seqno; // reset warning...
         }
       } else {
-            debug(1, "Audio Port -- Retransmitted Audio Data Packet %u received.",seqno);
+        debug(1, "Audio Port -- Retransmitted Audio Data Packet %u received.", seqno);
       }
-            
+
       int64_t timestamp = monotonic_timestamp(ntohl(*(uint32_t *)(pktp + 4)), conn);
 
       // if (packet[1]&0x10)
@@ -161,7 +162,11 @@ void *rtp_audio_receiver(void *arg) {
 
       // check if packet contains enough content to be reasonable
       if (plen >= 16) {
-        player_put_packet(seqno, timestamp, pktp, plen, conn);
+        if ((config.diagnostic_drop_packet_fraction == 0.0) ||
+            (drand48() > config.diagnostic_drop_packet_fraction))
+          player_put_packet(seqno, timestamp, pktp, plen, conn);
+        else
+          debug(3, "Dropping audio packet %u to simulate a bad connection.", seqno);
         continue;
       }
       if (type == 0x56 && seqno == 0) {
@@ -353,7 +358,7 @@ void *rtp_control_receiver(void *arg) {
       pktp = packet + 4;
       plen -= 4;
       seq_t seqno = ntohs(*(uint16_t *)(pktp + 2));
-      debug(1, "Control Port -- Retransmitted Audio Data Packet %u received.",seqno);
+      debug(1, "Control Port -- Retransmitted Audio Data Packet %u received.", seqno);
 
       int64_t timestamp = monotonic_timestamp(ntohl(*(uint32_t *)(pktp + 4)), conn);
 

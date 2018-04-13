@@ -31,11 +31,11 @@
 #include <libconfig.h>
 #include <libgen.h>
 #include <memory.h>
-#include <sys/socket.h>
 #include <net/if.h>
 #include <popt.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/socket.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -333,6 +333,8 @@ int parse_options(int argc, char **argv) {
   config.airplay_volume = -18.0; // if no volume is ever set, default to initial default value if
                                  // nothing else comes in first.
   config.fixedLatencyOffset = 11025; // this sounds like it works properly.
+  config.diagnostic_drop_packet_fraction = 0.0;
+
 #ifdef HAVE_METADATA_HUB
   config.cover_art_cache_dir = "/tmp/shairport-sync/.cache/coverart";
   config.scan_interval_when_active =
@@ -561,6 +563,19 @@ int parse_options(int argc, char **argv) {
           die("Invalid diagnostic disable_resend_requests option choice \"%s\". It should be "
               "\"yes\" "
               "or \"no\"");
+      }
+
+      /* Get the drop packets setting. */
+      if (config_lookup_float(config.cfg, "diagnostics.drop_this_fraction_of_audio_packets",
+                              &dvalue)) {
+        if ((dvalue >= 0.0) && (dvalue <= 3.0))
+          config.diagnostic_drop_packet_fraction = dvalue;
+        else
+          die("Invalid diagnostics drop_this_fraction_of_audio_packets setting \"%d\". It should "
+              "be "
+              "between 0.0 and 1.0, "
+              "inclusive.",
+              dvalue);
       }
 
       /* Get the ignore_volume_control setting. */
@@ -1425,8 +1440,10 @@ int main(int argc, char **argv) {
 #endif
   debug(1, "loudness is %d.", config.loudness);
   debug(1, "loudness reference level is %f", config.loudness_reference_volume_db);
-  debug(1, "disable resend requests is %d -- non-zero means \"yes\"",
-        config.disable_resend_requests);
+  debug(1, "disable resend requests is %s.", config.disable_resend_requests ? "on" : "off");
+  debug(1, "diagnostic_drop_packet_fraction is %f. A value of 0.0 means no packets will be dropped "
+           "deliberately.",
+        config.diagnostic_drop_packet_fraction);
 
   uint8_t ap_md5[16];
 
