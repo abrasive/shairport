@@ -1,3 +1,9 @@
+Version 3.2d39
+====
+**Enhancements**
+* An extra diagnostic to artificially drop audio packets to simulate a noisy network has been added. Set the proportion of packets to be dropped in the `diagnostics` section of the configuration file using the tag `drop_this_fraction_of_audio_packets`. The value should be between 0.0 and 1.0. E.g. a value of 0.001 would mean one packet in a thousand would be dropped, on average. Look in the sample configuration file `/etc/shairport-sync.conf.sample` for the added entry.
+* Compatibility with AirAudio has been added / restored.
+
 Version 3.2d35
 ====
 **Enhancements**
