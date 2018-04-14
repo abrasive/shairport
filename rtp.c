@@ -39,6 +39,7 @@
 #include <netinet/in.h>
 #include <pthread.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <time.h>
@@ -124,51 +125,60 @@ void *rtp_audio_receiver(void *arg) {
       time_of_previous_packet_fp = local_time_now_fp;
     }
 
-    if (nread < 0)
-      break;
+    if (nread >= 0) {
+      ssize_t plen = nread;
+      uint8_t type = packet[1] & ~0x80;
+      if (type == 0x60 || type == 0x56) { // audio data / resend
+        pktp = packet;
+        if (type == 0x56) {
+          pktp += 4;
+          plen -= 4;
+        }
+        seq_t seqno = ntohs(*(uint16_t *)(pktp + 2));
+        // increment last_seqno and see if it's the same as the incoming seqno
 
-    ssize_t plen = nread;
-    uint8_t type = packet[1] & ~0x80;
-    if (type == 0x60 || type == 0x56) { // audio data / resend
-      pktp = packet;
-      if (type == 0x56) {
-        pktp += 4;
-        plen -= 4;
-        debug(3,"resent packet %u received in audio port.",ntohs(*(uint16_t *)(pktp + 2)));
+        if (type == 0x60) { // regular audio data
+          if (last_seqno == -1)
+            last_seqno = seqno;
+          else {
+            last_seqno = (last_seqno + 1) & 0xffff;
+            // if (seqno != last_seqno)
+            //  debug(3, "RTP: Packets out of sequence: expected: %d, got %d.", last_seqno, seqno);
+            last_seqno = seqno; // reset warning...
+          }
+        } else {
+          debug(1, "Audio Receiver -- Retransmitted Audio Data Packet %u received.", seqno);
+        }
+
+        uint32_t actual_timestamp = ntohl(*(uint32_t *)(pktp + 4));
+        int64_t timestamp = monotonic_timestamp(actual_timestamp, conn);
+
+        // if (packet[1]&0x10)
+        //	debug(1,"Audio packet Extension bit set.");
+
+        pktp += 12;
+        plen -= 12;
+
+        // check if packet contains enough content to be reasonable
+        if (plen >= 16) {
+          if ((config.diagnostic_drop_packet_fraction == 0.0) ||
+              (drand48() > config.diagnostic_drop_packet_fraction))
+            player_put_packet(seqno, actual_timestamp, timestamp, pktp, plen, conn);
+          else
+            debug(3, "Dropping audio packet %u to simulate a bad connection.", seqno);
+          continue;
+        }
+        if (type == 0x56 && seqno == 0) {
+          debug(2, "resend-related request packet received, ignoring.");
+          continue;
+        }
+        debug(1, "Audio receiver -- Unknown RTP packet of type 0x%02X length %d seqno %d", type,
+              nread, seqno);
       }
-      seq_t seqno = ntohs(*(uint16_t *)(pktp + 2));
-      // increment last_seqno and see if it's the same as the incoming seqno
-
-      if (last_seqno == -1)
-        last_seqno = seqno;
-      else {
-        last_seqno = (last_seqno + 1) & 0xffff;
-        // if (seqno != last_seqno)
-        //  debug(3, "RTP: Packets out of sequence: expected: %d, got %d.", last_seqno, seqno);
-        last_seqno = seqno; // reset warning...
-      }
-      uint32_t actual_timestamp = ntohl(*(uint32_t *)(pktp + 4));      
-      int64_t timestamp = monotonic_timestamp(actual_timestamp, conn);
-
-      // if (packet[1]&0x10)
-      //	debug(1,"Audio packet Extension bit set.");
-
-      pktp += 12;
-      plen -= 12;
-
-      // check if packet contains enough content to be reasonable
-      if (plen >= 16) {
-        player_put_packet(seqno, actual_timestamp, timestamp, pktp, plen, conn);
-        continue;
-      }
-      if (type == 0x56 && seqno == 0) {
-        debug(2, "resend-related request packet received, ignoring.");
-        continue;
-      }
-      debug(1, "Audio receiver -- Unknown RTP packet of type 0x%02X length %d seqno %d", type,
-            nread, seqno);
+      warn("Audio receiver -- Unknown RTP packet of type 0x%02X length %d.", type, nread);
+    } else {
+      debug(1, "Error receiving an audio packet.");
     }
-    warn("Audio receiver -- Unknown RTP packet of type 0x%02X length %d.", type, nread);
   }
 
   debug(3, "Audio receiver -- Server RTP thread interrupted. terminating.");
@@ -201,186 +211,190 @@ void *rtp_control_receiver(void *arg) {
     if (conn->please_stop != 0) {
       break;
     }
+
     nread = recv(conn->control_socket, packet, sizeof(packet), 0);
     // local_time_now = get_absolute_time_in_fp();
     //        clock_gettime(CLOCK_MONOTONIC,&tn);
     //        local_time_now=((uint64_t)tn.tv_sec<<32)+((uint64_t)tn.tv_nsec<<32)/1000000000;
 
-    if (nread < 0)
-      break;
+    if (nread >= 0) {
 
-    ssize_t plen = nread;
-    if (packet[1] == 0xd4) {                       // sync data
-                                                   /*
-                                                         // the following stanza is for debugging only -- normally commented out.
-                                                         {
-                                                           char obf[4096];
-                                                           char *obfp = obf;
-                                                           int obfc;
-                                                           for (obfc = 0; obfc < plen; obfc++) {
-                                                             snprintf(obfp, 3, "%02X", packet[obfc]);
-                                                             obfp += 2;
-                                                           };
-                                                           *obfp = 0;
+      if ((config.diagnostic_drop_packet_fraction == 0.0) ||
+          (drand48() > config.diagnostic_drop_packet_fraction)) {
+
+        ssize_t plen = nread;
+        if (packet[1] == 0xd4) {                       // sync data
+                                                       /*
+                                                             // the following stanza is for debugging only -- normally commented out.
+                                                             {
+                                                               char obf[4096];
+                                                               char *obfp = obf;
+                                                               int obfc;
+                                                               for (obfc = 0; obfc < plen; obfc++) {
+                                                                 snprintf(obfp, 3, "%02X", packet[obfc]);
+                                                                 obfp += 2;
+                                                               };
+                                                               *obfp = 0;
                                              
                                              
-                                                           // get raw timestamp information
-                                                           // I think that a good way to understand these timestamps is that
-                                                           // (1) the rtlt below is the timestamp of the frame that should be playing at the
-                                                      client-time specified in the packet if there was no delay
-                                                           // and (2) that the rt below is the timestamp of the frame that should be playing at
-                                                      the client-time specified in the packet on this device taking account of the delay
-                                                           // Thus, (3) the latency can be calculated by subtracting the second from the first.
-                                                           // There must be more to it -- there something missing.
+                                                               // get raw timestamp information
+                                                               // I think that a good way to understand these timestamps is that
+                                                               // (1) the rtlt below is the timestamp of the frame that should be playing at the
+                                                          client-time specified in the packet if there was no delay
+                                                               // and (2) that the rt below is the timestamp of the frame that should be playing
+                                                          at
+                                                          the client-time specified in the packet on this device taking account of the delay
+                                                               // Thus, (3) the latency can be calculated by subtracting the second from the
+                                                          first.
+                                                               // There must be more to it -- there something missing.
                                              
-                                                           // In addition, it seems that if the value of the short represented by the second pair
-                                                      of bytes in the packe is 7
-                                                           // then an extra time lag is expected to be added, presumably by the AirPort Express.
-                                                      Best guess is that this delay is 11,025 frames.
+                                                               // In addition, it seems that if the value of the short represented by the second
+                                                          pair
+                                                          of bytes in the packe is 7
+                                                               // then an extra time lag is expected to be added, presumably by the AirPort
+                                                          Express.
+                                                          Best guess is that this delay is 11,025 frames.
                                              
-                                                           uint32_t rtlt = nctohl(&packet[4]); // raw timestamp less latency
-                                                           uint32_t rt = nctohl(&packet[16]);  // raw timestamp
+                                                               // uint32_t rtlt = nctohl(&packet[4]); // raw timestamp less latency
+                                                               // uint32_t rt = nctohl(&packet[16]);  // raw timestamp
                                              
-                                                           uint32_t fl = nctohs(&packet[2]); //
+                                                               // uint32_t fl = nctohs(&packet[2]); //
                                              
-                                                           // debug(1,"Sync Packet of %d bytes received: \"%s\", flags: %d, timestamps %u and %u,
-                                                      giving a latency of %d frames.",plen,obf,fl,rt,rtlt,rt-rtlt);
-                                                           // debug(1,"Monotonic timestamps are: %" PRId64 " and %" PRId64 "
-                                                      respectively.",monotonic_timestamp(rt, conn),monotonic_timestamp(rtlt, conn));
-                                                         }
-                                                   */
-      if (conn->local_to_remote_time_difference) { // need a time packet to be interchanged first...
+                                                               // debug(1,"Sync Packet of %d bytes received: \"%s\", flags: %d, timestamps %u and
+                                                          %u,
+                                                          giving a latency of %d frames.",plen,obf,fl,rt,rtlt,rt-rtlt);
+                                                               // debug(1,"Monotonic timestamps are: %" PRId64 " and %" PRId64 "
+                                                          respectively.",monotonic_timestamp(rt, conn),monotonic_timestamp(rtlt, conn));
+                                                             }
+                                                       */
+          if (conn->local_to_remote_time_difference) { // need a time packet to be interchanged
+                                                       // first...
 
-        remote_time_of_sync = (uint64_t)nctohl(&packet[8]) << 32;
-        remote_time_of_sync += nctohl(&packet[12]);
+            remote_time_of_sync = (uint64_t)nctohl(&packet[8]) << 32;
+            remote_time_of_sync += nctohl(&packet[12]);
 
-        // debug(1,"Remote Sync Time: %0llx.",remote_time_of_sync);
+            // debug(1,"Remote Sync Time: %0llx.",remote_time_of_sync);
 
-        sync_rtp_timestamp = monotonic_timestamp(nctohl(&packet[16]), conn);
-        int64_t rtp_timestamp_less_latency = monotonic_timestamp(nctohl(&packet[4]), conn);
+            sync_rtp_timestamp = monotonic_timestamp(nctohl(&packet[16]), conn);
+            int64_t rtp_timestamp_less_latency = monotonic_timestamp(nctohl(&packet[4]), conn);
 
-        // debug(1,"Sync timestamp is %u.",ntohl(*((uint32_t *)&packet[16])));
+            // debug(1,"Sync timestamp is %u.",ntohl(*((uint32_t *)&packet[16])));
 
-        if (config.userSuppliedLatency) {
-          if (config.userSuppliedLatency != conn->latency) {
-            debug(1, "Using the user-supplied latency: %" PRId64 ".", config.userSuppliedLatency);
-          }
-          conn->latency = config.userSuppliedLatency;
-        } else {
+            if (config.userSuppliedLatency) {
+              if (config.userSuppliedLatency != conn->latency) {
+                debug(1, "Using the user-supplied latency: %" PRId64 ".",
+                      config.userSuppliedLatency);
+              }
+              conn->latency = config.userSuppliedLatency;
+            } else {
 
-          // It seems that the second pair of bytes in the packet indicate whether a fixed
-          // delay of 11,025 frames should be added -- iTunes set this field to 7 and
-          // AirPlay sets it to 4.
+              // It seems that the second pair of bytes in the packet indicate whether a fixed
+              // delay of 11,025 frames should be added -- iTunes set this field to 7 and
+              // AirPlay sets it to 4.
 
-          // The value of 11,025 (0.25 seconds) is a guess based on the "Audio-Latency" parameter
-          // returned by an AE.
+              // The value of 11,025 (0.25 seconds) is a guess based on the "Audio-Latency"
+              // parameter
+              // returned by an AE.
 
-          // Sigh, it would be nice to have a published protocol...
+              // Sigh, it would be nice to have a published protocol...
 
-          uint16_t flags = nctohs(&packet[2]);
-          int64_t la = sync_rtp_timestamp - rtp_timestamp_less_latency;
-          if (flags == 7)
-            la += config.fixedLatencyOffset;
-          // debug(1,"Latency calculated from the sync packet is %" PRId64 " frames.",la);
-          if ((conn->maximum_latency) && (conn->maximum_latency < la))
-            la = conn->maximum_latency;
-          if ((conn->minimum_latency) && (conn->minimum_latency > la))
-            la = conn->minimum_latency;
+              uint16_t flags = nctohs(&packet[2]);
+              int64_t la = sync_rtp_timestamp - rtp_timestamp_less_latency;
+              if (flags == 7)
+                la += config.fixedLatencyOffset;
+              // debug(1,"Latency calculated from the sync packet is %" PRId64 " frames.",la);
+              if ((conn->maximum_latency) && (conn->maximum_latency < la))
+                la = conn->maximum_latency;
+              if ((conn->minimum_latency) && (conn->minimum_latency > la))
+                la = conn->minimum_latency;
 
-          const int max_frames = ((3 * BUFFER_FRAMES * 352) / 4) - 11025;
+              const int max_frames = ((3 * BUFFER_FRAMES * 352) / 4) - 11025;
 
-          if ((la < 0) || (la > max_frames)) {
-            warn("An out-of-range latency request of %" PRId64
-                 " frames was ignored. Must be %d frames or less (44,100 frames per second). "
-                 "Latency remains at %" PRId64 " frames.",
-                 la, max_frames, conn->latency);
-          } else {
+              if ((la < 0) || (la > max_frames)) {
+                warn("An out-of-range latency request of %" PRId64
+                     " frames was ignored. Must be %d frames or less (44,100 frames per second). "
+                     "Latency remains at %" PRId64 " frames.",
+                     la, max_frames, conn->latency);
+              } else {
 
-            if (la != conn->latency) {
-              conn->latency = la;
-              debug(2, "New latency detected: %" PRId64 ", sync latency: %" PRId64
-                       ", minimum latency: %" PRId64 ", maximum "
-                       "latency: %" PRId64 ", fixed offset: %" PRId64 ".",
-                    la, sync_rtp_timestamp - rtp_timestamp_less_latency, conn->minimum_latency,
-                    conn->maximum_latency, config.fixedLatencyOffset);
+                if (la != conn->latency) {
+                  conn->latency = la;
+                  debug(2, "New latency detected: %" PRId64 ", sync latency: %" PRId64
+                           ", minimum latency: %" PRId64 ", maximum "
+                           "latency: %" PRId64 ", fixed offset: %" PRId64 ".",
+                        la, sync_rtp_timestamp - rtp_timestamp_less_latency, conn->minimum_latency,
+                        conn->maximum_latency, config.fixedLatencyOffset);
+                }
+              }
             }
+
+            pthread_mutex_lock(&conn->reference_time_mutex);
+
+            // this is for debugging
+            // uint64_t old_remote_reference_time = conn->remote_reference_timestamp_time;
+            // int64_t old_reference_timestamp = conn->reference_timestamp;
+            // int64_t old_latency_delayed_timestamp = conn->latency_delayed_timestamp;
+            conn->remote_reference_timestamp_time = remote_time_of_sync;
+            conn->reference_timestamp_time =
+                remote_time_of_sync - conn->local_to_remote_time_difference;
+            conn->reference_timestamp = sync_rtp_timestamp;
+            conn->latency_delayed_timestamp = rtp_timestamp_less_latency;
+            pthread_mutex_unlock(&conn->reference_time_mutex);
+
+            // this is for debugging
+            /*
+            uint64_t time_difference = remote_time_of_sync - old_remote_reference_time;
+            int64_t reference_frame_difference = sync_rtp_timestamp - old_reference_timestamp;
+            int64_t delayed_frame_difference = rtp_timestamp_less_latency -
+            old_latency_delayed_timestamp;
+
+            if (old_remote_reference_time)
+              debug(1,"Time difference: %" PRIu64 " reference and delayed frame differences: %"
+            PRId64 "
+            and %" PRId64 ", giving rates of %f and %f respectively.",
+                (time_difference*1000000)>>32,reference_frame_difference,delayed_frame_difference,(1.0*(reference_frame_difference*10000000))/((time_difference*10000000)>>32),(1.0*(delayed_frame_difference*10000000))/((time_difference*10000000)>>32));
+            else
+              debug(1,"First sync received");
+            */
+
+            // debug(1,"New Reference timestamp and timestamp time...");
+            // get estimated remote time now
+            // remote_time_now = local_time_now + local_to_remote_time_difference;
+
+            // debug(1,"Sync Time is %lld us late (remote
+            // times).",((remote_time_now-remote_time_of_sync)*1000000)>>32);
+            // debug(1,"Sync Time is %lld us late (local
+            // times).",((local_time_now-reference_timestamp_time)*1000000)>>32);
+          } else {
+            debug(1, "Sync packet received before we got a timing packet back.");
           }
-        }
-
-        pthread_mutex_lock(&conn->reference_time_mutex);
-
-        // this is for debugging
-        // uint64_t old_remote_reference_time = conn->remote_reference_timestamp_time;
-        // int64_t old_reference_timestamp = conn->reference_timestamp;
-        // int64_t old_latency_delayed_timestamp = conn->latency_delayed_timestamp;
-        conn->remote_reference_timestamp_time = remote_time_of_sync;
-        conn->reference_timestamp_time =
-            remote_time_of_sync - conn->local_to_remote_time_difference;
-        conn->reference_timestamp = sync_rtp_timestamp;
-        conn->latency_delayed_timestamp = rtp_timestamp_less_latency;
-        pthread_mutex_unlock(&conn->reference_time_mutex);
-
-        // this is for debugging
-        /*
-        uint64_t time_difference = remote_time_of_sync - old_remote_reference_time;
-        int64_t reference_frame_difference = sync_rtp_timestamp - old_reference_timestamp;
-        int64_t delayed_frame_difference = rtp_timestamp_less_latency -
-        old_latency_delayed_timestamp;
-
-        if (old_remote_reference_time)
-          debug(1,"Time difference: %" PRIu64 " reference and delayed frame differences: %" PRId64 "
-        and %" PRId64 ", giving rates of %f and %f respectively.",
-            (time_difference*1000000)>>32,reference_frame_difference,delayed_frame_difference,(1.0*(reference_frame_difference*10000000))/((time_difference*10000000)>>32),(1.0*(delayed_frame_difference*10000000))/((time_difference*10000000)>>32));
-        else
-          debug(1,"First sync received");
-        */
-
-        // debug(1,"New Reference timestamp and timestamp time...");
-        // get estimated remote time now
-        // remote_time_now = local_time_now + local_to_remote_time_difference;
-
-        // debug(1,"Sync Time is %lld us late (remote
-        // times).",((remote_time_now-remote_time_of_sync)*1000000)>>32);
-        // debug(1,"Sync Time is %lld us late (local
-        // times).",((local_time_now-reference_timestamp_time)*1000000)>>32);
-      } else {
-        debug(1, "Sync packet received before we got a timing packet back.");
-      }
-    } else {
-      uint8_t type = packet[1] & ~0x80;
-      if ((type == 0x60) || (type == 0x56)) { // audio data / resent audio data in the control path -- whaale only?
-        pktp = packet;
-        
-        if (type == 0x56) { // resent audio data in the control path -- whaale only?
-          // debug(1, "Control Port -- Retransmitted Audio Data Packet received.");
+        } else if (packet[1] == 0xd6) { // resent audio data in the control path -- whaale only?
           pktp = packet + 4;
           plen -= 4;
-        } 
-        
-        seq_t seqno = ntohs(*(uint16_t *)(pktp + 2));
-        if (type==0x56)
-          debug(3,"Resent audio packet %u received in the control port.",seqno);
-        else
-          debug(1,"Audio packet %u received in the control port.",seqno);
-        uint32_t actual_timestamp = ntohl(*(uint32_t *)(pktp + 4));
-        
-        int64_t timestamp = monotonic_timestamp(actual_timestamp, conn);
+          seq_t seqno = ntohs(*(uint16_t *)(pktp + 2));
+          debug(1, "Control Receiver -- Retransmitted Audio Data Packet %u received.", seqno);
 
-        pktp += 12;
-        plen -= 12;
+          uint32_t actual_timestamp = ntohl(*(uint32_t *)(pktp + 4));
+          int64_t timestamp = monotonic_timestamp(actual_timestamp, conn);
 
-        // check if packet contains enough content to be reasonable
+          pktp += 12;
+          plen -= 12;
 
-        if (plen >= 16) {
-          player_put_packet(seqno, actual_timestamp, timestamp, pktp, plen, conn);
-          continue;
-        } else {
-          debug(3, "Too-short retransmitted audio packet received in control port, ignored.");
-        }
+          // check if packet contains enough content to be reasonable
+          if (plen >= 16) {
+            player_put_packet(seqno, actual_timestamp, timestamp, pktp, plen, conn);
+            continue;
+          } else {
+            debug(3, "Too-short retransmitted audio packet received in control port, ignored.");
+          }
+        } else
+          debug(1, "Control Receiver -- Unknown RTP packet of type 0x%02X length %d, ignored.",
+                packet[1], nread);
       } else {
-        debug(1, "Control Port -- Unknown RTP packet of type 0x%02X length %d, ignored.", packet[1],
-              nread);
+        debug(1, "Control Receiver -- dropping a packet to simulate a bad network.");
       }
+    } else {
+      debug(1, "Control Receiver -- error receiving a packet.");
     }
   }
 
@@ -506,192 +520,199 @@ void *rtp_timing_receiver(void *arg) {
     arrival_time = get_absolute_time_in_fp();
     //      clock_gettime(CLOCK_MONOTONIC,&att);
 
-    if (nread < 0)
-      break;
+    if (nread >= 0) {
 
-    // ssize_t plen = nread;
-    // debug(1,"Packet Received on Timing Port.");
-    if (packet[1] == 0xd3) { // timing reply
-      /*
-      char obf[4096];
-      char *obfp = obf;
-      int obfc;
-      for (obfc=0;obfc<plen;obfc++) {
-        snprintf(obfp, 3, "%02X", packet[obfc]);
-        obfp+=2;
-      };
-      *obfp=0;
-      //debug(1,"Timing Packet Received: \"%s\"",obf);
-      */
+      // ssize_t plen = nread;
+      // debug(1,"Packet Received on Timing Port.");
+      if (packet[1] == 0xd3) { // timing reply
+        /*
+        char obf[4096];
+        char *obfp = obf;
+        int obfc;
+        for (obfc=0;obfc<plen;obfc++) {
+          snprintf(obfp, 3, "%02X", packet[obfc]);
+          obfp+=2;
+        };
+        *obfp=0;
+        //debug(1,"Timing Packet Received: \"%s\"",obf);
+        */
 
-      // arrival_time = ((uint64_t)att.tv_sec<<32)+((uint64_t)att.tv_nsec<<32)/1000000000;
-      // departure_time = ((uint64_t)dtt.tv_sec<<32)+((uint64_t)dtt.tv_nsec<<32)/1000000000;
+        // arrival_time = ((uint64_t)att.tv_sec<<32)+((uint64_t)att.tv_nsec<<32)/1000000000;
+        // departure_time = ((uint64_t)dtt.tv_sec<<32)+((uint64_t)dtt.tv_nsec<<32)/1000000000;
 
-      return_time = arrival_time - conn->departure_time;
+        return_time = arrival_time - conn->departure_time;
 
-      uint64_t rtus = (return_time * 1000000) >> 32;
+        uint64_t rtus = (return_time * 1000000) >> 32;
 
-      if (rtus < 300000) {
+        if (rtus < 300000) {
 
-        // debug(2,"Synchronisation ping return time is %f milliseconds.",(rtus*1.0)/1000);
+          // debug(2,"Synchronisation ping return time is %f milliseconds.",(rtus*1.0)/1000);
 
-        // distant_receive_time =
-        // ((uint64_t)ntohl(*((uint32_t*)&packet[16])))<<32+ntohl(*((uint32_t*)&packet[20]));
+          // distant_receive_time =
+          // ((uint64_t)ntohl(*((uint32_t*)&packet[16])))<<32+ntohl(*((uint32_t*)&packet[20]));
 
-        distant_receive_time = (uint64_t)nctohl(&packet[16]) << 32;
-        distant_receive_time += nctohl(&packet[20]);
+          distant_receive_time = (uint64_t)nctohl(&packet[16]) << 32;
+          distant_receive_time += nctohl(&packet[20]);
 
-        // distant_transmit_time =
-        // ((uint64_t)ntohl(*((uint32_t*)&packet[24])))<<32+ntohl(*((uint32_t*)&packet[28]));
+          // distant_transmit_time =
+          // ((uint64_t)ntohl(*((uint32_t*)&packet[24])))<<32+ntohl(*((uint32_t*)&packet[28]));
 
-        distant_transmit_time = (uint64_t)nctohl(&packet[24]) << 32;
-        distant_transmit_time += nctohl(&packet[28]);
+          distant_transmit_time = (uint64_t)nctohl(&packet[24]) << 32;
+          distant_transmit_time += nctohl(&packet[28]);
 
-        // processing_time = distant_transmit_time - distant_receive_time;
+          // processing_time = distant_transmit_time - distant_receive_time;
 
-        // debug(1,"Return trip time: %lluuS, remote processing time:
-        // %lluuS.",(return_time*1000000)>>32,(processing_time*1000000)>>32);
+          // debug(1,"Return trip time: %lluuS, remote processing time:
+          // %lluuS.",(return_time*1000000)>>32,(processing_time*1000000)>>32);
 
-        uint64_t local_time_by_remote_clock = distant_transmit_time + return_time / 2;
+          uint64_t local_time_by_remote_clock = distant_transmit_time + return_time / 2;
 
-        unsigned int cc;
-        for (cc = time_ping_history - 1; cc > 0; cc--) {
-          conn->time_pings[cc] = conn->time_pings[cc - 1];
-          conn->time_pings[cc].dispersion =
-              (conn->time_pings[cc].dispersion * 110) /
-              100; // make the dispersions 'age' by this rational factor
-        }
-        // these are for diagnostics only -- not used
-        conn->time_pings[0].local_time = arrival_time;
-        conn->time_pings[0].remote_time = distant_transmit_time;
-
-        conn->time_pings[0].local_to_remote_difference = local_time_by_remote_clock - arrival_time;
-        conn->time_pings[0].dispersion = return_time;
-        if (conn->time_ping_count < time_ping_history)
-          conn->time_ping_count++;
-
-        uint64_t local_time_chosen = arrival_time;
-        ;
-        // uint64_t remote_time_chosen = distant_transmit_time;
-        // now pick the timestamp with the lowest dispersion
-        uint64_t l2rtd = conn->time_pings[0].local_to_remote_difference;
-        uint64_t tld = conn->time_pings[0].dispersion;
-        // chosen = 0;
-        for (cc = 1; cc < conn->time_ping_count; cc++)
-          if (conn->time_pings[cc].dispersion < tld) {
-            l2rtd = conn->time_pings[cc].local_to_remote_difference;
-            // chosen = cc;
-            tld = conn->time_pings[cc].dispersion;
-            local_time_chosen = conn->time_pings[cc].local_time;
-            // remote_time_chosen = conn->time_pings[cc].remote_time;
+          unsigned int cc;
+          for (cc = time_ping_history - 1; cc > 0; cc--) {
+            conn->time_pings[cc] = conn->time_pings[cc - 1];
+            conn->time_pings[cc].dispersion =
+                (conn->time_pings[cc].dispersion * 110) /
+                100; // make the dispersions 'age' by this rational factor
           }
-        // int64_t ji;
+          // these are for diagnostics only -- not used
+          conn->time_pings[0].local_time = arrival_time;
+          conn->time_pings[0].remote_time = distant_transmit_time;
 
-        if (conn->time_ping_count > 1) {
-          if (l2rtd > conn->local_to_remote_time_difference) {
-            local_to_remote_time_jitters =
-                local_to_remote_time_jitters + l2rtd - conn->local_to_remote_time_difference;
-            //  ji = l2rtd - conn->local_to_remote_time_difference;
+          conn->time_pings[0].local_to_remote_difference =
+              local_time_by_remote_clock - arrival_time;
+          conn->time_pings[0].dispersion = return_time;
+          if (conn->time_ping_count < time_ping_history)
+            conn->time_ping_count++;
+
+          uint64_t local_time_chosen = arrival_time;
+
+          // uint64_t remote_time_chosen = distant_transmit_time;
+          // now pick the timestamp with the lowest dispersion
+          uint64_t l2rtd = conn->time_pings[0].local_to_remote_difference;
+          uint64_t tld = conn->time_pings[0].dispersion;
+          // chosen = 0;
+          for (cc = 1; cc < conn->time_ping_count; cc++)
+            if (conn->time_pings[cc].dispersion < tld) {
+              l2rtd = conn->time_pings[cc].local_to_remote_difference;
+              // chosen = cc;
+              tld = conn->time_pings[cc].dispersion;
+              local_time_chosen = conn->time_pings[cc].local_time;
+              // remote_time_chosen = conn->time_pings[cc].remote_time;
+            }
+          // int64_t ji;
+
+          if (conn->time_ping_count > 1) {
+            if (l2rtd > conn->local_to_remote_time_difference) {
+              local_to_remote_time_jitters =
+                  local_to_remote_time_jitters + l2rtd - conn->local_to_remote_time_difference;
+              //  ji = l2rtd - conn->local_to_remote_time_difference;
+            } else {
+              local_to_remote_time_jitters =
+                  local_to_remote_time_jitters + conn->local_to_remote_time_difference - l2rtd;
+              // ji = -(conn->local_to_remote_time_difference - l2rtd);
+            }
+            local_to_remote_time_jitters_count += 1;
+          }
+          // uncomment below to print jitter between client's clock and oour clock
+          // int64_t rtus = (tld*1000000)>>32; ji = (ji*1000000)>>32; debug(1,"Choosing time
+          // difference
+          // with dispersion of %lld us with delta of %lld us",rtus,ji);
+
+          conn->local_to_remote_time_difference = l2rtd;
+          if (first_local_to_remote_time_difference == 0) {
+            first_local_to_remote_time_difference = conn->local_to_remote_time_difference;
+            // first_local_to_remote_time_difference_time = get_absolute_time_in_fp();
+          }
+
+          // int64_t clock_drift;
+          // int64_t clock_drift_in_usec;
+          // double clock_drift_ppm = 0.0;
+          if (first_local_time == 0) {
+            first_local_time = local_time_chosen;
+            // first_remote_time = remote_time_chosen;
+            // clock_drift = 0;
           } else {
-            local_to_remote_time_jitters =
-                local_to_remote_time_jitters + conn->local_to_remote_time_difference - l2rtd;
-            // ji = -(conn->local_to_remote_time_difference - l2rtd);
+            // uint64_t local_time_change = local_time_chosen - first_local_time;
+            // uint64_t remote_time_change = remote_time_chosen - first_remote_time;
+
+            /*
+            if (remote_time_change >= local_time_change)
+              clock_drift = remote_time_change - local_time_change;
+            else
+              clock_drift = -(local_time_change - remote_time_change);
+            */
+            /*
+            if (clock_drift >= 0)
+              clock_drift_in_usec = (clock_drift * 1000000) >> 32;
+            else
+              clock_drift_in_usec = -(((-clock_drift) * 1000000) >> 32);
+            */
+
+            // clock_drift_ppm = (1.0 * clock_drift_in_usec) / (local_time_change >> 32);
           }
-          local_to_remote_time_jitters_count += 1;
-        }
-        // uncomment below to print jitter between client's clock and oour clock
-        // int64_t rtus = (tld*1000000)>>32; ji = (ji*1000000)>>32; debug(1,"Choosing time
-        // difference
-        // with dispersion of %lld us with delta of %lld us",rtus,ji);
 
-        conn->local_to_remote_time_difference = l2rtd;
-        if (first_local_to_remote_time_difference == 0) {
-          first_local_to_remote_time_difference = conn->local_to_remote_time_difference;
-          // first_local_to_remote_time_difference_time = get_absolute_time_in_fp();
-        }
+          int64_t source_drift_usec;
+          if (conn->play_segment_reference_frame != 0) {
+            int64_t reference_timestamp;
+            uint64_t reference_timestamp_time, remote_reference_timestamp_time;
+            get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time,
+                                          &remote_reference_timestamp_time, conn);
+            uint64_t frame_difference = 0;
+            if (reference_timestamp >= conn->play_segment_reference_frame)
+              frame_difference =
+                  (uint64_t)reference_timestamp - (uint64_t)conn->play_segment_reference_frame;
+            else // rollover
+              frame_difference = (uint64_t)reference_timestamp + 0x100000000 -
+                                 (uint64_t)conn->play_segment_reference_frame;
+            uint64_t frame_time_difference_calculated =
+                (((uint64_t)frame_difference << 32) / 44100);
+            uint64_t frame_time_difference_actual =
+                remote_reference_timestamp_time -
+                conn->play_segment_reference_frame_remote_time; // this is all done by reference to
+                                                                // the
+                                                                // sources' system clock
+            // debug(1,"%llu frames since play started, %llu usec calculated, %llu usec
+            // actual",frame_difference, (frame_time_difference_calculated*1000000)>>32,
+            // (frame_time_difference_actual*1000000)>>32);
+            if (frame_time_difference_calculated >=
+                frame_time_difference_actual) // i.e. if the time it should have taken to send the
+                                              // packets is greater than the actual time difference
+                                              // measured on the source clock
+              // then the source DAC's clock is running fast relative to the source system clock
+              source_drift_usec = frame_time_difference_calculated - frame_time_difference_actual;
+            else
+              // otherwise the source DAC's clock is running slow relative to the source system
+              // clock
+              source_drift_usec =
+                  -(frame_time_difference_actual - frame_time_difference_calculated);
+          } else
+            source_drift_usec = 0;
+          source_drift_usec = (source_drift_usec * 1000000) >> 32; // turn it to microseconds
 
-        // int64_t clock_drift;
-        // int64_t clock_drift_in_usec;
-        // double clock_drift_ppm = 0.0;
-        if (first_local_time == 0) {
-          first_local_time = local_time_chosen;
-          // first_remote_time = remote_time_chosen;
-          // clock_drift = 0;
+          // long current_delay = 0;
+          // if (config.output->delay) {
+          //       config.output->delay(&current_delay);
+          //}
+          //  Useful for troubleshooting:
+          // debug(1, "clock_drift_ppm %f\tchosen %5d\tsource_drift_usec
+          // %10.1lld\treturn_time_in_usec
+          // %10.1llu",
+          // clock_drift_ppm,
+          // chosen,
+          //(session_corrections*1000000)/44100,
+          // current_delay,
+          // source_drift_usec,
+          // buffer_occupancy,
+          //(return_time*1000000)>>32);
         } else {
-          // uint64_t local_time_change = local_time_chosen - first_local_time;
-          // uint64_t remote_time_change = remote_time_chosen - first_remote_time;
-
-          /*
-          if (remote_time_change >= local_time_change)
-            clock_drift = remote_time_change - local_time_change;
-          else
-            clock_drift = -(local_time_change - remote_time_change);
-          */
-          /*
-          if (clock_drift >= 0)
-            clock_drift_in_usec = (clock_drift * 1000000) >> 32;
-          else
-            clock_drift_in_usec = -(((-clock_drift) * 1000000) >> 32);
-          */
-
-          // clock_drift_ppm = (1.0 * clock_drift_in_usec) / (local_time_change >> 32);
+          debug(1, "Time ping turnaround time: %lld us -- it looks like a timing ping was lost.",
+                rtus);
         }
-
-        int64_t source_drift_usec;
-        if (conn->play_segment_reference_frame != 0) {
-          int64_t reference_timestamp;
-          uint64_t reference_timestamp_time, remote_reference_timestamp_time;
-          get_reference_timestamp_stuff(&reference_timestamp, &reference_timestamp_time,
-                                        &remote_reference_timestamp_time, conn);
-          uint64_t frame_difference = 0;
-          if (reference_timestamp >= conn->play_segment_reference_frame)
-            frame_difference =
-                (uint64_t)reference_timestamp - (uint64_t)conn->play_segment_reference_frame;
-          else // rollover
-            frame_difference = (uint64_t)reference_timestamp + 0x100000000 -
-                               (uint64_t)conn->play_segment_reference_frame;
-          uint64_t frame_time_difference_calculated = (((uint64_t)frame_difference << 32) / 44100);
-          uint64_t frame_time_difference_actual =
-              remote_reference_timestamp_time -
-              conn->play_segment_reference_frame_remote_time; // this is all done by reference to
-                                                              // the
-                                                              // sources' system clock
-          // debug(1,"%llu frames since play started, %llu usec calculated, %llu usec
-          // actual",frame_difference, (frame_time_difference_calculated*1000000)>>32,
-          // (frame_time_difference_actual*1000000)>>32);
-          if (frame_time_difference_calculated >=
-              frame_time_difference_actual) // i.e. if the time it should have taken to send the
-                                            // packets is greater than the actual time difference
-                                            // measured on the source clock
-            // then the source DAC's clock is running fast relative to the source system clock
-            source_drift_usec = frame_time_difference_calculated - frame_time_difference_actual;
-          else
-            // otherwise the source DAC's clock is running slow relative to the source system clock
-            source_drift_usec = -(frame_time_difference_actual - frame_time_difference_calculated);
-        } else
-          source_drift_usec = 0;
-        source_drift_usec = (source_drift_usec * 1000000) >> 32; // turn it to microseconds
-
-        // long current_delay = 0;
-        // if (config.output->delay) {
-        //       config.output->delay(&current_delay);
-        //}
-        //  Useful for troubleshooting:
-        // debug(1, "clock_drift_ppm %f\tchosen %5d\tsource_drift_usec %10.1lld\treturn_time_in_usec
-        // %10.1llu",
-        // clock_drift_ppm,
-        // chosen,
-        //(session_corrections*1000000)/44100,
-        // current_delay,
-        // source_drift_usec,
-        // buffer_occupancy,
-        //(return_time*1000000)>>32);
       } else {
-        debug(1, "Time ping turnaround time: %lld us -- it looks like a timing ping was lost.",
-              rtus);
+        debug(1, "Timing port -- Unknown RTP packet of type 0x%02X length %d.", packet[1], nread);
       }
     } else {
-      debug(1, "Timing port -- Unknown RTP packet of type 0x%02X length %d.", packet[1], nread);
+      debug(1, "Timing receiver -- error receiving a packet.");
     }
   }
 
@@ -868,12 +889,12 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, uint16_t cport, uint16_t tport
     conn->remote_control_port = cport;
     conn->remote_timing_port = tport;
 
-    conn->local_audio_port = bind_port(conn->connection_ip_family, conn->self_ip_string,
-                                       conn->self_scope_id, &conn->audio_socket);
     conn->local_control_port = bind_port(conn->connection_ip_family, conn->self_ip_string,
                                          conn->self_scope_id, &conn->control_socket);
     conn->local_timing_port = bind_port(conn->connection_ip_family, conn->self_ip_string,
                                         conn->self_scope_id, &conn->timing_socket);
+    conn->local_audio_port = bind_port(conn->connection_ip_family, conn->self_ip_string,
+                                       conn->self_scope_id, &conn->audio_socket);
 
     debug(2, "listening for audio, control and timing on ports %d, %d, %d.", conn->local_audio_port,
           conn->local_control_port, conn->local_timing_port);
@@ -916,7 +937,7 @@ void clear_reference_timestamp(rtsp_conn_info *conn) {
 void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
   if (conn->rtp_running) {
     // if (!request_sent) {
-    debug(3, "requesting resend of %d packets starting at %u.", count, first);
+    debug(2, "requesting resend of %d packets starting at %u.", count, first);
     //  request_sent = 1;
     //}
 

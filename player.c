@@ -162,6 +162,7 @@ static void ab_resync(rtsp_conn_info *conn) {
   int i;
   for (i = 0; i < BUFFER_FRAMES; i++) {
     conn->audio_buffer[i].ready = 0;
+    conn->audio_buffer[i].resend_level = 0;
     conn->audio_buffer[i].sequence_number = 0;
   }
   conn->ab_synced = 0;
@@ -462,11 +463,12 @@ static void free_audio_buffers(rtsp_conn_info *conn) {
     free(conn->audio_buffer[i].data);
 }
 
-void player_put_packet(seq_t seqno, uint32_t actual_timestamp, int64_t timestamp, uint8_t *data, int len,
-                       rtsp_conn_info *conn) {
+void player_put_packet(seq_t seqno, uint32_t actual_timestamp, int64_t timestamp, uint8_t *data,
+                       int len, rtsp_conn_info *conn) {
 
   // all timestamps are done at the output rate
-  // the "actual_timestamp" is the one that comes in the packet, and is carried over for debugging and checking only.
+  // the "actual_timestamp" is the one that comes in the packet, and is carried over for debugging
+  // and checking only.
 
   int64_t ltimestamp = timestamp * conn->output_sample_ratio;
 
@@ -504,6 +506,38 @@ void player_put_packet(seq_t seqno, uint32_t actual_timestamp, int64_t timestamp
         conn->ab_read = seqno;
         conn->ab_synced = 1;
       }
+
+      // here, we should check for missing frames
+      if (!conn->ab_buffering) {
+        int j;
+        for (j = 1; j <= 7; j++) {
+          // check j times, after a short period of has elapsed, assuming 352 frames per packet
+          int back_step = (((250 * 44100) / 352) / 1000) * (j); // approx 250, 500 and 750 ms
+          int k;
+          for (k = -2; k <= 2; k++) {
+            if (back_step <
+                seq_diff(conn->ab_read, conn->ab_write,
+                         conn->ab_read)) { // if it's within the range of frames in use...
+              int item_to_check = (conn->ab_write - back_step) & 0xffff;
+              seq_t next = item_to_check;
+              abuf_t *check_buf = conn->audio_buffer + BUFIDX(next);
+              if ((!check_buf->ready) &&
+                  (check_buf->resend_level <
+                   j)) { // prevent multiple requests from the same level of lookback
+                check_buf->resend_level = j;
+                if (config.disable_resend_requests == 0) {
+                  rtp_request_resend(next, 1, conn);
+                  // if (j>=3)
+                  debug(1, "Resend request level #%d for packet %u in range %u to %u.", j, next,
+                        conn->ab_read, conn->ab_write);
+                  conn->resend_requests++;
+                }
+              }
+            }
+          }
+        }
+      }
+
       if (conn->ab_write == seqno) { // expected packet
         abuf = conn->audio_buffer + BUFIDX(seqno);
         conn->ab_write = SUCCESSOR(seqno);
@@ -518,6 +552,7 @@ void player_put_packet(seq_t seqno, uint32_t actual_timestamp, int64_t timestamp
         for (i = 0; i < gap; i++) {
           abuf = conn->audio_buffer + BUFIDX(seq_sum(conn->ab_write, i));
           abuf->ready = 0; // to be sure, to be sure
+          abuf->resend_level = 0;
           abuf->timestamp = 0;
           abuf->given_timestamp = 0;
           abuf->sequence_number = 0;
@@ -557,6 +592,7 @@ void player_put_packet(seq_t seqno, uint32_t actual_timestamp, int64_t timestamp
         } else {
           debug(1, "Bad audio packet detected and discarded.");
           abuf->ready = 0;
+          abuf->resend_level = 0;
           abuf->timestamp = 0;
           abuf->given_timestamp = 0;
           abuf->sequence_number = 0;
@@ -578,7 +614,7 @@ int32_t rand_in_range(int32_t exclusive_range_limit) {
   int64_t sp = lcg_prev;
   int64_t rl = exclusive_range_limit;
   lcg_prev = lcg_prev * 69069 + 3; // crappy psrg
-  sp = sp * rl; // 64 bit calculation. INtersting part if above the 32 rightmost bits;
+  sp = sp * rl; // 64 bit calculation. Interesting part is above the 32 rightmost bits;
   return sp >> 32;
 }
 
@@ -718,8 +754,6 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
   // int16_t buf_fill;
   uint64_t local_time_now;
   // struct timespec tn;
-  abuf_t *abuf = 0;
-  int i;
   abuf_t *curframe = 0;
   int notified_buffer_empty = 0; // diagnostic only
 
@@ -799,6 +833,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
             debug(1, "Dropping flushed packet seqno %u, timestamp %lld", curframe->sequence_number,
                   curframe->timestamp);
             curframe->ready = 0;
+            curframe->resend_level = 0;
             flush_limit++;
             conn->ab_read = SUCCESSOR(conn->ab_read);
           }
@@ -1175,28 +1210,13 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
   // check if t+8, t+16, t+32, t+64, t+128, ... (buffer_start_fill / 2)
   // packets have arrived... last-chance resend
 
-  if (!conn->ab_buffering) {
-    // check once, after a short period of has elapsed, assuming 352 frames per packet
-    i = ((125 * 44100) / 352) / 1000; // approx 125 ms
-    if (i < seq_diff(conn->ab_read, conn->ab_write, conn->ab_read)) {
-      seq_t next = seq_sum(conn->ab_read, i);
-      abuf = conn->audio_buffer + BUFIDX(next);
-      if (!abuf->ready) {
-        if (config.disable_resend_requests == 0) {
-          rtp_request_resend(next, 1, conn);
-          // debug(1,"Resend request for packet %u.",next);
-          conn->resend_requests++;
-        }
-      }
-    }
-  }
-
   if (!curframe->ready) {
     // debug(1, "Supplying a silent frame for frame %u", read);
     conn->missing_packets++;
     curframe->timestamp = 0; // indicate a silent frame should be substituted
   }
   curframe->ready = 0;
+  curframe->resend_level = 0;
   conn->ab_read = SUCCESSOR(conn->ab_read);
   pthread_mutex_unlock(&conn->ab_mutex);
   return curframe;
@@ -1670,11 +1690,12 @@ static void *player_thread_func(void *arg) {
       inbuflength = inframe->length;
       if (inbuf) {
         play_number++;
-        if (play_number % 100 == 0)
-          debug(3, "Play frame %d.", play_number);
+        //        if (play_number % 100 == 0)
+        //          debug(3, "Play frame %d.", play_number);
         conn->play_number_after_flush++;
         if (inframe->timestamp == 0) {
-          debug(3, "Player has a supplied silent frame.");
+          debug(1, "Player has a supplied silent frame, (possibly frame %u).",
+                SUCCESSOR(conn->last_seqno_read));
           conn->last_seqno_read = (SUCCESSOR(conn->last_seqno_read) &
                                    0xffff); // manage the packet out of sequence minder
           config.output->play(silence, conn->max_frames_per_packet * conn->output_sample_ratio);
@@ -1775,6 +1796,9 @@ static void *player_thread_func(void *arg) {
           // forward in time
 
           at_least_one_frame_seen = 1;
+
+          // now, go back as far as the total latency less, say, 100 ms, and check the presence of
+          // frames from then onwards
 
           int64_t reference_timestamp;
           uint64_t reference_timestamp_time, remote_reference_timestamp_time;
@@ -1895,7 +1919,8 @@ static void *player_thread_func(void *arg) {
                 warn("Very large sync error: %" PRId64 " frames, with delay: %" PRId64
                      ", td_in_frames: %" PRId64 ", rt: %" PRId64 ", nt: %" PRId64
                      ", current_delay: %" PRId64 ", seqno: %u, given timestamp: %" PRIu32 ".",
-                     sync_error, delay, td_in_frames, rt, nt, current_delay, inframe->sequence_number, inframe->given_timestamp);
+                     sync_error, delay, td_in_frames, rt, nt, current_delay,
+                     inframe->sequence_number, inframe->given_timestamp);
               }
               sync_error_out_of_bounds++;
             } else {
