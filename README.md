@@ -530,14 +530,34 @@ sync error in milliseconds, net correction in ppm, corrections in ppm, total pac
 ```
 This will be followed by the statistics themselves at regular intervals, for example:
 ```
-      -1.3,      25.9,      25.9,        3758,      0,      0,      0,      0,   4444,  263,  270
-      -2.0,      96.0,      96.0,        7516,      0,      0,      0,      0,   5357,  260,  267
-      -2.0,      96.0,      96.0,       11274,      0,      0,      0,      0,   4956,  262,  268
-      -2.0,      94.5,      94.5,       15032,      0,      0,      0,      0,   5430,  263,  267
-      -2.0,      99.8,      99.8,       18790,      0,      0,      0,      0,   5047,  261,  268
-      -2.0,      91.5,      91.5,       22548,      0,      0,      0,      0,   5258,  260,  267
-      -2.0,      90.7,      90.7,       26306,      0,      0,      0,      0,   5279,  262,  267
-      -2.0,      96.0,      96.0,       30064,      0,      0,      0,      0,   5551,  260,  266
+      -0.7,       0.0,       0.0,        1003,      0,      0,      0,      0,   6085,  222,  230
+      -0.8,       0.0,       0.0,        2006,      0,      0,      0,      0,   6087,  222,  230
+      -1.1,       0.0,       0.0,        3009,      0,      0,      0,      0,   6078,  223,  230
+      -1.1,       0.0,       0.0,        4012,      0,      0,      0,      0,   6078,  222,  230
+      -1.1,       0.0,       0.0,        5015,      0,      0,      0,      0,   6071,  223,  230
+      -1.1,       0.0,       0.0,        6018,      0,      0,      0,      0,   6081,  223,  230
+      -1.0,       0.0,       0.0,        7021,      0,      0,      0,      0,   6078,  223,  230
+      -0.8,       0.0,       0.0,        8024,      0,      0,      0,      0,   6085,  223,  230
+      -0.3,       0.0,       0.0,        9027,      0,      0,      0,      0,   6111,  224,  230
+      -0.4,       0.0,       0.0,       10030,      0,      0,      0,      0,   6104,  223,  230
+      -0.8,       0.0,       0.0,       11033,      0,      0,      0,      0,   6096,  223,  230
+      -0.5,       0.0,       0.0,       12036,      0,      0,      0,      0,   6094,  224,  230
+      -0.7,       0.0,       0.0,       13039,      0,      0,      0,      0,   6095,  222,  230
+      -0.7,       0.0,       0.0,       14042,      0,      0,      0,      0,   6094,  222,  230
+      -0.2,       0.0,       0.0,       15045,      0,      0,      0,      0,   6111,  223,  230
+      -0.6,       0.0,       0.0,       16048,      0,      2,      0,      2,   6090,  210,  230
+      -0.6,       0.0,       0.0,       17051,      0,      2,      0,      2,   6097,  220,  230
+      -0.5,       0.0,       0.0,       18054,      0,      2,      0,      2,   6097,  224,  230
+      -0.4,       0.0,       0.0,       19057,      0,      2,      0,      2,   6098,  222,  230
+      -0.4,       0.0,       0.0,       20060,      0,      2,      0,      2,   6107,  223,  230
+      -0.4,       0.0,       0.0,       21063,      0,      2,      0,      2,   6111,  222,  230
+      -0.4,       0.0,       0.0,       22066,      0,      3,      0,      3,   6108,  210,  230
+      -0.3,       0.0,       0.0,       23069,      0,      4,      0,      4,   6106,  214,  245
+      -0.4,       0.0,       0.0,       24072,      0,      4,      0,      4,   6104,  232,  245
+      -0.3,       0.0,       0.0,       25075,      0,      4,      0,      4,   6069,  232,  246
+      -0.3,       0.0,       0.0,       26078,      0,      4,      0,      4,   6110,  232,  245
+      -0.3,       0.0,       0.0,       27081,      0,      4,      0,      4,   6088,  231,  245
+      -0.2,       0.0,       0.0,       28084,      0,      4,      0,      4,   6090,  232,  245
 ```
 
 "Sync error in milliseconds" is the average deviation from exact synchronisation. The first line of the example above indicates that the output is on average 1.3 milliseconds behind exact synchronisation. Sync is allowed to drift by the `general` `drift_tolerance_in_seconds` setting — (± 0.002 seconds) by default — before a correction will be made.
@@ -546,7 +566,7 @@ This will be followed by the statistics themselves at regular intervals, for exa
 
 "Corrections in ppm" is the number of frame insertions plus the number of frame deletions (i.e. the total number of corrections), given as a moving average in parts per million. The closer this is to the net corrections, the fewer "unnecessary" corrections that are being made. Third party programs tend to have much larger levels of corrections.
 
-For reference, a drift of one second per day is approximately 11.57 ppm. Left uncorrected, even a drift this small between two audio outputs will be audible after a short time. The above sample is from an Ethernet-connected iMac driving a WiFi-connected Raspberry Pi 3 using an IQaudIO Pi-DigiAMP+.
+For reference, a drift of one second per day is approximately 11.57 ppm. Left uncorrected, even a drift this small between two audio outputs will be audible after a short time. The above sample is from an iPhone 6 to Shairport Sync running on a WiFi-connected Raspberry Pi 3 using a cheap no-name USB DAC.
 
 It's not unusual to have resend requests, late packets and even missing packets if some part of the connection to the Shairport Sync device is over WiFi. Late packets can sometimes be asked for and received multiple times. Sometimes late packets are sent and arrive too late, but have already been sent and received in time, so weren't needed anyway...
 
