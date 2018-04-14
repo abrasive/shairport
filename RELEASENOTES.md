@@ -1,3 +1,16 @@
+Version 3.2RC3
+====
+**Enhancements**
+* Lost UDP packet resending code improved for better performance on busy or congested networks.
+
+**Bug Fixes**
+* 3.2RC3 removes fixes some important and long-standing bugs that could make Shairport Sync less resilient on noisy or poor quality networks.
+
+Version 3.2RC2
+====
+**Bug Fixes**
+* 3.2RC2 makes Shairport Sync work with AirAudio, removing a crashing bug, and includes some more debugging code.
+
 Version 3.2RC1
 ====
 **Enhancements**
