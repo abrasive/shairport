@@ -4,7 +4,7 @@ Shairport Sync is an AirPlay audio player – it plays audio streamed from iTune
 
 Audio played by a Shairport Sync-powered device stays synchronised with the source and hence with similar devices playing the same source. In this way, synchronised multi-room audio is possible for suitable players. (Hence the name Shairport Sync, BTW.)
 
-Shairport Sync runs on Linux and FreeBSD. It does not support AirPlay video or photo streaming.
+Shairport Sync runs on Linux, FreeBSD and OpenBSD. It does not support AirPlay video or photo streaming.
 
 This is the stable "master" branch. Changes and updates are incorporated into this branch relatively slowly. To access the development version, where all the latest changes are made first, please switch to the "development" branch.
 
