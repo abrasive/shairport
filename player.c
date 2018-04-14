@@ -527,9 +527,9 @@ void player_put_packet(seq_t seqno, uint32_t actual_timestamp, int64_t timestamp
                 check_buf->resend_level = j;
                 if (config.disable_resend_requests == 0) {
                   rtp_request_resend(next, 1, conn);
-                  // if (j>=3)
-                  debug(1, "Resend request level #%d for packet %u in range %u to %u.", j, next,
-                        conn->ab_read, conn->ab_write);
+                  if (j >= 3)
+                    debug(2, "Resend request level #%d for packet %u in range %u to %u.", j, next,
+                          conn->ab_read, conn->ab_write);
                   conn->resend_requests++;
                 }
               }
