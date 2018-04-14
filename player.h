@@ -40,6 +40,7 @@ typedef struct audio_buffer_entry { // decoded audio packets
   int resend_level;
   int64_t timestamp;
   seq_t sequence_number;
+  uint32_t given_timestamp; // for debugging and checking
   signed short *data;
   int length; // the length of the decoded data
 } abuf_t;
@@ -194,8 +195,8 @@ void player_stop(rtsp_conn_info *conn);
 void player_volume(double f, rtsp_conn_info *conn);
 void player_volume_without_notification(double f, rtsp_conn_info *conn);
 void player_flush(int64_t timestamp, rtsp_conn_info *conn);
-void player_put_packet(seq_t seqno, int64_t timestamp, uint8_t *data, int len,
-                       rtsp_conn_info *conn);
+void player_put_packet(seq_t seqno, uint32_t actual_timestamp, int64_t timestamp, uint8_t *data,
+                       int len, rtsp_conn_info *conn);
 
 int64_t monotonic_timestamp(uint32_t timestamp,
                             rtsp_conn_info *conn); // add an epoch to the timestamp. The monotonic
