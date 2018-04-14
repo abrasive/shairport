@@ -1,8 +1,16 @@
+Version 3.2d50
+====
+**Bug Fixes**
+* A number of serious and long-standing bugs have been identified and fixed in the threads that handle audio, control and timing packets. Specifically, if UDP reception or transmission errors occured (a rare occurence on a good network, but possible on noisy or congested networks), the threads would quit. An error on the reception of the first control packet could mute an entire play session.
+
+**Enhancements**
+* the code used to request the retransmission of missing audio packets has been significantly improved.
+
 Version 3.2d39
 ====
 **Enhancements**
 * An extra diagnostic to artificially drop audio packets to simulate a noisy network has been added. Set the proportion of packets to be dropped in the `diagnostics` section of the configuration file using the tag `drop_this_fraction_of_audio_packets`. The value should be between 0.0 and 1.0. E.g. a value of 0.001 would mean one packet in a thousand would be dropped, on average. Look in the sample configuration file `/etc/shairport-sync.conf.sample` for the added entry.
-* Compatibility with AirAudio has been added / restored.
+* Minimal compatibility with AirAudio has been added / restored. There remains a question about error correction for handling UDP packet loss. Thanks to [Janusz Kowalczyk](https://github.com/kowalcj0) for reporting the issues.
 
 Version 3.2d35
 ====
