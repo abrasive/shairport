@@ -510,9 +510,9 @@ void player_put_packet(seq_t seqno, uint32_t actual_timestamp, int64_t timestamp
       // here, we should check for missing frames
       if (!conn->ab_buffering) {
         int j;
-        for (j = 1; j <= 7; j++) {
+        for (j = 1; j <= 8; j++) {
           // check j times, after a short period of has elapsed, assuming 352 frames per packet
-          int back_step = (((250 * 44100) / 352) / 1000) * (j); // approx 250, 500 and 750 ms
+          int back_step = (((250 * 44100) / 352) / 1000) * (j); // approx 250 ms intervals
           int k;
           for (k = -2; k <= 2; k++) {
             if (back_step <
@@ -528,8 +528,8 @@ void player_put_packet(seq_t seqno, uint32_t actual_timestamp, int64_t timestamp
                 if (config.disable_resend_requests == 0) {
                   rtp_request_resend(next, 1, conn);
                   // if (j>=3)
-                  debug(1, "Resend request level #%d for packet %u in range %u to %u.", j, next,
-                        conn->ab_read, conn->ab_write);
+                  //debug(2, "Resend request level #%d for packet %u in range %u to %u.", j, next,
+                  //      conn->ab_read, conn->ab_write);
                   conn->resend_requests++;
                 }
               }
@@ -1694,7 +1694,7 @@ static void *player_thread_func(void *arg) {
         //          debug(3, "Play frame %d.", play_number);
         conn->play_number_after_flush++;
         if (inframe->timestamp == 0) {
-          debug(1, "Player has a supplied silent frame, (possibly frame %u).",
+          debug(2, "Player has supplied a silent frame, (possibly frame %u).",
                 SUCCESSOR(conn->last_seqno_read));
           conn->last_seqno_read = (SUCCESSOR(conn->last_seqno_read) &
                                    0xffff); // manage the packet out of sequence minder
