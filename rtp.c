@@ -986,7 +986,7 @@ void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
           conn->rtp_time_of_last_resend_request_error_fp = 0;
         }
       } else {
-        debug(2, "Dropping resend request packet to simulate a bad netowrk.");
+        debug(2, "Dropping resend request packet to simulate a bad network.");
       }
     }
   } else {
