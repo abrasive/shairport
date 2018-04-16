@@ -165,7 +165,7 @@ void *rtp_audio_receiver(void *arg) {
               (drand48() > config.diagnostic_drop_packet_fraction))
             player_put_packet(seqno, actual_timestamp, timestamp, pktp, plen, conn);
           else
-            debug(3, "Dropping audio packet %u to simulate a bad connection.", seqno);
+            debug(2, "Dropping audio packet %u to simulate a bad connection.", seqno);
           continue;
         }
         if (type == 0x56 && seqno == 0) {
@@ -986,7 +986,7 @@ void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
           conn->rtp_time_of_last_resend_request_error_fp = 0;
         }
       } else {
-        debug(2, "rtp_request_resend dropping outgoing packet to simulate a bad netowrk.");
+        debug(2, "Dropping resend request packet to simulate a bad netowrk.");
       }
     }
   } else {
