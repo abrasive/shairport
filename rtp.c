@@ -953,7 +953,7 @@ void clear_reference_timestamp(rtsp_conn_info *conn) {
 void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
   if (conn->rtp_running) {
     // if (!request_sent) {
-    debug(2, "requesting resend of %d packets starting at %u.", count, first);
+    // debug(2, "requesting resend of %d packets starting at %u.", count, first);
     //  request_sent = 1;
     //}
 
