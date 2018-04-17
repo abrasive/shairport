@@ -62,6 +62,10 @@ typedef struct metadata_bundle {
   int advanced_dacp_server_active; // true if there's a reachable DACP server with iTunes
                                    // capabilitiues
                                    // ; false otherwise
+  int dacp_server_has_been_active; // basically this is a delayed version of dacp_server_active,
+  // used detect transitions between server activity being on or off
+  // e.g. to reease metadata when a server goes inactive, but not if it's permanently
+  // inactive.
   enum play_status_type play_status;
   enum shuffle_status_type shuffle_status;
   enum repeat_status_type repeat_status;

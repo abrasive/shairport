@@ -139,10 +139,18 @@ void run_metadata_watchers(void) {
 void metadata_hub_modify_epilog(int modified) {
   // always run this after changing an entry or a sequence of entries in the metadata_hub
   // debug(1, "unlocking metadata hub for writing");
+
+  // Here, we check to see if the dacp_server is transitioning between active and inactive
+  // If it's going off, we will release track metadata and image stuff
+  // If it's already off, we do nothing
+  // If it's transitioning to on, we will record it for use later.
+
   int m = 0;
-  if (metadata_store.dacp_server_active == 0) {
-    // debug(1,"player_stop release track metadata and artwork");
-    //
+  int tm = modified;
+
+  if ((metadata_store.dacp_server_active == 0) &&
+      (metadata_store.dacp_server_has_been_active != 0)) {
+    debug(1, "dacp_scanner going inactive -- release track metadata and artwork");
     if (metadata_store.track_metadata) {
       m = 1;
       metadata_hub_release_track_metadata(metadata_store.track_metadata);
@@ -154,10 +162,12 @@ void metadata_hub_modify_epilog(int modified) {
     }
     if (m)
       debug(2, "Release track metadata after dacp server goes inactive.");
-    modified += m;
+    tm += m;
   }
+  metadata_store.dacp_server_has_been_active =
+      metadata_store.dacp_server_active; // set the scanner_has_been_active now.
   pthread_rwlock_unlock(&metadata_hub_re_lock);
-  if (modified) {
+  if (tm) {
     run_metadata_watchers();
   }
 }
@@ -392,8 +402,7 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
         track_metadata->sort_name = strndup(data, length);
         debug(2, "MH Sort Name set to: \"%s\"", track_metadata->sort_name);
       } else {
-        debug(1,
-              "No track metadata memory allocated when sort name description received!");
+        debug(1, "No track metadata memory allocated when sort name description received!");
       }
       break;
     case 'assa':
@@ -401,8 +410,7 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
         track_metadata->sort_artist = strndup(data, length);
         debug(2, "MH Sort Artist set to: \"%s\"", track_metadata->sort_artist);
       } else {
-        debug(1,
-              "No track metadata memory allocated when sort artist description received!");
+        debug(1, "No track metadata memory allocated when sort artist description received!");
       }
       break;
     case 'assu':
@@ -410,8 +418,7 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
         track_metadata->sort_album = strndup(data, length);
         debug(2, "MH Sort Album set to: \"%s\"", track_metadata->sort_album);
       } else {
-        debug(1,
-              "No track metadata memory allocated when sort album description received!");
+        debug(1, "No track metadata memory allocated when sort album description received!");
       }
       break;
     case 'assc':
@@ -419,32 +426,31 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
         track_metadata->sort_composer = strndup(data, length);
         debug(2, "MH Sort Composer set to: \"%s\"", track_metadata->sort_composer);
       } else {
-        debug(1,
-              "No track metadata memory allocated when sort composer description received!");
+        debug(1, "No track metadata memory allocated when sort composer description received!");
       }
       break;
 
-    default:  
-    /*    
-        {
-          char typestring[5];
-          *(uint32_t *)typestring = htonl(type);
-          typestring[4] = 0;
-          char codestring[5];
-          *(uint32_t *)codestring = htonl(code);
-          codestring[4] = 0;
-          char *payload;
-          if (length < 2048)
-            payload = strndup(data, length);
-          else
-            payload = NULL;
-          debug(1, "MH \"%s\" \"%s\" (%d bytes): \"%s\".", typestring, codestring, length, payload);
-          if (payload)
-            free(payload);
-        }
-    */
+    default:
+      /*
+          {
+            char typestring[5];
+            *(uint32_t *)typestring = htonl(type);
+            typestring[4] = 0;
+            char codestring[5];
+            *(uint32_t *)codestring = htonl(code);
+            codestring[4] = 0;
+            char *payload;
+            if (length < 2048)
+              payload = strndup(data, length);
+            else
+              payload = NULL;
+            debug(1, "MH \"%s\" \"%s\" (%d bytes): \"%s\".", typestring, codestring, length,
+         payload);
+            if (payload)
+              free(payload);
+          }
+      */
       break;
-      
     }
   } else if (type == 'ssnc') {
     switch (code) {

@@ -15,4 +15,9 @@ dbus-send --print-reply --system --dest=org.gnome.ShairportSync /org/gnome/Shair
 # Include Elapsed Time in Log Entries
 dbus-send --print-reply --system --dest=org.gnome.ShairportSync /org/gnome/ShairportSync org.freedesktop.DBus.Properties.Set string:org.gnome.ShairportSync.Diagnostics string:ElapsedTime variant:boolean:true
 
+# Play using regular Remote Control
+dbus-send --system --print-reply --type=method_call --dest=org.gnome.ShairportSync '/org/gnome/ShairportSync' org.gnome.ShairportSync.RemoteControl.Play
+#Remote Control commands include: Play, Pause, PlayPause, Resume, Stop, Next, Previous, VolumeUp, VolumeDown, ToggleMute, FastForward, Rewind, ShuffleSongs
 
+# Set Volume using Advanced Remote Control
+dbus-send --system --print-reply --type=method_call --dest=org.gnome.ShairportSync '/org/gnome/ShairportSync' org.gnome.ShairportSync.AdvancedRemoteControl.SetVolume int32:50
