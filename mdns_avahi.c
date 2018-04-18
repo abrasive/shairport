@@ -448,7 +448,7 @@ void avahi_dacp_dont_monitor(void *userdata) {
     free((char *)(dbs));
     debug(3, "DACP monitor successfully stopped");
   } else {
-    debug(1, "DHCP Monitor is not running.");
+    debug(1, "DACP Monitor is not running.");
   }
 }
 

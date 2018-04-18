@@ -156,7 +156,7 @@ int dacp_send_command(const char *command, char **body, ssize_t *bodysize) {
   hints.ai_family = AF_UNSPEC;
   hints.ai_socktype = SOCK_STREAM;
 
-  // debug(1, "DHCP port string is \"%s:%s\".", server, portstring);
+  // debug(1, "DACP port string is \"%s:%s\".", server, portstring);
 
   int ires = getaddrinfo(server, portstring, &hints, &res);
   if (ires) {

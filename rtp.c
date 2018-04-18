@@ -165,7 +165,7 @@ void *rtp_audio_receiver(void *arg) {
               (drand48() > config.diagnostic_drop_packet_fraction))
             player_put_packet(seqno, actual_timestamp, timestamp, pktp, plen, conn);
           else
-            debug(3, "Dropping audio packet %u to simulate a bad connection.", seqno);
+            debug(2, "Dropping audio packet %u to simulate a bad connection.", seqno);
           continue;
         }
         if (type == 0x56 && seqno == 0) {
@@ -391,7 +391,7 @@ void *rtp_control_receiver(void *arg) {
           debug(1, "Control Receiver -- Unknown RTP packet of type 0x%02X length %d, ignored.",
                 packet[1], nread);
       } else {
-        debug(3, "Control Receiver -- dropping a packet to simulate a bad network.");
+        debug(2, "Control Receiver -- dropping a packet to simulate a bad network.");
       }
     } else {
       debug(1, "Control Receiver -- error receiving a packet.");
@@ -469,7 +469,7 @@ void *rtp_timing_sender(void *arg) {
       }
 
     } else {
-      debug(1, "Timing Sender -- dropping an outbound timing packet to simulate a bad network.");
+      debug(2, "Timing Sender Thread -- dropping outgoing packet to simulate bad network.");
     }
 
     request_number++;
@@ -526,13 +526,12 @@ void *rtp_timing_receiver(void *arg) {
       break;
     }
     nread = recv(conn->timing_socket, packet, sizeof(packet), 0);
-    arrival_time = get_absolute_time_in_fp();
-    //      clock_gettime(CLOCK_MONOTONIC,&att);
 
     if (nread >= 0) {
 
       if ((config.diagnostic_drop_packet_fraction == 0.0) ||
           (drand48() > config.diagnostic_drop_packet_fraction)) {
+        arrival_time = get_absolute_time_in_fp();
 
         // ssize_t plen = nread;
         // debug(1,"Packet Received on Timing Port.");
@@ -725,7 +724,7 @@ void *rtp_timing_receiver(void *arg) {
           debug(1, "Timing port -- Unknown RTP packet of type 0x%02X length %d.", packet[1], nread);
         }
       } else {
-        debug(1, "Timing Receiver -- dropping a packet to simulate a bad network.");
+        debug(2, "Timing Receiver Thread -- dropping incoming packet to simulate a bad network.");
       }
     } else {
       debug(1, "Timing receiver -- error receiving a packet.");
@@ -953,7 +952,7 @@ void clear_reference_timestamp(rtsp_conn_info *conn) {
 void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
   if (conn->rtp_running) {
     // if (!request_sent) {
-    debug(2, "requesting resend of %d packets starting at %u.", count, first);
+    // debug(2, "requesting resend of %d packets starting at %u.", count, first);
     //  request_sent = 1;
     //}
 
@@ -974,14 +973,19 @@ void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
     if ((conn->rtp_time_of_last_resend_request_error_fp) ||
         ((time_of_sending_fp - conn->rtp_time_of_last_resend_request_error_fp) >
          resend_error_backoff_time)) {
-      if (sendto(conn->audio_socket, req, sizeof(req), 0,
-                 (struct sockaddr *)&conn->rtp_client_control_socket, msgsize) == -1) {
-        char em[1024];
-        strerror_r(errno, em, sizeof(em));
-        debug(1, "Error %d using send-to to an audio socket: \"%s\". ", errno, em);
-        conn->rtp_time_of_last_resend_request_error_fp = time_of_sending_fp;
+      if ((config.diagnostic_drop_packet_fraction == 0.0) ||
+          (drand48() > config.diagnostic_drop_packet_fraction)) {
+        if (sendto(conn->audio_socket, req, sizeof(req), 0,
+                   (struct sockaddr *)&conn->rtp_client_control_socket, msgsize) == -1) {
+          char em[1024];
+          strerror_r(errno, em, sizeof(em));
+          debug(1, "Error %d using send-to to an audio socket: \"%s\". ", errno, em);
+          conn->rtp_time_of_last_resend_request_error_fp = time_of_sending_fp;
+        } else {
+          conn->rtp_time_of_last_resend_request_error_fp = 0;
+        }
       } else {
-        conn->rtp_time_of_last_resend_request_error_fp = 0;
+        debug(2, "Dropping resend request packet to simulate a bad network.");
       }
     }
   } else {
