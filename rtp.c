@@ -960,7 +960,7 @@ void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
     char req[8]; // *not* a standard RTCP NACK
     req[0] = 0x80;
     req[1] = (char)0x55 | (char)0x80;            // Apple 'resend'
-    *(unsigned short *)(req + 2) = htons(1);     // our seqnum
+    *(unsigned short *)(req + 2) = htons(1);     // our sequence number
     *(unsigned short *)(req + 4) = htons(first); // missed seqnum
     *(unsigned short *)(req + 6) = htons(count); // count
     socklen_t msgsize = sizeof(struct sockaddr_in);
@@ -976,7 +976,7 @@ void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
          resend_error_backoff_time)) {
       if ((config.diagnostic_drop_packet_fraction == 0.0) ||
           (drand48() > config.diagnostic_drop_packet_fraction)) {
-        if (sendto(conn->audio_socket, req, sizeof(req), 0,
+        if (sendto(conn->control_socket, req, sizeof(req), 0,
                    (struct sockaddr *)&conn->rtp_client_control_socket, msgsize) == -1) {
           char em[1024];
           strerror_r(errno, em, sizeof(em));
