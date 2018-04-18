@@ -1,4 +1,9 @@
-Version 3.2d50
+Version 3.2d41
+====
+**Bug Fixes**
+* Fixed a "silent" bug that prevented Shairport Sync working properly with AirAudio. According to the unofficial standard, requests for resending missing packets should come from the control port. However, up until now, Shairport Sync sent them on the audio port. All AirPlay sources responded correctly to this incorrect request, except AirAudio, which rightly, discarded requests that were not coming from the correct source. Fixed now, with many thanks to [funtax](https://github.com/funtax) and to [Janusz Kowalczyk](https://github.com/kowalcj0) for bringing the issue to the fore.
+
+Version 3.2d40
 ====
 **Bug Fixes**
 * A number of serious and long-standing bugs have been identified and fixed in the threads that handle audio, control and timing packets. Specifically, if UDP reception or transmission errors occured (a rare occurence on a good network, but possible on noisy or congested networks), the threads would quit. An error on the reception of the first control packet could mute an entire play session.
