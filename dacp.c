@@ -223,7 +223,7 @@ int dacp_send_command(const char *command, char **body, ssize_t *bodysize) {
               if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof tv) == -1)
                 debug(1, "Error %d setting receive timeout for DACP service.", errno);
               int ndata = recv(sockfd, buffer, sizeof(buffer), 0);
-              debug(3, "Received %d bytes: \"%s\".", ndata, buffer);
+              // debug(3, "Received %d bytes: \"%s\".", ndata, buffer);
               if (ndata <= 0) {
                 debug(1, "dacp_send_command -- error receiving response for command \"%s\".",
                       command);

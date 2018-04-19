@@ -147,7 +147,7 @@ void *rtp_audio_receiver(void *arg) {
             last_seqno = seqno; // reset warning...
           }
         } else {
-          debug(2, "Audio Receiver -- Retransmitted Audio Data Packet %u received.", seqno);
+          debug(3, "Audio Receiver -- Retransmitted Audio Data Packet %u received.", seqno);
         }
 
         uint32_t actual_timestamp = ntohl(*(uint32_t *)(pktp + 4));
@@ -165,7 +165,7 @@ void *rtp_audio_receiver(void *arg) {
               (drand48() > config.diagnostic_drop_packet_fraction))
             player_put_packet(seqno, actual_timestamp, timestamp, pktp, plen, conn);
           else
-            debug(2, "Dropping audio packet %u to simulate a bad connection.", seqno);
+            debug(3, "Dropping audio packet %u to simulate a bad connection.", seqno);
           continue;
         }
         if (type == 0x56 && seqno == 0) {
@@ -319,7 +319,7 @@ void *rtp_control_receiver(void *arg) {
 
                 if (la != conn->latency) {
                   conn->latency = la;
-                  debug(2, "New latency detected: %" PRId64 ", sync latency: %" PRId64
+                  debug(3, "New latency detected: %" PRId64 ", sync latency: %" PRId64
                            ", minimum latency: %" PRId64 ", maximum "
                            "latency: %" PRId64 ", fixed offset: %" PRId64 ".",
                         la, sync_rtp_timestamp - rtp_timestamp_less_latency, conn->minimum_latency,
@@ -366,13 +366,13 @@ void *rtp_control_receiver(void *arg) {
             // debug(1,"Sync Time is %lld us late (local
             // times).",((local_time_now-reference_timestamp_time)*1000000)>>32);
           } else {
-            debug(1, "Sync packet received before we got a timing packet back.");
+            debug(2, "Sync packet received before we got a timing packet back.");
           }
         } else if (packet[1] == 0xd6) { // resent audio data in the control path -- whaale only?
           pktp = packet + 4;
           plen -= 4;
           seq_t seqno = ntohs(*(uint16_t *)(pktp + 2));
-          debug(2, "Control Receiver -- Retransmitted Audio Data Packet %u received.", seqno);
+          debug(3, "Control Receiver -- Retransmitted Audio Data Packet %u received.", seqno);
 
           uint32_t actual_timestamp = ntohl(*(uint32_t *)(pktp + 4));
           int64_t timestamp = monotonic_timestamp(actual_timestamp, conn);
@@ -391,7 +391,7 @@ void *rtp_control_receiver(void *arg) {
           debug(1, "Control Receiver -- Unknown RTP packet of type 0x%02X length %d, ignored.",
                 packet[1], nread);
       } else {
-        debug(2, "Control Receiver -- dropping a packet to simulate a bad network.");
+        debug(3, "Control Receiver -- dropping a packet to simulate a bad network.");
       }
     } else {
       debug(1, "Control Receiver -- error receiving a packet.");
@@ -469,8 +469,9 @@ void *rtp_timing_sender(void *arg) {
       }
 
     } else {
-      debug(2, "Timing Sender Thread -- dropping outgoing packet to simulate bad network.");
+      debug(3, "Timing Sender Thread -- dropping outgoing packet to simulate bad network.");
     }
+
     request_number++;
 
     // this is to deal with the possibility of missing a timing_sender_stop signal.
@@ -530,9 +531,7 @@ void *rtp_timing_receiver(void *arg) {
 
       if ((config.diagnostic_drop_packet_fraction == 0.0) ||
           (drand48() > config.diagnostic_drop_packet_fraction)) {
-
         arrival_time = get_absolute_time_in_fp();
-        //      clock_gettime(CLOCK_MONOTONIC,&att);
 
         // ssize_t plen = nread;
         // debug(1,"Packet Received on Timing Port.");
@@ -718,14 +717,14 @@ void *rtp_timing_receiver(void *arg) {
             // buffer_occupancy,
             //(return_time*1000000)>>32);
           } else {
-            debug(1, "Time ping turnaround time: %lld us -- it looks like a timing ping was lost.",
+            debug(2, "Time ping turnaround time: %lld us -- it looks like a timing ping was lost.",
                   rtus);
           }
         } else {
           debug(1, "Timing port -- Unknown RTP packet of type 0x%02X length %d.", packet[1], nread);
         }
       } else {
-        debug(2, "Timing Receiver Thread -- dropping incoming packet to simulate a bad network.");
+        debug(3, "Timing Receiver Thread -- dropping incoming packet to simulate a bad network.");
       }
     } else {
       debug(1, "Timing receiver -- error receiving a packet.");
@@ -818,7 +817,7 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, uint16_t cport, uint16_t tport
          "SETUP call?");
   else {
 
-    debug(2, "rtp_setup: cport=%d tport=%d.", cport, tport);
+    debug(3, "rtp_setup: cport=%d tport=%d.", cport, tport);
 
     // print out what we know about the client
     void *client_addr = NULL, *self_addr = NULL;
@@ -854,7 +853,7 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, uint16_t cport, uint16_t tport
     inet_ntop(conn->connection_ip_family, self_addr, conn->self_ip_string,
               sizeof(conn->self_ip_string));
 
-    debug(2, "Set up play connection from %s to self at %s on RTSP conversation thread %d.",
+    debug(2, "SETUP connection from %s to self at %s on RTSP conversation thread %d.",
           conn->client_ip_string, conn->self_ip_string, conn->connection_number);
 
     // set up a the record of the remote's control socket
@@ -912,7 +911,7 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, uint16_t cport, uint16_t tport
     conn->local_audio_port = bind_port(conn->connection_ip_family, conn->self_ip_string,
                                        conn->self_scope_id, &conn->audio_socket);
 
-    debug(2, "listening for audio, control and timing on ports %d, %d, %d.", conn->local_audio_port,
+    debug(3, "listening for audio, control and timing on ports %d, %d, %d.", conn->local_audio_port,
           conn->local_control_port, conn->local_timing_port);
 
     conn->reference_timestamp = 0;
@@ -986,7 +985,7 @@ void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
           conn->rtp_time_of_last_resend_request_error_fp = 0;
         }
       } else {
-        debug(2, "Dropping resend request packet to simulate a bad network.");
+        debug(3, "Dropping resend request packet to simulate a bad network.");
       }
     }
   } else {
