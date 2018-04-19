@@ -1694,7 +1694,7 @@ static void *player_thread_func(void *arg) {
         //          debug(3, "Play frame %d.", play_number);
         conn->play_number_after_flush++;
         if (inframe->timestamp == 0) {
-          debug(1, "Player has supplied a silent frame, (possibly frame %u) for play number %d.",
+          debug(3, "Player has supplied a silent frame, (possibly frame %u) for play number %d.",
                 SUCCESSOR(conn->last_seqno_read),play_number);
           conn->last_seqno_read = (SUCCESSOR(conn->last_seqno_read) &
                                    0xffff); // manage the packet out of sequence minder
@@ -1848,7 +1848,7 @@ static void *player_thread_func(void *arg) {
                 SUCCESSOR(conn->last_seqno_read); // int32_t from seq_t, i.e. uint16_t, so okay.
             if (inframe->sequence_number !=
                 conn->last_seqno_read) { // seq_t, ei.e. uint16_t and int32_t, so okay
-              debug(1, "Player: packets out of sequence: expected: %u, got: %u, with ab_read: %u "
+              debug(2, "Player: packets out of sequence: expected: %u, got: %u, with ab_read: %u "
                        "and ab_write: %u.",
                     conn->last_seqno_read, inframe->sequence_number, conn->ab_read, conn->ab_write);
               conn->last_seqno_read = inframe->sequence_number; // reset warning...
