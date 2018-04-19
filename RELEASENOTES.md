@@ -1,7 +1,7 @@
 Version 3.2RC4
 ====
 **Bug Fixes**
-* 3.2RC4 sends resend requests (correctly) in the control channel now rather than (incorrectly) over the audio channel as before. This makes it compatible with AirAudio and also makes it conform to the Unofficial AirPlay protocol. This bug went unnoticed for so long because other AirPlay sources accept resend requests in the audio channel. Thanks to [funtax](https://github.com/funtax) and to [Janusz Kowalczyk](https://github.com/kowalcj0) for bringing the issue to the fore.
+* 3.2RC4 sends resend requests (correctly) in the control channel now rather than (incorrectly) over the audio channel as before. This makes it compatible with AirAudio and also makes it conform to the [Unofficial AirPlay Protocol Specification](https://nto.github.io/AirPlay.html). This bug went unnoticed for so long because other AirPlay sources accept resend requests in the audio channel. Thanks to [funtax](https://github.com/funtax) and to [Janusz Kowalczyk](https://github.com/kowalcj0) for bringing the issue to the fore.
 
 Version 3.2RC3
 ====
