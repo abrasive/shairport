@@ -1,20 +1,24 @@
+Version 3.2d42
+====
+This version just brings some small changes made to the Release Candidates back into the `development` branch. 
+
 Version 3.2d41
 ====
 **Bug Fixes**
-* Fixed a "silent" bug that prevented Shairport Sync working properly with AirAudio. According to the unofficial standard, requests for resending missing packets should come from the control port. However, up until now, Shairport Sync sent them on the audio port. All AirPlay sources responded correctly to this incorrect request, except AirAudio, which rightly, discarded requests that were not coming from the correct source. Fixed now, with many thanks to [funtax](https://github.com/funtax) and to [Janusz Kowalczyk](https://github.com/kowalcj0) for bringing the issue to the fore.
+* Fixed a "silent" bug that prevented Shairport Sync working properly with AirAudio. According to the [unofficial standard](https://nto.github.io/AirPlay.html), requests for resending missing packets come from the control port; however, up until now, Shairport Sync sent them on the audio port. All AirPlay sources responded correctly to this incorrect request, except AirAudio, which rightly discarded requests that were not coming from the correct source. Fixed now, with many thanks to [funtax](https://github.com/funtax) and to [Janusz Kowalczyk](https://github.com/kowalcj0) for bringing the issue to the fore.
 
 Version 3.2d40
 ====
 **Bug Fixes**
-* A number of serious and long-standing bugs have been identified and fixed in the threads that handle audio, control and timing packets. Specifically, if UDP reception or transmission errors occured (a rare occurence on a good network, but possible on noisy or congested networks), the threads would quit. An error on the reception of the first control packet could mute an entire play session.
+* A number of serious and long-standing bugs have been identified and fixed in the threads that handle audio, control and timing packets. Specifically, if UDP reception or transmission errors occured (a rare occurence on a good network, but possible on noisy or congested networks), the threads would quit. In this way, an error on the reception of the first control packet could mute an entire play session.
 
 **Enhancements**
-* the code used to request the retransmission of missing audio packets has been significantly improved.
+* The code used to request the retransmission of missing audio packets has been significantly improved.
 
 Version 3.2d39
 ====
 **Enhancements**
-* An extra diagnostic to artificially drop audio packets to simulate a noisy network has been added. Set the proportion of packets to be dropped in the `diagnostics` section of the configuration file using the tag `drop_this_fraction_of_audio_packets`. The value should be between 0.0 and 1.0. E.g. a value of 0.001 would mean one packet in a thousand would be dropped, on average. Look in the sample configuration file `/etc/shairport-sync.conf.sample` for the added entry.
+* An extra diagnostic to artificially drop UDP packets to simulate a noisy network has been added. Set the proportion of packets to be dropped in the `diagnostics` section of the configuration file using the tag `drop_this_fraction_of_audio_packets`. The value should be between 0.0 and 1.0. E.g. a value of 0.001 would mean one packet in a thousand would be dropped, on average. Look in the sample configuration file `/etc/shairport-sync.conf.sample` for the added entry.
 * Minimal compatibility with AirAudio has been added / restored. There remains a question about error correction for handling UDP packet loss. Thanks to [Janusz Kowalczyk](https://github.com/kowalcj0) for reporting the issues.
 
 Version 3.2d35
