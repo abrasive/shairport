@@ -49,7 +49,7 @@ Version 3.2d30
 ====
 **Enhancements**
 * A "native" D-Bus Remote Control permits remote control of the current AirPlay or iTunes client. It includes status information about whether the remote control connection is viable or not, i.e. whether it can still be used to control the client.
-A remote control connection to the audio client becomes valid when the client starts AirPlaying to Shairport Sync. The connections remains valid until the audio source deselects Shairport Sync for AirPlay, or until the client disappears, or until another client starts AirPlaying to Shairport Sync. It is likely that a time limit will be put on this, so that after, say, 30 minutes of inactivity, the reomte contol connection will be dropped.
+A remote control connection to the audio client becomes valid when the client starts AirPlaying to Shairport Sync. The connections remains valid until the audio source deselects Shairport Sync for AirPlay, or until the client disappears, or until another client starts AirPlaying to Shairport Sync. It is likely that a time limit will be put on this, so that after, say, 30 minutes of inactivity, the remote contol connection will be dropped.
 
 Version 3.2d29
 ====
