@@ -430,7 +430,7 @@ void *dacp_monitor_thread_code(__attribute__((unused)) void *na) {
     else
       idle_scan_count = 0;
 
-    debug(2, "Scan Result: %d, Bad Scan Count: %d, Idle Scan Count: %d.", result, bad_result_count,
+    debug(3, "Scan Result: %d, Bad Scan Count: %d, Idle Scan Count: %d.", result, bad_result_count,
           idle_scan_count);
 
     if ((bad_result_count == config.scan_max_bad_response_count) ||
