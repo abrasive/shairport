@@ -277,7 +277,7 @@ AC_ARG_WITH(dns_sd, [  --with-dns_sd = choose dns_sd mDNS support], [
 AM_CONDITIONAL([USE_DNS_SD], [test "x$HAS_DNS_SD" = "x1"])
 
 # Look for dbus flag
-AC_ARG_WITH(dbus, [  --with-dbus-interface = include support for the native Shairport Sync D-Bus interface], [
+AC_ARG_WITH(dbus-interface, [  --with-dbus-interface = include support for the native Shairport Sync D-Bus interface], [
   AC_MSG_RESULT(>>Including dbus support)
   HAS_DBUS=1
   AC_DEFINE([HAVE_DBUS], 1, [Needed by the compiler.])
@@ -295,7 +295,7 @@ AC_ARG_WITH(dbus-test-client, [  --with-dbus-test-client = compile dbus test cli
 AM_CONDITIONAL([USE_DBUS_CLIENT], [test "x$HAS_DBUS_CLIENT" = "x1"])
 
 # Look for mpris flag
-AC_ARG_WITH(mpris, [  --with-mpris-interface = include support for a Shairport Sync D-Bus interface conforming to the MPRIS standard], [
+AC_ARG_WITH(mpris-interface, [  --with-mpris-interface = include support for a Shairport Sync D-Bus interface conforming to the MPRIS standard], [
   AC_MSG_RESULT(>>Including the MPRIS D-Bus Interface)
   HAS_MPRIS=1
   AC_DEFINE([HAVE_MPRIS], 1, [Needed by the compiler.])
