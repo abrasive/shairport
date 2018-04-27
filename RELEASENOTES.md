@@ -2,7 +2,7 @@ Version 3.2d44
 ====
 **Bug Fixes**
 * When errors occur sending resend requests, back off for 0.5 seconds, rather than 10 seconds, and make the code actually work.
-* Make the configuration options to include the dbus ionterface and the mpris interfaces be `--with-dbus-interface` and `--with-mpris-interface` as expected, not `--with-dbus` and `--with-mpris` as they actually were.
+* Make the configuration options for including the dbus interface and the mpris interface be `--with-dbus-interface` and `--with-mpris-interface` as expected, not `--with-dbus` and `--with-mpris` as they actually were.
 
 Version 3.2d42
 ====
