@@ -11,7 +11,7 @@ This version just brings some small changes made to the Release Candidates back 
 Version 3.2d41
 ====
 **Bug Fixes**
-* Fixed a "silent" bug that prevented Shairport Sync working properly with AirAudio. According to the [unofficial standard](https://nto.github.io/AirPlay.html), requests for resending missing packets come from the control port; however, up until now, Shairport Sync sent them on the audio port. All AirPlay sources responded to these improperly-delivered requests except AirAudio, which discards requests that do not come from the correct source. Fixed now, with many thanks to [funtax](https://github.com/funtax) and to [Janusz Kowalczyk](https://github.com/kowalcj0) for bringing the issue to the fore.
+* Fixed a hitherto-silent bug that prevented Shairport Sync working properly with AirAudio. According to the [unofficial standard](https://nto.github.io/AirPlay.html), requests for resending missing packets come from the control port; however, up until now, Shairport Sync sent them on the audio port. All AirPlay sources responded to these improperly-delivered requests except AirAudio, which discards requests that do not come from the correct source. Fixed now, with many thanks to [funtax](https://github.com/funtax) and to [Janusz Kowalczyk](https://github.com/kowalcj0) for bringing the issue to the fore.
 
 Version 3.2d40
 ====
