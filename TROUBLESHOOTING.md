@@ -12,7 +12,7 @@ In this brief document will be listed some problems and some solutions, some pro
 
 **Problem**
 
-Shairport Sync is installed and running, but sometimes it disappears from the network, and sometimes it suffers from long dropouts.
+Shairport Sync is installed and running, but sometimes it disappears from the network, and sometimes it suffers from long dropouts. You can check WiFi throughput using, for example, https://thepi.io/how-to-use-your-raspberry-pi-to-monitor-broadband-speed/
 
 **Possible Cause**
 
@@ -35,7 +35,7 @@ to the file `/etc/network/interfaces`.
 There are some more details in some the closed issues on this repository.
 
 ### Faulty WiFi
-For an example of what it can take to track down a bad WiFi situation -- in this case, a slowly-dying base station -- please look at [this report](https://github.com/mikebrady/shairport-sync/issues/689).
+For an example of what it can take to track down a bad WiFi situation – in this case, a faulty WiFi adapter – please look at [this report](https://github.com/mikebrady/shairport-sync/issues/689).
 
 ### Can't play from iTunes on Windows
 
