@@ -10,9 +10,13 @@ In this brief document will be listed some problems and some solutions, some pro
 
 ### WiFi adapter running in power-saving / low-power mode
 
+**Check Throughput**
+
+ You can check WiFi throughput using, for example, https://thepi.io/how-to-use-your-raspberry-pi-to-monitor-broadband-speed/
+
 **Problem**
 
-Shairport Sync is installed and running, but sometimes it disappears from the network, and sometimes it suffers from long dropouts. You can check WiFi throughput using, for example, https://thepi.io/how-to-use-your-raspberry-pi-to-monitor-broadband-speed/
+Shairport Sync is installed and running, but sometimes it disappears from the network, and sometimes it suffers from long dropouts.
 
 **Possible Cause**
 
