@@ -303,11 +303,11 @@ void *rtp_control_receiver(void *arg) {
               uint16_t flags = nctohs(&packet[2]);
               int64_t la = sync_rtp_timestamp - rtp_timestamp_less_latency;
               debug(3, "Latency derived just from the sync packet is %" PRId64 " frames.", la);
-              if ((flags == 7) || ((conn->AirPlayVersion > 0) && (conn->AirPlayVersion <= 363))) {
+              if ((flags == 7) || ((conn->AirPlayVersion > 0) && (conn->AirPlayVersion <= 353))) {
                 la += config.fixedLatencyOffset;
                 debug(3, "A fixed latency offset of %d frames has been added, giving a latency of "
                          "%" PRId64
-                         " frames with flags: %d and AirPlay version %d (triggers if 363 or less).",
+                         " frames with flags: %d and AirPlay version %d (triggers if 353 or less).",
                       config.fixedLatencyOffset, la, flags, conn->AirPlayVersion);
               }
               if ((conn->maximum_latency) && (conn->maximum_latency < la))
