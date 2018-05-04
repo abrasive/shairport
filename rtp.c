@@ -292,6 +292,8 @@ void *rtp_control_receiver(void *arg) {
               // delay of 11,025 frames should be added -- iTunes set this field to 7 and
               // AirPlay sets it to 4.
 
+              // However, on older versions of AirPlay, the 11,025 frames seem to be necessary too
+
               // The value of 11,025 (0.25 seconds) is a guess based on the "Audio-Latency"
               // parameter
               // returned by an AE.
@@ -300,9 +302,14 @@ void *rtp_control_receiver(void *arg) {
 
               uint16_t flags = nctohs(&packet[2]);
               int64_t la = sync_rtp_timestamp - rtp_timestamp_less_latency;
-              if (flags == 7)
+              debug(3, "Latency derived just from the sync packet is %" PRId64 " frames.", la);
+              if ((flags == 7) || ((conn->AirPlayVersion > 0) && (conn->AirPlayVersion <= 363))) {
                 la += config.fixedLatencyOffset;
-              // debug(1,"Latency calculated from the sync packet is %" PRId64 " frames.",la);
+                debug(3, "A fixed latency offset of %d frames has been added, giving a latency of "
+                         "%" PRId64
+                         " frames with flags: %d and AirPlay version %d (triggers if 363 or less).",
+                      config.fixedLatencyOffset, la, flags, conn->AirPlayVersion);
+              }
               if ((conn->maximum_latency) && (conn->maximum_latency < la))
                 la = conn->maximum_latency;
               if ((conn->minimum_latency) && (conn->minimum_latency > la))
@@ -969,8 +976,8 @@ void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
     }
 #endif
     uint64_t time_of_sending_fp = get_absolute_time_in_fp();
-    uint64_t resend_error_backoff_time = (uint64_t)1 << (32-1); // half a second
-    if ((conn->rtp_time_of_last_resend_request_error_fp==0) ||
+    uint64_t resend_error_backoff_time = (uint64_t)1 << (32 - 1); // half a second
+    if ((conn->rtp_time_of_last_resend_request_error_fp == 0) ||
         ((time_of_sending_fp - conn->rtp_time_of_last_resend_request_error_fp) >
          resend_error_backoff_time)) {
       if ((config.diagnostic_drop_packet_fraction == 0.0) ||
@@ -979,17 +986,20 @@ void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
                    (struct sockaddr *)&conn->rtp_client_control_socket, msgsize) == -1) {
           char em[1024];
           strerror_r(errno, em, sizeof(em));
-          debug(1, "Error %d using send-to to an audio socket: \"%s\". Backing off for 0.5 seconds.", errno, em);
+          debug(1,
+                "Error %d using send-to to an audio socket: \"%s\". Backing off for 0.5 seconds.",
+                errno, em);
           conn->rtp_time_of_last_resend_request_error_fp = time_of_sending_fp;
         } else {
           conn->rtp_time_of_last_resend_request_error_fp = 0;
         }
       } else {
-        debug(3, "Dropping resend request packet to simulate a bad network. Backing off for 0.5 seconds.");
+        debug(3, "Dropping resend request packet to simulate a bad network. Backing off for 0.5 "
+                 "seconds.");
         conn->rtp_time_of_last_resend_request_error_fp = time_of_sending_fp;
       }
     } else {
-    	debug(3,"Backing off sending resend requests due to a previous send-to error");
+      debug(3, "Backing off sending resend requests due to a previous send-to error");
     }
   } else {
     // if (!request_sent) {
