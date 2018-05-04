@@ -1,3 +1,8 @@
+Version 3.2d45
+====
+**Enhancement**
+* Restore the old method for calculating latency for older AirPlay sources: an AirPlay source displaying an AirPlay User Agent string verion of 363 or older -- corresponding to iOS 11.1.2 or older -- will add an extra 0.25 seconds to the latency requested. This seems to be right.
+
 Version 3.2d44
 ====
 **Bug Fixes**
