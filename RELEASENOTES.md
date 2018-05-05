@@ -1,3 +1,8 @@
+Version 3.2d46
+====
+
+Update [TROUBLESHOOTING.md](https://github.com/mikebrady/shairport-sync/blob/development/TROUBLESHOOTING.md) to correspond to 3.2RC6.
+
 Version 3.2d45
 ====
 **Enhancement**
