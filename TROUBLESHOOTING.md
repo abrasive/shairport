@@ -10,6 +10,10 @@ In this brief document will be listed some problems and some solutions, some pro
 
 ### WiFi adapter running in power-saving / low-power mode
 
+**Check Throughput**
+
+ You can check WiFi throughput using, for example, https://thepi.io/how-to-use-your-raspberry-pi-to-monitor-broadband-speed/
+
 **Problem**
 
 Shairport Sync is installed and running, but sometimes it disappears from the network, and sometimes it suffers from long dropouts.
@@ -33,6 +37,9 @@ wireless-power off
 to the file `/etc/network/interfaces`.
 
 There are some more details in some the closed issues on this repository.
+
+### Faulty WiFi
+For an example of what it can take to track down a bad WiFi situation – in this case, a faulty WiFi adapter – please look at [this report](https://github.com/mikebrady/shairport-sync/issues/689).
 
 ### Can't play from iTunes on Windows
 
