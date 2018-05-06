@@ -892,8 +892,11 @@ static void flush(void) {
   int derr;
   do_mute(1);
   if (alsa_handle) {
-    if ((derr = snd_pcm_drop(alsa_handle)))
-      debug(1, "Error %d (\"%s\") draining the output device.", derr, snd_strerror(derr));
+
+    debug(1,"Start drain.");
+    if ((derr = snd_pcm_drain(alsa_handle)))
+      debug(1, "Error %d (\"%s\") draining output device.", derr, snd_strerror(derr));
+    debug(1,"Finish drain.");
 
     if ((derr = snd_pcm_hw_free(alsa_handle)))
       debug(1, "Error %d (\"%s\") freeing the output device hardware.", derr, snd_strerror(derr));
