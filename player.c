@@ -452,8 +452,7 @@ static void terminate_decoders(rtsp_conn_info *conn) {
 static void init_buffer(rtsp_conn_info *conn) {
   int i;
   for (i = 0; i < BUFFER_FRAMES; i++)
-    conn->audio_buffer[i].data = malloc(
-        conn->input_bytes_per_frame * (conn->max_frames_per_packet + conn->max_frame_size_change));
+    conn->audio_buffer[i].data = malloc(conn->input_bytes_per_frame * conn->max_frames_per_packet);
   ab_resync(conn);
 }
 
@@ -1036,13 +1035,13 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
                       // ab_write),ab_read,ab_write);
                       conn->ab_buffering = 0;
                     }
-                    signed short *silence;
+                    void *silence;
                     // if (fs==0)
                     //  debug(2,"Zero length silence buffer needed with gross_frame_gap of %lld and
                     //  dac_delay of %lld.",gross_frame_gap,dac_delay);
                     // the fs (number of frames of silence to play) can be zero in the DAC doesn't
                     // start
-                    // ouotputting frames for a while -- it could get loaded up but not start
+                    // outputting frames for a while -- it could get loaded up but not start
                     // responding
                     // for many milliseconds.
                     if (fs > 0) {
@@ -1066,7 +1065,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
                   // debug(1,"Back end has no delay function.");
                   // send the appropriate prefiller here...
 
-                  signed short *silence;
+                  void *silence;
                   if (lead_time != 0) {
                     int64_t frame_gap = (lead_time * config.output_rate) >> 32;
                     // debug(1,"%d frames needed.",frame_gap);
@@ -1079,7 +1078,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
                       if (silence == NULL)
                         debug(1, "Failed to allocate %d frame silence buffer.", fs);
                       else {
-                        // debug(1, "Outputting %d frames of silence.", fs);
+                        // debug(1, "No delay function -- outputting %d frames of silence.", fs);
                         memset(silence, 0, conn->output_bytes_per_frame * fs);
                         config.output->play(silence, fs);
                         free(silence);
@@ -1546,7 +1545,7 @@ static void *player_thread_func(void *arg) {
   static char rnstate[256];
   initstate(time(NULL), rnstate, 256);
 
-  signed short *inbuf, *tbuf, *silence;
+  signed short *inbuf, *tbuf;
 
   int32_t *sbuf;
 
@@ -1597,13 +1596,12 @@ static void *player_thread_func(void *arg) {
     die("Failed to allocate memory for the transition buffer.");
   sbuf = 0;
   // initialise this, because soxr stuffing might be chosen later
-  // if (config.packet_stuffing == ST_soxr) { // needed for stuffing
+
   sbuf = malloc(sizeof(int32_t) * 2 * (conn->max_frames_per_packet * conn->output_sample_ratio +
                                        conn->max_frame_size_change));
   if (sbuf == NULL)
     debug(1, "Failed to allocate memory for the sbuf buffer.");
-  // }
-  // We might need an output buffer and a buffer of silence.
+
   // The size of these dependents on the number of frames, the size of each frame and the maximum
   // size change
   outbuf = malloc(
@@ -1611,12 +1609,6 @@ static void *player_thread_func(void *arg) {
       (conn->max_frames_per_packet * conn->output_sample_ratio + conn->max_frame_size_change));
   if (outbuf == NULL)
     die("Failed to allocate memory for an output buffer.");
-  silence = malloc(conn->output_bytes_per_frame * conn->max_frames_per_packet *
-                   conn->output_sample_ratio);
-  if (silence == NULL)
-    die("Failed to allocate memory for a silence buffer.");
-  memset(silence, 0,
-         conn->output_bytes_per_frame * conn->max_frames_per_packet * conn->output_sample_ratio);
   conn->first_packet_timestamp = 0;
   conn->missing_packets = conn->late_packets = conn->too_late_packets = conn->resend_requests = 0;
   conn->flush_rtp_timestamp =
@@ -1695,10 +1687,22 @@ static void *player_thread_func(void *arg) {
         conn->play_number_after_flush++;
         if (inframe->timestamp == 0) {
           debug(3, "Player has supplied a silent frame, (possibly frame %u) for play number %d.",
-                SUCCESSOR(conn->last_seqno_read),play_number);
+                SUCCESSOR(conn->last_seqno_read), play_number);
           conn->last_seqno_read = (SUCCESSOR(conn->last_seqno_read) &
                                    0xffff); // manage the packet out of sequence minder
-          config.output->play(silence, conn->max_frames_per_packet * conn->output_sample_ratio);
+
+          void *silence = malloc(conn->output_bytes_per_frame * conn->max_frames_per_packet *
+                                 conn->output_sample_ratio);
+          if (silence == NULL) {
+            debug(1, "Failed to allocate memory for a silent frame silence buffer.");
+          } else {
+            // the player may change the contents of the buffer, so it has to be zeroed each time;
+            // might as well malloc and freee it locally
+            memset(silence, 0, conn->output_bytes_per_frame * conn->max_frames_per_packet *
+                                   conn->output_sample_ratio);
+            config.output->play(silence, conn->max_frames_per_packet * conn->output_sample_ratio);
+            free(silence);
+          }
         } else if (conn->play_number_after_flush < 10) {
           /*
           int64_t difference = 0;
@@ -1708,7 +1712,18 @@ static void *player_thread_func(void *arg) {
           debug(1, "Play number %d, monotonic timestamp %llx, difference
           %lld.",conn->play_number_after_flush,inframe->timestamp,difference);
           */
-          config.output->play(silence, conn->max_frames_per_packet * conn->output_sample_ratio);
+          void *silence = malloc(conn->output_bytes_per_frame * conn->max_frames_per_packet *
+                                 conn->output_sample_ratio);
+          if (silence == NULL) {
+            debug(1, "Failed to allocate memory for a flush silence buffer.");
+          } else {
+            // the player may change the contents of the buffer, so it has to be zeroed each time;
+            // might as well malloc and freee it locally
+            memset(silence, 0, conn->output_bytes_per_frame * conn->max_frames_per_packet *
+                                   conn->output_sample_ratio);
+            config.output->play(silence, conn->max_frames_per_packet * conn->output_sample_ratio);
+            free(silence);
+          }
         } else if (frames_to_drop) {
           if (frames_to_drop > 3 * config.output_rate)
             warn("Very large number of frames to drop: %" PRId64 ".", frames_to_drop);
@@ -1948,7 +1963,7 @@ static void *player_thread_func(void *arg) {
                   die("Failed to allocate memory for a long_silence buffer of %d frames.",
                       silence_length);
                 memset(long_silence, 0, conn->output_bytes_per_frame * silence_length);
-                config.output->play((short *)long_silence, silence_length);
+                config.output->play(long_silence, silence_length);
                 free(long_silence);
               }
             } else {
@@ -2085,7 +2100,7 @@ static void *player_thread_func(void *arg) {
                 if (play_samples == 0)
                   debug(1, "play_samples==0 skipping it (1).");
                 else
-                  config.output->play((short *)outbuf, play_samples); // remove the (short*)!
+                  config.output->play(outbuf, play_samples);
               }
 
               // check for loss of sync
@@ -2119,7 +2134,7 @@ static void *player_thread_func(void *arg) {
             if (outbuf == NULL)
               debug(1, "NULL outbuf to play -- skipping it.");
             else
-              config.output->play((short *)outbuf, play_samples); // remove the (short*)!
+              config.output->play(outbuf, play_samples); // remove the (short*)!
           }
 
           // mark the frame as finished
@@ -2314,8 +2329,6 @@ static void *player_thread_func(void *arg) {
   }
   if (outbuf)
     free(outbuf);
-  if (silence)
-    free(silence);
   if (tbuf)
     free(tbuf);
   if (sbuf)
