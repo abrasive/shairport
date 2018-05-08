@@ -1,3 +1,8 @@
+Version 3.2d47
+====
+**Bug Fix**
+* A very subtle bug that would occasionally cause a loud 80 millisecond buzz when a new track was selected has been located and fixed. Thanks to [mistipen](https://github.com/mistepien) and [artenverho](https://github.com/artenverho) for help with this.
+
 Version 3.2d46
 ====
 
