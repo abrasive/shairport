@@ -1,3 +1,10 @@
+
+Version 3.2RC6
+====
+**Bug Fixes**
+
+* Restores audio sync with videos on older versions of iOS (prior to iOS 11.2) and macOS by restoring the old way of determining latency for clients identifying with AirPlay user agent strings having a version of 353 (iOS 11.1.2) or earlier. Thanks to [Mmoi-Fr](https://github.com/Mmoi-Fr) for help with this.
+
 Version 3.2RC5
 ====
 **Bug Fixes**
