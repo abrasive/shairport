@@ -22,7 +22,7 @@ typedef struct {
   void (*start)(int sample_rate, int sample_format);
 
   // block of samples
-  void (*play)(short buf[], int samples);
+  void (*play)(void *buf, int samples);
   void (*stop)(void);
 
   // may be null if not implemented
