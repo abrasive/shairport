@@ -1593,15 +1593,15 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
     if (hdr) {
       debug(2, "Play connection from user agent \"%s\" on RTSP conversation thread %d.", hdr,
             conn->connection_number);
-      // if the user agent is AirPlay and has a version number of 353 or less (from iOS 11.1)
+      // if the user agent is AirPlay and has a version number of 353 or less (from iOS 11.1,2)
       // use the older way of calculating the latency
 
       char *p = strstr(hdr, "AirPlay");
       if (p) {
         p = strchr(p, '/');
         if (p) {
-          conn->AirPlayVersion = atoi(p + 1); // unsigned integer -- up to 2^32-1
-          debug(1, "AirPlay version %d detected.", conn->AirPlayVersion);
+          conn->AirPlayVersion = atoi(p + 1);
+          debug(2, "AirPlay version %d detected.", conn->AirPlayVersion);
         }
       }
 

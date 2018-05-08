@@ -40,7 +40,7 @@ static void help(void);
 static int init(int argc, char **argv);
 static void deinit(void);
 static void start(int i_sample_rate, int i_sample_format);
-static void play(short buf[], int samples);
+static void play(void *buf, int samples);
 static void stop(void);
 static void flush(void);
 int delay(long *the_delay);
@@ -836,7 +836,7 @@ int delay(long *the_delay) {
   }
 }
 
-static void play(short buf[], int samples) {
+static void play(void *buf, int samples) {
   // debug(3,"audio_alsa play called.");
   int ret = 0;
   if (alsa_handle == NULL) {
@@ -867,7 +867,7 @@ static void play(short buf[], int samples) {
       if (samples == 0)
         debug(1, "empty buffer being passed to pcm_writei -- skipping it");
       if ((samples != 0) && (buf != NULL)) {
-        err = alsa_pcm_write(alsa_handle, (char *)buf, samples);
+        err = alsa_pcm_write(alsa_handle, buf, samples);
         if (err < 0) {
           debug(1, "Error %d writing %d samples in play(): \"%s\".", err, samples,
                 snd_strerror(err));
@@ -892,8 +892,9 @@ static void flush(void) {
   int derr;
   do_mute(1);
   if (alsa_handle) {
+
     if ((derr = snd_pcm_drop(alsa_handle)))
-      debug(1, "Error %d (\"%s\") draining the output device.", derr, snd_strerror(derr));
+      debug(1, "Error %d (\"%s\") dropping output device.", derr, snd_strerror(derr));
 
     if ((derr = snd_pcm_hw_free(alsa_handle)))
       debug(1, "Error %d (\"%s\") freeing the output device hardware.", derr, snd_strerror(derr));
@@ -901,6 +902,7 @@ static void flush(void) {
     // flush also closes the device
     if ((derr = snd_pcm_close(alsa_handle)))
       debug(1, "Error %d (\"%s\") closing the output device.", derr, snd_strerror(derr));
+
     alsa_handle = NULL;
   }
   pthread_mutex_unlock(&alsa_mutex);
