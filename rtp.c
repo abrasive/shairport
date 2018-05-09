@@ -469,14 +469,12 @@ void *rtp_timing_sender(void *arg) {
 
     if ((config.diagnostic_drop_packet_fraction == 0.0) ||
         (drand48() > config.diagnostic_drop_packet_fraction)) {
-
       if (sendto(conn->timing_socket, &req, sizeof(req), 0,
                  (struct sockaddr *)&conn->rtp_client_timing_socket, msgsize) == -1) {
         char em[1024];
         strerror_r(errno, em, sizeof(em));
         debug(1, "Error %d using send-to to the timing socket: \"%s\".", errno, em);
       }
-
     } else {
       debug(3, "Timing Sender Thread -- dropping outgoing packet to simulate bad network.");
     }
@@ -808,7 +806,17 @@ static uint16_t bind_port(int ip_family, const char *self_ip_address, uint32_t s
     struct sockaddr_in *sa = (struct sockaddr_in *)&local;
     sport = ntohs(sa->sin_port);
   }
-  fcntl(local_socket, F_SETFL, O_NONBLOCK);
+  // fcntl(local_socket, F_SETFL, O_NONBLOCK);
+
+  // don't wait if outputting something will take longer than this time.
+  struct timeval timeout;
+  timeout.tv_sec = 0;
+  timeout.tv_usec = 2000; // two milliseconds
+
+  if (setsockopt(local_socket, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout)) < 0)
+    debug(1, "bind_port set output timeout failed.");
+  //  else
+  //    debug(1,"bind_port set output timeout succeeded.");
 
   *sock = local_socket;
   return sport;
@@ -995,6 +1003,7 @@ void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
         } else {
           conn->rtp_time_of_last_resend_request_error_fp = 0;
         }
+
       } else {
         debug(3, "Dropping resend request packet to simulate a bad network. Backing off for 0.5 "
                  "seconds.");
