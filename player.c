@@ -1725,8 +1725,10 @@ static void *player_thread_func(void *arg) {
             free(silence);
           }
         } else if (frames_to_drop) {
-          if (frames_to_drop > 3 * config.output_rate)
-            warn("Very large number of frames to drop: %" PRId64 ".", frames_to_drop);
+          if (frames_to_drop > 3 * config.output_rate) {
+            warn("Shome mhistake shurely: very large number of frames to drop: %" PRId64 " -- setting it to %" PRId64 ".", frames_to_drop,3 * config.output_rate);
+            frames_to_drop = 3 * config.output_rate;
+          }
           debug(3, "%" PRId64 " frames to drop.", frames_to_drop);
           frames_to_drop -= inframe->length;
           if (frames_to_drop < 0)
