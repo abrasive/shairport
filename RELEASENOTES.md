@@ -1,3 +1,9 @@
+
+Version 3.2d48
+====
+**Bug Fix**
+* A seg fault possibly caused by a dangling pointer has been addressed by making the UDP sockets blocking rather than non-blocking. A two millisecond limit has been put on the sendto calls.
+
 Version 3.2d47
 ====
 **Bug Fix**
