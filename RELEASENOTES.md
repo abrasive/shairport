@@ -1,4 +1,8 @@
 
+Version 3.2d49
+====
+* A few extra debugging messages to try to locate where a segfault is occurring.
+
 Version 3.2d48
 ====
 **Bug Fix**
