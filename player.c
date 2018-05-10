@@ -1200,6 +1200,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
   } while (wait);
 
   if (conn->player_thread_please_stop) {
+    debug(3,"buffer_get_frame exiting due to thread stop request.");
     pthread_mutex_unlock(&conn->ab_mutex);
     return 0;
   }
@@ -2272,6 +2273,8 @@ static void *player_thread_func(void *arg) {
       }
     }
   }
+  
+  debug(3,"Play thread main loop exited.");
 
   if (config.statistics_requested) {
     int rawSeconds = (int)difftime(time(NULL), playstart);
@@ -2288,10 +2291,12 @@ static void *player_thread_func(void *arg) {
   mdns_dacp_dont_monitor(conn->dapo_private_storage);
 #endif
 
+  debug(3,"Requesting output device to stop.");
+
   if (config.output->stop)
     config.output->stop();
 
-  debug(2, "Shut down audio, control and timing threads");
+  debug(2, "Shutting down audio, control and timing threads");
   conn->please_stop = 1;
   pthread_kill(rtp_audio_thread, SIGUSR1);
   pthread_kill(rtp_control_thread, SIGUSR1);
@@ -2307,6 +2312,8 @@ static void *player_thread_func(void *arg) {
 
   // usleep(100000); // allow this time to (?) allow the alsa subsystem to finish cleaning up after
   // itself. 50 ms seems too short
+  
+  debug(3,"Freeing audio buffers and decoders.");
 
   free_audio_buffers(conn);
   terminate_decoders(conn);
