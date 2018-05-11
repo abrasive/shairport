@@ -1358,10 +1358,12 @@ int main(int argc, char **argv) {
   // audio_backend_latency_offset instead.
 
   if (config.userSuppliedLatency) {
-    inform("The default latency setting is deprecated, as Shairport Sync can now get the correct "
+    inform("The fixed latency setting is deprecated, as Shairport Sync can now get the correct "
            "latency from the source.");
     inform("Please remove this setting and use the relevant audio_backend_latency_offset setting, "
            "if necessary, to compensate for delays elsewhere.");
+    if ((config.userSuppliedLatency!=0) && ((config.userSuppliedLatency<4410) || (config.userSuppliedLatency>154350)))
+      die("An out-of-range fixed latency has been specified. It must be between 4,410 and 154,350.");
   }
 
   /* print out version */
