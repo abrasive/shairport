@@ -364,9 +364,17 @@ static int avahi_register(char *srvname, int srvport) {
 
 static void avahi_unregister(void) {
   debug(1, "avahi: avahi_unregister.");
-  if (tpoll)
+  if (tpoll) {
     avahi_threaded_poll_stop(tpoll);
-  tpoll = NULL;
+    
+    if (client) {
+      avahi_client_free(client);
+      client = NULL;
+    };
+    
+    avahi_threaded_poll_free(tpoll);
+    tpoll = NULL;
+  }
 
   if (service_name)
     free(service_name);

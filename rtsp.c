@@ -2082,14 +2082,15 @@ void rtsp_listen_loop(void) {
   }
 
   mdns_register();
+  
 
   // printf("Listening for connections.");
   // shairport_startup_complete();
 
   int acceptfd;
   struct timeval tv;
-  while (1) {
-    tv.tv_sec = 300;
+  do {
+    tv.tv_sec = 60;
     tv.tv_usec = 0;
 
     for (i = 0; i < nsock; i++)
@@ -2182,7 +2183,13 @@ void rtsp_listen_loop(void) {
       conn->running = 1; // this must happen before the thread is tracked
       track_thread(conn);
     }
-  }
-  perror("select");
-  die("fell out of the RTSP select loop");
+  } while (1);
+  
+  mdns_unregister();
+  
+  if (sockfd)
+    free(sockfd);
+
+  //perror("select");
+  //die("fell out of the RTSP select loop");
 }
