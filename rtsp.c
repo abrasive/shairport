@@ -1861,6 +1861,12 @@ authenticate:
 static void *rtsp_conversation_thread_func(void *pconn) {
   rtsp_conn_info *conn = pconn;
 
+  // create the player thread lock.
+  int rwli = pthread_rwlock_init(&conn->player_thread_lock, NULL);
+  if (rwli != 0)
+    die("Error %d initialising player_thread_lock for conversation thread %d.", rwli,
+        conn->connection_number);
+
   rtp_initialise(conn);
 
   rtsp_message *req, *resp;
@@ -1943,6 +1949,7 @@ static void *rtsp_conversation_thread_func(void *pconn) {
       if (tstop) {
         debug(3, "Synchronously terminate playing thread of RTSP conversation thread %d.",
               conn->connection_number);
+
         if (conn->player_thread)
           debug(1, "RTSP Channel unexpectedly closed or a serious error occured -- closing the "
                    "player thread.");
@@ -1968,6 +1975,13 @@ static void *rtsp_conversation_thread_func(void *pconn) {
   debug(2, "RTSP conversation thread %d terminated.", conn->connection_number);
   //  please_shutdown = 0;
   conn->running = 0;
+
+  // release the player_thread_lock
+  int rwld = pthread_rwlock_destroy(&conn->player_thread_lock);
+  if (rwld)
+    debug(1, "Error %d destroying player_thread_lock for conversation thread %d.", rwld,
+          conn->connection_number);
+
   return NULL;
 }
 
@@ -2082,7 +2096,6 @@ void rtsp_listen_loop(void) {
   }
 
   mdns_register();
-  
 
   // printf("Listening for connections.");
   // shairport_startup_complete();
@@ -2184,12 +2197,12 @@ void rtsp_listen_loop(void) {
       track_thread(conn);
     }
   } while (1);
-  
+
   mdns_unregister();
-  
+
   if (sockfd)
     free(sockfd);
 
-  //perror("select");
-  //die("fell out of the RTSP select loop");
+  // perror("select");
+  // die("fell out of the RTSP select loop");
 }

@@ -74,6 +74,7 @@ typedef struct {
 
   // pthread_t *ptp;
   pthread_t *player_thread;
+  pthread_rwlock_t player_thread_lock; // used to control access by "outsiders"
 
   abuf_t audio_buffer[BUFFER_FRAMES];
   int max_frames_per_packet, input_num_channels, input_bit_depth, input_rate;
@@ -191,7 +192,7 @@ typedef struct {
 } rtsp_conn_info;
 
 int player_play(rtsp_conn_info *conn);
-void player_stop(rtsp_conn_info *conn);
+int player_stop(rtsp_conn_info *conn);
 
 void player_volume(double f, rtsp_conn_info *conn);
 void player_volume_without_notification(double f, rtsp_conn_info *conn);

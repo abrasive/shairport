@@ -749,6 +749,8 @@ static inline void process_sample(int32_t sample, char **outp, enum sps_format_t
 }
 
 // get the next frame, when available. return 0 if underrun/stream reset.
+// remember that this function will be running in the audio receiver thread.
+
 static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
   // int16_t buf_fill;
   uint64_t local_time_now;
@@ -1200,7 +1202,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
   } while (wait);
 
   if (conn->player_thread_please_stop) {
-    debug(3,"buffer_get_frame exiting due to thread stop request.");
+    debug(3, "buffer_get_frame exiting due to thread stop request.");
     pthread_mutex_unlock(&conn->ab_mutex);
     return 0;
   }
@@ -1397,25 +1399,10 @@ typedef struct stats { // statistics for running averages
 
 static void *player_thread_func(void *arg) {
 
+  // note, the thread will be started up with the player_thread_lock locked. You must release it
+  // quickly.
+
   rtsp_conn_info *conn = (rtsp_conn_info *)arg;
-
-  conn->please_stop = 0;
-  conn->packet_count = 0;
-  conn->previous_random_number = 0;
-  conn->input_bytes_per_frame = 4;
-  conn->player_thread_please_stop = 0;
-  conn->decoder_in_use = 0;
-  conn->ab_buffering = 1;
-  conn->ab_synced = 0;
-  conn->first_packet_timestamp = 0;
-  conn->flush_requested = 0;
-  conn->fix_volume = 0x10000;
-
-  if (conn->latency == 0) {
-    debug(3, "No latency has (yet) been specified. Setting 88,200 (2 seconds) frames "
-             "as a default.");
-    conn->latency = 88200;
-  }
 
   int rc = pthread_mutex_init(&conn->ab_mutex, NULL);
   if (rc)
@@ -1438,6 +1425,29 @@ static void *player_thread_func(void *arg) {
 #endif
   if (rc)
     debug(1, "Error initialising flowcontrol condition variable.");
+
+  pthread_rwlock_unlock(&conn->player_thread_lock);
+
+  // it's safe now
+
+  conn->please_stop = 0;
+  conn->packet_count = 0;
+  conn->previous_random_number = 0;
+  conn->input_bytes_per_frame = 4;
+  conn->player_thread_please_stop = 0;
+  conn->decoder_in_use = 0;
+  conn->ab_buffering = 1;
+  conn->ab_synced = 0;
+  conn->first_packet_timestamp = 0;
+  conn->flush_requested = 0;
+  conn->fix_volume = 0x10000;
+
+  if (conn->latency == 0) {
+    debug(3, "No latency has (yet) been specified. Setting 88,200 (2 seconds) frames "
+             "as a default.");
+    conn->latency = 88200;
+  }
+
   config.output->start(config.output_rate, config.output_format);
 
   init_decoder((int32_t *)&conn->stream.fmtp,
@@ -1727,7 +1737,9 @@ static void *player_thread_func(void *arg) {
           }
         } else if (frames_to_drop) {
           if (frames_to_drop > 3 * config.output_rate) {
-            warn("Shome mhistake shurely: very large number of frames to drop: %" PRId64 " -- setting it to %" PRId64 ".", frames_to_drop,3 * config.output_rate);
+            warn("Shome mhistake shurely: very large number of frames to drop: %" PRId64
+                 " -- setting it to %" PRId64 ".",
+                 frames_to_drop, 3 * config.output_rate);
             frames_to_drop = 3 * config.output_rate;
           }
           debug(3, "%" PRId64 " frames to drop.", frames_to_drop);
@@ -2273,8 +2285,8 @@ static void *player_thread_func(void *arg) {
       }
     }
   }
-  
-  debug(3,"Play thread main loop exited.");
+
+  debug(3, "Play thread main loop exited.");
 
   if (config.statistics_requested) {
     int rawSeconds = (int)difftime(time(NULL), playstart);
@@ -2291,7 +2303,7 @@ static void *player_thread_func(void *arg) {
   mdns_dacp_dont_monitor(conn->dapo_private_storage);
 #endif
 
-  debug(3,"Requesting output device to stop.");
+  debug(3, "Requesting output device to stop.");
 
   if (config.output->stop)
     config.output->stop();
@@ -2312,8 +2324,8 @@ static void *player_thread_func(void *arg) {
 
   // usleep(100000); // allow this time to (?) allow the alsa subsystem to finish cleaning up after
   // itself. 50 ms seems too short
-  
-  debug(3,"Freeing audio buffers and decoders.");
+
+  debug(3, "Freeing audio buffers and decoders.");
 
   free_audio_buffers(conn);
   terminate_decoders(conn);
@@ -2582,11 +2594,15 @@ void player_volume(double airplay_volume, rtsp_conn_info *conn) {
 
 void player_flush(int64_t timestamp, rtsp_conn_info *conn) {
   debug(3, "Flush requested up to %u. It seems as if 0 is special.", timestamp);
-  pthread_mutex_lock(&conn->flush_mutex);
-  conn->flush_requested = 1;
-  // if (timestamp!=0)
-  conn->flush_rtp_timestamp = timestamp; // flush all packets up to (and including?) this
-  pthread_mutex_unlock(&conn->flush_mutex);
+  pthread_rwlock_rdlock(&conn->player_thread_lock);
+  if (conn->player_thread != NULL) {
+    pthread_mutex_lock(&conn->flush_mutex);
+    conn->flush_requested = 1;
+    // if (timestamp!=0)
+    conn->flush_rtp_timestamp = timestamp; // flush all packets up to (and including?) this
+    pthread_mutex_unlock(&conn->flush_mutex);
+  }
+  pthread_rwlock_unlock(&conn->player_thread_lock);
   conn->play_segment_reference_frame = 0;
   conn->play_number_after_flush = 0;
 #ifdef CONFIG_METADATA
@@ -2611,6 +2627,7 @@ int player_play(rtsp_conn_info *conn) {
   debug(2, "pbeg");
   send_ssnc_metadata('pbeg', NULL, 0, 1);
 #endif
+  pthread_rwlock_wrlock(&conn->player_thread_lock);
   pthread_t *pt = malloc(sizeof(pthread_t));
   if (pt == NULL)
     die("Couldn't allocate space for pthread_t");
@@ -2621,25 +2638,33 @@ int player_play(rtsp_conn_info *conn) {
   int rc = pthread_attr_setstacksize(&tattr, size);
   if (rc)
     debug(1, "Error setting stack size for player_thread: %s", strerror(errno));
+
+  // hack alert -- the player thread itself releases the player_thread_lock rwlock as soon as it's
+  // finished initialising.
   pthread_create(pt, &tattr, player_thread_func, (void *)conn);
   pthread_attr_destroy(&tattr);
   return 0;
 }
 
-void player_stop(rtsp_conn_info *conn) {
+int player_stop(rtsp_conn_info *conn) {
+  pthread_rwlock_wrlock(&conn->player_thread_lock);
   if (conn->player_thread) {
     conn->player_thread_please_stop = 1;
     pthread_cond_signal(&conn->flowcontrol); // tell it to give up
     pthread_kill(*conn->player_thread, SIGUSR1);
     pthread_join(*conn->player_thread, NULL);
+    free(conn->player_thread);
+    conn->player_thread = NULL;
+    pthread_rwlock_unlock(&conn->player_thread_lock);
 #ifdef CONFIG_METADATA
     debug(2, "pend");
     send_ssnc_metadata('pend', NULL, 0, 1);
 #endif
     command_stop();
-    free(conn->player_thread);
-    conn->player_thread = NULL;
+    return 0;
   } else {
+    pthread_rwlock_unlock(&conn->player_thread_lock);
     debug(3, "player thread of RTSP conversation %d is already deleted.", conn->connection_number);
+    return -1;
   }
 }
