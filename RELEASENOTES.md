@@ -1,4 +1,8 @@
 
+Version 3.2d50
+====
+* Add a read-write mutex lock to the player thread so that it can't be accessed while it's being created and initialised or while it's being torn down and destroyed. Make external accessor functions acquire a read lock for access. It's "A Good Thing" and it might help the seg fault problem, which I'm afraid still can't reproduce...
+
 Version 3.2d49
 ====
 * A few extra debugging messages to try to locate where a segfault is occurring.
