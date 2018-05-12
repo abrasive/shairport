@@ -106,6 +106,8 @@
 // static abuf_t audio_buffer[BUFFER_FRAMES];
 #define BUFIDX(seqno) ((seq_t)(seqno) % BUFFER_FRAMES)
 
+void do_flush(int64_t timestamp, rtsp_conn_info *conn);
+
 // make timestamps and seqnos definitely monotonic
 
 // add an epoch to the timestamp. The monotonic timestamp guaranteed to start between 2^32 and 2^33
@@ -2598,17 +2600,13 @@ void player_volume(double airplay_volume, rtsp_conn_info *conn) {
   player_volume_without_notification(airplay_volume, conn);
 }
 
-void player_flush(int64_t timestamp, rtsp_conn_info *conn) {
+void do_flush(int64_t timestamp, rtsp_conn_info *conn) {
   debug(3, "Flush requested up to %u. It seems as if 0 is special.", timestamp);
-  pthread_rwlock_rdlock(&conn->player_thread_lock);
-  if (conn->player_thread != NULL) {
-    pthread_mutex_lock(&conn->flush_mutex);
-    conn->flush_requested = 1;
-    // if (timestamp!=0)
-    conn->flush_rtp_timestamp = timestamp; // flush all packets up to (and including?) this
-    pthread_mutex_unlock(&conn->flush_mutex);
-  }
-  pthread_rwlock_unlock(&conn->player_thread_lock);
+  pthread_mutex_lock(&conn->flush_mutex);
+  conn->flush_requested = 1;
+  // if (timestamp!=0)
+  conn->flush_rtp_timestamp = timestamp; // flush all packets up to (and including?) this
+  pthread_mutex_unlock(&conn->flush_mutex);
   conn->play_segment_reference_frame = 0;
   conn->play_number_after_flush = 0;
 #ifdef CONFIG_METADATA
@@ -2621,8 +2619,18 @@ void player_flush(int64_t timestamp, rtsp_conn_info *conn) {
 #endif
 }
 
+void player_flush(int64_t timestamp, rtsp_conn_info *conn) {
+  debug(3, "Flush requested up to %u. It seems as if 0 is special.", timestamp);
+  pthread_rwlock_rdlock(&conn->player_thread_lock);
+  if (conn->player_thread != NULL)
+    do_flush(timestamp, conn);
+  else
+    debug(1, "Flush requested when player thread is gone.");
+  pthread_rwlock_unlock(&conn->player_thread_lock);
+}
+
 int player_play(rtsp_conn_info *conn) {
-  // need to use conn in place of streram below. Need to put the stream as a parameter to he
+  // need to use conn in place of stream below. Need to put the stream as a parameter to he
   if (conn->player_thread != NULL)
     die("Trying to create a second player thread for this RTSP session");
   if (config.buffer_start_fill > BUFFER_FRAMES)
