@@ -1406,11 +1406,12 @@ typedef struct stats { // statistics for running averages
 } stats_t;
 
 static void *player_thread_func(void *arg) {
-
   // note, the thread will be started up with the player_thread_lock locked. You must release it
   // quickly.
 
   rtsp_conn_info *conn = (rtsp_conn_info *)arg;
+
+  pthread_rwlock_wrlock(&conn->player_thread_lock);
 
   int rc = pthread_mutex_init(&conn->ab_mutex, NULL);
   if (rc)
@@ -2617,10 +2618,11 @@ void do_flush(int64_t timestamp, rtsp_conn_info *conn) {
     send_ssnc_metadata('pfls', NULL, 0, 1);
   }
 #endif
+  debug(3, "Flush request made.");
 }
 
 void player_flush(int64_t timestamp, rtsp_conn_info *conn) {
-  debug(3, "Flush requested up to %u. It seems as if 0 is special.", timestamp);
+  debug(3, "player_flush");
   pthread_rwlock_rdlock(&conn->player_thread_lock);
   if (conn->player_thread != NULL)
     do_flush(timestamp, conn);
@@ -2641,7 +2643,6 @@ int player_play(rtsp_conn_info *conn) {
   debug(2, "pbeg");
   send_ssnc_metadata('pbeg', NULL, 0, 1);
 #endif
-  pthread_rwlock_wrlock(&conn->player_thread_lock);
   pthread_t *pt = malloc(sizeof(pthread_t));
   if (pt == NULL)
     die("Couldn't allocate space for pthread_t");

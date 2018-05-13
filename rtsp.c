@@ -697,7 +697,7 @@ static void handle_record(rtsp_conn_info *conn, rtsp_message *req, rtsp_message 
       p = strchr(p, '=');
       if (p) {
         rtptime = uatoi(p + 1); // unsigned integer -- up to 2^32-1
-        rtptime--;
+        // rtptime--;
         // debug(1,"RTSP Flush Requested by handle_record: %u.",rtptime);
         player_flush(rtptime, conn);
       }
