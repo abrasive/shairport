@@ -1,4 +1,8 @@
 
+Version 3.2d51
+====
+* Fix a small bug locking and unlocking the read-write mutex. It might (and in principle, it could) cause a crash.
+
 Version 3.2d50
 ====
 * Add a read-write mutex lock to the player thread so that it can't be accessed while it's being created and initialised or while it's being torn down and destroyed. Make external accessor functions acquire a read lock for access. It's "A Good Thing" and it might help the seg fault problem, which I'm afraid still can't reproduce...
