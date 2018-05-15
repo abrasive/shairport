@@ -1362,8 +1362,8 @@ int main(int argc, char **argv) {
            "latency from the source.");
     inform("Please remove this setting and use the relevant audio_backend_latency_offset setting, "
            "if necessary, to compensate for delays elsewhere.");
-    if ((config.userSuppliedLatency!=0) && ((config.userSuppliedLatency<4410) || (config.userSuppliedLatency>154350)))
-      die("An out-of-range fixed latency has been specified. It must be between 4,410 and 154,350.");
+    if ((config.userSuppliedLatency!=0) && ((config.userSuppliedLatency<4410) || (config.userSuppliedLatency>BUFFER_FRAMES*352-22050)))
+      die("An out-of-range fixed latency has been specified. It must be between 4410 and %d (at 44100 frames per second).",BUFFER_FRAMES*352-22050);
   }
 
   /* print out version */

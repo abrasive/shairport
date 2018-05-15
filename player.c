@@ -512,11 +512,19 @@ void player_put_packet(seq_t seqno, uint32_t actual_timestamp, int64_t timestamp
         }
 
         // here, we should check for missing frames
+        const int number_of_resend_attempts = 8;
         if (!conn->ab_buffering) {
           int j;
-          for (j = 1; j <= 8; j++) {
+          for (j = 1; j <= number_of_resend_attempts; j++) {
             // check j times, after a short period of has elapsed, assuming 352 frames per packet
-            int back_step = (((250 * 44100) / 352) / 1000) * (j); // approx 250 ms intervals
+            // int back_step = (((250 * 44100) / 352) / 1000) * (j); // approx 250 ms intervals
+            // int back_step = ((BUFFER_FRAMES-(22050/352)) / number_of_resend_attempts) * j;
+            int back_step = ((seq_diff(conn->ab_read, conn->ab_write,
+                           conn->ab_read)-(22050/352)) / number_of_resend_attempts) * j;
+            if (back_step<(((190 * 44100) / 352) / 1000) * j) {
+              // debug(1,"resend request back_step %d is too small. Reset to %d.",back_step,(((190 * 44100) / 352) / 1000) * j);
+              back_step = (((190 * 44100) / 352) / 1000) * j;
+            }
             int k;
             for (k = -2; k <= 2; k++) {
               if (back_step <
@@ -1216,9 +1224,6 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
   }
 
   // seq_t read = conn->ab_read;
-
-  // check if t+8, t+16, t+32, t+64, t+128, ... (buffer_start_fill / 2)
-  // packets have arrived... last-chance resend
 
   if (!curframe->ready) {
     // debug(1, "Supplying a silent frame for frame %u", read);
