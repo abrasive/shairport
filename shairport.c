@@ -274,7 +274,7 @@ int parse_options(int argc, char **argv) {
       optind = j;
 
   optCon = poptGetContext(NULL, optind, (const char **)argv, optionsTable, 0);
-  if (optCon==NULL)
+  if (optCon == NULL)
     die("Can not get a secondary popt context.");
   poptSetOtherOptionHelp(optCon, "[OPTIONS]* ");
 
@@ -321,7 +321,7 @@ int parse_options(int argc, char **argv) {
   }
 
   poptFreeContext(optCon);
-  
+
   if ((daemonisewith) && (daemonisewithout))
     die("Select either daemonize_with_pid_file or daemonize_without_pid_file -- you have selected "
         "both!");
@@ -892,7 +892,7 @@ int parse_options(int argc, char **argv) {
       optind = j;
 
   optCon = poptGetContext(NULL, optind, (const char **)argv, optionsTable, 0);
-  if (optCon==NULL)
+  if (optCon == NULL)
     die("Can not get a popt context.");
   poptSetOtherOptionHelp(optCon, "[OPTIONS]* ");
 
@@ -1052,13 +1052,13 @@ void shairport_startup_complete(void) {
   }
 }
 
-const char *pid_file_proc(char* fn,size_t max_length) {
+const char *pid_file_proc(char *fn, size_t max_length) {
   if (fn) {
     snprintf(fn, max_length, "%s/%s.pid", config.computed_piddir,
              daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
     // debug(1,"fn \"%s\".",fn);
   } else {
-    debug(1,"the sise of the buffer for the PID file path is zero.");
+    debug(1, "the sise of the buffer for the PID file path is zero.");
   }
   return fn;
 }
@@ -1358,12 +1358,16 @@ int main(int argc, char **argv) {
   // audio_backend_latency_offset instead.
 
   if (config.userSuppliedLatency) {
-    inform("The fixed latency setting is deprecated, as Shairport Sync can now get the correct "
-           "latency from the source.");
-    inform("Please remove this setting and use the relevant audio_backend_latency_offset setting, "
-           "if necessary, to compensate for delays elsewhere.");
-    if ((config.userSuppliedLatency!=0) && ((config.userSuppliedLatency<4410) || (config.userSuppliedLatency>BUFFER_FRAMES*352-22050)))
-      die("An out-of-range fixed latency has been specified. It must be between 4410 and %d (at 44100 frames per second).",BUFFER_FRAMES*352-22050);
+    inform("The fixed latency setting is deprecated, as Shairport Sync gets the correct "
+           "latency automatically from the source.");
+    inform("Use the audio_backend_latency_offset_in_seconds setting "
+           "instead to compensate for timing issues.");
+    if ((config.userSuppliedLatency != 0) &&
+        ((config.userSuppliedLatency < 4410) ||
+         (config.userSuppliedLatency > BUFFER_FRAMES * 352 - 22050)))
+      die("An out-of-range fixed latency has been specified. It must be between 4410 and %d (at "
+          "44100 frames per second).",
+          BUFFER_FRAMES * 352 - 22050);
   }
 
   /* print out version */
@@ -1380,7 +1384,7 @@ int main(int argc, char **argv) {
   /* Print out options */
   debug(1, "statistics_requester status is %d.", config.statistics_requested);
   debug(1, "daemon status is %d.", config.daemonise);
-  debug(1, "deamon pid file is \"%s\".", pid_file_proc(pid_file_path_string,4096));
+  debug(1, "deamon pid file is \"%s\".", pid_file_proc(pid_file_path_string, 4096));
   debug(1, "rtsp listening port is %d.", config.port);
   debug(1, "udp base port is %d.", config.udp_port_base);
   debug(1, "udp port range is %d.", config.udp_port_range);

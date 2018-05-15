@@ -512,25 +512,30 @@ void player_put_packet(seq_t seqno, uint32_t actual_timestamp, int64_t timestamp
         }
 
         // here, we should check for missing frames
+        int resend_interval = (((250 * 44100) / 352) / 1000); // approximately 250 ms intervals
         const int number_of_resend_attempts = 8;
+        int latency_based_resend_interval =
+            (conn->latency) / (number_of_resend_attempts * conn->max_frames_per_packet);
+        if (latency_based_resend_interval > resend_interval)
+          resend_interval = latency_based_resend_interval;
+
+        if (conn->resend_interval != resend_interval) {
+          debug(1, "Resend interval for latency of %" PRId64 " frames is %d frames.", conn->latency,
+                resend_interval);
+          conn->resend_interval = resend_interval;
+        }
         if (!conn->ab_buffering) {
           int j;
           for (j = 1; j <= number_of_resend_attempts; j++) {
             // check j times, after a short period of has elapsed, assuming 352 frames per packet
-            // int back_step = (((250 * 44100) / 352) / 1000) * (j); // approx 250 ms intervals
-            // int back_step = ((BUFFER_FRAMES-(22050/352)) / number_of_resend_attempts) * j;
-            int back_step = ((seq_diff(conn->ab_read, conn->ab_write,
-                           conn->ab_read)-(22050/352)) / number_of_resend_attempts) * j;
-            if (back_step<(((190 * 44100) / 352) / 1000) * j) {
-              // debug(1,"resend request back_step %d is too small. Reset to %d.",back_step,(((190 * 44100) / 352) / 1000) * j);
-              back_step = (((190 * 44100) / 352) / 1000) * j;
-            }
+
+            int back_step = resend_interval * j;
+
+            int32_t sd = seq_diff(conn->ab_read, conn->ab_write, conn->ab_read);
             int k;
             for (k = -2; k <= 2; k++) {
-              if (back_step <
-                  seq_diff(conn->ab_read, conn->ab_write,
-                           conn->ab_read)) { // if it's within the range of frames in use...
-                int item_to_check = (conn->ab_write - back_step) & 0xffff;
+              if ((back_step + k) < sd) { // if it's within the range of frames in use...
+                int item_to_check = (conn->ab_write - back_step + k) & 0xffff;
                 seq_t next = item_to_check;
                 abuf_t *check_buf = conn->audio_buffer + BUFIDX(next);
                 if ((!check_buf->ready) &&
@@ -539,7 +544,7 @@ void player_put_packet(seq_t seqno, uint32_t actual_timestamp, int64_t timestamp
                   check_buf->resend_level = j;
                   if (config.disable_resend_requests == 0) {
                     rtp_request_resend(next, 1, conn);
-                    if (j >= 6)
+                    if (j >= number_of_resend_attempts - 2)
                       debug(2, "Resend request level #%d for packet %u in range %u to %u.", j, next,
                             conn->ab_read, conn->ab_write);
                     conn->resend_requests++;

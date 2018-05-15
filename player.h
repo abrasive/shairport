@@ -46,7 +46,17 @@ typedef struct audio_buffer_entry { // decoded audio packets
 } abuf_t;
 
 // default buffer size
-// needs to be a power of 2 because of the way BUFIDX(seqno) works
+// This eeds to be a power of 2 because of the way BUFIDX(seqno) works.
+// 512 is the minimum for normal operation -- it gives 512*352/44100 or just over 4 seconds of
+// buffers.
+// For at least 10 seconds, you need to go to 2048.
+// Resend requests will be spaced out evenly in the latency period, subject to a minimum interval of
+// about 0.25 seconds.
+// Each buffer occupies 352*4 bytes plus about, say, 64 bytes of overhead in various places, say
+// rougly 1,500 bytes per buffer.
+// Thus, 2048 buffers will occupy about 3 megabytes -- no big deal in a normal machine but maybe a
+// problem in an embedded device.
+
 #define BUFFER_FRAMES 1024
 
 typedef struct {
@@ -57,6 +67,7 @@ typedef struct {
 
 typedef struct {
   int connection_number;   // for debug ID purposes, nothing else...
+  int resend_interval;     // this is really just for debugging
   int AirPlayVersion;      // zero if not an AirPlay session. Used to help calculate latency
   int64_t latency;         // the actual latency used for this play session
   int64_t minimum_latency; // set if an a=min-latency: line appears in the ANNOUNCE message; zero
