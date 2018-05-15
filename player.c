@@ -520,7 +520,7 @@ void player_put_packet(seq_t seqno, uint32_t actual_timestamp, int64_t timestamp
           resend_interval = latency_based_resend_interval;
 
         if (conn->resend_interval != resend_interval) {
-          debug(1, "Resend interval for latency of %" PRId64 " frames is %d frames.", conn->latency,
+          debug(2, "Resend interval for latency of %" PRId64 " frames is %d frames.", conn->latency,
                 resend_interval);
           conn->resend_interval = resend_interval;
         }
@@ -544,9 +544,9 @@ void player_put_packet(seq_t seqno, uint32_t actual_timestamp, int64_t timestamp
                   check_buf->resend_level = j;
                   if (config.disable_resend_requests == 0) {
                     rtp_request_resend(next, 1, conn);
-                    if (j >= number_of_resend_attempts - 2)
-                      debug(2, "Resend request level #%d for packet %u in range %u to %u.", j, next,
-                            conn->ab_read, conn->ab_write);
+                    if ((back_step + k + resend_interval) >= sd)
+                      debug(2, "Last-ditch (#%d) resend request for packet %u in range %u to %u. Looking back %d packets.", j, next,
+                            conn->ab_read, conn->ab_write,back_step + k);
                     conn->resend_requests++;
                   }
                 }
