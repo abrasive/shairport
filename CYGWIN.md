@@ -24,19 +24,15 @@ and enter valid DNS server addresses, e.g. `8.8.8.8`.
   * `flex` for compiling `libconfig`
   * `bison` for compiling `libconfig` 
 
-* Download, configure, compile and install `libconfig`.
-
-For this, if your home directory name has a space in it, which happens by default with Cygwin, you should
-temporarily rename it to a single word, e.g. `Mike Brady` -> `mike`. This is to allow the `make install` script to work properly.
+* Download, configure, compile and install `libconfig`:
 ```
-$ wget http://www.hyperrealm.com/libconfig/libconfig-1.5.tar.gz
-$ tar -xvzf  libconfig-1.5.tar.gz
-$ cd libconfig-1.5
+$ git clone https://github.com/hyperrealm/libconfig.git
+$ autoreconf -fi
 $ ./configure
 $ make
 $ make install
 $ cd ..
-``` 
+```
 * Next, download, configure and compile Shairport Sync:
 ```
 $ git clone https://github.com/mikebrady/shairport-sync.git
