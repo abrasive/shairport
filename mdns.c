@@ -106,14 +106,14 @@ void mdns_unregister(void) {
 
 void *mdns_dacp_monitor(char *dacp_id) {
   void *reply = NULL;
-  if ((dacp_id!=NULL) && (*dacp_id!='\0')) {
-  if ((config.mdns) && (config.mdns->mdns_dacp_monitor)) {
-    reply = config.mdns->mdns_dacp_monitor(dacp_id);
-    if (reply == NULL) {
-      debug(1, "Error starting a DACP monitor.");
-    }
-  } else
-    debug(3, "Can't start a DACP monitor -- none registered.");
+  if ((dacp_id != NULL) && (*dacp_id != '\0')) {
+    if ((config.mdns) && (config.mdns->mdns_dacp_monitor)) {
+      reply = config.mdns->mdns_dacp_monitor(dacp_id);
+      if (reply == NULL) {
+        debug(1, "Error starting a DACP monitor.");
+      }
+    } else
+      debug(3, "Can't start a DACP monitor -- none registered.");
   }
   return reply;
 }

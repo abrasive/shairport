@@ -545,8 +545,9 @@ void player_put_packet(seq_t seqno, uint32_t actual_timestamp, int64_t timestamp
                   if (config.disable_resend_requests == 0) {
                     rtp_request_resend(next, 1, conn);
                     if ((back_step + k + resend_interval) >= sd)
-                      debug(2, "Last-ditch (#%d) resend request for packet %u in range %u to %u. Looking back %d packets.", j, next,
-                            conn->ab_read, conn->ab_write,back_step + k);
+                      debug(2, "Last-ditch (#%d) resend request for packet %u in range %u to %u. "
+                               "Looking back %d packets.",
+                            j, next, conn->ab_read, conn->ab_write, back_step + k);
                     conn->resend_requests++;
                   }
                 }

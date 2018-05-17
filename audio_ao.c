@@ -121,7 +121,7 @@ static void deinit(void) {
 static void start(__attribute__((unused)) int sample_rate,
                   __attribute__((unused)) int sample_format) {}
 
-static void play(void * buf, int samples) { ao_play(dev, buf, samples * 4); }
+static void play(void *buf, int samples) { ao_play(dev, buf, samples * 4); }
 
 static void stop(void) {}
 
