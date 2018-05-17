@@ -68,6 +68,7 @@ void rtp_terminate(rtsp_conn_info *conn) {
 void rtp_audio_receiver_cleanup_handler(void *arg) {
   rtsp_conn_info *conn = (rtsp_conn_info *)arg;
   close(conn->audio_socket);
+  debug(3,"Audio Receiver Cleanup Successful.");
 }
 
 void *rtp_audio_receiver(void *arg) {
@@ -187,6 +188,7 @@ void *rtp_audio_receiver(void *arg) {
 void rtp_control_handler_cleanup_handler(void *arg) {
   rtsp_conn_info *conn = (rtsp_conn_info *)arg;
   close(conn->control_socket);
+  debug(3,"Control Receiver Cleanup Successful.");
 }
 
 void *rtp_control_receiver(void *arg) {
@@ -470,6 +472,7 @@ void rtp_timing_receiver_cleanup_handler(void *arg) {
   pthread_cancel(timer_requester);
   pthread_join(timer_requester, NULL);
   close(conn->timing_socket);
+  debug(3,"Timing Receiver Cleanup Successful.");
 }
 
 void *rtp_timing_receiver(void *arg) {

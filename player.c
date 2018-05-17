@@ -2327,17 +2327,21 @@ static void *player_thread_func(void *arg) {
   if (config.output->stop)
     config.output->stop();
 
-  debug(3, "Shutting down timing, control and audio threads");
+  debug(2, "Cancelling timing, control and audio threads");
   pthread_cancel(rtp_timing_thread);
-  pthread_join(rtp_timing_thread, NULL);
   pthread_cancel(rtp_control_thread);
-  pthread_join(rtp_control_thread, NULL);
   pthread_cancel(rtp_audio_thread);
+  debug(2, "Joining terminated threads.");
+  pthread_join(rtp_timing_thread, NULL);
+  debug(2, "Timing thread terminated.");
+  pthread_join(rtp_control_thread, NULL);
+  debug(2, "Control thread terminated.");
   pthread_join(rtp_audio_thread, NULL);
+  debug(2, "Audio thread terminated.");
   clear_reference_timestamp(conn);
   conn->rtp_running = 0;
 
-  debug(3, "Freeing audio buffers and decoders.");
+  debug(2, "Freeing audio buffers and decoders.");
 
   free_audio_buffers(conn);
   terminate_decoders(conn);
