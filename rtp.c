@@ -48,8 +48,6 @@
 uint64_t local_to_remote_time_jitters;
 uint64_t local_to_remote_time_jitters_count;
 
-void memory_barrier();
-
 void rtp_initialise(rtsp_conn_info *conn) {
   conn->rtp_time_of_last_resend_request_error_fp = 0;
   conn->rtp_running = 0;
@@ -67,10 +65,13 @@ void rtp_terminate(rtsp_conn_info *conn) {
     debug(1, "Error destroying reference_time_mutex variable.");
 }
 
-void *rtp_audio_receiver(void *arg) {
-  debug(3, "Audio receiver -- Server RTP thread starting.");
+void rtp_audio_receiver_cleanup_handler(void *arg) {
+  rtsp_conn_info *conn = (rtsp_conn_info *)arg;
+  close(conn->audio_socket);
+}
 
-  // we inherit the signal mask (SIGUSR1)
+void *rtp_audio_receiver(void *arg) {
+  pthread_cleanup_push(rtp_audio_receiver_cleanup_handler, arg);
   rtsp_conn_info *conn = (rtsp_conn_info *)arg;
 
   int32_t last_seqno = -1;
@@ -87,17 +88,8 @@ void *rtp_audio_receiver(void *arg) {
   float stat_M2 = 0.0;
 
   ssize_t nread;
-  while (conn->please_stop == 0) {
-    fd_set readfds;
-    FD_ZERO(&readfds);
-    FD_SET(conn->audio_socket, &readfds);
-    do {
-      memory_barrier();
-    } while (conn->please_stop == 0 &&
-             pselect(conn->audio_socket + 1, &readfds, NULL, NULL, NULL, &pselect_sigset) <= 0);
-    if (conn->please_stop != 0) {
-      break;
-    }
+  while (1) {
+
     nread = recv(conn->audio_socket, packet, sizeof(packet), 0);
 
     uint64_t local_time_now_fp = get_absolute_time_in_fp();
@@ -181,17 +173,24 @@ void *rtp_audio_receiver(void *arg) {
     }
   }
 
+  /*
   debug(3, "Audio receiver -- Server RTP thread interrupted. terminating.");
   close(conn->audio_socket);
+  */
+  
+  debug(1, "Audio receiver thread \"normal\" exit -- this can't happen. Hah!");
+  pthread_cleanup_pop(0); // don't execute anything here.
+  debug(2, "Audio receiver thread exit.");
+  pthread_exit(NULL);
+}
 
-  return NULL;
+void rtp_control_handler_cleanup_handler(void *arg) {
+  rtsp_conn_info *conn = (rtsp_conn_info *)arg;
+  close(conn->control_socket);
 }
 
 void *rtp_control_receiver(void *arg) {
-  // we inherit the signal mask (SIGUSR1)
-
-  debug(3, "Control receiver -- Server RTP thread starting.");
-
+  pthread_cleanup_push(rtp_control_handler_cleanup_handler, arg);
   rtsp_conn_info *conn = (rtsp_conn_info *)arg;
 
   conn->reference_timestamp = 0; // nothing valid received yet
@@ -200,18 +199,7 @@ void *rtp_control_receiver(void *arg) {
   uint64_t remote_time_of_sync;
   int64_t sync_rtp_timestamp;
   ssize_t nread;
-  while (conn->please_stop == 0) {
-    fd_set readfds;
-    FD_ZERO(&readfds);
-    FD_SET(conn->control_socket, &readfds);
-    do {
-      memory_barrier();
-    } while (conn->please_stop == 0 &&
-             pselect(conn->control_socket + 1, &readfds, NULL, NULL, NULL, &pselect_sigset) <= 0);
-    if (conn->please_stop != 0) {
-      break;
-    }
-
+  while (1) {
     nread = recv(conn->control_socket, packet, sizeof(packet), 0);
     // local_time_now = get_absolute_time_in_fp();
     //        clock_gettime(CLOCK_MONOTONIC,&tn);
@@ -223,50 +211,50 @@ void *rtp_control_receiver(void *arg) {
           (drand48() > config.diagnostic_drop_packet_fraction)) {
 
         ssize_t plen = nread;
-        if (packet[1] == 0xd4) {                       // sync data
-                                                       /*
-                                                             // the following stanza is for debugging only -- normally commented out.
-                                                             {
-                                                               char obf[4096];
-                                                               char *obfp = obf;
-                                                               int obfc;
-                                                               for (obfc = 0; obfc < plen; obfc++) {
-                                                                 snprintf(obfp, 3, "%02X", packet[obfc]);
-                                                                 obfp += 2;
-                                                               };
-                                                               *obfp = 0;
-                                             
-                                             
-                                                               // get raw timestamp information
-                                                               // I think that a good way to understand these timestamps is that
-                                                               // (1) the rtlt below is the timestamp of the frame that should be playing at the
-                                                          client-time specified in the packet if there was no delay
-                                                               // and (2) that the rt below is the timestamp of the frame that should be playing
-                                                          at
-                                                          the client-time specified in the packet on this device taking account of the delay
-                                                               // Thus, (3) the latency can be calculated by subtracting the second from the
-                                                          first.
-                                                               // There must be more to it -- there something missing.
-                                             
-                                                               // In addition, it seems that if the value of the short represented by the second
-                                                          pair
-                                                          of bytes in the packe is 7
-                                                               // then an extra time lag is expected to be added, presumably by the AirPort
-                                                          Express.
-                                                          Best guess is that this delay is 11,025 frames.
-                                             
-                                                               // uint32_t rtlt = nctohl(&packet[4]); // raw timestamp less latency
-                                                               // uint32_t rt = nctohl(&packet[16]);  // raw timestamp
-                                             
-                                                               // uint32_t fl = nctohs(&packet[2]); //
-                                             
-                                                               // debug(1,"Sync Packet of %d bytes received: \"%s\", flags: %d, timestamps %u and
-                                                          %u,
-                                                          giving a latency of %d frames.",plen,obf,fl,rt,rtlt,rt-rtlt);
-                                                               // debug(1,"Monotonic timestamps are: %" PRId64 " and %" PRId64 "
-                                                          respectively.",monotonic_timestamp(rt, conn),monotonic_timestamp(rtlt, conn));
-                                                             }
-                                                       */
+        if (packet[1] == 0xd4) {                     // sync data
+      /*
+           // the following stanza is for debugging only -- normally commented out.
+           {
+             char obf[4096];
+             char *obfp = obf;
+             int obfc;
+             for (obfc = 0; obfc < plen; obfc++) {
+               snprintf(obfp, 3, "%02X", packet[obfc]);
+               obfp += 2;
+             };
+             *obfp = 0;
+
+
+             // get raw timestamp information
+             // I think that a good way to understand these timestamps is that
+             // (1) the rtlt below is the timestamp of the frame that should be playing at the
+             // client-time specified in the packet if there was no delay
+             // and (2) that the rt below is the timestamp of the frame that should be playing
+             // at the client-time specified in the packet on this device taking account of
+             // the delay
+             // Thus, (3) the latency can be calculated by subtracting the second from the
+             // first.
+             // There must be more to it -- there something missing.
+
+             // In addition, it seems that if the value of the short represented by the second
+             // pair of bytes in the packe is 7
+             // then an extra time lag is expected to be added, presumably by
+             // the AirPort Express.
+             
+             // Best guess is that this delay is 11,025 frames.
+
+             // uint32_t rtlt = nctohl(&packet[4]); // raw timestamp less latency
+             // uint32_t rt = nctohl(&packet[16]);  // raw timestamp
+
+             // uint32_t fl = nctohs(&packet[2]); //
+
+             // debug(1,"Sync Packet of %d bytes received: \"%s\", flags: %d, timestamps %u and
+        %u,
+        giving a latency of %d frames.",plen,obf,fl,rt,rtlt,rt-rtlt);
+             // debug(1,"Monotonic timestamps are: %" PRId64 " and %" PRId64 "
+        respectively.",monotonic_timestamp(rt, conn),monotonic_timestamp(rtlt, conn));
+           }
+      */
           if (conn->local_to_remote_time_difference) { // need a time packet to be interchanged
                                                        // first...
 
@@ -406,15 +394,13 @@ void *rtp_control_receiver(void *arg) {
       debug(1, "Control Receiver -- error receiving a packet.");
     }
   }
-
-  debug(3, "Control RTP thread interrupted. terminating.");
-  close(conn->control_socket);
-
-  return NULL;
+  debug(1, "Control RTP thread \"normal\" exit -- this can't happen. Hah!");
+  pthread_cleanup_pop(0); // don't execute anything here.
+  debug(2, "Control RTP thread exit.");
+  pthread_exit(NULL);
 }
 
 void *rtp_timing_sender(void *arg) {
-  debug(3, "Timing sender thread starting.");
   rtsp_conn_info *conn = (rtsp_conn_info *)arg;
   struct timing_request {
     char leader;
@@ -434,9 +420,7 @@ void *rtp_timing_sender(void *arg) {
   req.seqno = htons(7);
 
   conn->time_ping_count = 0;
-
-  // we inherit the signal mask (SIGUSR1)
-  while (conn->timing_sender_stop == 0) {
+  while (1) {
     // debug(1,"Send a timing request");
 
     if (!conn->rtp_running)
@@ -456,17 +440,6 @@ void *rtp_timing_sender(void *arg) {
       msgsize = sizeof(struct sockaddr_in6);
     }
 #endif
-    fd_set writefds;
-    FD_ZERO(&writefds);
-    FD_SET(conn->timing_socket, &writefds);
-    do {
-      memory_barrier();
-    } while (conn->timing_sender_stop == 0 &&
-             pselect(conn->timing_socket + 1, NULL, &writefds, NULL, NULL, &pselect_sigset) <= 0);
-    if (conn->timing_sender_stop != 0) {
-      break;
-    }
-
     if ((config.diagnostic_drop_packet_fraction == 0.0) ||
         (drand48() > config.diagnostic_drop_packet_fraction)) {
       if (sendto(conn->timing_socket, &req, sizeof(req), 0,
@@ -481,35 +454,30 @@ void *rtp_timing_sender(void *arg) {
 
     request_number++;
 
-    // this is to deal with the possibility of missing a timing_sender_stop signal.
-    // if the signal came in just before the usleep, then it wouldn't cause the sleep to end.
-    // so, we will wait a maximum time of the wait_interval
-
-    int wait_time;
-    int wait_interval = 20000; // 20 milliseconds
-
     if (request_number <= 4)
-      wait_time = 500000;
+      usleep(500000); //these are thread cancellation points
     else
-      wait_time = 3000000;
-    while ((wait_time > 0) && (conn->timing_sender_stop == 0)) {
-      usleep(wait_interval);
-      wait_time -= wait_interval;
-    }
+      usleep(3000000);
   }
   debug(3, "rtp_timing_sender thread interrupted. terminating.");
-  return NULL;
+  pthread_exit(NULL);
+}
+
+pthread_t timer_requester;
+
+void rtp_timing_receiver_cleanup_handler(void *arg) {
+  rtsp_conn_info *conn = (rtsp_conn_info *)arg;
+  pthread_cancel(timer_requester);
+  pthread_join(timer_requester, NULL);
+  close(conn->timing_socket);
 }
 
 void *rtp_timing_receiver(void *arg) {
-  debug(3, "Timing receiver -- Server RTP thread starting.");
-  // we inherit the signal mask (SIGUSR1)
+  pthread_cleanup_push(rtp_timing_receiver_cleanup_handler, arg);
   rtsp_conn_info *conn = (rtsp_conn_info *)arg;
 
   uint8_t packet[2048];
   ssize_t nread;
-  conn->timing_sender_stop = 0;
-  pthread_t timer_requester;
   pthread_create(&timer_requester, NULL, &rtp_timing_sender, arg);
   //    struct timespec att;
   uint64_t distant_receive_time, distant_transmit_time, arrival_time, return_time;
@@ -521,17 +489,7 @@ void *rtp_timing_receiver(void *arg) {
   uint64_t first_local_to_remote_time_difference = 0;
   // uint64_t first_local_to_remote_time_difference_time;
   // uint64_t l2rtd = 0;
-  while (conn->please_stop == 0) {
-    fd_set readfds;
-    FD_ZERO(&readfds);
-    FD_SET(conn->timing_socket, &readfds);
-    do {
-      memory_barrier();
-    } while (conn->please_stop == 0 &&
-             pselect(conn->timing_socket + 1, &readfds, NULL, NULL, NULL, &pselect_sigset) <= 0);
-    if (conn->please_stop != 0) {
-      break;
-    }
+  while (1) {
     nread = recv(conn->timing_socket, packet, sizeof(packet), 0);
 
     if (nread >= 0) {
@@ -738,17 +696,10 @@ void *rtp_timing_receiver(void *arg) {
     }
   }
 
-  debug(3, "Timing thread interrupted. terminating.");
-  conn->timing_sender_stop = 1;
-  void *retval;
-  pthread_kill(timer_requester, SIGUSR1);
-  debug(3, "Wait for timer requester to exit.");
-  pthread_join(timer_requester, &retval);
-  debug(3, "Closed and terminated timer requester thread.");
-  debug(3, "Timing RTP thread terminated.");
-  close(conn->timing_socket);
-
-  return NULL;
+  debug(1, "Timing Receiver RTP thread \"normal\" exit -- this can't happen. Hah!");
+  pthread_cleanup_pop(0); // don't execute anything here.
+  debug(2, "Timing Receiver RTP thread exit.");
+  pthread_exit(NULL);
 }
 
 static uint16_t bind_port(int ip_family, const char *self_ip_address, uint32_t scope_id,

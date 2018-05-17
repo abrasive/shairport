@@ -113,7 +113,7 @@ void *mdns_dacp_monitor(char *dacp_id) {
       debug(1, "Error starting a DACP monitor.");
     }
   } else
-    debug(1, "Can't start a DACP monitor -- none registered.");
+    debug(3, "Can't start a DACP monitor -- none registered.");
   }
   return reply;
 }
@@ -122,7 +122,7 @@ void mdns_dacp_dont_monitor(void *userdata) {
   if ((config.mdns) && (config.mdns->mdns_dacp_dont_monitor)) {
     config.mdns->mdns_dacp_dont_monitor(userdata);
   } else
-    debug(1, "Can't stop a DACP monitor -- none registered.");
+    debug(3, "Can't stop a DACP monitor -- none registered.");
 }
 void mdns_ls_backends(void) {
   mdns_backend **b = NULL;

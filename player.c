@@ -1449,7 +1449,6 @@ static void *player_thread_func(void *arg) {
 
   // it's safe now
 
-  conn->please_stop = 0;
   conn->packet_count = 0;
   conn->previous_random_number = 0;
   conn->input_bytes_per_frame = 4;
@@ -2305,7 +2304,7 @@ static void *player_thread_func(void *arg) {
     }
   }
 
-  debug(3, "Play thread main loop exited.");
+  debug(3, "Connection %d: player thread main loop exit.", conn->connection_number);
 
   if (config.statistics_requested) {
     int rawSeconds = (int)difftime(time(NULL), playstart);
@@ -2327,22 +2326,15 @@ static void *player_thread_func(void *arg) {
   if (config.output->stop)
     config.output->stop();
 
-  debug(2, "Shutting down audio, control and timing threads");
-  conn->please_stop = 1;
-  pthread_kill(rtp_audio_thread, SIGUSR1);
-  pthread_kill(rtp_control_thread, SIGUSR1);
-  pthread_kill(rtp_timing_thread, SIGUSR1);
+  debug(3, "Shutting down timing, control and audio threads");
+  pthread_cancel(rtp_timing_thread);
   pthread_join(rtp_timing_thread, NULL);
-  debug(2, "timing thread joined");
-  pthread_join(rtp_audio_thread, NULL);
-  debug(2, "audio thread joined");
+  pthread_cancel(rtp_control_thread);
   pthread_join(rtp_control_thread, NULL);
-  debug(2, "control thread joined");
+  pthread_cancel(rtp_audio_thread);
+  pthread_join(rtp_audio_thread, NULL);
   clear_reference_timestamp(conn);
   conn->rtp_running = 0;
-
-  // usleep(100000); // allow this time to (?) allow the alsa subsystem to finish cleaning up after
-  // itself. 50 ms seems too short
 
   debug(3, "Freeing audio buffers and decoders.");
 
@@ -2362,7 +2354,7 @@ static void *player_thread_func(void *arg) {
   if (rc)
     debug(1, "Error destroying vol_mutex variable.");
 
-  debug(2, "Player thread exit on RTSP conversation thread %d.", conn->connection_number);
+  debug(2, "Connection %d: player thread terminated.", conn->connection_number);
   if (conn->dacp_id) {
     free(conn->dacp_id);
     conn->dacp_id = NULL;
@@ -2373,7 +2365,7 @@ static void *player_thread_func(void *arg) {
     free(tbuf);
   if (sbuf)
     free(sbuf);
-  return 0;
+  pthread_exit(NULL);
 }
 
 // takes the volume as specified by the airplay protocol

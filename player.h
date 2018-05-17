@@ -93,7 +93,6 @@ typedef struct {
   int max_frame_size_change;
   int64_t previous_random_number;
   alac_file *decoder_info;
-  uint32_t please_stop;
   uint64_t packet_count;
   int connection_state_to_output;
   int player_thread_please_stop;
@@ -180,7 +179,6 @@ typedef struct {
 
   uint64_t local_to_remote_time_difference; // used to switch between local and remote clocks
 
-  int timing_sender_stop; // for asking the timing-sending thread to stop
   int last_stuff_request;
 
   int64_t play_segment_reference_frame;

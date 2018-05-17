@@ -1972,8 +1972,7 @@ static void *rtsp_conversation_thread_func(void *pconn) {
     playing_conn = NULL;
     pthread_mutex_unlock(&play_lock);
   }
-  debug(2, "RTSP conversation thread %d terminated.", conn->connection_number);
-  //  please_shutdown = 0;
+  debug(2, "Connection %d: RTSP thread terminated.", conn->connection_number);
   conn->running = 0;
 
   // release the player_thread_lock
@@ -1982,7 +1981,7 @@ static void *rtsp_conversation_thread_func(void *pconn) {
     debug(1, "Error %d destroying player_thread_lock for conversation thread %d.", rwld,
           conn->connection_number);
 
-  return NULL;
+  pthread_exit(NULL);
 }
 
 /*
