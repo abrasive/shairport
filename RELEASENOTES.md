@@ -1,4 +1,10 @@
 
+Version 3.2d53
+====
+**Bug Fix**
+* Fix an incompatibility with Cygwin 64. It seems that the handling of signals in Cygwin is different to regular "native" Unix/Linux platforms. So, this is an attempt to use `pthread_cancel` calls where possible. In principle it should considerably simplify thread management, so let's see how it goes.
+* Fix an off-by-one error that was generating excessive resend requests.
+
 Version 3.2d51
 ====
 * Fix a small bug locking and unlocking the read-write mutex. It might (and in principle, it could) cause a crash.
