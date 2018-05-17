@@ -1,4 +1,9 @@
 
+Version 3.2d54
+====
+**Bug Fix**
+* Prevent packets of audio being added when the play session has ended and the play thread is being deleted. They are now simply dropped.
+
 Version 3.2d53
 ====
 **Bug Fix**
