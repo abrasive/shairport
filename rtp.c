@@ -66,9 +66,10 @@ void rtp_terminate(rtsp_conn_info *conn) {
 }
 
 void rtp_audio_receiver_cleanup_handler(void *arg) {
+  debug(2, "Audio Receiver Cleanup.");
   rtsp_conn_info *conn = (rtsp_conn_info *)arg;
   close(conn->audio_socket);
-  debug(3,"Audio Receiver Cleanup Successful.");
+  debug(2, "Audio Receiver Cleanup Successful.");
 }
 
 void *rtp_audio_receiver(void *arg) {
@@ -90,7 +91,6 @@ void *rtp_audio_receiver(void *arg) {
 
   ssize_t nread;
   while (1) {
-
     nread = recv(conn->audio_socket, packet, sizeof(packet), 0);
 
     uint64_t local_time_now_fp = get_absolute_time_in_fp();
@@ -186,9 +186,10 @@ void *rtp_audio_receiver(void *arg) {
 }
 
 void rtp_control_handler_cleanup_handler(void *arg) {
+  debug(2, "Control Receiver Cleanup.");
   rtsp_conn_info *conn = (rtsp_conn_info *)arg;
   close(conn->control_socket);
-  debug(3,"Control Receiver Cleanup Successful.");
+  debug(2, "Control Receiver Cleanup Successful.");
 }
 
 void *rtp_control_receiver(void *arg) {
@@ -465,14 +466,13 @@ void *rtp_timing_sender(void *arg) {
   pthread_exit(NULL);
 }
 
-pthread_t timer_requester;
-
 void rtp_timing_receiver_cleanup_handler(void *arg) {
+  debug(2, "Timing Receiver Cleanup.");
   rtsp_conn_info *conn = (rtsp_conn_info *)arg;
-  pthread_cancel(timer_requester);
-  pthread_join(timer_requester, NULL);
+  pthread_cancel(conn->timer_requester);
+  pthread_join(conn->timer_requester, NULL);
   close(conn->timing_socket);
-  debug(3,"Timing Receiver Cleanup Successful.");
+  debug(2, "Timing Receiver Cleanup Successful.");
 }
 
 void *rtp_timing_receiver(void *arg) {
@@ -481,7 +481,7 @@ void *rtp_timing_receiver(void *arg) {
 
   uint8_t packet[2048];
   ssize_t nread;
-  pthread_create(&timer_requester, NULL, &rtp_timing_sender, arg);
+  pthread_create(&conn->timer_requester, NULL, &rtp_timing_sender, arg);
   //    struct timespec att;
   uint64_t distant_receive_time, distant_transmit_time, arrival_time, return_time;
   local_to_remote_time_jitters = 0;
@@ -521,7 +521,7 @@ void *rtp_timing_receiver(void *arg) {
 
           return_time = arrival_time - conn->departure_time;
 
-          //uint64_t rtus = (return_time * 1000000) >> 32;
+          // uint64_t rtus = (return_time * 1000000) >> 32;
 
           if (((return_time * 1000000) >> 32) < 300000) {
 
@@ -760,18 +760,6 @@ static uint16_t bind_port(int ip_family, const char *self_ip_address, uint32_t s
     struct sockaddr_in *sa = (struct sockaddr_in *)&local;
     sport = ntohs(sa->sin_port);
   }
-  // fcntl(local_socket, F_SETFL, O_NONBLOCK);
-
-  // don't wait if outputting something will take longer than this time.
-  struct timeval timeout;
-  timeout.tv_sec = 0;
-  timeout.tv_usec = 2000; // two milliseconds
-
-  if (setsockopt(local_socket, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout)) < 0)
-    debug(1, "bind_port set output timeout failed.");
-  //  else
-  //    debug(1,"bind_port set output timeout succeeded.");
-
   *sock = local_socket;
   return sport;
 }
