@@ -535,7 +535,7 @@ void player_put_packet(seq_t seqno, uint32_t actual_timestamp, int64_t timestamp
             int k;
             for (k = -2; k <= 2; k++) {
               if ((back_step + k) < sd) { // if it's within the range of frames in use...
-                int item_to_check = (conn->ab_write - back_step + k) & 0xffff;
+                int item_to_check = (conn->ab_write - (back_step + k)) & 0xffff;
                 seq_t next = item_to_check;
                 abuf_t *check_buf = conn->audio_buffer + BUFIDX(next);
                 if ((!check_buf->ready) &&
