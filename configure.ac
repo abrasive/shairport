@@ -225,7 +225,7 @@ AC_ARG_WITH(sndio, [  --with-sndio = choose SNDIO API support], [
   AC_MSG_RESULT(>>Including a SNDIO back end)
   HAS_SNDIO=1
   AC_DEFINE([CONFIG_SNDIO], 1, [Needed by the compiler.])
-  AC_CHECK_LIB([sndio], [sio_open], , AC_MSG_ERROR(SNDIO support requires the sndio library!))], )
+  AC_CHECK_LIB([sndio], [sio_open], , AC_MSG_ERROR(SNDIO support requires the sndio library -- libsndio-dev suggested))], )
 AM_CONDITIONAL([USE_SNDIO], [test "x$HAS_SNDIO" = "x1"])
 
 # Look for AO flag
@@ -241,7 +241,7 @@ AC_ARG_WITH(soundio, [  --with-soundio = choose soundio API support.], [
   AC_MSG_RESULT(>>Including an soundio back end)
   HAS_SOUNDIO=1
   AC_DEFINE([CONFIG_SOUNDIO], 1, [Needed by the compiler.])
-  AC_CHECK_LIB([soundio], [soundio_create], , AC_MSG_ERROR(soundio support requires the soundio library!))], )
+  AC_CHECK_LIB([soundio], [soundio_create], , AC_MSG_ERROR(soundio support requires the soundio library -- libsoundio-dev suggested))], )
 AM_CONDITIONAL([USE_SOUNDIO], [test "x$HAS_SOUNDIO" = "x1"])
 
 # Look for pulseaudio flag

@@ -33,7 +33,7 @@ static int init(int, char **);
 static void onmove_cb(void *, int);
 static void deinit(void);
 static void start(int, int);
-static void play(short[], int);
+static void play(void *, int);
 static void stop(void);
 static void onmove_cb(void *, int);
 static int delay(long *);
@@ -222,7 +222,7 @@ static void start(__attribute__((unused)) int sample_rate,
   pthread_mutex_unlock(&sndio_mutex);
 }
 
-static void play(short buf[], int frames) {
+static void play(void *buf, int frames) {
   if (frames > 0) {
     pthread_mutex_lock(&sndio_mutex);
     written += sio_write(hdl, buf, frames * framesize);

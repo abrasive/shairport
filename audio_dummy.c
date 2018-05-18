@@ -48,7 +48,7 @@ static void start(int sample_rate, __attribute__((unused)) int sample_format) {
   debug(1, "dummy audio output started at Fs=%d Hz\n", sample_rate);
 }
 
-static void play(__attribute__((unused)) short buf[], __attribute__((unused)) int samples) {}
+static void play(__attribute__((unused)) void *buf, __attribute__((unused)) int samples) {}
 
 static void stop(void) { debug(1, "dummy audio stopped\n"); }
 
