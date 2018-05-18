@@ -2637,12 +2637,15 @@ void do_flush(int64_t timestamp, rtsp_conn_info *conn) {
 
 void player_flush(int64_t timestamp, rtsp_conn_info *conn) {
   debug(3, "player_flush");
-  pthread_rwlock_rdlock(&conn->player_thread_lock);
-  if (conn->player_thread != NULL)
-    do_flush(timestamp, conn);
-  else
-    debug(1, "Flush requested when player thread is gone.");
-  pthread_rwlock_unlock(&conn->player_thread_lock);
+  if (pthread_rwlock_tryrdlock(&conn->player_thread_lock) == 0) {
+    if (conn->player_thread != NULL)
+      do_flush(timestamp, conn);
+    else
+      debug(1, "Flush requested when player thread is gone.");
+    pthread_rwlock_unlock(&conn->player_thread_lock);
+  } else {
+    debug(3, "Can't acquire a read lock for a flush -- ignored.");
+  }
 }
 
 int player_play(rtsp_conn_info *conn) {
