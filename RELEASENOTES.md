@@ -1,4 +1,9 @@
 
+Version 3.2d55
+====
+**Bug Fix**
+* Flush requests that are received while the player is being initialised or deleted are now ignored. This should prevents two potential (but never seen) lock possibilities.
+
 Version 3.2d54
 ====
 **Bug Fix**
@@ -7,7 +12,7 @@ Version 3.2d54
 Version 3.2d53
 ====
 **Bug Fix**
-* Fix an incompatibility with Cygwin 64. It seems that the handling of signals in Cygwin is different to regular "native" Unix/Linux platforms. So, this is an attempt to use `pthread_cancel` calls where possible. In principle it should considerably simplify thread management, so let's see how it goes.
+* Fix an incompatibility with Cygwin 64. It seems that the handling of signals in Cygwin is different to regular "native" Unix/Linux platforms. So, this is an attempt to use `pthread_cancel` calls where possible. In principle it should simplify thread management considerably, so let's see how it goes.
 * Fix an off-by-one error that was generating excessive resend requests.
 
 Version 3.2d51
