@@ -762,12 +762,12 @@ static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
 }
 
 static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
-  debug(2, "Connection %d: SETUP", conn->connection_number);
+  debug(3, "Connection %d: SETUP", conn->connection_number);
   uint16_t cport, tport;
 
   char *ar = msg_get_header(req, "Active-Remote");
   if (ar) {
-    debug(2, "Active-Remote string seen: \"%s\".", ar);
+    debug(2, "Connection %d: SETUP -- Active-Remote string seen: \"%s\".", conn->connection_number, ar);
     // get the active remote
     char *p;
     conn->dacp_active_remote = strtoul(ar, &p, 10);
@@ -775,13 +775,13 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
     send_metadata('ssnc', 'acre', ar, strlen(ar), req, 1);
 #endif
   } else {
-    debug(2, "Note: no Active-Remote information  the SETUP Record.");
+    debug(2, "Connection %d: SETUP -- Note: no Active-Remote information  the SETUP Record.",conn->connection_number);
     conn->dacp_active_remote = 0;
   }
 
   ar = msg_get_header(req, "DACP-ID");
   if (ar) {
-    debug(2, "DACP-ID string seen: \"%s\".", ar);
+    debug(2, "Connection %d: SETUP -- DACP-ID string seen: \"%s\".",conn->connection_number, ar);
     if (conn->dacp_id) // this is in case SETUP was previously called
       free(conn->dacp_id);
     conn->dacp_id = strdup(ar);
@@ -789,7 +789,7 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
     send_metadata('ssnc', 'daid', ar, strlen(ar), req, 1);
 #endif
   } else {
-    debug(2, "Note: no DACP-ID string information in the SETUP Record.");
+    debug(2, "Connection %d: SETUP doesn't include DACP-ID string information.",conn->connection_number);
     if (conn->dacp_id) // this is in case SETUP was previously called
       free(conn->dacp_id);
     conn->dacp_id = NULL;
@@ -797,14 +797,14 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
 
   char *hdr = msg_get_header(req, "Transport");
   if (!hdr) {
-    debug(1, "SETUP doesn't contain a Transport header.");
+    debug(1, "Connection %d: SETUP doesn't contain a Transport header.",conn->connection_number);
     goto error;
   }
 
   char *p;
   p = strstr(hdr, "control_port=");
   if (!p) {
-    debug(1, "SETUP doesn't specify a control_port.");
+    debug(1, "Connection %d: SETUP doesn't specify a control_port.",conn->connection_number);
     goto error;
   }
   p = strchr(p, '=') + 1;
@@ -812,7 +812,7 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
 
   p = strstr(hdr, "timing_port=");
   if (!p) {
-    debug(1, "SETUP doesn't specify a timing_port.");
+    debug(1, "Connection %d: SETUP doesn't specify a timing_port.",conn->connection_number);
     goto error;
   }
   p = strchr(p, '=') + 1;
@@ -820,19 +820,19 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
 
   if (conn->rtp_running) {
     if ((conn->remote_control_port != cport) || (conn->remote_timing_port != tport)) {
-      warn("Duplicate SETUP message with different control (old %u, new %u) or timing (old %u, new "
-           "%u) ports! This is probably fatal!",
+      warn("Connection %d: Duplicate SETUP message with different control (old %u, new %u) or timing (old %u, new "
+           "%u) ports! This is probably fatal!",conn->connection_number,
            conn->remote_control_port, cport, conn->remote_timing_port, tport);
     } else {
-      warn("Duplicate SETUP message with the same control (%u) and timing (%u) ports. This is "
-           "probably not fatal.",
+      warn("Connection %d: Duplicate SETUP message with the same control (%u) and timing (%u) ports. This is "
+           "probably not fatal.",conn->connection_number,
            conn->remote_control_port, conn->remote_timing_port);
     }
   } else {
     rtp_setup(&conn->local, &conn->remote, cport, tport, conn);
   }
   if (conn->local_audio_port == 0) {
-    debug(1, "SETUP seems to specify a null audio port.");
+    debug(1, "Connection %d: SETUP seems to specify a null audio port.",conn->connection_number);
     goto error;
   }
 
@@ -851,7 +851,7 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
   return;
 
 error:
-  warn("Error in setup request -- unlocking play lock on RTSP conversation thread %d.",
+  warn("Connection %d: SETUP -- Error in setup request -- unlocking play lock.",
        conn->connection_number);
   playing_conn = NULL;
   pthread_mutex_unlock(&play_lock);

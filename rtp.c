@@ -66,10 +66,10 @@ void rtp_terminate(rtsp_conn_info *conn) {
 }
 
 void rtp_audio_receiver_cleanup_handler(void *arg) {
-  debug(2, "Audio Receiver Cleanup.");
+  debug(3, "Audio Receiver Cleanup.");
   rtsp_conn_info *conn = (rtsp_conn_info *)arg;
   close(conn->audio_socket);
-  debug(2, "Audio Receiver Cleanup Successful.");
+  debug(3, "Audio Receiver Cleanup Successful.");
 }
 
 void *rtp_audio_receiver(void *arg) {
@@ -186,10 +186,10 @@ void *rtp_audio_receiver(void *arg) {
 }
 
 void rtp_control_handler_cleanup_handler(void *arg) {
-  debug(2, "Control Receiver Cleanup.");
+  debug(3, "Control Receiver Cleanup.");
   rtsp_conn_info *conn = (rtsp_conn_info *)arg;
   close(conn->control_socket);
-  debug(2, "Control Receiver Cleanup Successful.");
+  debug(3, "Control Receiver Cleanup Successful.");
 }
 
 void *rtp_control_receiver(void *arg) {
@@ -462,17 +462,17 @@ void *rtp_timing_sender(void *arg) {
     else
       usleep(3000000);
   }
-  debug(3, "rtp_timing_sender thread interrupted. terminating.");
+  debug(3, "rtp_timing_sender thread interrupted. This should never happen.");
   pthread_exit(NULL);
 }
 
 void rtp_timing_receiver_cleanup_handler(void *arg) {
-  debug(2, "Timing Receiver Cleanup.");
+  debug(3, "Timing Receiver Cleanup.");
   rtsp_conn_info *conn = (rtsp_conn_info *)arg;
   pthread_cancel(conn->timer_requester);
   pthread_join(conn->timer_requester, NULL);
   close(conn->timing_socket);
-  debug(2, "Timing Receiver Cleanup Successful.");
+  debug(3, "Timing Receiver Cleanup Successful.");
 }
 
 void *rtp_timing_receiver(void *arg) {
@@ -812,8 +812,8 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, uint16_t cport, uint16_t tport
     inet_ntop(conn->connection_ip_family, self_addr, conn->self_ip_string,
               sizeof(conn->self_ip_string));
 
-    debug(2, "SETUP connection from %s to self at %s on RTSP conversation thread %d.",
-          conn->client_ip_string, conn->self_ip_string, conn->connection_number);
+    debug(2, "Connection %d: SETUP -- Connection from %s to self at %s.",
+          conn->connection_number,conn->client_ip_string, conn->self_ip_string);
 
     // set up a the record of the remote's control socket
     struct addrinfo hints;
