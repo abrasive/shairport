@@ -43,7 +43,7 @@ static void start(__attribute__((unused)) int sample_rate,
   fd = STDOUT_FILENO;
 }
 
-static void play(short buf[], int samples) {
+static void play(void *buf, int samples) {
   char errorstring[1024];
   int warned = 0;
   int rc = write(fd, buf, samples * 4);

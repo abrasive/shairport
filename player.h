@@ -46,7 +46,17 @@ typedef struct audio_buffer_entry { // decoded audio packets
 } abuf_t;
 
 // default buffer size
-// needs to be a power of 2 because of the way BUFIDX(seqno) works
+// This eeds to be a power of 2 because of the way BUFIDX(seqno) works.
+// 512 is the minimum for normal operation -- it gives 512*352/44100 or just over 4 seconds of
+// buffers.
+// For at least 10 seconds, you need to go to 2048.
+// Resend requests will be spaced out evenly in the latency period, subject to a minimum interval of
+// about 0.25 seconds.
+// Each buffer occupies 352*4 bytes plus about, say, 64 bytes of overhead in various places, say
+// rougly 1,500 bytes per buffer.
+// Thus, 2048 buffers will occupy about 3 megabytes -- no big deal in a normal machine but maybe a
+// problem in an embedded device.
+
 #define BUFFER_FRAMES 1024
 
 typedef struct {
@@ -57,6 +67,7 @@ typedef struct {
 
 typedef struct {
   int connection_number;   // for debug ID purposes, nothing else...
+  int resend_interval;     // this is really just for debugging
   int AirPlayVersion;      // zero if not an AirPlay session. Used to help calculate latency
   int64_t latency;         // the actual latency used for this play session
   int64_t minimum_latency; // set if an a=min-latency: line appears in the ANNOUNCE message; zero
@@ -70,10 +81,11 @@ typedef struct {
   SOCKADDR remote, local;
   int stop;
   int running;
-  pthread_t thread;
+  pthread_t thread, timer_requester;
 
   // pthread_t *ptp;
   pthread_t *player_thread;
+  pthread_rwlock_t player_thread_lock; // used to control access by "outsiders"
 
   abuf_t audio_buffer[BUFFER_FRAMES];
   int max_frames_per_packet, input_num_channels, input_bit_depth, input_rate;
@@ -81,7 +93,6 @@ typedef struct {
   int max_frame_size_change;
   int64_t previous_random_number;
   alac_file *decoder_info;
-  uint32_t please_stop;
   uint64_t packet_count;
   int connection_state_to_output;
   int player_thread_please_stop;
@@ -168,7 +179,6 @@ typedef struct {
 
   uint64_t local_to_remote_time_difference; // used to switch between local and remote clocks
 
-  int timing_sender_stop; // for asking the timing-sending thread to stop
   int last_stuff_request;
 
   int64_t play_segment_reference_frame;
@@ -191,7 +201,7 @@ typedef struct {
 } rtsp_conn_info;
 
 int player_play(rtsp_conn_info *conn);
-void player_stop(rtsp_conn_info *conn);
+int player_stop(rtsp_conn_info *conn);
 
 void player_volume(double f, rtsp_conn_info *conn);
 void player_volume_without_notification(double f, rtsp_conn_info *conn);

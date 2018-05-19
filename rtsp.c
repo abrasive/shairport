@@ -697,7 +697,7 @@ static void handle_record(rtsp_conn_info *conn, rtsp_message *req, rtsp_message 
       p = strchr(p, '=');
       if (p) {
         rtptime = uatoi(p + 1); // unsigned integer -- up to 2^32-1
-        rtptime--;
+        // rtptime--;
         // debug(1,"RTSP Flush Requested by handle_record: %u.",rtptime);
         player_flush(rtptime, conn);
       }
@@ -762,12 +762,12 @@ static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
 }
 
 static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
-  debug(2, "Connection %d: SETUP", conn->connection_number);
+  debug(3, "Connection %d: SETUP", conn->connection_number);
   uint16_t cport, tport;
 
   char *ar = msg_get_header(req, "Active-Remote");
   if (ar) {
-    debug(2, "Active-Remote string seen: \"%s\".", ar);
+    debug(2, "Connection %d: SETUP -- Active-Remote string seen: \"%s\".", conn->connection_number, ar);
     // get the active remote
     char *p;
     conn->dacp_active_remote = strtoul(ar, &p, 10);
@@ -775,13 +775,13 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
     send_metadata('ssnc', 'acre', ar, strlen(ar), req, 1);
 #endif
   } else {
-    debug(2, "Note: no Active-Remote information  the SETUP Record.");
+    debug(2, "Connection %d: SETUP -- Note: no Active-Remote information  the SETUP Record.",conn->connection_number);
     conn->dacp_active_remote = 0;
   }
 
   ar = msg_get_header(req, "DACP-ID");
   if (ar) {
-    debug(2, "DACP-ID string seen: \"%s\".", ar);
+    debug(2, "Connection %d: SETUP -- DACP-ID string seen: \"%s\".",conn->connection_number, ar);
     if (conn->dacp_id) // this is in case SETUP was previously called
       free(conn->dacp_id);
     conn->dacp_id = strdup(ar);
@@ -789,7 +789,7 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
     send_metadata('ssnc', 'daid', ar, strlen(ar), req, 1);
 #endif
   } else {
-    debug(2, "Note: no DACP-ID string information in the SETUP Record.");
+    debug(2, "Connection %d: SETUP doesn't include DACP-ID string information.",conn->connection_number);
     if (conn->dacp_id) // this is in case SETUP was previously called
       free(conn->dacp_id);
     conn->dacp_id = NULL;
@@ -797,14 +797,14 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
 
   char *hdr = msg_get_header(req, "Transport");
   if (!hdr) {
-    debug(1, "SETUP doesn't contain a Transport header.");
+    debug(1, "Connection %d: SETUP doesn't contain a Transport header.",conn->connection_number);
     goto error;
   }
 
   char *p;
   p = strstr(hdr, "control_port=");
   if (!p) {
-    debug(1, "SETUP doesn't specify a control_port.");
+    debug(1, "Connection %d: SETUP doesn't specify a control_port.",conn->connection_number);
     goto error;
   }
   p = strchr(p, '=') + 1;
@@ -812,7 +812,7 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
 
   p = strstr(hdr, "timing_port=");
   if (!p) {
-    debug(1, "SETUP doesn't specify a timing_port.");
+    debug(1, "Connection %d: SETUP doesn't specify a timing_port.",conn->connection_number);
     goto error;
   }
   p = strchr(p, '=') + 1;
@@ -820,19 +820,19 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
 
   if (conn->rtp_running) {
     if ((conn->remote_control_port != cport) || (conn->remote_timing_port != tport)) {
-      warn("Duplicate SETUP message with different control (old %u, new %u) or timing (old %u, new "
-           "%u) ports! This is probably fatal!",
+      warn("Connection %d: Duplicate SETUP message with different control (old %u, new %u) or timing (old %u, new "
+           "%u) ports! This is probably fatal!",conn->connection_number,
            conn->remote_control_port, cport, conn->remote_timing_port, tport);
     } else {
-      warn("Duplicate SETUP message with the same control (%u) and timing (%u) ports. This is "
-           "probably not fatal.",
+      warn("Connection %d: Duplicate SETUP message with the same control (%u) and timing (%u) ports. This is "
+           "probably not fatal.",conn->connection_number,
            conn->remote_control_port, conn->remote_timing_port);
     }
   } else {
     rtp_setup(&conn->local, &conn->remote, cport, tport, conn);
   }
   if (conn->local_audio_port == 0) {
-    debug(1, "SETUP seems to specify a null audio port.");
+    debug(1, "Connection %d: SETUP seems to specify a null audio port.",conn->connection_number);
     goto error;
   }
 
@@ -851,7 +851,7 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
   return;
 
 error:
-  warn("Error in setup request -- unlocking play lock on RTSP conversation thread %d.",
+  warn("Connection %d: SETUP -- Error in setup request -- unlocking play lock.",
        conn->connection_number);
   playing_conn = NULL;
   pthread_mutex_unlock(&play_lock);
@@ -1861,6 +1861,12 @@ authenticate:
 static void *rtsp_conversation_thread_func(void *pconn) {
   rtsp_conn_info *conn = pconn;
 
+  // create the player thread lock.
+  int rwli = pthread_rwlock_init(&conn->player_thread_lock, NULL);
+  if (rwli != 0)
+    die("Error %d initialising player_thread_lock for conversation thread %d.", rwli,
+        conn->connection_number);
+
   rtp_initialise(conn);
 
   rtsp_message *req, *resp;
@@ -1943,6 +1949,7 @@ static void *rtsp_conversation_thread_func(void *pconn) {
       if (tstop) {
         debug(3, "Synchronously terminate playing thread of RTSP conversation thread %d.",
               conn->connection_number);
+
         if (conn->player_thread)
           debug(1, "RTSP Channel unexpectedly closed or a serious error occured -- closing the "
                    "player thread.");
@@ -1965,10 +1972,16 @@ static void *rtsp_conversation_thread_func(void *pconn) {
     playing_conn = NULL;
     pthread_mutex_unlock(&play_lock);
   }
-  debug(2, "RTSP conversation thread %d terminated.", conn->connection_number);
-  //  please_shutdown = 0;
+  debug(2, "Connection %d: RTSP thread terminated.", conn->connection_number);
   conn->running = 0;
-  return NULL;
+
+  // release the player_thread_lock
+  int rwld = pthread_rwlock_destroy(&conn->player_thread_lock);
+  if (rwld)
+    debug(1, "Error %d destroying player_thread_lock for conversation thread %d.", rwld,
+          conn->connection_number);
+
+  pthread_exit(NULL);
 }
 
 /*
@@ -2088,8 +2101,8 @@ void rtsp_listen_loop(void) {
 
   int acceptfd;
   struct timeval tv;
-  while (1) {
-    tv.tv_sec = 300;
+  do {
+    tv.tv_sec = 60;
     tv.tv_usec = 0;
 
     for (i = 0; i < nsock; i++)
@@ -2182,7 +2195,13 @@ void rtsp_listen_loop(void) {
       conn->running = 1; // this must happen before the thread is tracked
       track_thread(conn);
     }
-  }
-  perror("select");
-  die("fell out of the RTSP select loop");
+  } while (1);
+
+  mdns_unregister();
+
+  if (sockfd)
+    free(sockfd);
+
+  // perror("select");
+  // die("fell out of the RTSP select loop");
 }

@@ -198,22 +198,21 @@ static void start(__attribute__((unused)) int sample_rate,
   pa_threaded_mainloop_unlock(mainloop);
 }
 
-static void play(short buf[], int samples) {
+static void play(void *buf, int samples) {
   // debug(1,"pa_play of %d samples.",samples);
-  char *bbuf = (char *)buf;
   // copy the samples into the queue
   size_t bytes_to_transfer = samples * 2 * 2;
   size_t space_to_end_of_buffer = audio_umb - audio_eoq;
   if (space_to_end_of_buffer >= bytes_to_transfer) {
-    memcpy(audio_eoq, bbuf, bytes_to_transfer);
+    memcpy(audio_eoq, buf, bytes_to_transfer);
     audio_occupancy += bytes_to_transfer;
     pthread_mutex_lock(&buffer_mutex);
     audio_eoq += bytes_to_transfer;
     pthread_mutex_unlock(&buffer_mutex);
   } else {
-    memcpy(audio_eoq, bbuf, space_to_end_of_buffer);
-    bbuf += space_to_end_of_buffer;
-    memcpy(audio_lmb, bbuf, bytes_to_transfer - space_to_end_of_buffer);
+    memcpy(audio_eoq, buf, space_to_end_of_buffer);
+    buf += space_to_end_of_buffer;
+    memcpy(audio_lmb, buf, bytes_to_transfer - space_to_end_of_buffer);
     pthread_mutex_lock(&buffer_mutex);
     audio_occupancy += bytes_to_transfer;
     pthread_mutex_unlock(&buffer_mutex);

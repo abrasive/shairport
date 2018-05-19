@@ -274,6 +274,8 @@ int parse_options(int argc, char **argv) {
       optind = j;
 
   optCon = poptGetContext(NULL, optind, (const char **)argv, optionsTable, 0);
+  if (optCon == NULL)
+    die("Can not get a secondary popt context.");
   poptSetOtherOptionHelp(optCon, "[OPTIONS]* ");
 
   /* Now do options processing just to get a debug level */
@@ -317,6 +319,8 @@ int parse_options(int argc, char **argv) {
   if (c < -1) {
     die("%s: %s", poptBadOption(optCon, POPT_BADOPTION_NOALIAS), poptStrerror(c));
   }
+
+  poptFreeContext(optCon);
 
   if ((daemonisewith) && (daemonisewithout))
     die("Select either daemonize_with_pid_file or daemonize_without_pid_file -- you have selected "
@@ -888,6 +892,8 @@ int parse_options(int argc, char **argv) {
       optind = j;
 
   optCon = poptGetContext(NULL, optind, (const char **)argv, optionsTable, 0);
+  if (optCon == NULL)
+    die("Can not get a popt context.");
   poptSetOtherOptionHelp(optCon, "[OPTIONS]* ");
 
   /* Now do options processing, get portname */
@@ -935,6 +941,7 @@ int parse_options(int argc, char **argv) {
     die("%s: %s", poptBadOption(optCon, POPT_BADOPTION_NOALIAS), poptStrerror(c));
   }
 
+  poptFreeContext(optCon);
 #ifdef CONFIG_METADATA
   if ((config.metadata_enabled == 1) && (config.metadata_pipename == NULL))
     config.metadata_pipename = strdup("/tmp/shairport-sync-metadata");
@@ -956,6 +963,10 @@ int parse_options(int argc, char **argv) {
   char hostname[100];
   gethostname(hostname, 100);
   char *i1 = str_replace(raw_service_name, "%h", hostname);
+  if (raw_service_name) {
+    free(raw_service_name);
+    raw_service_name = NULL;
+  }
   if ((hostname[0] >= 'a') && (hostname[0] <= 'z'))
     hostname[0] = hostname[0] - 0x20; // convert a lowercase first letter into a capital letter
   char *i2 = str_replace(i1, "%H", hostname);
@@ -1041,13 +1052,15 @@ void shairport_startup_complete(void) {
   }
 }
 
-const char *pid_file_proc(void) {
-
-  char fn[8192];
-  snprintf(fn, sizeof(fn), "%s/%s.pid", config.computed_piddir,
-           daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
-  // debug(1,"fn \"%s\".",fn);
-  return strdup(fn);
+const char *pid_file_proc(char *fn, size_t max_length) {
+  if (fn) {
+    snprintf(fn, max_length, "%s/%s.pid", config.computed_piddir,
+             daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
+    // debug(1,"fn \"%s\".",fn);
+  } else {
+    debug(1, "the sise of the buffer for the PID file path is zero.");
+  }
+  return fn;
 }
 
 void exit_function() {
@@ -1167,11 +1180,6 @@ int main(int argc, char **argv) {
     daemon_log(LOG_ERR, "Failed to unblock all signals: %s", strerror(errno));
     return 1;
   }
-
-  // Point to a function to help locate where the PID file will go
-  // We always use this function because the default location
-  // is unsatisfactory. By default we want to use /var/run/shairport-sync/.
-  daemon_pid_file_proc = pid_file_proc;
 
   /* Set indentification string for the daemon for both syslog and PID file */
   daemon_pid_file_ident = daemon_log_ident = daemon_ident_from_argv0(argv[0]);
@@ -1350,10 +1358,16 @@ int main(int argc, char **argv) {
   // audio_backend_latency_offset instead.
 
   if (config.userSuppliedLatency) {
-    inform("The default latency setting is deprecated, as Shairport Sync can now get the correct "
-           "latency from the source.");
-    inform("Please remove this setting and use the relevant audio_backend_latency_offset setting, "
-           "if necessary, to compensate for delays elsewhere.");
+    inform("The fixed latency setting is deprecated, as Shairport Sync gets the correct "
+           "latency automatically from the source.");
+    inform("Use the audio_backend_latency_offset_in_seconds setting "
+           "instead to compensate for timing issues.");
+    if ((config.userSuppliedLatency != 0) &&
+        ((config.userSuppliedLatency < 4410) ||
+         (config.userSuppliedLatency > BUFFER_FRAMES * 352 - 22050)))
+      die("An out-of-range fixed latency has been specified. It must be between 4410 and %d (at "
+          "44100 frames per second).",
+          BUFFER_FRAMES * 352 - 22050);
   }
 
   /* print out version */
@@ -1366,10 +1380,11 @@ int main(int argc, char **argv) {
     debug(1, "Can't print the version information!");
   }
 
+  char pid_file_path_string[4096] = "\0";
   /* Print out options */
   debug(1, "statistics_requester status is %d.", config.statistics_requested);
   debug(1, "daemon status is %d.", config.daemonise);
-  debug(1, "deamon pid file is \"%s\".", pid_file_proc());
+  debug(1, "deamon pid file is \"%s\".", pid_file_proc(pid_file_path_string, 4096));
   debug(1, "rtsp listening port is %d.", config.port);
   debug(1, "udp base port is %d.", config.udp_port_base);
   debug(1, "udp port range is %d.", config.udp_port_range);
