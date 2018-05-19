@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.50])
-AC_INIT([shairport-sync], [3.2RC7], [mikebrady@eircom.net])
+AC_INIT([shairport-sync], [3.2RC8], [mikebrady@eircom.net])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([shairport.c])
 AC_CONFIG_HEADERS([config.h])
@@ -35,7 +35,6 @@ fi
 AM_CONDITIONAL([BUILD_FOR_FREEBSD], [test "x${with_os}" = xfreebsd ])
 
 AM_CONDITIONAL([BUILD_FOR_OPENBSD], [test "x${with_os}" = xopenbsd ])
-
 
 ##### Some build systems are not fully using pkg-config, so we can use the flag ${with_pkg_config} on a case-by-case basis
 ##### to control how to deal with them
@@ -225,7 +224,7 @@ AC_ARG_WITH(sndio, [  --with-sndio = choose SNDIO API support], [
   AC_MSG_RESULT(>>Including a SNDIO back end)
   HAS_SNDIO=1
   AC_DEFINE([CONFIG_SNDIO], 1, [Needed by the compiler.])
-  AC_CHECK_LIB([sndio], [sio_open], , AC_MSG_ERROR(SNDIO support requires the sndio library!))], )
+  AC_CHECK_LIB([sndio], [sio_open], , AC_MSG_ERROR(SNDIO support requires the sndio library -- libsndio-dev suggested))], )
 AM_CONDITIONAL([USE_SNDIO], [test "x$HAS_SNDIO" = "x1"])
 
 # Look for AO flag
@@ -241,7 +240,7 @@ AC_ARG_WITH(soundio, [  --with-soundio = choose soundio API support.], [
   AC_MSG_RESULT(>>Including an soundio back end)
   HAS_SOUNDIO=1
   AC_DEFINE([CONFIG_SOUNDIO], 1, [Needed by the compiler.])
-  AC_CHECK_LIB([soundio], [soundio_create], , AC_MSG_ERROR(soundio support requires the soundio library!))], )
+  AC_CHECK_LIB([soundio], [soundio_create], , AC_MSG_ERROR(soundio support requires the soundio library -- libsoundio-dev suggested))], )
 AM_CONDITIONAL([USE_SOUNDIO], [test "x$HAS_SOUNDIO" = "x1"])
 
 # Look for pulseaudio flag
