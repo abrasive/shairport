@@ -1,4 +1,10 @@
 
+Version 3.2RC8
+====
+**Bug Fixes**
+
+* Fix a bug causing a play session to hang up on Cygwin 64. Fix a bug that might cause excessive resend requests. Fix a number of other (apparently) silent bugs.
+
 Version 3.2RC7
 ====
 **Bug Fixes**
