@@ -709,7 +709,7 @@ static uint16_t bind_port(int ip_family, const char *self_ip_address, uint32_t s
                           int *sock) {
   // look for a port in the range, if any was specified.
   uint16_t desired_port = config.udp_port_base;
-  int ret;
+  int ret = 0;
 
   int local_socket = socket(ip_family, SOCK_DGRAM, IPPROTO_UDP);
   if (local_socket == -1)
