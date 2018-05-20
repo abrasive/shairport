@@ -1052,15 +1052,13 @@ void shairport_startup_complete(void) {
   }
 }
 
-const char *pid_file_proc(char *fn, size_t max_length) {
-  if (fn) {
-    snprintf(fn, max_length, "%s/%s.pid", config.computed_piddir,
-             daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
-    // debug(1,"fn \"%s\".",fn);
-  } else {
-    debug(1, "the sise of the buffer for the PID file path is zero.");
-  }
-  return fn;
+char pid_file_path_string[4096] = "\0";
+
+const char *pid_file_proc(void) {
+  snprintf(pid_file_path_string, sizeof(pid_file_path_string), "%s/%s.pid", config.computed_piddir,
+           daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
+  debug(1,"pid_file_path_string \"%s\".",pid_file_path_string);
+  return pid_file_path_string;
 }
 
 void exit_function() {
@@ -1184,6 +1182,8 @@ int main(int argc, char **argv) {
   /* Set indentification string for the daemon for both syslog and PID file */
   daemon_pid_file_ident = daemon_log_ident = daemon_ident_from_argv0(argv[0]);
 
+  daemon_pid_file_proc = pid_file_proc;
+  
   /* Check if we are called with -D or --disconnectFromOutput parameter */
   if (argc >= 2 &&
       ((strcmp(argv[1], "-D") == 0) || (strcmp(argv[1], "--disconnectFromOutput") == 0))) {
@@ -1380,11 +1380,10 @@ int main(int argc, char **argv) {
     debug(1, "Can't print the version information!");
   }
 
-  char pid_file_path_string[4096] = "\0";
   /* Print out options */
   debug(1, "statistics_requester status is %d.", config.statistics_requested);
   debug(1, "daemon status is %d.", config.daemonise);
-  debug(1, "deamon pid file is \"%s\".", pid_file_proc(pid_file_path_string, 4096));
+  debug(1, "deamon pid file is \"%s\".", pid_file_proc());
   debug(1, "rtsp listening port is %d.", config.port);
   debug(1, "udp base port is %d.", config.udp_port_base);
   debug(1, "udp port range is %d.", config.udp_port_range);
