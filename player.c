@@ -1556,7 +1556,7 @@ static void *player_thread_func(void *arg) {
   int at_least_one_frame_seen = 0;
   int64_t tsum_of_sync_errors, tsum_of_corrections, tsum_of_insertions_and_deletions,
       tsum_of_drifts;
-  int64_t previous_sync_error, previous_correction;
+  int64_t previous_sync_error = 0, previous_correction = 0;
   int64_t minimum_dac_queue_size = INT64_MAX;
   int32_t minimum_buffer_occupancy = INT32_MAX;
   int32_t maximum_buffer_occupancy = INT32_MIN;
@@ -2516,7 +2516,7 @@ void player_volume_without_notification(double airplay_volume, rtsp_conn_info *c
       }
     }
   */
-  double hardware_attenuation, software_attenuation = 0.0;
+  double hardware_attenuation = 0.0, software_attenuation = 0.0;
   double scaled_attenuation = hw_min_db + sw_min_db;
 
   // now, we can map the input to the desired output volume
