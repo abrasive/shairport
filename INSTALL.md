@@ -1,6 +1,6 @@
 Simple Installation Instructions
 ==
-Shairport Sync can be installed in lots of different Linux and Unix machines, and there are lots of variations to consider – see the [README.md](https://github.com/mikebrady/shairport-sync/blob/master/README.md) page for a fuller discussion. But here are really simple instructions for building and installing it on a Raspberry Pi B, 2B, 3B or 3B+. It is assumed that the Pi is running Raspbian Stretch Lite – a GUI isn't needed, since Shairport Sync runs as a daemon program.
+Here are really simple instructions for building and installing Shairport Sync on a Raspberry Pi B, 2B, 3B or 3B+. It is assumed that the Pi is running Raspbian Stretch Lite – a GUI isn't needed, since Shairport Sync runs as a daemon program.
 
 ### Configure and Update
 Do the usual update and upgrade:
