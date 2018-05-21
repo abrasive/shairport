@@ -65,6 +65,8 @@ For information about changes and updates, please refer to the RELEASENOTES.md f
 
 Building And Installing
 ---------------------
+See [here](https://github.com/mikebrady/shairport-sync/blob/master/INSTALL.md) for simple installation instructions for modern Linux systems like Rapsberry Pis.
+
 Shairport Sync may already be available as a package in your Linux distribution (search for `shairport-sync` – the package named `shairport` is a different program). Packages are available on recent versions of Debian, Ubuntu, Arch, OpenWrt and possibly more:
 
 **Ubuntu:** A `shairport-sync` installer package is available for Ubuntu. Additionally, a Personal Package Archives for Shairport Sync master and development branches are available at https://launchpad.net/~dantheperson. 
