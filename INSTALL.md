@@ -1,6 +1,6 @@
 Simple Installation Instructions
 ==
-Shairport Sync can be installed in lots of different Linux and Unix machines, and there are lots of variations to consider -- see the [README.md](https://github.com/mikebrady/shairport-sync/blob/master/README.md) page for a fuller discussion. But here are really simple instructions for building and installing it on a Raspberry Pi B, 2B, 3B or 3B+. It is assumed that the Pi is running Raspbian Stretch Lite -- a GUI isn't needed, since Shairport Sync runs as a daemon program.
+Shairport Sync can be installed in lots of different Linux and Unix machines, and there are lots of variations to consider – see the [README.md](https://github.com/mikebrady/shairport-sync/blob/master/README.md) page for a fuller discussion. But here are really simple instructions for building and installing it on a Raspberry Pi B, 2B, 3B or 3B+. It is assumed that the Pi is running Raspbian Stretch Lite – a GUI isn't needed, since Shairport Sync runs as a daemon program.
 
 ### Configure and Update
 Do the usual update and upgrade:
@@ -19,17 +19,17 @@ audio_pwm_mode=2
 Reboot.
 
 ### Remove Old Copies
-Before you begin building Shairport Sync, it's best to search and remove any existing copies. Use the command `$ which shairport-sync` to find them. For example, if `shairport-sync` has been installed previously, this might happen:
+Before you begin building Shairport Sync, it's best to search for and remove any existing copies of the applicatioon, called `shairport-sync`. Use the command `$ which shairport-sync` to find them. For example, if `shairport-sync` has been installed previously, this might happen:
 ```
 $ which shairport-sync
 /usr/local/bin/shairport-sync
 $ sudo rm /usr/local/bin/shairport-sync
 ...
 ```
-Do this until no more are found.
+You can see that the `which` command located a copy of `shairports-sync` in the direcotry `/usr/local/bin` and then we removed it with the `rm` command. Do this until no more copies of `shairport-sync` are found.
 
 ### Build and Install
-Okay,now let's get the tools and sources for building and installing Shairport Sync.
+Okay, now let's get the tools and sources for building and installing Shairport Sync.
 
 First, install the packages needed by Shairport Sync:
 ```
@@ -45,8 +45,7 @@ $ make
 $ sudo make install
 ```
 
-Now to comfigure Shairport Sync.
-Here are the important options for the Shairport Sync configuration file at `/etc/shairport-sync.conf`:
+Now to configure Shairport Sync. Here are the important options for the Shairport Sync configuration file at `/etc/shairport-sync.conf`:
 ```
 // Sample Configuration File for Shairport Sync on a Raspberry Pi using the built-in audio DAC
 general =
@@ -57,17 +56,17 @@ general =
 
 alsa =
 {
-	output_device = "hw:0";
+  output_device = "hw:0";
   mixer_control_name = "PCM";
 };
 
 ```
-Fourth, enable Shairport Sync to start automatically on boot up:
+The next step is to enable Shairport Sync to start automatically on boot up:
 ```
 $ sudo systemctl enable shairport-sync
 ```
-Fifth, either reboot the Pi or start the service:
+Finally, either reboot the Pi or start the `shairport-sync` service:
 ```
 $ sudo systemctl start shairport-sync
 ```
-Sixth, enjoy!
+The Shairport Sync AirPlay service should now appear on the network for your devices to find. Connect to it and enjoy.
