@@ -69,4 +69,4 @@ Finally, either reboot the Pi or start the `shairport-sync` service:
 ```
 $ sudo systemctl start shairport-sync
 ```
-The Shairport Sync AirPlay service should now appear on the network for your devices to find. Connect to it and enjoy.
+The Shairport Sync AirPlay service should now appear on the network with a service name derived from the Pi's `hostname`. Connect to it and enjoy...
