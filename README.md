@@ -62,6 +62,8 @@ For information about changes and updates, please refer to the RELEASENOTES.md f
 
 Building And Installing the Development Version
 ---------------------
+See [here](https://github.com/mikebrady/shairport-sync/blob/development/INSTALL.md) for simple installation instructions for modern Linux systems like Rapsberry Pis.
+
 The following procedures will build and install the `shairport-sync` application into your system.
 
 **Remove Old Versions Of Shairport Sync**
