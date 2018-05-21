@@ -1,3 +1,8 @@
+Version 3.2RC9
+====
+**Bug Fix**
+
+* Restore the correct pathname for the Shairport Sync PID file used in FreeBSD and System V Linux installations.
 
 Version 3.2RC8
 ====
