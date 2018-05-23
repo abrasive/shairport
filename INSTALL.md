@@ -23,10 +23,12 @@ Before you begin building Shairport Sync, it's best to search for and remove any
 ```
 $ which shairport-sync
 /usr/local/bin/shairport-sync
-$ sudo rm /usr/local/bin/shairport-sync
-...
 ```
-You can see that the `which` command located a copy of `shairports-sync` in the direcotry `/usr/local/bin` and then we removed it with the `rm` command. Do this until no more copies of `shairport-sync` are found.
+Remove it as follows:
+```
+$ sudo rm /usr/local/bin/shairport-sync
+```
+Do this until no more copies of `shairport-sync` are found.
 
 ### Build and Install
 Okay, now let's get the tools and sources for building and installing Shairport Sync.
