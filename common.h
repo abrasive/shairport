@@ -163,7 +163,7 @@ typedef struct {
 
   int loudness;
   float loudness_reference_volume_db;
-  int alsa_use_playback_switch_for_mute;
+  int alsa_use_hardware_mute;
 #if defined(HAVE_DBUS)
   enum dbus_session_type dbus_service_bus_type;
 #endif

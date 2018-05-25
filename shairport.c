@@ -1424,7 +1424,7 @@ int main(int argc, char **argv) {
   debug(1, "zeroconf regtype is \"%s\".", config.regtype);
   debug(1, "decoders_supported field is %d.", config.decoders_supported);
   debug(1, "use_apple_decoder is %d.", config.use_apple_decoder);
-  debug(1, "alsa_use_playback_switch_for_mute is %d.", config.alsa_use_playback_switch_for_mute);
+  debug(1, "alsa_use_hardware_mute is %d.", config.alsa_use_hardware_mute);
   if (config.interface)
     debug(1, "mdns service interface \"%s\" requested.", config.interface);
   else
