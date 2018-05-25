@@ -1,4 +1,13 @@
 
+Version 3.2d56
+====
+**Enhancement**
+* The `mute_using_playback_switch` setting in the `alsa` group has been replaced by a `use_hardware_mute_if_available`, which defaults to `"no"`. This new setting controls both the playback switch method and the magic volume level method for doing hardware-supported muting.
+If hardware muting is used, the output device will be muted when Shairport Sync releases it, potentially causing problems for other audio programs using the device. To avoid this, `use_hardware_mute_if_available` is disabled by default.
+
+**Bug Chasing**
+* A debug message has been enhanced when a TEARDOWN message is received.
+
 Version 3.2d55
 ====
 **Bug Fix**
