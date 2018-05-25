@@ -1877,11 +1877,14 @@ static void *rtsp_conversation_thread_func(void *pconn) {
   int rtsp_read_request_attempt_count = 1; // 1 means exit immediately
 
   while (conn->stop == 0) {
+    int debug_level = 3; // for printing the request and response
     reply = rtsp_read_request(conn, &req);
     if (reply == rtsp_read_request_response_ok) {
-      debug(3, "RTSP thread %d received an RTSP Packet of type \"%s\":", conn->connection_number,
+      if (strcmp(req->method,"TEARDOWN")==0)
+        debug_level=2;
+      debug(debug_level, "RTSP thread %d received an RTSP Packet of type \"%s\":", conn->connection_number,
             req->method),
-          debug_print_msg_headers(3, req);
+      debug_print_msg_headers(debug_level, req);
       resp = msg_init();
       resp->respcode = 400;
 
@@ -1907,8 +1910,8 @@ static void *rtsp_conversation_thread_func(void *pconn) {
           debug(1, "RTSP thread %d: Unrecognised and unhandled rtsp request \"%s\".",
                 conn->connection_number, req->method);
       }
-      debug(3, "RTSP thread %d: RTSP Response:", conn->connection_number);
-      debug_print_msg_headers(3, resp);
+      debug(debug_level, "RTSP thread %d: RTSP Response:", conn->connection_number);
+      debug_print_msg_headers(debug_level, resp);
       fd_set writefds;
       FD_ZERO(&writefds);
       FD_SET(conn->fd, &writefds);
