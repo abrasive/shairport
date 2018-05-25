@@ -279,7 +279,7 @@ static int init(int argc, char **argv) {
 
     /* Get the output rate, which must be a multiple of 44,100*/
     if (config_lookup_int(config.cfg, "alsa.output_rate", &value)) {
-      debug(1, "Value read for output rate is %d.", value);
+      debug(1, "alsa output rate is %d frames per second", value);
       switch (value) {
       case 44100:
       case 88200:

@@ -1880,7 +1880,7 @@ static void *rtsp_conversation_thread_func(void *pconn) {
     int debug_level = 3; // for printing the request and response
     reply = rtsp_read_request(conn, &req);
     if (reply == rtsp_read_request_response_ok) {
-      if (strcmp(req->method,"TEARDOWN")==0)
+      if (strcmp(req->method,"OPTIONS")!=0)
         debug_level=2;
       debug(debug_level, "RTSP thread %d received an RTSP Packet of type \"%s\":", conn->connection_number,
             req->method),
