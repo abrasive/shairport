@@ -1,3 +1,10 @@
+Version 3.2RC10
+====
+**Compatibility Adjustment**
+
+* Disable the use of all hardware mute mechanisms by default, for compatibility with other applications using the same output card.
+* Rename `\"mute_using_playback_switch\"` to `\"use_hardware_mute_if_available\"` and make it control volume-based mute as well as playback-switch-based mute.
+
 Version 3.2RC9
 ====
 **Bug Fix**
