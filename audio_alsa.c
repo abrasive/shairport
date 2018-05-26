@@ -175,7 +175,7 @@ static int init(int argc, char **argv) {
   // set up default values first
   set_period_size_request = 0;
   set_buffer_size_request = 0;
-  config.alsa_use_playback_switch_for_mute = 0; // don't use it by default
+  config.alsa_use_hardware_mute = 0; // don't use it by default
 
   config.audio_backend_latency_offset = 0;
   config.audio_backend_buffer_desired_length = 0.15;
@@ -226,13 +226,28 @@ static int init(int argc, char **argv) {
 
     /* Get the mute_using_playback_switch setting. */
     if (config_lookup_string(config.cfg, "alsa.mute_using_playback_switch", &str)) {
+      inform("The alsa \"mute_using_playback_switch\" setting is deprecated. "
+             "Please use the \"use_hardware_mute_if_available\" setting instead.");      
       if (strcasecmp(str, "no") == 0)
-        config.alsa_use_playback_switch_for_mute = 0;
+        config.alsa_use_hardware_mute = 0;
       else if (strcasecmp(str, "yes") == 0)
-        config.alsa_use_playback_switch_for_mute = 1;
+        config.alsa_use_hardware_mute = 1;
       else {
         pthread_mutex_unlock(&alsa_mutex);
-        die("Invalid mute_use_playback_switch option choice \"%s\". It should be \"yes\" or "
+        die("Invalid mute_using_playback_switch option choice \"%s\". It should be \"yes\" or "
+            "\"no\"");
+      }
+    }
+
+    /* Get the use_hardware_mute_if_available setting. */
+    if (config_lookup_string(config.cfg, "alsa.use_hardware_mute_if_available", &str)) {
+      if (strcasecmp(str, "no") == 0)
+        config.alsa_use_hardware_mute = 0;
+      else if (strcasecmp(str, "yes") == 0)
+        config.alsa_use_hardware_mute = 1;
+      else {
+        pthread_mutex_unlock(&alsa_mutex);
+        die("Invalid use_hardware_mute_if_available option choice \"%s\". It should be \"yes\" or "
             "\"no\"");
       }
     }
@@ -264,7 +279,7 @@ static int init(int argc, char **argv) {
 
     /* Get the output rate, which must be a multiple of 44,100*/
     if (config_lookup_int(config.cfg, "alsa.output_rate", &value)) {
-      debug(1, "Value read for output rate is %d.", value);
+      debug(1, "alsa output rate is %d frames per second", value);
       switch (value) {
       case 44100:
       case 88200:
@@ -433,7 +448,7 @@ static int init(int argc, char **argv) {
         */
       }
     }
-    if (((config.alsa_use_playback_switch_for_mute == 1) &&
+    if (((config.alsa_use_hardware_mute == 1) &&
          (snd_mixer_selem_has_playback_switch(alsa_mix_elem))) ||
         mixer_volume_setting_gives_mute) {
       audio_alsa.mute = &mute; // insert the mute function now we know it can do muting stuff
@@ -1006,13 +1021,13 @@ void do_mute(int mute_state_requested) {
   // If the hardware isn't there, or we are not allowed to use it, nothing will be done
   // The caller must have the alsa mutex
 
-  if ((config.alsa_use_playback_switch_for_mute == 1) || mixer_volume_setting_gives_mute) {
+  if (config.alsa_use_hardware_mute == 1) {
     if (mute_request_pending == 0)
       local_mute_state_requested = mute_state_requested;
     if (open_mixer()) {
       if (local_mute_state_requested) {
         // debug(1,"Playback Switch mute actually done");
-        if (config.alsa_use_playback_switch_for_mute == 1)
+        if (snd_mixer_selem_has_playback_switch(alsa_mix_elem))
           snd_mixer_selem_set_playback_switch_all(alsa_mix_elem, 0);
         else {
           // debug(1,"Activating volume-based mute.");
@@ -1021,7 +1036,7 @@ void do_mute(int mute_state_requested) {
         }
       } else if (overriding_mute_state_requested == 0) {
         // debug(1,"Playback Switch unmute actually done");
-        if (config.alsa_use_playback_switch_for_mute == 1)
+        if (snd_mixer_selem_has_playback_switch(alsa_mix_elem))
           snd_mixer_selem_set_playback_switch_all(alsa_mix_elem, 1);
         else {
           // debug(1,"Deactivating volume-based mute.");
