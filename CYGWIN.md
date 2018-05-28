@@ -27,6 +27,7 @@ and enter valid DNS server addresses, e.g. `8.8.8.8`.
 * Download, configure, compile and install `libconfig`:
 ```
 $ git clone https://github.com/hyperrealm/libconfig.git
+$ cd libconfig
 $ autoreconf -fi
 $ ./configure
 $ make
