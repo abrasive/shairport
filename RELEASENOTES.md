@@ -1,4 +1,10 @@
 
+Version 3.2d57
+====
+
+**Bug Chasing**
+* Debug messaging has been enhanced when a TEARDOWN message is received.
+
 Version 3.2d56
 ====
 **Enhancement**
