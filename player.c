@@ -2679,11 +2679,15 @@ int player_play(rtsp_conn_info *conn) {
 }
 
 int player_stop(rtsp_conn_info *conn) {
+	debug(3,"player_stop");
   pthread_rwlock_wrlock(&conn->player_thread_lock);
+	debug(3,"player_thread_lock acquired");
   if (conn->player_thread) {
+		debug(3,"player_thread exists");
     conn->player_thread_please_stop = 1;
     pthread_cond_signal(&conn->flowcontrol); // tell it to give up
     pthread_kill(*conn->player_thread, SIGUSR1);
+		debug(3,"player_thread signalled");
     pthread_join(*conn->player_thread, NULL);
     free(conn->player_thread);
     conn->player_thread = NULL;
