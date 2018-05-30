@@ -1,5 +1,5 @@
 
-Version 3.2d57
+Version 3.2d57 and 3.2d58
 ====
 
 **Bug Chasing**
