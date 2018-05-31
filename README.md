@@ -202,7 +202,7 @@ If you wish to have Shairport Sync start automatically when your system boots, y
 
 There are a number of init systems in use: `systemd`, `upstart` and "System V" among others, and it's actually difficult to be certain which one your system is using. Fortunately, for Shairport Sync, all you have to do is figure out if it's a `systemd` init system or not. If it is not a `systemd` init system, you can assume that it is either a System V init system or else it is compatible with a System V init system. Recent systems tend to use `systemd`, whereas older systems use `upstart` or the earlier System V init system. 
 
-The easiest way to look at the first few lines of the `init` manual. Enter the command:
+The easiest way is to look at the first few lines of the `init` manual. Enter the command:
 
 ```
 $ man init
