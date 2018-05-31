@@ -16,7 +16,15 @@ Check the file `/boot/config.txt` and, if it's not there already, add the follow
 ```
 audio_pwm_mode=2
 ```
-Reboot.
+
+### Turn Off WiFi Power Management
+If you are using WiFi, you should turn off WiFi Power Management:
+```
+# iwconfig wlan0 power off
+```
+WiFi Power Management will put the WiFi system in low-power mode when the WiFi system considered active, and in this mode it may not respond to events initiated from the network, such as AirPlay requests. Hence, WiFi Power Management should be turned off. (See [TROUBLESHOOTING.md](https://github.com/mikebrady/shairport-sync/blob/master/TROUBLESHOOTING.md#wifi-adapter-running-in-power-saving--low-power-mode) for more details.)
+
+Reboot the Pi.
 
 ### Remove Old Copies
 Before you begin building Shairport Sync, it's best to search for and remove any existing copies of the applicatioon, called `shairport-sync`. Use the command `$ which shairport-sync` to find them. For example, if `shairport-sync` has been installed previously, this might happen:
