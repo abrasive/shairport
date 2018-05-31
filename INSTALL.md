@@ -83,6 +83,6 @@ Finally, either reboot the Pi or start the `shairport-sync` service:
 ```
 # systemctl start shairport-sync
 ```
-The Shairport Sync AirPlay service should now appear on the network with a service name made from the Pi's hostname with the first letter capitalised, e.g. hostname `raspberrypi` gives a service name `Raspberrypi`. You can change the service name ins the configuration file.
+The Shairport Sync AirPlay service should now appear on the network with a service name made from the Pi's hostname with the first letter capitalised, e.g. hostname `raspberrypi` gives a service name `Raspberrypi`. You can change the service name and set a password in the configuration file.
 
 Connect and enjoy...
