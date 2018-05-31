@@ -58,6 +58,7 @@ $ make
 $ sudo make install
 ```
 By the way, the `autoreconf` step may take quite a while on a Raspberry Pi -- be patient!
+
 Now to configure Shairport Sync. Here are the important options for the Shairport Sync configuration file at `/etc/shairport-sync.conf`:
 ```
 // Sample Configuration File for Shairport Sync on a Raspberry Pi using the built-in audio DAC
@@ -82,4 +83,6 @@ Finally, either reboot the Pi or start the `shairport-sync` service:
 ```
 # systemctl start shairport-sync
 ```
-The Shairport Sync AirPlay service should now appear on the network with a service name made from the Pi's hostname with the first letter capitalised, e.g. hostname `raspberrypi` gives a service name `Raspberrypi`. Connect to it and enjoy...
+The Shairport Sync AirPlay service should now appear on the network with a service name made from the Pi's hostname with the first letter capitalised, e.g. hostname `raspberrypi` gives a service name `Raspberrypi`. You can change the service name ins the configuration file.
+
+Connect and enjoy...
