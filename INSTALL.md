@@ -2,6 +2,8 @@ Simple Installation Instructions
 ==
 Here are really simple instructions for building and installing Shairport Sync on a Raspberry Pi B, 2B, 3B or 3B+. It is assumed that the Pi is running Raspbian Stretch Lite – a GUI isn't needed, since Shairport Sync runs as a daemon program.
 
+In the commands below, note the convention that a `#` prompt means you are in superuser mode and a `$` prompt means you are in a regular non-priviliged user mode. You can use `sudo` *("SUperuser DO")* to temporarily promote yourself from user to superuser, if permitted. For example, if you want to execute `apt-get update` in superuser mode and you are in user mode, enter `sudo apt-get update`.
+
 ### Configure and Update
 Do the usual update and upgrade:
 ```
@@ -34,7 +36,7 @@ $ which shairport-sync
 ```
 Remove it as follows:
 ```
-$ sudo rm /usr/local/bin/shairport-sync
+# rm /usr/local/bin/shairport-sync
 ```
 Do this until no more copies of `shairport-sync` are found.
 
@@ -73,10 +75,10 @@ alsa =
 ```
 The next step is to enable Shairport Sync to start automatically on boot up:
 ```
-$ sudo systemctl enable shairport-sync
+# systemctl enable shairport-sync
 ```
 Finally, either reboot the Pi or start the `shairport-sync` service:
 ```
-$ sudo systemctl start shairport-sync
+# systemctl start shairport-sync
 ```
 The Shairport Sync AirPlay service should now appear on the network with a service name made from the Pi's hostname with the first letter capitalised, e.g. hostname `raspberrypi` gives a service name `Raspberrypi`. Connect to it and enjoy...
