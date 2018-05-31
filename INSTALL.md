@@ -57,7 +57,7 @@ $ ./configure --sysconfdir=/etc --with-alsa --with-avahi --with-ssl=openssl --wi
 $ make
 $ sudo make install
 ```
-
+By the way, the `autoconf` step may take quite a while on a Raspberry Pi -- be patient!
 Now to configure Shairport Sync. Here are the important options for the Shairport Sync configuration file at `/etc/shairport-sync.conf`:
 ```
 // Sample Configuration File for Shairport Sync on a Raspberry Pi using the built-in audio DAC
