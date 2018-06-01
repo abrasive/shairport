@@ -219,7 +219,7 @@ static int init(int argc, char **argv) {
       else if (strcasecmp(str, "yes") == 0)
         config.no_sync = 1;
       else {
-        pthread_mutex_unlock(&alsa_mutex);
+        debug_mutex_unlock(&alsa_mutex, 3);
         die("Invalid disable_synchronization option choice \"%s\". It should be \"yes\" or \"no\"");
       }
     }
@@ -233,7 +233,7 @@ static int init(int argc, char **argv) {
       else if (strcasecmp(str, "yes") == 0)
         config.alsa_use_hardware_mute = 1;
       else {
-        pthread_mutex_unlock(&alsa_mutex);
+        debug_mutex_unlock(&alsa_mutex, 3);
         die("Invalid mute_using_playback_switch option choice \"%s\". It should be \"yes\" or "
             "\"no\"");
       }
@@ -246,7 +246,7 @@ static int init(int argc, char **argv) {
       else if (strcasecmp(str, "yes") == 0)
         config.alsa_use_hardware_mute = 1;
       else {
-        pthread_mutex_unlock(&alsa_mutex);
+        debug_mutex_unlock(&alsa_mutex, 3);
         die("Invalid use_hardware_mute_if_available option choice \"%s\". It should be \"yes\" or "
             "\"no\"");
       }
@@ -269,7 +269,7 @@ static int init(int argc, char **argv) {
       else if (strcasecmp(str, "S8") == 0)
         config.output_format = SPS_FORMAT_S8;
       else {
-        pthread_mutex_unlock(&alsa_mutex);
+        debug_mutex_unlock(&alsa_mutex, 3);
         die("Invalid output format \"%s\". It should be \"U8\", \"S8\", \"S16\", \"S24\", "
             "\"S24_3LE\", \"S24_3BE\" or "
             "\"S32\"",
@@ -288,7 +288,7 @@ static int init(int argc, char **argv) {
         config.output_rate = value;
         break;
       default:
-        pthread_mutex_unlock(&alsa_mutex);
+        debug_mutex_unlock(&alsa_mutex, 3);
         die("Invalid output rate \"%d\". It should be a multiple of 44,100 up to 352,800", value);
       }
     }
@@ -300,7 +300,7 @@ static int init(int argc, char **argv) {
       else if (strcasecmp(str, "yes") == 0)
         config.no_mmap = 0;
       else {
-        pthread_mutex_unlock(&alsa_mutex);
+        debug_mutex_unlock(&alsa_mutex, 3);
         die("Invalid use_mmap_if_available option choice \"%s\". It should be \"yes\" or \"no\"");
       }
     }
@@ -309,7 +309,7 @@ static int init(int argc, char **argv) {
       set_period_size_request = 1;
       debug(1, "Value read for period size is %d.", value);
       if (value < 0) {
-        pthread_mutex_unlock(&alsa_mutex);
+        debug_mutex_unlock(&alsa_mutex, 3);
         die("Invalid alsa period size setting \"%d\". It "
             "must be greater than 0.",
             value);
@@ -323,7 +323,7 @@ static int init(int argc, char **argv) {
       set_buffer_size_request = 1;
       debug(1, "Value read for buffer size is %d.", value);
       if (value < 0) {
-        pthread_mutex_unlock(&alsa_mutex);
+        debug_mutex_unlock(&alsa_mutex, 3);
         die("Invalid alsa buffer size setting \"%d\". It "
             "must be greater than 0.",
             value);
@@ -362,13 +362,13 @@ static int init(int argc, char **argv) {
       break;
     default:
       help();
-      pthread_mutex_unlock(&alsa_mutex);
+      debug_mutex_unlock(&alsa_mutex, 3);
       die("Invalid audio option -%c specified", opt);
     }
   }
 
   if (optind < argc) {
-    pthread_mutex_unlock(&alsa_mutex);
+    debug_mutex_unlock(&alsa_mutex, 3);
     die("Invalid audio argument: %s", argv[optind]);
   }
 
@@ -412,11 +412,11 @@ static int init(int argc, char **argv) {
               alsa_mix_ctrl);
 
         if (snd_ctl_open(&ctl, alsa_mix_dev, 0) < 0) {
-          pthread_mutex_unlock(&alsa_mutex);
+          debug_mutex_unlock(&alsa_mutex, 3);
           die("Cannot open control \"%s\"", alsa_mix_dev);
         }
         if (snd_ctl_elem_id_malloc(&elem_id) < 0) {
-          pthread_mutex_unlock(&alsa_mutex);
+          debug_mutex_unlock(&alsa_mutex, 3);
           die("Cannot allocate memory for control \"%s\"", alsa_mix_dev);
         }
         snd_ctl_elem_id_set_interface(elem_id, SND_CTL_ELEM_IFACE_MIXER);
@@ -462,7 +462,7 @@ static int init(int argc, char **argv) {
   }
 
   alsa_mix_handle = NULL;
-  pthread_mutex_unlock(&alsa_mutex);
+  debug_mutex_unlock(&alsa_mutex, 3);
   return 0;
 }
 
@@ -507,7 +507,7 @@ int open_alsa_device(void) {
 
   ret = snd_pcm_hw_params_any(alsa_handle, alsa_params);
   if (ret < 0) {
-    pthread_mutex_unlock(&alsa_mutex);
+    debug_mutex_unlock(&alsa_mutex, 3);
     ;
     die("audio_alsa: Broken configuration for device \"%s\": no configurations "
         "available",
@@ -534,7 +534,7 @@ int open_alsa_device(void) {
 
   ret = snd_pcm_hw_params_set_access(alsa_handle, alsa_params, access);
   if (ret < 0) {
-    pthread_mutex_unlock(&alsa_mutex);
+    debug_mutex_unlock(&alsa_mutex, 3);
     die("audio_alsa: Access type not available for device \"%s\": %s", alsa_out_dev,
         snd_strerror(ret));
   }
@@ -562,20 +562,20 @@ int open_alsa_device(void) {
     sf = SND_PCM_FORMAT_S32;
     break;
   default:
-    pthread_mutex_unlock(&alsa_mutex);
+    debug_mutex_unlock(&alsa_mutex, 3);
     sf = SND_PCM_FORMAT_S16; // this is just to quieten a compiler warning
     die("Unsupported output format at audio_alsa.c");
   }
   ret = snd_pcm_hw_params_set_format(alsa_handle, alsa_params, sf);
   if (ret < 0) {
-    pthread_mutex_unlock(&alsa_mutex);
+    debug_mutex_unlock(&alsa_mutex, 3);
     die("audio_alsa: Sample format %d not available for device \"%s\": %s", sample_format,
         alsa_out_dev, snd_strerror(ret));
   }
 
   ret = snd_pcm_hw_params_set_channels(alsa_handle, alsa_params, 2);
   if (ret < 0) {
-    pthread_mutex_unlock(&alsa_mutex);
+    debug_mutex_unlock(&alsa_mutex, 3);
     die("audio_alsa: Channels count (2) not available for device \"%s\": %s", alsa_out_dev,
         snd_strerror(ret));
   }
@@ -591,7 +591,7 @@ int open_alsa_device(void) {
     ret = snd_pcm_hw_params_set_period_size_near(alsa_handle, alsa_params, &period_size_requested,
                                                  &dir);
     if (ret < 0) {
-      pthread_mutex_unlock(&alsa_mutex);
+      debug_mutex_unlock(&alsa_mutex, 3);
       die("audio_alsa: cannot set period size of %lu: %s", period_size_requested,
           snd_strerror(ret));
       snd_pcm_uframes_t actual_period_size;
@@ -607,7 +607,7 @@ int open_alsa_device(void) {
     debug(1, "Attempting to set the buffer size to %lu", buffer_size_requested);
     ret = snd_pcm_hw_params_set_buffer_size_near(alsa_handle, alsa_params, &buffer_size_requested);
     if (ret < 0) {
-      pthread_mutex_unlock(&alsa_mutex);
+      debug_mutex_unlock(&alsa_mutex, 3);
       die("audio_alsa: cannot set buffer size of %lu: %s", buffer_size_requested,
           snd_strerror(ret));
     }
@@ -621,19 +621,19 @@ int open_alsa_device(void) {
 
   ret = snd_pcm_hw_params(alsa_handle, alsa_params);
   if (ret < 0) {
-    pthread_mutex_unlock(&alsa_mutex);
+    debug_mutex_unlock(&alsa_mutex, 3);
     die("audio_alsa: Unable to set hw parameters for device \"%s\": %s.", alsa_out_dev,
         snd_strerror(ret));
   }
 
   if (my_sample_rate != desired_sample_rate) {
-    pthread_mutex_unlock(&alsa_mutex);
+    debug_mutex_unlock(&alsa_mutex, 3);
     die("Can't set the D/A converter to %d.", desired_sample_rate);
   }
 
   ret = snd_pcm_hw_params_get_buffer_size(alsa_params, &actual_buffer_length);
   if (ret < 0) {
-    pthread_mutex_unlock(&alsa_mutex);
+    debug_mutex_unlock(&alsa_mutex, 3);
     die("audio_alsa: Unable to get hw buffer length for device \"%s\": %s.", alsa_out_dev,
         snd_strerror(ret));
   }
@@ -843,7 +843,7 @@ int delay(long *the_delay) {
         debug(1, "Error preparing after delay error: \"%s\".", snd_strerror(derr));
       }
     }
-    pthread_mutex_unlock(&alsa_mutex);
+    debug_mutex_unlock(&alsa_mutex, 3);
     // here, occasionally pretend there's a problem with pcm_get_delay()
     // if ((random() % 100000) < 3) // keep it pretty rare
     //	reply = -EPERM; // pretend something bad has happened
@@ -863,7 +863,7 @@ static void play(void *buf, int samples) {
       if (audio_alsa.mute)
         do_mute(0);
     }
-    pthread_mutex_unlock(&alsa_mutex);
+    debug_mutex_unlock(&alsa_mutex, 3);
   }
   if (ret == 0) {
     debug_mutex_lock(&alsa_mutex, 10000, 1);
@@ -897,7 +897,7 @@ static void play(void *buf, int samples) {
         debug(1, "Error preparing after play error: \"%s\".", snd_strerror(err));
       }
     }
-    pthread_mutex_unlock(&alsa_mutex);
+    debug_mutex_unlock(&alsa_mutex, 3);
   }
 }
 
@@ -920,7 +920,7 @@ static void flush(void) {
 
     alsa_handle = NULL;
   }
-  pthread_mutex_unlock(&alsa_mutex);
+  debug_mutex_unlock(&alsa_mutex, 3);
 }
 
 static void stop(void) {
@@ -976,7 +976,7 @@ void volume(double vol) {
   debug_mutex_lock(&alsa_mutex, 1000, 1);
   volume_set_request = 1; // an external request has been made to set the volume
   do_volume(vol);
-  pthread_mutex_unlock(&alsa_mutex);
+  debug_mutex_unlock(&alsa_mutex, 3);
 }
 
 /*
@@ -1003,7 +1003,7 @@ static void mute(int mute_state_requested) {
   mute_request_pending = 1;
   overriding_mute_state_requested = mute_state_requested;
   do_mute(mute_state_requested);
-  pthread_mutex_unlock(&alsa_mutex);
+  debug_mutex_unlock(&alsa_mutex, 3);
 }
 
 void do_mute(int mute_state_requested) {

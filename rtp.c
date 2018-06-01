@@ -339,7 +339,7 @@ void *rtp_control_receiver(void *arg) {
                 remote_time_of_sync - conn->local_to_remote_time_difference;
             conn->reference_timestamp = sync_rtp_timestamp;
             conn->latency_delayed_timestamp = rtp_timestamp_less_latency;
-            pthread_mutex_unlock(&conn->reference_time_mutex);
+            debug_mutex_unlock(&conn->reference_time_mutex, 3);
 
             // this is for debugging
             /*
@@ -898,14 +898,14 @@ void get_reference_timestamp_stuff(int64_t *timestamp, uint64_t *timestamp_time,
   //  debug(1,"Reference timestamp is invalid.");
   //}
   *remote_timestamp_time = conn->remote_reference_timestamp_time;
-  pthread_mutex_unlock(&conn->reference_time_mutex);
+  debug_mutex_unlock(&conn->reference_time_mutex, 3);
 }
 
 void clear_reference_timestamp(rtsp_conn_info *conn) {
   debug_mutex_lock(&conn->reference_time_mutex, 1000, 1);
   conn->reference_timestamp = 0;
   conn->reference_timestamp_time = 0;
-  pthread_mutex_unlock(&conn->reference_time_mutex);
+  debug_mutex_unlock(&conn->reference_time_mutex, 3);
 }
 
 void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {

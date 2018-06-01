@@ -1042,11 +1042,26 @@ int _debug_mutex_lock(pthread_mutex_t *mutex, useconds_t dally_time, const char 
                       const int line, int debuglevel) {
   char dstring[1000];
   memset(dstring, 0, sizeof(dstring));
-  snprintf(dstring, sizeof(dstring), "%s%d", filename, line);
+  snprintf(dstring, sizeof(dstring), "%s:%d", filename, line);
+  debug(3, "debug_mutex_lock at \"%s\".", dstring);
   int result = sps_pthread_mutex_timedlock(mutex, dally_time, dstring, debuglevel);
   if (result == EBUSY)
     result = pthread_mutex_lock(mutex);
   return result;
+}
+
+int _debug_mutex_unlock(pthread_mutex_t *mutex, const char *filename, const int line,
+                        int debuglevel) {
+  char dstring[1000];
+  char errstr[512];
+  memset(dstring, 0, sizeof(dstring));
+  snprintf(dstring, sizeof(dstring), "%s:%d", filename, line);
+  debug(debuglevel, "debug_mutex_unlock at \"%s\".", dstring);
+  int r = pthread_mutex_unlock(mutex);
+  if (r != 0)
+    debug(1, "error %d: \"%s\" unlocking a mutex: \"%s\".", r,
+          strerror_r(r, errstr, sizeof(errstr)), dstring);
+  return r;
 }
 
 char *get_version_string() {

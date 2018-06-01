@@ -481,10 +481,10 @@ void player_put_packet(seq_t seqno, uint32_t actual_timestamp, int64_t timestamp
         debug_mutex_lock(&conn->flush_mutex, 1000, 1);
         conn->flush_requested = 0;
         conn->flush_rtp_timestamp = 0;
-        pthread_mutex_unlock(&conn->flush_mutex);
+        debug_mutex_unlock(&conn->flush_mutex, 3);
       }
 
-      debug_mutex_lock(&conn->ab_mutex, 10000, 1);
+      debug_mutex_lock(&conn->ab_mutex, 40000, 1);
       conn->packet_count++;
       conn->time_of_last_audio_packet = get_absolute_time_in_fp();
       if (conn->connection_state_to_output) { // if we are supposed to be processing these packets
@@ -626,7 +626,7 @@ void player_put_packet(seq_t seqno, uint32_t actual_timestamp, int64_t timestamp
         if (rc)
           debug(1, "Error signalling flowcontrol.");
       }
-      pthread_mutex_unlock(&conn->ab_mutex);
+      debug_mutex_unlock(&conn->ab_mutex, 3);
     } else {
       debug(
           1,
@@ -787,7 +787,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
   abuf_t *curframe = 0;
   int notified_buffer_empty = 0; // diagnostic only
 
-  debug_mutex_lock(&conn->ab_mutex, 10000, 1);
+  debug_mutex_lock(&conn->ab_mutex, 40000, 1);
   int wait;
   long dac_delay = 0; // long because alsa returns a long
   do {
@@ -819,7 +819,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
       if (conn->connection_state_to_output == 0) { // going off
         debug_mutex_lock(&conn->flush_mutex, 1000, 1);
         conn->flush_requested = 1;
-        pthread_mutex_unlock(&conn->flush_mutex);
+        debug_mutex_unlock(&conn->flush_mutex, 3);
       }
     }
 
@@ -833,7 +833,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
       conn->time_since_play_started = 0;
       conn->flush_requested = 0;
     }
-    pthread_mutex_unlock(&conn->flush_mutex);
+    debug_mutex_unlock(&conn->flush_mutex, 3);
 
     uint32_t flush_limit = 0;
     if (conn->ab_synced) {
@@ -1232,7 +1232,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
 
   if (conn->player_thread_please_stop) {
     debug(3, "buffer_get_frame exiting due to thread stop request.");
-    pthread_mutex_unlock(&conn->ab_mutex);
+    debug_mutex_unlock(&conn->ab_mutex, 3);
     return 0;
   }
 
@@ -1246,7 +1246,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
   curframe->ready = 0;
   curframe->resend_level = 0;
   conn->ab_read = SUCCESSOR(conn->ab_read);
-  pthread_mutex_unlock(&conn->ab_mutex);
+  debug_mutex_unlock(&conn->ab_mutex, 3);
   return curframe;
 }
 
@@ -1324,7 +1324,7 @@ static int stuff_buffer_basic_32(int32_t *inptr, int length, enum sps_format_t l
       process_sample(*inptr++, &l_outptr, l_output_format, conn->fix_volume, dither, conn);
     }
   }
-  pthread_mutex_unlock(&conn->vol_mutex);
+  debug_mutex_unlock(&conn->vol_mutex, 3);
   conn->amountStuffed = tstuff;
   return length + tstuff;
 }
@@ -2584,7 +2584,7 @@ void player_volume_without_notification(double airplay_volume, rtsp_conn_info *c
 
   debug_mutex_lock(&conn->vol_mutex, 1000, 1);
   conn->fix_volume = temp_fix_volume;
-  pthread_mutex_unlock(&conn->vol_mutex);
+  debug_mutex_unlock(&conn->vol_mutex, 3);
 
   if (config.loudness)
     loudness_set_volume(software_attenuation / 100);
@@ -2621,7 +2621,7 @@ void do_flush(int64_t timestamp, rtsp_conn_info *conn) {
   conn->flush_requested = 1;
   // if (timestamp!=0)
   conn->flush_rtp_timestamp = timestamp; // flush all packets up to (and including?) this
-  pthread_mutex_unlock(&conn->flush_mutex);
+  debug_mutex_unlock(&conn->flush_mutex, 3);
   conn->play_segment_reference_frame = 0;
   conn->play_number_after_flush = 0;
 #ifdef CONFIG_METADATA

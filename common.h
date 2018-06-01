@@ -271,6 +271,11 @@ int _debug_mutex_lock(pthread_mutex_t *mutex, useconds_t dally_time, const char 
 
 #define debug_mutex_lock(mu, t, d) _debug_mutex_lock(mu, t, __FILE__, __LINE__, d)
 
+int _debug_mutex_unlock(pthread_mutex_t *mutex, const char *filename, const int line,
+                        int debuglevel);
+
+#define debug_mutex_unlock(mu, d) _debug_mutex_unlock(mu, __FILE__, __LINE__, d)
+
 char *get_version_string(); // mallocs a string space -- remember to free it afterwards
 
 void sps_nanosleep(const time_t sec,
