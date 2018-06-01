@@ -793,6 +793,8 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
   do {
     // get the time
     local_time_now = get_absolute_time_in_fp(); // type okay
+    debug(3, "buffer_get_frame is iterating");
+
     // if config.timeout (default 120) seconds have elapsed since the last audio packet was
     // received, then we should stop.
     // config.timeout of zero means don't check..., but iTunes may be confused by a long gap
@@ -1200,7 +1202,6 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
            (!conn->player_thread_please_stop);
 
     if (wait) {
-      debug(3, "buffer_get_frame is iterating");
       uint64_t time_to_wait_for_wakeup_fp =
           ((uint64_t)1 << 32) / conn->input_rate; // this is time period of one frame
       time_to_wait_for_wakeup_fp *= 4 * 352;      // four full 352-frame packets
@@ -1214,10 +1215,10 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
       struct timespec time_of_wakeup;
       time_of_wakeup.tv_sec = sec;
       time_of_wakeup.tv_nsec = nsec;
-      pthread_cond_timedwait(&conn->flowcontrol, &conn->ab_mutex, &time_of_wakeup);
-// int rc = pthread_cond_timedwait(&flowcontrol,&ab_mutex,&time_of_wakeup);
-// if (rc!=0)
-//  debug(1,"pthread_cond_timedwait returned error code %d.",rc);
+//      pthread_cond_timedwait(&conn->flowcontrol, &conn->ab_mutex, &time_of_wakeup);
+ int rc = pthread_cond_timedwait(&conn->flowcontrol,&conn->ab_mutex,&time_of_wakeup);
+ if (rc!=0)
+  debug(3,"pthread_cond_timedwait returned error code %d.",rc);
 #endif
 #ifdef COMPILE_FOR_OSX
       uint64_t sec = time_to_wait_for_wakeup_fp >> 32;
