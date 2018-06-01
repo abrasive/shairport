@@ -484,7 +484,7 @@ void player_put_packet(seq_t seqno, uint32_t actual_timestamp, int64_t timestamp
         debug_mutex_unlock(&conn->flush_mutex, 3);
       }
 
-      debug_mutex_lock(&conn->ab_mutex, 40000, 1);
+      debug_mutex_lock(&conn->ab_mutex, 20000, 1);
       conn->packet_count++;
       conn->time_of_last_audio_packet = get_absolute_time_in_fp();
       if (conn->connection_state_to_output) { // if we are supposed to be processing these packets
@@ -525,37 +525,6 @@ void player_put_packet(seq_t seqno, uint32_t actual_timestamp, int64_t timestamp
             debug(2, "Resend interval for latency of %" PRId64 " frames is %d frames.",
                   conn->latency, resend_interval);
             conn->resend_interval = resend_interval;
-          }
-          if (!conn->ab_buffering) {
-            int j;
-            for (j = 1; j <= number_of_resend_attempts; j++) {
-              // check j times, after a short period of has elapsed, assuming 352 frames per packet
-
-              int back_step = resend_interval * j;
-
-              int32_t sd = seq_diff(conn->ab_read, conn->ab_write, conn->ab_read);
-              int k;
-              for (k = -2; k <= 2; k++) {
-                if ((back_step + k) < sd) { // if it's within the range of frames in use...
-                  int item_to_check = (conn->ab_write - (back_step + k)) & 0xffff;
-                  seq_t next = item_to_check;
-                  abuf_t *check_buf = conn->audio_buffer + BUFIDX(next);
-                  if ((!check_buf->ready) &&
-                      (check_buf->resend_level <
-                       j)) { // prevent multiple requests from the same level of lookback
-                    check_buf->resend_level = j;
-                    if (config.disable_resend_requests == 0) {
-                      rtp_request_resend(next, 1, conn);
-                      if ((back_step + k + resend_interval) >= sd)
-                        debug(2, "Last-ditch (#%d) resend request for packet %u in range %u to %u. "
-                                 "Looking back %d packets.",
-                              j, next, conn->ab_read, conn->ab_write, back_step + k);
-                      conn->resend_requests++;
-                    }
-                  }
-                }
-              }
-            }
           }
 
           if (conn->ab_write == seqno) { // expected packet
@@ -621,16 +590,51 @@ void player_put_packet(seq_t seqno, uint32_t actual_timestamp, int64_t timestamp
           }
 
           // pthread_mutex_lock(&ab_mutex);
+          int rc = pthread_cond_signal(&conn->flowcontrol);
+          if (rc)
+            debug(1, "Error signalling flowcontrol.");
+
+          // if it's at the expected time, do a look back for missing packets
+          // but release the ab_mutex when doing a resend
+          if (!conn->ab_buffering) {
+            int j;
+            for (j = 1; j <= number_of_resend_attempts; j++) {
+              // check j times, after a short period of has elapsed, assuming 352 frames per packet
+
+              int back_step = resend_interval * j;
+              int k;
+              for (k = -2; k <= 2; k++) {
+                if ((back_step + k) <
+                    seq_diff(conn->ab_read, conn->ab_write,
+                             conn->ab_read)) { // if it's within the range of frames in use...
+                  int item_to_check = (conn->ab_write - (back_step + k)) & 0xffff;
+                  seq_t next = item_to_check;
+                  abuf_t *check_buf = conn->audio_buffer + BUFIDX(next);
+                  if ((!check_buf->ready) &&
+                      (check_buf->resend_level <
+                       j)) { // prevent multiple requests from the same level of lookback
+                    check_buf->resend_level = j;
+                    if (config.disable_resend_requests == 0) {
+                      if ((back_step + k + resend_interval) >=
+                          seq_diff(conn->ab_read, conn->ab_write, conn->ab_read))
+                        debug(2, "Last-ditch (#%d) resend request for packet %u in range %u to %u. "
+                                 "Looking back %d packets.",
+                              j, next, conn->ab_read, conn->ab_write, back_step + k);
+                      debug_mutex_unlock(&conn->ab_mutex, 3);
+                      rtp_request_resend(next, 1, conn);
+                      conn->resend_requests++;
+                      debug_mutex_lock(&conn->ab_mutex, 20000, 1);
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
-        int rc = pthread_cond_signal(&conn->flowcontrol);
-        if (rc)
-          debug(1, "Error signalling flowcontrol.");
       }
       debug_mutex_unlock(&conn->ab_mutex, 3);
     } else {
-      debug(
-          1,
-          "No player thread while adding a player_put_packet calle was made -- packet discarded.");
+      debug(1, "player_put_packet discarded packet %d because the player thread was gone.");
     }
     pthread_rwlock_unlock(&conn->player_thread_lock);
   } else {
@@ -787,7 +791,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
   abuf_t *curframe = 0;
   int notified_buffer_empty = 0; // diagnostic only
 
-  debug_mutex_lock(&conn->ab_mutex, 40000, 1);
+  debug_mutex_lock(&conn->ab_mutex, 20000, 1);
   int wait;
   long dac_delay = 0; // long because alsa returns a long
   do {
@@ -1215,10 +1219,10 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
       struct timespec time_of_wakeup;
       time_of_wakeup.tv_sec = sec;
       time_of_wakeup.tv_nsec = nsec;
-//      pthread_cond_timedwait(&conn->flowcontrol, &conn->ab_mutex, &time_of_wakeup);
- int rc = pthread_cond_timedwait(&conn->flowcontrol,&conn->ab_mutex,&time_of_wakeup);
- if (rc!=0)
-  debug(3,"pthread_cond_timedwait returned error code %d.",rc);
+      //      pthread_cond_timedwait(&conn->flowcontrol, &conn->ab_mutex, &time_of_wakeup);
+      int rc = pthread_cond_timedwait(&conn->flowcontrol, &conn->ab_mutex, &time_of_wakeup);
+      if (rc != 0)
+        debug(3, "pthread_cond_timedwait returned error code %d.", rc);
 #endif
 #ifdef COMPILE_FOR_OSX
       uint64_t sec = time_to_wait_for_wakeup_fp >> 32;

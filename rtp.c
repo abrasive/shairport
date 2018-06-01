@@ -934,11 +934,21 @@ void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
          resend_error_backoff_time)) {
       if ((config.diagnostic_drop_packet_fraction == 0.0) ||
           (drand48() > config.diagnostic_drop_packet_fraction)) {
+        // put a time limit on the sendto
+
+        struct timeval timeout;
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 100000;
+
+        if (setsockopt(conn->control_socket, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout,
+                       sizeof(timeout)) < 0)
+          debug(1, "Can't set timeout on resend request socket.");
+
         if (sendto(conn->control_socket, req, sizeof(req), 0,
                    (struct sockaddr *)&conn->rtp_client_control_socket, msgsize) == -1) {
           char em[1024];
           strerror_r(errno, em, sizeof(em));
-          debug(1, "Error %d using send-to to an audio socket: \"%s\". Backing off for 1/16th of a "
+          debug(1, "Error %d using sendto to an audio socket: \"%s\". Backing off for 1/16th of a "
                    "second.",
                 errno, em);
           conn->rtp_time_of_last_resend_request_error_fp = time_of_sending_fp;
