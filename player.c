@@ -484,7 +484,7 @@ void player_put_packet(seq_t seqno, uint32_t actual_timestamp, int64_t timestamp
         debug_mutex_unlock(&conn->flush_mutex, 3);
       }
 
-      debug_mutex_lock(&conn->ab_mutex, 20000, 1);
+      debug_mutex_lock(&conn->ab_mutex, 30000, 1);
       conn->packet_count++;
       conn->time_of_last_audio_packet = get_absolute_time_in_fp();
       if (conn->connection_state_to_output) { // if we are supposed to be processing these packets
@@ -791,7 +791,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
   abuf_t *curframe = 0;
   int notified_buffer_empty = 0; // diagnostic only
 
-  debug_mutex_lock(&conn->ab_mutex, 20000, 1);
+  debug_mutex_lock(&conn->ab_mutex, 30000, 1);
   int wait;
   long dac_delay = 0; // long because alsa returns a long
   do {

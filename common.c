@@ -1026,11 +1026,12 @@ int sps_pthread_mutex_timedlock(pthread_mutex_t *mutex, useconds_t dally_time,
     time_to_wait -= st;
     r = pthread_mutex_trylock(mutex);
   }
-  if (r != 0) {
+  if ((r != 0) && (debugmessage != NULL)) {
     char errstr[1000];
     if (r == EBUSY)
-      debug(debuglevel, "timeout at %d microseconds while waiting for a mutex: \"%s\".", dally_time,
-            debugmessage);
+      debug(debuglevel,
+            "waiting for a mutex, maximum expected time of %d microseconds exceeded \"%s\".",
+            dally_time, debugmessage);
     else
       debug(debuglevel, "error %d: \"%s\" waiting for a mutex: \"%s\".", r,
             strerror_r(r, errstr, sizeof(errstr)), debugmessage);
@@ -1051,7 +1052,9 @@ int _debug_mutex_lock(pthread_mutex_t *mutex, useconds_t dally_time, const char 
     uint64_t time_delay = get_absolute_time_in_fp() - time_at_start;
     uint64_t divisor = (uint64_t)1 << 32;
     double delay = 1.0 * time_delay / divisor;
-    debug(debuglevel, "debug_mutex_lock  at \"%s\" -- wait time: %0.9f sec.", dstring, delay);
+    debug(debuglevel,
+          "debug_mutex_lock at \"%s\" expected max wait: %0.9f, actual wait: %0.9f sec.", dstring,
+          (1.0 * dally_time) / 1000000, delay);
   }
   return result;
 }
