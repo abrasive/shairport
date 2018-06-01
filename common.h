@@ -264,6 +264,12 @@ extern sigset_t pselect_sigset;
 // wait for the specified time in microseconds -- it checks every 20 milliseconds
 int sps_pthread_mutex_timedlock(pthread_mutex_t *mutex, useconds_t dally_time,
                                 const char *debugmessage, int debuglevel);
+// wait for the specified time, checking every 20 milliseconds, and block if it can't acquire the
+// lock
+int _debug_mutex_lock(pthread_mutex_t *mutex, useconds_t dally_time, const char *filename,
+                      const int line, int debuglevel);
+
+#define debug_mutex_lock(mu, t, d) _debug_mutex_lock(mu, t, __FILE__, __LINE__, d)
 
 char *get_version_string(); // mallocs a string space -- remember to free it afterwards
 

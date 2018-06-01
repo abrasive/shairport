@@ -328,7 +328,7 @@ void *rtp_control_receiver(void *arg) {
               }
             }
 
-            pthread_mutex_lock(&conn->reference_time_mutex);
+            debug_mutex_lock(&conn->reference_time_mutex, 1000, 1);
 
             // this is for debugging
             // uint64_t old_remote_reference_time = conn->remote_reference_timestamp_time;
@@ -812,8 +812,8 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, uint16_t cport, uint16_t tport
     inet_ntop(conn->connection_ip_family, self_addr, conn->self_ip_string,
               sizeof(conn->self_ip_string));
 
-    debug(2, "Connection %d: SETUP -- Connection from %s to self at %s.",
-          conn->connection_number,conn->client_ip_string, conn->self_ip_string);
+    debug(2, "Connection %d: SETUP -- Connection from %s to self at %s.", conn->connection_number,
+          conn->client_ip_string, conn->self_ip_string);
 
     // set up a the record of the remote's control socket
     struct addrinfo hints;
@@ -891,7 +891,7 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, uint16_t cport, uint16_t tport
 void get_reference_timestamp_stuff(int64_t *timestamp, uint64_t *timestamp_time,
                                    uint64_t *remote_timestamp_time, rtsp_conn_info *conn) {
   // types okay
-  pthread_mutex_lock(&conn->reference_time_mutex);
+  debug_mutex_lock(&conn->reference_time_mutex, 1000, 1);
   *timestamp = conn->reference_timestamp;
   *timestamp_time = conn->reference_timestamp_time;
   // if ((*timestamp == 0) && (*timestamp_time == 0)) {
@@ -902,7 +902,7 @@ void get_reference_timestamp_stuff(int64_t *timestamp, uint64_t *timestamp_time,
 }
 
 void clear_reference_timestamp(rtsp_conn_info *conn) {
-  pthread_mutex_lock(&conn->reference_time_mutex);
+  debug_mutex_lock(&conn->reference_time_mutex, 1000, 1);
   conn->reference_timestamp = 0;
   conn->reference_timestamp_time = 0;
   pthread_mutex_unlock(&conn->reference_time_mutex);

@@ -166,7 +166,7 @@ void do_snd_mixer_selem_set_playback_dB_all(snd_mixer_elem_t *mix_elem, double v
 }
 
 static int init(int argc, char **argv) {
-  pthread_mutex_lock(&alsa_mutex);
+  debug_mutex_lock(&alsa_mutex, 1000, 1);
   // debug(2,"audio_alsa init called.");
   const char *str;
   int value;
@@ -227,7 +227,7 @@ static int init(int argc, char **argv) {
     /* Get the mute_using_playback_switch setting. */
     if (config_lookup_string(config.cfg, "alsa.mute_using_playback_switch", &str)) {
       inform("The alsa \"mute_using_playback_switch\" setting is deprecated. "
-             "Please use the \"use_hardware_mute_if_available\" setting instead.");      
+             "Please use the \"use_hardware_mute_if_available\" setting instead.");
       if (strcasecmp(str, "no") == 0)
         config.alsa_use_hardware_mute = 0;
       else if (strcasecmp(str, "yes") == 0)
@@ -817,7 +817,7 @@ int delay(long *the_delay) {
   if (alsa_handle == NULL) {
     return -ENODEV;
   } else {
-    pthread_mutex_lock(&alsa_mutex);
+    debug_mutex_lock(&alsa_mutex, 10000, 1);
     int derr;
     if (snd_pcm_state(alsa_handle) == SND_PCM_STATE_RUNNING) {
       *the_delay = 0; // just to see what happens
@@ -855,7 +855,7 @@ static void play(void *buf, int samples) {
   // debug(3,"audio_alsa play called.");
   int ret = 0;
   if (alsa_handle == NULL) {
-    pthread_mutex_lock(&alsa_mutex);
+    debug_mutex_lock(&alsa_mutex, 10000, 1);
     ret = open_alsa_device();
     if (ret == 0) {
       if (audio_alsa.volume)
@@ -866,7 +866,7 @@ static void play(void *buf, int samples) {
     pthread_mutex_unlock(&alsa_mutex);
   }
   if (ret == 0) {
-    pthread_mutex_lock(&alsa_mutex);
+    debug_mutex_lock(&alsa_mutex, 10000, 1);
     //    snd_pcm_sframes_t current_delay = 0;
     int err;
     if (snd_pcm_state(alsa_handle) == SND_PCM_STATE_XRUN) {
@@ -903,7 +903,7 @@ static void play(void *buf, int samples) {
 
 static void flush(void) {
   // debug(2,"audio_alsa flush called.");
-  pthread_mutex_lock(&alsa_mutex);
+  debug_mutex_lock(&alsa_mutex, 10000, 1);
   int derr;
   do_mute(1);
   if (alsa_handle) {
@@ -973,7 +973,7 @@ void do_volume(double vol) { // caller is assumed to have the alsa_mutex when us
 }
 
 void volume(double vol) {
-  pthread_mutex_lock(&alsa_mutex);
+  debug_mutex_lock(&alsa_mutex, 1000, 1);
   volume_set_request = 1; // an external request has been made to set the volume
   do_volume(vol);
   pthread_mutex_unlock(&alsa_mutex);
@@ -999,7 +999,7 @@ static void linear_volume(double vol) {
 
 static void mute(int mute_state_requested) {
   // debug(1,"External Mute Request: %d",mute_state_requested);
-  pthread_mutex_lock(&alsa_mutex);
+  debug_mutex_lock(&alsa_mutex, 10000, 1);
   mute_request_pending = 1;
   overriding_mute_state_requested = mute_state_requested;
   do_mute(mute_state_requested);
