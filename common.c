@@ -1040,13 +1040,19 @@ int sps_pthread_mutex_timedlock(pthread_mutex_t *mutex, useconds_t dally_time,
 
 int _debug_mutex_lock(pthread_mutex_t *mutex, useconds_t dally_time, const char *filename,
                       const int line, int debuglevel) {
+  uint64_t time_at_start = get_absolute_time_in_fp();
   char dstring[1000];
   memset(dstring, 0, sizeof(dstring));
   snprintf(dstring, sizeof(dstring), "%s:%d", filename, line);
   debug(3, "debug_mutex_lock at \"%s\".", dstring);
   int result = sps_pthread_mutex_timedlock(mutex, dally_time, dstring, debuglevel);
-  if (result == EBUSY)
+  if (result == EBUSY) {
     result = pthread_mutex_lock(mutex);
+    uint64_t time_delay = get_absolute_time_in_fp() - time_at_start;
+    uint64_t divisor = (uint64_t)1 << 32;
+    double delay = 1.0 * time_delay / divisor;
+    debug(debuglevel, "debug_mutex_lock  at \"%s\" -- wait time: %0.9f sec.", dstring, delay);
+  }
   return result;
 }
 

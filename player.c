@@ -1294,7 +1294,6 @@ static int stuff_buffer_basic_32(int32_t *inptr, int length, enum sps_format_t l
     stuffsamp =
         (rand() % (length - 2)) + 1; // ensure there's always a sample before and after the item
 
-  debug_mutex_lock(&conn->vol_mutex, 1000, 1);
   for (i = 0; i < stuffsamp; i++) { // the whole frame, if no stuffing
     process_sample(*inptr++, &l_outptr, l_output_format, conn->fix_volume, dither, conn);
     process_sample(*inptr++, &l_outptr, l_output_format, conn->fix_volume, dither, conn);
@@ -1324,7 +1323,6 @@ static int stuff_buffer_basic_32(int32_t *inptr, int length, enum sps_format_t l
       process_sample(*inptr++, &l_outptr, l_output_format, conn->fix_volume, dither, conn);
     }
   }
-  debug_mutex_unlock(&conn->vol_mutex, 3);
   conn->amountStuffed = tstuff;
   return length + tstuff;
 }
@@ -1437,9 +1435,6 @@ static void *player_thread_func(void *arg) {
   rc = pthread_mutex_init(&conn->flush_mutex, NULL);
   if (rc)
     debug(1, "Error initialising flush_mutex.");
-  rc = pthread_mutex_init(&conn->vol_mutex, NULL);
-  if (rc)
-    debug(1, "Error initialising vol_mutex.");
 // set the flowcontrol condition variable to wait on a monotonic clock
 #ifdef COMPILE_FOR_LINUX_AND_FREEBSD_AND_CYGWIN_AND_OPENBSD
   pthread_condattr_t attr;
@@ -2329,12 +2324,12 @@ static void *player_thread_func(void *arg) {
   mdns_dacp_dont_monitor(conn->dapo_private_storage);
 #endif
 
-  debug(3, "Requesting output device to stop.");
+  debug(3, "Connection %d: stopping output device.", conn->connection_number);
 
   if (config.output->stop)
     config.output->stop();
 
-  debug(2, "Cancelling timing, control and audio threads");
+  debug(2, "Cancelling timing, control and audio threads...");
   pthread_cancel(rtp_timing_thread);
   pthread_cancel(rtp_control_thread);
   pthread_cancel(rtp_audio_thread);
@@ -2362,10 +2357,6 @@ static void *player_thread_func(void *arg) {
   rc = pthread_mutex_destroy(&conn->ab_mutex);
   if (rc)
     debug(1, "Error destroying ab_mutex variable.");
-  rc = pthread_mutex_destroy(&conn->vol_mutex);
-  if (rc)
-    debug(1, "Error destroying vol_mutex variable.");
-
   debug(2, "Connection %d: player thread terminated.", conn->connection_number);
   if (conn->dacp_id) {
     free(conn->dacp_id);
@@ -2582,9 +2573,8 @@ void player_volume_without_notification(double airplay_volume, rtsp_conn_info *c
   // debug(1,"Software attenuation set to %f, i.e %f out of 65,536, for airplay volume of
   // %f",software_attenuation,temp_fix_volume,airplay_volume);
 
-  debug_mutex_lock(&conn->vol_mutex, 1000, 1);
   conn->fix_volume = temp_fix_volume;
-  debug_mutex_unlock(&conn->vol_mutex, 3);
+  memory_barrier();
 
   if (config.loudness)
     loudness_set_volume(software_attenuation / 100);
