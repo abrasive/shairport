@@ -617,7 +617,7 @@ void player_put_packet(seq_t seqno, uint32_t actual_timestamp, int64_t timestamp
                     if (config.disable_resend_requests == 0) {
                       if ((back_step + k + resend_interval) >=
                           seq_diff(conn->ab_read, conn->ab_write, conn->ab_read))
-                        debug(2, "Last-ditch (#%d) resend request for packet %u in range %u to %u. "
+                        debug(3, "Last-ditch (#%d) resend request for packet %u in range %u to %u. "
                                  "Looking back %d packets.",
                               j, next, conn->ab_read, conn->ab_write, back_step + k);
                       debug_mutex_unlock(&conn->ab_mutex, 3);
