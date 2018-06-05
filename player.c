@@ -466,14 +466,14 @@ static void free_audio_buffers(rtsp_conn_info *conn) {
 
 void player_thread_lock_cleanup(void *arg) {
   rtsp_conn_info *conn = (rtsp_conn_info *)arg;
-  debug(3,"Cleaning up player_thread_lock.");
+  debug(3, "Cleaning up player_thread_lock.");
   pthread_rwlock_unlock(&conn->player_thread_lock);
 }
 
 void player_put_packet(seq_t seqno, uint32_t actual_timestamp, int64_t timestamp, uint8_t *data,
                        int len, rtsp_conn_info *conn) {
   if (pthread_rwlock_tryrdlock(&conn->player_thread_lock) == 0) {
-    pthread_cleanup_push( player_thread_lock_cleanup, (void *)conn);
+    pthread_cleanup_push(player_thread_lock_cleanup, (void *)conn);
     if (conn->player_thread != NULL) {
 
       // all timestamps are done at the output rate
@@ -643,7 +643,7 @@ void player_put_packet(seq_t seqno, uint32_t actual_timestamp, int64_t timestamp
     } else {
       debug(1, "player_put_packet discarded packet %d because the player thread was gone.");
     }
-    pthread_cleanup_pop( 1);
+    pthread_cleanup_pop(1);
     // pthread_rwlock_unlock(&conn->player_thread_lock);
   } else {
     debug(1, "player_put_packet discarded packet %d because the player thread was locked.", seqno);
