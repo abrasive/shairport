@@ -1,7 +1,7 @@
 Version 3.2d61
 ====
 **Bug Fix**
-* Add a pthread_cancel cleanup routine to put_packet to unlock the player rw thread when cancelled. Sincere thanks to [davidhq](https://github.com/davidhq) for help with this investigation.
+* Add a pthread_cancel cleanup routine to put_packet to unlock the player rw thread when cancelled. Sincere thanks to [davidhq](https://github.com/davidhq) for help investigating this.
 
 Version 3.2d57, 3.2d58, 3.2d59, 3.2d60 
 ====
