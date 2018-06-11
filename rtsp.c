@@ -637,7 +637,7 @@ static void msg_write_response(int fd, rtsp_message *resp) {
     pktfree -= n;
     p += n;
     if (pktfree <= 1024)
-      die("Attempted to write overlong RTSP packet");
+      die("Attempted to write overlong RTSP packet 1");
   }
 
   // Here, if there's content, write the Content-Length header ...
@@ -648,21 +648,22 @@ static void msg_write_response(int fd, rtsp_message *resp) {
     pktfree -= n;
     p += n;
     if (pktfree <= 1024)
-      die("Attempted to write overlong RTSP packet");
+      die("Attempted to write overlong RTSP packet 2");
+    debug(1, "Content is \"%s\"", resp->content);
+    memcpy(p, resp->content, resp->contentlength);
+    pktfree -= resp->contentlength;
+    p += resp->contentlength;
   }
+
+  n = snprintf(p, pktfree, "\r\n");
+  pktfree -= n;
+  p += n;
+
+  if (pktfree <= 1024)
+    die("Attempted to write overlong RTSP packet 3");
 
   if (write(fd, pkt, p - pkt) != p - pkt)
     debug(1, "Error writing an RTSP packet -- requested bytes not fully written.");
-
-  // Here, if there's content, write it
-  if (resp->contentlength) {
-    debug(1, "Content is \"%s\"", resp->content);
-    if (write(fd, resp->content, resp->contentlength) != resp->contentlength)
-      debug(1, "Error writing RTSP content -- requested bytes not fully written.");
-  }
-
-  if (write(fd, "\r\n", strlen("\r\n")) != strlen("\r\n"))
-    debug(1, "Error terminating RTSP content.");
 }
 
 static void handle_record(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
@@ -709,9 +710,10 @@ static void handle_options(rtsp_conn_info *conn, __attribute__((unused)) rtsp_me
                            rtsp_message *resp) {
   debug(3, "Connection %d: OPTIONS", conn->connection_number);
   resp->respcode = 200;
-  msg_add_header(resp, "Public", "ANNOUNCE, SETUP, RECORD, "
-                                 "PAUSE, FLUSH, TEARDOWN, "
-                                 "OPTIONS, GET_PARAMETER, SET_PARAMETER");
+  msg_add_header(resp, "Public",
+                 "ANNOUNCE, SETUP, RECORD, "
+                 "PAUSE, FLUSH, TEARDOWN, "
+                 "OPTIONS, GET_PARAMETER, SET_PARAMETER");
 }
 
 static void handle_teardown(rtsp_conn_info *conn, __attribute__((unused)) rtsp_message *req,
@@ -767,7 +769,8 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
 
   char *ar = msg_get_header(req, "Active-Remote");
   if (ar) {
-    debug(2, "Connection %d: SETUP -- Active-Remote string seen: \"%s\".", conn->connection_number, ar);
+    debug(2, "Connection %d: SETUP -- Active-Remote string seen: \"%s\".", conn->connection_number,
+          ar);
     // get the active remote
     char *p;
     conn->dacp_active_remote = strtoul(ar, &p, 10);
@@ -775,13 +778,14 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
     send_metadata('ssnc', 'acre', ar, strlen(ar), req, 1);
 #endif
   } else {
-    debug(2, "Connection %d: SETUP -- Note: no Active-Remote information  the SETUP Record.",conn->connection_number);
+    debug(2, "Connection %d: SETUP -- Note: no Active-Remote information  the SETUP Record.",
+          conn->connection_number);
     conn->dacp_active_remote = 0;
   }
 
   ar = msg_get_header(req, "DACP-ID");
   if (ar) {
-    debug(2, "Connection %d: SETUP -- DACP-ID string seen: \"%s\".",conn->connection_number, ar);
+    debug(2, "Connection %d: SETUP -- DACP-ID string seen: \"%s\".", conn->connection_number, ar);
     if (conn->dacp_id) // this is in case SETUP was previously called
       free(conn->dacp_id);
     conn->dacp_id = strdup(ar);
@@ -789,7 +793,8 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
     send_metadata('ssnc', 'daid', ar, strlen(ar), req, 1);
 #endif
   } else {
-    debug(2, "Connection %d: SETUP doesn't include DACP-ID string information.",conn->connection_number);
+    debug(2, "Connection %d: SETUP doesn't include DACP-ID string information.",
+          conn->connection_number);
     if (conn->dacp_id) // this is in case SETUP was previously called
       free(conn->dacp_id);
     conn->dacp_id = NULL;
@@ -797,14 +802,14 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
 
   char *hdr = msg_get_header(req, "Transport");
   if (!hdr) {
-    debug(1, "Connection %d: SETUP doesn't contain a Transport header.",conn->connection_number);
+    debug(1, "Connection %d: SETUP doesn't contain a Transport header.", conn->connection_number);
     goto error;
   }
 
   char *p;
   p = strstr(hdr, "control_port=");
   if (!p) {
-    debug(1, "Connection %d: SETUP doesn't specify a control_port.",conn->connection_number);
+    debug(1, "Connection %d: SETUP doesn't specify a control_port.", conn->connection_number);
     goto error;
   }
   p = strchr(p, '=') + 1;
@@ -812,7 +817,7 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
 
   p = strstr(hdr, "timing_port=");
   if (!p) {
-    debug(1, "Connection %d: SETUP doesn't specify a timing_port.",conn->connection_number);
+    debug(1, "Connection %d: SETUP doesn't specify a timing_port.", conn->connection_number);
     goto error;
   }
   p = strchr(p, '=') + 1;
@@ -820,27 +825,31 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
 
   if (conn->rtp_running) {
     if ((conn->remote_control_port != cport) || (conn->remote_timing_port != tport)) {
-      warn("Connection %d: Duplicate SETUP message with different control (old %u, new %u) or timing (old %u, new "
-           "%u) ports! This is probably fatal!",conn->connection_number,
-           conn->remote_control_port, cport, conn->remote_timing_port, tport);
+      warn("Connection %d: Duplicate SETUP message with different control (old %u, new %u) or "
+           "timing (old %u, new "
+           "%u) ports! This is probably fatal!",
+           conn->connection_number, conn->remote_control_port, cport, conn->remote_timing_port,
+           tport);
     } else {
-      warn("Connection %d: Duplicate SETUP message with the same control (%u) and timing (%u) ports. This is "
-           "probably not fatal.",conn->connection_number,
-           conn->remote_control_port, conn->remote_timing_port);
+      warn("Connection %d: Duplicate SETUP message with the same control (%u) and timing (%u) "
+           "ports. This is "
+           "probably not fatal.",
+           conn->connection_number, conn->remote_control_port, conn->remote_timing_port);
     }
   } else {
     rtp_setup(&conn->local, &conn->remote, cport, tport, conn);
   }
   if (conn->local_audio_port == 0) {
-    debug(1, "Connection %d: SETUP seems to specify a null audio port.",conn->connection_number);
+    debug(1, "Connection %d: SETUP seems to specify a null audio port.", conn->connection_number);
     goto error;
   }
 
   char resphdr[256] = "";
-  snprintf(resphdr, sizeof(resphdr), "RTP/AVP/"
-                                     "UDP;unicast;interleaved=0-1;mode=record;control_port=%d;"
-                                     "timing_port=%d;server_"
-                                     "port=%d",
+  snprintf(resphdr, sizeof(resphdr),
+           "RTP/AVP/"
+           "UDP;unicast;interleaved=0-1;mode=record;control_port=%d;"
+           "timing_port=%d;server_"
+           "port=%d",
            conn->local_control_port, conn->local_timing_port, conn->local_audio_port);
 
   msg_add_header(resp, "Transport", resphdr);
@@ -1358,7 +1367,7 @@ static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_m
   char *ct = msg_get_header(req, "Content-Type");
 
   if (ct) {
-// debug(2, "SET_PARAMETER Content-Type:\"%s\".", ct);
+    // debug(2, "SET_PARAMETER Content-Type:\"%s\".", ct);
 
 #ifdef CONFIG_METADATA
     // It seems that the rtptime of the message is used as a kind of an ID that
@@ -1880,11 +1889,13 @@ static void *rtsp_conversation_thread_func(void *pconn) {
     int debug_level = 3; // for printing the request and response
     reply = rtsp_read_request(conn, &req);
     if (reply == rtsp_read_request_response_ok) {
-      if (strcmp(req->method,"OPTIONS")!=0) // the options message is very common, so don't log it until level 3
-        debug_level=2;
-      debug(debug_level, "RTSP thread %d received an RTSP Packet of type \"%s\":", conn->connection_number,
+      if (strcmp(req->method, "OPTIONS") !=
+          0) // the options message is very common, so don't log it until level 3
+        debug_level = 2;
+      debug(debug_level,
+            "RTSP thread %d received an RTSP Packet of type \"%s\":", conn->connection_number,
             req->method),
-      debug_print_msg_headers(debug_level, req);
+          debug_print_msg_headers(debug_level, req);
       resp = msg_init();
       resp->respcode = 400;
 
