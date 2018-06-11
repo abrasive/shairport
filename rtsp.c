@@ -717,8 +717,6 @@ static void handle_options(rtsp_conn_info *conn, __attribute__((unused)) rtsp_me
 static void handle_teardown(rtsp_conn_info *conn, __attribute__((unused)) rtsp_message *req,
                             rtsp_message *resp) {
   debug(2, "Connection %d: TEARDOWN", conn->connection_number);
-  int tdl = debuglev;
-  debuglev = 3;
   // if (!rtsp_playing())
   //  debug(1, "This RTSP connection thread (%d) doesn't think it's playing, but "
   //           "it's sending a response to teardown anyway",conn->connection_number);
@@ -731,7 +729,6 @@ static void handle_teardown(rtsp_conn_info *conn, __attribute__((unused)) rtsp_m
   player_stop(conn);
   debug(3, "TEARDOWN: successful termination of playing thread of RTSP conversation thread %d.",
         conn->connection_number);
-  debuglev = tdl;
 }
 
 static void handle_flush(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
@@ -1883,7 +1880,7 @@ static void *rtsp_conversation_thread_func(void *pconn) {
     int debug_level = 3; // for printing the request and response
     reply = rtsp_read_request(conn, &req);
     if (reply == rtsp_read_request_response_ok) {
-      if (strcmp(req->method,"OPTIONS")!=0)
+      if (strcmp(req->method,"OPTIONS")!=0) // the options message is very common, so don't log it until level 3
         debug_level=2;
       debug(debug_level, "RTSP thread %d received an RTSP Packet of type \"%s\":", conn->connection_number,
             req->method),
