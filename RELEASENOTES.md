@@ -1,7 +1,12 @@
+Version 3.2d62
+====
+**Bug Fix**
+* Restore compatability with Synology AudioStation/5.2. Thanks to [Jörg Krause](https://github.com/joerg-krause) for identifying both the issue itself and the likely location of the fix needed. It's not clear if the problem lies with Shairport Sync or Synology – the fix was to ensure that an RTSP reply was sent in one `SEND` call, which shouldn't be important.
+
 Version 3.2d61
 ====
 **Bug Fix**
-* Add a pthread_cancel cleanup routine to put_packet to unlock the player rw mutex when cancelled. Sincere thanks to [davidhq](https://github.com/davidhq) for help investigating this.
+* Add a pthread_cancel cleanup routine to put_packet to unlock the player rw mutex when cancelled. Sincere thanks to [David Krmpotić](https://github.com/davidhq) for help investigating this.
 
 Version 3.2d57, 3.2d58, 3.2d59, 3.2d60 
 ====
