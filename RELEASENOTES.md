@@ -22,7 +22,7 @@ Version 3.2d56
 If hardware muting is used, the output device will be muted when Shairport Sync releases it, potentially causing problems for other audio programs using the device. To avoid this, `use_hardware_mute_if_available` is disabled by default.
 
 **Bug Chasing**
-* A debug message has been enhanced when a TEARDOWN message is received.
+* A debug message has been enhanced when a `TEARDOWN` message is received.
 
 Version 3.2d55
 ====
