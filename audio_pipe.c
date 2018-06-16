@@ -54,7 +54,7 @@ static void start(__attribute__((unused)) int sample_rate,
   }
 }
 
-static void play(short buf[], int samples) {
+static void play(void *buf, int samples) {
   // if the file is not open, try to open it.
   char errorstring[1024];
   if (fd == -1) {

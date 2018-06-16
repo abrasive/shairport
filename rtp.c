@@ -68,6 +68,9 @@ void rtp_terminate(rtsp_conn_info *conn) {
 void rtp_audio_receiver_cleanup_handler(void *arg) {
   debug(3, "Audio Receiver Cleanup.");
   rtsp_conn_info *conn = (rtsp_conn_info *)arg;
+  debug(1,"shutdown audio socket.");
+  shutdown(conn->audio_socket,SHUT_RDWR);  
+  debug(1,"close audio socket.");
   close(conn->audio_socket);
   debug(3, "Audio Receiver Cleanup Successful.");
 }
@@ -188,6 +191,9 @@ void *rtp_audio_receiver(void *arg) {
 void rtp_control_handler_cleanup_handler(void *arg) {
   debug(3, "Control Receiver Cleanup.");
   rtsp_conn_info *conn = (rtsp_conn_info *)arg;
+  debug(1,"shutdown control socket.");
+  shutdown(conn->control_socket,SHUT_RDWR);  
+  debug(1,"close control socket.");
   close(conn->control_socket);
   debug(3, "Control Receiver Cleanup Successful.");
 }
@@ -328,7 +334,7 @@ void *rtp_control_receiver(void *arg) {
               }
             }
 
-            pthread_mutex_lock(&conn->reference_time_mutex);
+            debug_mutex_lock(&conn->reference_time_mutex, 1000, 1);
 
             // this is for debugging
             // uint64_t old_remote_reference_time = conn->remote_reference_timestamp_time;
@@ -339,7 +345,7 @@ void *rtp_control_receiver(void *arg) {
                 remote_time_of_sync - conn->local_to_remote_time_difference;
             conn->reference_timestamp = sync_rtp_timestamp;
             conn->latency_delayed_timestamp = rtp_timestamp_less_latency;
-            pthread_mutex_unlock(&conn->reference_time_mutex);
+            debug_mutex_unlock(&conn->reference_time_mutex, 3);
 
             // this is for debugging
             /*
@@ -471,6 +477,9 @@ void rtp_timing_receiver_cleanup_handler(void *arg) {
   rtsp_conn_info *conn = (rtsp_conn_info *)arg;
   pthread_cancel(conn->timer_requester);
   pthread_join(conn->timer_requester, NULL);
+  debug(1,"shutdown timing socket.");
+  shutdown(conn->timing_socket,SHUT_RDWR);  
+  debug(1,"close timing socket.");
   close(conn->timing_socket);
   debug(3, "Timing Receiver Cleanup Successful.");
 }
@@ -812,8 +821,8 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, uint16_t cport, uint16_t tport
     inet_ntop(conn->connection_ip_family, self_addr, conn->self_ip_string,
               sizeof(conn->self_ip_string));
 
-    debug(2, "Connection %d: SETUP -- Connection from %s to self at %s.",
-          conn->connection_number,conn->client_ip_string, conn->self_ip_string);
+    debug(2, "Connection %d: SETUP -- Connection from %s to self at %s.", conn->connection_number,
+          conn->client_ip_string, conn->self_ip_string);
 
     // set up a the record of the remote's control socket
     struct addrinfo hints;
@@ -891,21 +900,21 @@ void rtp_setup(SOCKADDR *local, SOCKADDR *remote, uint16_t cport, uint16_t tport
 void get_reference_timestamp_stuff(int64_t *timestamp, uint64_t *timestamp_time,
                                    uint64_t *remote_timestamp_time, rtsp_conn_info *conn) {
   // types okay
-  pthread_mutex_lock(&conn->reference_time_mutex);
+  debug_mutex_lock(&conn->reference_time_mutex, 1000, 1);
   *timestamp = conn->reference_timestamp;
   *timestamp_time = conn->reference_timestamp_time;
   // if ((*timestamp == 0) && (*timestamp_time == 0)) {
   //  debug(1,"Reference timestamp is invalid.");
   //}
   *remote_timestamp_time = conn->remote_reference_timestamp_time;
-  pthread_mutex_unlock(&conn->reference_time_mutex);
+  debug_mutex_unlock(&conn->reference_time_mutex, 3);
 }
 
 void clear_reference_timestamp(rtsp_conn_info *conn) {
-  pthread_mutex_lock(&conn->reference_time_mutex);
+  debug_mutex_lock(&conn->reference_time_mutex, 1000, 1);
   conn->reference_timestamp = 0;
   conn->reference_timestamp_time = 0;
-  pthread_mutex_unlock(&conn->reference_time_mutex);
+  debug_mutex_unlock(&conn->reference_time_mutex, 3);
 }
 
 void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
@@ -934,11 +943,21 @@ void rtp_request_resend(seq_t first, uint32_t count, rtsp_conn_info *conn) {
          resend_error_backoff_time)) {
       if ((config.diagnostic_drop_packet_fraction == 0.0) ||
           (drand48() > config.diagnostic_drop_packet_fraction)) {
+        // put a time limit on the sendto
+
+        struct timeval timeout;
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 100000;
+
+        if (setsockopt(conn->control_socket, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout,
+                       sizeof(timeout)) < 0)
+          debug(1, "Can't set timeout on resend request socket.");
+
         if (sendto(conn->control_socket, req, sizeof(req), 0,
                    (struct sockaddr *)&conn->rtp_client_control_socket, msgsize) == -1) {
           char em[1024];
           strerror_r(errno, em, sizeof(em));
-          debug(1, "Error %d using send-to to an audio socket: \"%s\". Backing off for 1/16th of a "
+          debug(1, "Error %d using sendto to an audio socket: \"%s\". Backing off for 1/16th of a "
                    "second.",
                 errno, em);
           conn->rtp_time_of_last_resend_request_error_fp = time_of_sending_fp;

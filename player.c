@@ -464,9 +464,16 @@ static void free_audio_buffers(rtsp_conn_info *conn) {
     free(conn->audio_buffer[i].data);
 }
 
+void player_thread_lock_cleanup(void *arg) {
+  rtsp_conn_info *conn = (rtsp_conn_info *)arg;
+  debug(3, "Cleaning up player_thread_lock.");
+  pthread_rwlock_unlock(&conn->player_thread_lock);
+}
+
 void player_put_packet(seq_t seqno, uint32_t actual_timestamp, int64_t timestamp, uint8_t *data,
                        int len, rtsp_conn_info *conn) {
   if (pthread_rwlock_tryrdlock(&conn->player_thread_lock) == 0) {
+    pthread_cleanup_push(player_thread_lock_cleanup, (void *)conn);
     if (conn->player_thread != NULL) {
 
       // all timestamps are done at the output rate
@@ -478,13 +485,13 @@ void player_put_packet(seq_t seqno, uint32_t actual_timestamp, int64_t timestamp
 
       // ignore a request to flush that has been made before the first packet...
       if (conn->packet_count == 0) {
-        pthread_mutex_lock(&conn->flush_mutex);
+        debug_mutex_lock(&conn->flush_mutex, 1000, 1);
         conn->flush_requested = 0;
         conn->flush_rtp_timestamp = 0;
-        pthread_mutex_unlock(&conn->flush_mutex);
+        debug_mutex_unlock(&conn->flush_mutex, 3);
       }
 
-      pthread_mutex_lock(&conn->ab_mutex);
+      debug_mutex_lock(&conn->ab_mutex, 30000, 1);
       conn->packet_count++;
       conn->time_of_last_audio_packet = get_absolute_time_in_fp();
       if (conn->connection_state_to_output) { // if we are supposed to be processing these packets
@@ -525,37 +532,6 @@ void player_put_packet(seq_t seqno, uint32_t actual_timestamp, int64_t timestamp
             debug(2, "Resend interval for latency of %" PRId64 " frames is %d frames.",
                   conn->latency, resend_interval);
             conn->resend_interval = resend_interval;
-          }
-          if (!conn->ab_buffering) {
-            int j;
-            for (j = 1; j <= number_of_resend_attempts; j++) {
-              // check j times, after a short period of has elapsed, assuming 352 frames per packet
-
-              int back_step = resend_interval * j;
-
-              int32_t sd = seq_diff(conn->ab_read, conn->ab_write, conn->ab_read);
-              int k;
-              for (k = -2; k <= 2; k++) {
-                if ((back_step + k) < sd) { // if it's within the range of frames in use...
-                  int item_to_check = (conn->ab_write - (back_step + k)) & 0xffff;
-                  seq_t next = item_to_check;
-                  abuf_t *check_buf = conn->audio_buffer + BUFIDX(next);
-                  if ((!check_buf->ready) &&
-                      (check_buf->resend_level <
-                       j)) { // prevent multiple requests from the same level of lookback
-                    check_buf->resend_level = j;
-                    if (config.disable_resend_requests == 0) {
-                      rtp_request_resend(next, 1, conn);
-                      if ((back_step + k + resend_interval) >= sd)
-                        debug(2, "Last-ditch (#%d) resend request for packet %u in range %u to %u. "
-                                 "Looking back %d packets.",
-                              j, next, conn->ab_read, conn->ab_write, back_step + k);
-                      conn->resend_requests++;
-                    }
-                  }
-                }
-              }
-            }
           }
 
           if (conn->ab_write == seqno) { // expected packet
@@ -621,18 +597,54 @@ void player_put_packet(seq_t seqno, uint32_t actual_timestamp, int64_t timestamp
           }
 
           // pthread_mutex_lock(&ab_mutex);
+          int rc = pthread_cond_signal(&conn->flowcontrol);
+          if (rc)
+            debug(1, "Error signalling flowcontrol.");
+
+          // if it's at the expected time, do a look back for missing packets
+          // but release the ab_mutex when doing a resend
+          if (!conn->ab_buffering) {
+            int j;
+            for (j = 1; j <= number_of_resend_attempts; j++) {
+              // check j times, after a short period of has elapsed, assuming 352 frames per packet
+
+              int back_step = resend_interval * j;
+              int k;
+              for (k = -2; k <= 2; k++) {
+                if ((back_step + k) <
+                    seq_diff(conn->ab_read, conn->ab_write,
+                             conn->ab_read)) { // if it's within the range of frames in use...
+                  int item_to_check = (conn->ab_write - (back_step + k)) & 0xffff;
+                  seq_t next = item_to_check;
+                  abuf_t *check_buf = conn->audio_buffer + BUFIDX(next);
+                  if ((!check_buf->ready) &&
+                      (check_buf->resend_level <
+                       j)) { // prevent multiple requests from the same level of lookback
+                    check_buf->resend_level = j;
+                    if (config.disable_resend_requests == 0) {
+                      if ((back_step + k + resend_interval) >=
+                          seq_diff(conn->ab_read, conn->ab_write, conn->ab_read))
+                        debug(3, "Last-ditch (#%d) resend request for packet %u in range %u to %u. "
+                                 "Looking back %d packets.",
+                              j, next, conn->ab_read, conn->ab_write, back_step + k);
+                      debug_mutex_unlock(&conn->ab_mutex, 3);
+                      rtp_request_resend(next, 1, conn);
+                      conn->resend_requests++;
+                      debug_mutex_lock(&conn->ab_mutex, 20000, 1);
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
-        int rc = pthread_cond_signal(&conn->flowcontrol);
-        if (rc)
-          debug(1, "Error signalling flowcontrol.");
       }
-      pthread_mutex_unlock(&conn->ab_mutex);
+      debug_mutex_unlock(&conn->ab_mutex, 3);
     } else {
-      debug(
-          1,
-          "No player thread while adding a player_put_packet calle was made -- packet discarded.");
+      debug(1, "player_put_packet discarded packet %d because the player thread was gone.");
     }
-    pthread_rwlock_unlock(&conn->player_thread_lock);
+    pthread_cleanup_pop(1);
+    // pthread_rwlock_unlock(&conn->player_thread_lock);
   } else {
     debug(1, "player_put_packet discarded packet %d because the player thread was locked.", seqno);
   }
@@ -787,12 +799,13 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
   abuf_t *curframe = 0;
   int notified_buffer_empty = 0; // diagnostic only
 
-  pthread_mutex_lock(&conn->ab_mutex);
+  debug_mutex_lock(&conn->ab_mutex, 30000, 1);
   int wait;
   long dac_delay = 0; // long because alsa returns a long
   do {
     // get the time
     local_time_now = get_absolute_time_in_fp(); // type okay
+    debug(3, "buffer_get_frame is iterating");
 
     // if config.timeout (default 120) seconds have elapsed since the last audio packet was
     // received, then we should stop.
@@ -818,13 +831,13 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
       conn->connection_state_to_output = rco;
       // change happening
       if (conn->connection_state_to_output == 0) { // going off
-        pthread_mutex_lock(&conn->flush_mutex);
+        debug_mutex_lock(&conn->flush_mutex, 1000, 1);
         conn->flush_requested = 1;
-        pthread_mutex_unlock(&conn->flush_mutex);
+        debug_mutex_unlock(&conn->flush_mutex, 3);
       }
     }
 
-    pthread_mutex_lock(&conn->flush_mutex);
+    debug_mutex_lock(&conn->flush_mutex, 1000, 1);
     if (conn->flush_requested == 1) {
       if (config.output->flush)
         config.output->flush();
@@ -834,7 +847,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
       conn->time_since_play_started = 0;
       conn->flush_requested = 0;
     }
-    pthread_mutex_unlock(&conn->flush_mutex);
+    debug_mutex_unlock(&conn->flush_mutex, 3);
 
     uint32_t flush_limit = 0;
     if (conn->ab_synced) {
@@ -1214,10 +1227,10 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
       struct timespec time_of_wakeup;
       time_of_wakeup.tv_sec = sec;
       time_of_wakeup.tv_nsec = nsec;
-      pthread_cond_timedwait(&conn->flowcontrol, &conn->ab_mutex, &time_of_wakeup);
-// int rc = pthread_cond_timedwait(&flowcontrol,&ab_mutex,&time_of_wakeup);
-// if (rc!=0)
-//  debug(1,"pthread_cond_timedwait returned error code %d.",rc);
+      //      pthread_cond_timedwait(&conn->flowcontrol, &conn->ab_mutex, &time_of_wakeup);
+      int rc = pthread_cond_timedwait(&conn->flowcontrol, &conn->ab_mutex, &time_of_wakeup);
+      if (rc != 0)
+        debug(3, "pthread_cond_timedwait returned error code %d.", rc);
 #endif
 #ifdef COMPILE_FOR_OSX
       uint64_t sec = time_to_wait_for_wakeup_fp >> 32;
@@ -1232,7 +1245,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
 
   if (conn->player_thread_please_stop) {
     debug(3, "buffer_get_frame exiting due to thread stop request.");
-    pthread_mutex_unlock(&conn->ab_mutex);
+    debug_mutex_unlock(&conn->ab_mutex, 3);
     return 0;
   }
 
@@ -1246,7 +1259,7 @@ static abuf_t *buffer_get_frame(rtsp_conn_info *conn) {
   curframe->ready = 0;
   curframe->resend_level = 0;
   conn->ab_read = SUCCESSOR(conn->ab_read);
-  pthread_mutex_unlock(&conn->ab_mutex);
+  debug_mutex_unlock(&conn->ab_mutex, 3);
   return curframe;
 }
 
@@ -1294,7 +1307,6 @@ static int stuff_buffer_basic_32(int32_t *inptr, int length, enum sps_format_t l
     stuffsamp =
         (rand() % (length - 2)) + 1; // ensure there's always a sample before and after the item
 
-  pthread_mutex_lock(&conn->vol_mutex);
   for (i = 0; i < stuffsamp; i++) { // the whole frame, if no stuffing
     process_sample(*inptr++, &l_outptr, l_output_format, conn->fix_volume, dither, conn);
     process_sample(*inptr++, &l_outptr, l_output_format, conn->fix_volume, dither, conn);
@@ -1324,7 +1336,6 @@ static int stuff_buffer_basic_32(int32_t *inptr, int length, enum sps_format_t l
       process_sample(*inptr++, &l_outptr, l_output_format, conn->fix_volume, dither, conn);
     }
   }
-  pthread_mutex_unlock(&conn->vol_mutex);
   conn->amountStuffed = tstuff;
   return length + tstuff;
 }
@@ -1437,9 +1448,6 @@ static void *player_thread_func(void *arg) {
   rc = pthread_mutex_init(&conn->flush_mutex, NULL);
   if (rc)
     debug(1, "Error initialising flush_mutex.");
-  rc = pthread_mutex_init(&conn->vol_mutex, NULL);
-  if (rc)
-    debug(1, "Error initialising vol_mutex.");
 // set the flowcontrol condition variable to wait on a monotonic clock
 #ifdef COMPILE_FOR_LINUX_AND_FREEBSD_AND_CYGWIN_AND_OPENBSD
   pthread_condattr_t attr;
@@ -2329,20 +2337,25 @@ static void *player_thread_func(void *arg) {
   mdns_dacp_dont_monitor(conn->dapo_private_storage);
 #endif
 
-  debug(3, "Requesting output device to stop.");
+  debug(3, "Connection %d: stopping output device.", conn->connection_number);
 
   if (config.output->stop)
     config.output->stop();
 
-  debug(2, "Cancelling timing, control and audio threads");
+  debug(2, "Cancelling timing, control and audio threads...");
+  debug(2, "Cancel timing thread.");
   pthread_cancel(rtp_timing_thread);
-  pthread_cancel(rtp_control_thread);
-  pthread_cancel(rtp_audio_thread);
-  debug(2, "Joining terminated threads.");
+  debug(2, "Join timing thread.");
   pthread_join(rtp_timing_thread, NULL);
   debug(2, "Timing thread terminated.");
+  debug(2, "Cancel control thread.");
+  pthread_cancel(rtp_control_thread);
+  debug(2, "Join control thread.");
   pthread_join(rtp_control_thread, NULL);
   debug(2, "Control thread terminated.");
+  debug(2, "Cancel audio thread.");
+  pthread_cancel(rtp_audio_thread);
+  debug(2, "Join audio thread.");
   pthread_join(rtp_audio_thread, NULL);
   debug(2, "Audio thread terminated.");
   clear_reference_timestamp(conn);
@@ -2362,10 +2375,6 @@ static void *player_thread_func(void *arg) {
   rc = pthread_mutex_destroy(&conn->ab_mutex);
   if (rc)
     debug(1, "Error destroying ab_mutex variable.");
-  rc = pthread_mutex_destroy(&conn->vol_mutex);
-  if (rc)
-    debug(1, "Error destroying vol_mutex variable.");
-
   debug(2, "Connection %d: player thread terminated.", conn->connection_number);
   if (conn->dacp_id) {
     free(conn->dacp_id);
@@ -2582,9 +2591,8 @@ void player_volume_without_notification(double airplay_volume, rtsp_conn_info *c
   // debug(1,"Software attenuation set to %f, i.e %f out of 65,536, for airplay volume of
   // %f",software_attenuation,temp_fix_volume,airplay_volume);
 
-  pthread_mutex_lock(&conn->vol_mutex);
   conn->fix_volume = temp_fix_volume;
-  pthread_mutex_unlock(&conn->vol_mutex);
+  memory_barrier();
 
   if (config.loudness)
     loudness_set_volume(software_attenuation / 100);
@@ -2617,11 +2625,11 @@ void player_volume(double airplay_volume, rtsp_conn_info *conn) {
 
 void do_flush(int64_t timestamp, rtsp_conn_info *conn) {
   debug(3, "Flush requested up to %u. It seems as if 0 is special.", timestamp);
-  pthread_mutex_lock(&conn->flush_mutex);
+  debug_mutex_lock(&conn->flush_mutex, 1000, 1);
   conn->flush_requested = 1;
   // if (timestamp!=0)
   conn->flush_rtp_timestamp = timestamp; // flush all packets up to (and including?) this
-  pthread_mutex_unlock(&conn->flush_mutex);
+  debug_mutex_unlock(&conn->flush_mutex, 3);
   conn->play_segment_reference_frame = 0;
   conn->play_number_after_flush = 0;
 #ifdef CONFIG_METADATA
@@ -2679,11 +2687,15 @@ int player_play(rtsp_conn_info *conn) {
 }
 
 int player_stop(rtsp_conn_info *conn) {
+  debug(3, "player_stop");
   pthread_rwlock_wrlock(&conn->player_thread_lock);
+  debug(3, "player_thread_lock acquired");
   if (conn->player_thread) {
+    debug(3, "player_thread exists");
     conn->player_thread_please_stop = 1;
     pthread_cond_signal(&conn->flowcontrol); // tell it to give up
     pthread_kill(*conn->player_thread, SIGUSR1);
+    debug(3, "player_thread signalled");
     pthread_join(*conn->player_thread, NULL);
     free(conn->player_thread);
     conn->player_thread = NULL;

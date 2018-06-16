@@ -795,17 +795,16 @@ uint64_t get_absolute_time_in_fp() {
   // can't use CLOCK_MONOTONIC_RAW as it's not implemented in OpenWrt
   clock_gettime(CLOCK_MONOTONIC, &tn);
   uint64_t tnfpsec = tn.tv_sec;
-  if (tnfpsec>0x100000000)
+  if (tnfpsec > 0x100000000)
     warn("clock_gettime seconds overflow!");
   uint64_t tnfpnsec = tn.tv_nsec;
-  if (tnfpnsec>0x100000000)
+  if (tnfpnsec > 0x100000000)
     warn("clock_gettime nanoseconds seconds overflow!");
-  tnfpsec = tnfpsec<<32;
-  tnfpnsec = tnfpnsec<<32;
-  tnfpnsec = tnfpnsec/1000000000;
-  
-  time_now_fp =
-       tnfpsec + tnfpnsec; // types okay
+  tnfpsec = tnfpsec << 32;
+  tnfpnsec = tnfpnsec << 32;
+  tnfpnsec = tnfpnsec / 1000000000;
+
+  time_now_fp = tnfpsec + tnfpnsec; // types okay
 #endif
 #ifdef COMPILE_FOR_OSX
   uint64_t time_now_mach;
@@ -1014,14 +1013,8 @@ void sps_nanosleep(const time_t sec, const long nanosec) {
     debug(1, "Error in sps_nanosleep of %d sec and %ld nanoseconds: %d.", sec, nanosec, errno);
 }
 
-char *previous_debug_message = NULL;
-
 int sps_pthread_mutex_timedlock(pthread_mutex_t *mutex, useconds_t dally_time,
                                 const char *debugmessage, int debuglevel) {
-
-  if (previous_debug_message)
-    free(previous_debug_message);
-  previous_debug_message = strdup(debugmessage);
 
   useconds_t time_to_wait = dally_time;
   int r = pthread_mutex_trylock(mutex);
@@ -1033,17 +1026,50 @@ int sps_pthread_mutex_timedlock(pthread_mutex_t *mutex, useconds_t dally_time,
     time_to_wait -= st;
     r = pthread_mutex_trylock(mutex);
   }
-  if (r != 0) {
+  if ((r != 0) && (debugmessage != NULL)) {
     char errstr[1000];
     if (r == EBUSY)
       debug(debuglevel,
-            "error EBUSY waiting for a mutex: \"%s\". Previous debug message was: \"%s\".",
-            debugmessage, previous_debug_message);
+            "waiting for a mutex, maximum expected time of %d microseconds exceeded \"%s\".",
+            dally_time, debugmessage);
     else
-      debug(debuglevel,
-            "error %d: \"%s\" waiting for a mutex: \"%s\". Previous debug message was: \"%s\".", r,
-            strerror_r(r, errstr, sizeof(errstr)), debugmessage, previous_debug_message);
+      debug(debuglevel, "error %d: \"%s\" waiting for a mutex: \"%s\".", r,
+            strerror_r(r, errstr, sizeof(errstr)), debugmessage);
   }
+  return r;
+}
+
+int _debug_mutex_lock(pthread_mutex_t *mutex, useconds_t dally_time, const char *filename,
+                      const int line, int debuglevel) {
+  uint64_t time_at_start = get_absolute_time_in_fp();
+  char dstring[1000];
+  memset(dstring, 0, sizeof(dstring));
+  snprintf(dstring, sizeof(dstring), "%s:%d", filename, line);
+  debug(3, "debug_mutex_lock at \"%s\".", dstring);
+  int result = sps_pthread_mutex_timedlock(mutex, dally_time, dstring, debuglevel);
+  if (result == EBUSY) {
+    result = pthread_mutex_lock(mutex);
+    uint64_t time_delay = get_absolute_time_in_fp() - time_at_start;
+    uint64_t divisor = (uint64_t)1 << 32;
+    double delay = 1.0 * time_delay / divisor;
+    debug(debuglevel,
+          "debug_mutex_lock at \"%s\" expected max wait: %0.9f, actual wait: %0.9f sec.", dstring,
+          (1.0 * dally_time) / 1000000, delay);
+  }
+  return result;
+}
+
+int _debug_mutex_unlock(pthread_mutex_t *mutex, const char *filename, const int line,
+                        int debuglevel) {
+  char dstring[1000];
+  char errstr[512];
+  memset(dstring, 0, sizeof(dstring));
+  snprintf(dstring, sizeof(dstring), "%s:%d", filename, line);
+  debug(debuglevel, "debug_mutex_unlock at \"%s\".", dstring);
+  int r = pthread_mutex_unlock(mutex);
+  if (r != 0)
+    debug(1, "error %d: \"%s\" unlocking a mutex: \"%s\".", r,
+          strerror_r(r, errstr, sizeof(errstr)), dstring);
   return r;
 }
 
