@@ -11,9 +11,9 @@ Version 3.2d61
 Version 3.2d57, 3.2d58, 3.2d59, 3.2d60 
 ====
 **Bug Chasing**
-* Debug messaging has been enhanced when a TEARDOWN message is received.
+* Debug messaging has been enhanced when a `TEARDOWN` message is received.
 * Check both timed and untimed mutex locks and give estimates of how long to wait. Generate debug messages when appropriate.
-* Unlock the ab_mutex when sending a resend request.
+* Unlock the `ab_mutex` when sending a resend request.
 
 Version 3.2d56
 ====
