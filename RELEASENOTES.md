@@ -1,3 +1,10 @@
+Version 3.2RC11
+====
+**Bug Fixes**
+
+* Restore compatability with Synology AudioStation/5.2. Thanks to [Jörg Krause](https://github.com/joerg-krause) for identifying both the issue itself and the likely location of the fix needed. It's not clear if the problem lies with Shairport Sync or Synology – the fix was to ensure that an RTSP reply was sent in one `SEND` call, which shouldn't be important.
+* Fix a bug that was causing Shairport Sync to hang very ocassionally when a play session was ending. This seems to occur under rare circumstances, so many thanks to [David Krmpotić](https://github.com/davidhq) for finding the problem and for his patience trying out different theories before the bug was finally identified. More long-term work is probably needed here.
+
 Version 3.2RC10
 ====
 **Compatibility Adjustment**
