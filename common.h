@@ -92,6 +92,22 @@ typedef struct {
   size_t metadata_sockmsglength;
   int get_coverart;
 #endif
+#ifdef CONFIG_MQTT
+  int mqtt_enabled;
+  char *mqtt_hostname;
+  int mqtt_port;
+  char *mqtt_username;
+  char *mqtt_password;
+  char *mqtt_capath;
+  char *mqtt_cafile;
+  char *mqtt_certfile;
+  char *mqtt_keyfile;
+  char *mqtt_topic;
+  int mqtt_publish_raw;
+  int mqtt_publish_parsed;
+  int mqtt_publish_cover;
+  int mqtt_enable_remote;
+#endif
   uint8_t hw_addr[6];
   int port;
   int udp_port_base;
