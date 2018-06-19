@@ -15,11 +15,12 @@
 #include "mqtt.h"
 
 //this holds the mosquitto client
-struct mosquitto *mosq = NULL;
+struct mosquitto *global_mosq = NULL;
 char *topic = NULL;
 
 //mosquitto logging
-void _cb_log(struct mosquitto *mosq, void *userdata, int level, const char *str){
+void _cb_log( __attribute__((unused)) struct mosquitto *mosq, 
+              __attribute__((unused)) void *userdata, int level, const char *str){
   switch(level){
     case MOSQ_LOG_DEBUG:
       debug(1, str);
@@ -40,7 +41,8 @@ void _cb_log(struct mosquitto *mosq, void *userdata, int level, const char *str)
 }
 
 //mosquitto message handler
-void on_message(struct mosquitto* mosq, void* userdata, const struct mosquitto_message* msg){
+void on_message( __attribute__((unused)) struct mosquitto* mosq, 
+                 __attribute__((unused)) void* userdata, const struct mosquitto_message* msg){
   
   //null-terminate the payload
   char payload[msg->payloadlen+1];
@@ -59,7 +61,7 @@ void on_message(struct mosquitto* mosq, void* userdata, const struct mosquitto_m
   
   //send command if it's a valid one
   while(commands[it++]!=NULL){
-    if( msg->payloadlen>=strlen(commands[it]) && 
+    if( (size_t)msg->payloadlen>=strlen(commands[it]) && 
       strncmp(msg->payload, commands[it], strlen(commands[it]))==0
     ){
       debug(1, "[MQTT]: DACP Command: %s\n",commands[it]);
@@ -69,11 +71,15 @@ void on_message(struct mosquitto* mosq, void* userdata, const struct mosquitto_m
   }
 }
 
-void on_disconnect(struct mosquitto* mosq, void* userdata, int rc){
+void on_disconnect( __attribute__((unused)) struct mosquitto* mosq, 
+                    __attribute__((unused)) void* userdata, 
+                    __attribute__((unused)) int rc){
   debug(1, "[MQTT]: disconnected");
 }
 
-void on_connect(struct mosquitto* mosq, void* userdata, int rc){
+void on_connect(struct mosquitto* mosq, 
+                __attribute__((unused)) void* userdata, 
+                __attribute__((unused)) int rc){
   debug(1, "[MQTT]: connected");
   
   //subscribe if requested
@@ -89,7 +95,7 @@ void mqtt_publish(char* topic, char* data, uint32_t length){
   char fulltopic[strlen(config.mqtt_topic)+strlen(topic)+3];
   snprintf(fulltopic, strlen(config.mqtt_topic)+strlen(topic)+2, "%s/%s", config.mqtt_topic, topic);
   debug(1, "[MQTT]: publishing under %s",fulltopic);
-  mosquitto_publish(mosq, NULL, fulltopic, length, data, 0, 0);
+  mosquitto_publish(global_mosq, NULL, fulltopic, length, data, 0, 0);
 }
 
 //handler for incoming metadata
@@ -167,8 +173,8 @@ int initialise_mqtt() {
   }
   int keepalive = 60;
   mosquitto_lib_init();
-  if( !(mosq = mosquitto_new(config.service_name, true, NULL)) ){
-    die("[MQTT]: FATAL: Could not create mosquitto object! %d\n", mosq);
+  if( !(global_mosq = mosquitto_new(config.service_name, true, NULL)) ){
+    die("[MQTT]: FATAL: Could not create mosquitto object! %d\n", global_mosq);
   }
 
   if(
@@ -177,7 +183,7 @@ int initialise_mqtt() {
     config.mqtt_certfile != NULL ||
     config.mqtt_keyfile != NULL
   ){
-    if(mosquitto_tls_set(mosq,config.mqtt_cafile, config.mqtt_capath, config.mqtt_certfile, config.mqtt_keyfile, NULL) != MOSQ_ERR_SUCCESS) {
+    if(mosquitto_tls_set(global_mosq,config.mqtt_cafile, config.mqtt_capath, config.mqtt_certfile, config.mqtt_keyfile, NULL) != MOSQ_ERR_SUCCESS) {
       die("[MQTT]: TLS Setup failed");
     }
   }
@@ -186,22 +192,22 @@ int initialise_mqtt() {
     config.mqtt_username != NULL ||
     config.mqtt_password != NULL
   ){
-    if(mosquitto_username_pw_set(mosq,config.mqtt_username,config.mqtt_password) != MOSQ_ERR_SUCCESS) {
+    if(mosquitto_username_pw_set(global_mosq,config.mqtt_username,config.mqtt_password) != MOSQ_ERR_SUCCESS) {
       die("[MQTT]: Username/Password set failed");
     }
   }
-  mosquitto_log_callback_set(mosq, _cb_log);
+  mosquitto_log_callback_set(global_mosq, _cb_log);
   
   if(config.mqtt_enable_remote){
-    mosquitto_message_callback_set(mosq, on_message);
+    mosquitto_message_callback_set(global_mosq, on_message);
   }
   
-  mosquitto_disconnect_callback_set(mosq, on_disconnect);
-  mosquitto_connect_callback_set(mosq, on_connect);
-  if(mosquitto_connect(mosq, config.mqtt_hostname, config.mqtt_port, keepalive)){
+  mosquitto_disconnect_callback_set(global_mosq, on_disconnect);
+  mosquitto_connect_callback_set(global_mosq, on_connect);
+  if(mosquitto_connect(global_mosq, config.mqtt_hostname, config.mqtt_port, keepalive)){
     inform("[MQTT]: Could not establish a mqtt connection");
   }
-  if(mosquitto_loop_start(mosq) != MOSQ_ERR_SUCCESS){
+  if(mosquitto_loop_start(global_mosq) != MOSQ_ERR_SUCCESS){
     inform("[MQTT]: Could start MQTT Main loop");
   }
 

@@ -315,7 +315,7 @@ AM_CONDITIONAL([USE_MPRIS_CLIENT], [test "x$HAS_MPRIS_CLIENT" = "x1"])
 #AM_CONDITIONAL([USE_DBUS_CORE_AND_DACP], [test "x$HAS_MPRIS" = "x1" -o "x$HAS_DBUS" = "x1"])
 
 # Look for mqtt flag
-AC_ARG_WITH(mqtt-interface, [  --with-mqtt-interface = include support for the native Shairport Sync MQTT interface], [
+AC_ARG_WITH(mqtt-client, [  --with-mqtt-client = include support for the native Shairport Sync MQTT interface], [
   AC_MSG_RESULT(>>Including MQTT support)
   HAS_MQTT=1
   AC_DEFINE([HAVE_MQTT], 1, [Needed by the compiler.])
@@ -332,7 +332,7 @@ AC_ARG_WITH(mqtt-interface, [  --with-mqtt-interface = include support for the n
 AM_CONDITIONAL([USE_MQTT], [test "x$HAS_MQTT" = "x1"])
 
 
-if test "x$HAS_MPRIS" = "x1" -o "x$HAS_DBUS" = "x1" -o "x$HAS_MQTT"; then
+if test "x$HAS_MPRIS" = "x1" || test "x$HAS_DBUS" = "x1" || test "x$HAS_MQTT" = "x1"; then
   AC_MSG_RESULT(>>Including the metadata hub)
   HAS_METADATA_HUB=1
   AC_DEFINE([HAVE_METADATA_HUB], 1, [Needed by the compiler.])
