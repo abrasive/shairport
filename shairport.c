@@ -880,6 +880,63 @@ int parse_options(int argc, char **argv) {
     }
 #endif
 
+#ifdef CONFIG_MQTT
+      int tmpval=0;
+      config_set_lookup_bool(config.cfg, "mqtt.enabled", &config.mqtt_enabled);
+      if(config.mqtt_enabled && !config.metadata_enabled){
+        die("You need to have metadata enabled in order to use mqtt");
+      }
+      if (config_lookup_string(config.cfg, "mqtt.hostname", &str)) {
+        config.mqtt_hostname = (char *)str;
+        //TODO: Document that, if this is false, whole mqtt func is disabled
+      }
+      if (config_lookup_int(config.cfg, "mqtt.port", &tmpval)) {
+        config.mqtt_port = tmpval;
+      }else{
+        //TODO: Is this the correct way to set a default value?
+        config.mqtt_port = 1883;
+      }
+      
+      if (config_lookup_string(config.cfg, "mqtt.username", &str)) {
+        config.mqtt_username = (char *)str;
+      }
+      if (config_lookup_string(config.cfg, "mqtt.password", &str)) {
+        config.mqtt_password = (char *)str;
+      }
+      int capath=0;
+      if (config_lookup_string(config.cfg, "mqtt.capath", &str)) {
+        config.mqtt_capath = (char *)str;
+        capath=1;
+      }
+      if (config_lookup_string(config.cfg, "mqtt.cafile", &str)) {
+        if(capath)
+          die("Supply either mqtt cafile or mqtt capath -- you have supplied both!");
+        config.mqtt_cafile = (char *)str;
+      }
+      int certkeynum=0;
+      if (config_lookup_string(config.cfg, "mqtt.certfile", &str)) {
+        config.mqtt_certfile = (char *)str;
+        certkeynum++;
+      }
+      if (config_lookup_string(config.cfg, "mqtt.keyfile", &str)) {
+        config.mqtt_keyfile = (char *)str;
+        certkeynum++;
+      }
+      if( certkeynum!=0 && certkeynum!=2){
+        die("If you want to use TLS Client Authentication, you have to specify "
+            "mqtt.certfile AND mqtt.keyfile.\nYou have supplied only one of them.\n"
+            "If you do not want to use TLS Client Authentication, leave both empty."
+        );
+      }
+      
+      if(config_lookup_string(config.cfg, "mqtt.topic", &str)){
+        config.mqtt_topic = (char *)str;
+      }
+      config_set_lookup_bool(config.cfg, "mqtt.publish_raw", &config.mqtt_publish_raw);
+      config_set_lookup_bool(config.cfg, "mqtt.publish_parsed", &config.mqtt_publish_parsed);
+      config_set_lookup_bool(config.cfg, "mqtt.publish_cover", &config.mqtt_publish_cover);
+      config_set_lookup_bool(config.cfg, "mqtt.enable_remote", &config.mqtt_enable_remote);
+#endif
     free(config_file_real_path);
   }
 
@@ -978,67 +1035,15 @@ int parse_options(int argc, char **argv) {
   free(i2);
   free(i3);
   free(vs);
-
+  
 #ifdef CONFIG_MQTT
-      int tmpval=0;
-      config_set_lookup_bool(config.cfg, "mqtt.enabled", &config.mqtt_enabled);
-      if(config.mqtt_enabled && !config.metadata_enabled){
-        die("You need to have metadata enabled in order to use mqtt");
-      }
-      if (config_lookup_string(config.cfg, "mqtt.hostname", &str)) {
-        config.mqtt_hostname = (char *)str;
-        //TODO: Document that, if this is false, whole mqtt func is disabled
-      }
-      if (config_lookup_int(config.cfg, "mqtt.port", &tmpval)) {
-        config.mqtt_port = tmpval;
-      }else{
-        //TODO: Is this the correct way to set a default value?
-        config.mqtt_port = 1883;
-      }
-      
-      if (config_lookup_string(config.cfg, "mqtt.username", &str)) {
-        config.mqtt_username = (char *)str;
-      }
-      if (config_lookup_string(config.cfg, "mqtt.password", &str)) {
-        config.mqtt_password = (char *)str;
-      }
-      int capath=0;
-      if (config_lookup_string(config.cfg, "mqtt.capath", &str)) {
-        config.mqtt_capath = (char *)str;
-        capath=1;
-      }
-      if (config_lookup_string(config.cfg, "mqtt.cafile", &str)) {
-        if(capath)
-          die("Supply either mqtt cafile or mqtt capath -- you have supplied both!");
-        config.mqtt_cafile = (char *)str;
-      }
-      int certkeynum=0;
-      if (config_lookup_string(config.cfg, "mqtt.certfile", &str)) {
-        config.mqtt_certfile = (char *)str;
-        certkeynum++;
-      }
-      if (config_lookup_string(config.cfg, "mqtt.keyfile", &str)) {
-        config.mqtt_keyfile = (char *)str;
-        certkeynum++;
-      }
-      if( certkeynum!=0 && certkeynum!=2){
-        die("If you want to use TLS Client Authentication, you have to specify "
-            "mqtt.certfile AND mqtt.keyfile.\nYou have supplied only one of them.\n"
-            "If you do not want to use TLS Client Authentication, leave both empty."
-        );
-      }
-      if (config_lookup_string(config.cfg, "mqtt.topic", &str)) {
-        config.mqtt_topic = (char *)str;
-      }else{
-        int topic_length=1+strlen(config.service_name)+1;
-        char* topic=malloc(topic_length+1);
-        snprintf(topic,topic_length,"/%s/",config.service_name);
-        config.mqtt_topic = topic;
-      }
-      config_set_lookup_bool(config.cfg, "mqtt.publish_raw", &config.mqtt_publish_raw);
-      config_set_lookup_bool(config.cfg, "mqtt.publish_parsed", &config.mqtt_publish_parsed);
-      config_set_lookup_bool(config.cfg, "mqtt.publish_cover", &config.mqtt_publish_cover);
-      config_set_lookup_bool(config.cfg, "mqtt.enable_remote", &config.mqtt_enable_remote);
+  // mqtt topic was not set. As we have the service name just now, set it
+  if(config.mqtt_topic==NULL){
+    int topic_length=1+strlen(config.service_name)+1;
+    char* topic=malloc(topic_length+1);
+    snprintf(topic,topic_length,"/%s/",config.service_name);
+    config.mqtt_topic = topic;
+  }
 #endif
 
 // now, check and calculate the pid directory
