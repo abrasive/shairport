@@ -47,6 +47,13 @@
 #include <avahi-client/lookup.h>
 #include <avahi-common/alternative.h>
 
+#define check_avahi_response(debugLevelArg, veryUnLikelyArgumentName)                              \
+  {                                                                                                \
+    int rc = veryUnLikelyArgumentName;                                                             \
+    if (rc)                                                                                        \
+      debug(debugLevelArg, "avahi call response %d at __FILE__, __LINE__)", rc);                   \
+  }
+
 typedef struct {
   AvahiThreadedPoll *service_poll;
   AvahiClient *service_client;
@@ -104,7 +111,7 @@ static void resolve_callback(AvahiServiceResolver *r, AVAHI_GCC_UNUSED AvahiIfIn
     }
   }
   }
-  avahi_service_resolver_free(r);
+  check_avahi_response(1, avahi_service_resolver_free(r));
 }
 static void browse_callback(AvahiServiceBrowser *b, AvahiIfIndex interface, AvahiProtocol protocol,
                             AvahiBrowserEvent event, const char *name, const char *type,
@@ -166,8 +173,12 @@ static void egroup_callback(AvahiEntryGroup *g, AvahiEntryGroupState state,
 
     /* A service name collision with a remote service
      * happened. Let's pick a new name */
+    debug(1, "avahi name collision -- look for another");
     n = avahi_alternative_service_name(service_name);
-    avahi_free(service_name);
+    if (service_name)
+      avahi_free(service_name);
+    else
+      debug(1, "avahi attempt to free a NULL service name");
     service_name = n;
 
     debug(2, "avahi: service name collision, renaming service to '%s'", service_name);
@@ -248,7 +259,7 @@ static void client_callback(AvahiClient *c, AvahiClientState state,
   switch (state) {
   case AVAHI_CLIENT_S_REGISTERING:
     if (group)
-      avahi_entry_group_reset(group);
+      check_avahi_response(1, avahi_entry_group_reset(group));
     break;
 
   case AVAHI_CLIENT_S_RUNNING:
@@ -260,8 +271,12 @@ static void client_callback(AvahiClient *c, AvahiClientState state,
     debug(1, "avahi: client failure: %s", avahi_strerror(err));
 
     if (err == AVAHI_ERR_DISCONNECTED) {
+      debug(1, "avahi client -- we have been disconnected, so let's reconnect.");
       /* We have been disconnected, so lets reconnect */
-      avahi_client_free(c);
+      if (c)
+        avahi_client_free(c);
+      else
+        debug(1, "Attempt to free NULL avahi client");
       c = NULL;
       group = NULL;
 
@@ -307,8 +322,12 @@ static void service_client_callback(AvahiClient *c, AvahiClientState state, void
     debug(1, "avahi: service client failure: %s", avahi_strerror(err));
 
     if (err == AVAHI_ERR_DISCONNECTED) {
+      debug(1, "avahi client has been disconnected, so reconnect");
       /* We have been disconnected, so lets reconnect */
-      avahi_client_free(c);
+      if (c)
+        avahi_client_free(c);
+      else
+        debug(1, "avahi attempt to free a NULL client");
       c = NULL;
 
       if (!(dbs->service_client =
@@ -366,18 +385,21 @@ static void avahi_unregister(void) {
   debug(1, "avahi: avahi_unregister.");
   if (tpoll) {
     avahi_threaded_poll_stop(tpoll);
-    
+
     if (client) {
       avahi_client_free(client);
       client = NULL;
-    };
-    
+    } else {
+      debug(1, "avahi attempting to unregister a NULL client");
+    }
     avahi_threaded_poll_free(tpoll);
     tpoll = NULL;
   }
 
   if (service_name)
     free(service_name);
+  else
+    debug(1, "avahi attempt to free NULL service name");
   service_name = NULL;
 }
 
@@ -418,7 +440,7 @@ void *avahi_dacp_monitor(char *dacp_id) {
   if (!(dbs->service_browser =
             avahi_service_browser_new(dbs->service_client, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC,
                                       "_dacp._tcp", NULL, 0, browse_callback, (void *)dbs))) {
-    warn("Failed to create service browser: %s\n",
+    warn("failed to create avahi service browser: %s\n",
          avahi_strerror(avahi_client_errno(dbs->service_client)));
     avahi_client_free(dbs->service_client);
     avahi_threaded_poll_free(dbs->service_poll);
