@@ -67,6 +67,10 @@
 #include "metadata_hub.h"
 #endif
 
+#ifdef HAVE_MQTT
+#include "mqtt.h"
+#endif
+
 #ifdef AF_INET6
 #define INETx_ADDRSTRLEN INET6_ADDRSTRLEN
 #else
@@ -1240,6 +1244,11 @@ void *metadata_thread_function(__attribute__((unused)) void *ignore) {
       metadata_process(pack.type, pack.code, pack.data, pack.length);
 #ifdef HAVE_METADATA_HUB
       metadata_hub_process_metadata(pack.type, pack.code, pack.data, pack.length);
+#endif
+#ifdef HAVE_MQTT
+    if(config.mqtt_enabled){
+      mqtt_process_metadata(pack.type, pack.code, pack.data, pack.length);
+    }
 #endif
     }
     if (pack.carrier)

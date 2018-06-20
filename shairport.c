@@ -72,6 +72,10 @@
 #include "dbus-service.h"
 #endif
 
+#ifdef HAVE_MQTT
+#include "mqtt.h"
+#endif
+
 #ifdef HAVE_MPRIS
 #include "mpris-service.h"
 #endif
@@ -90,6 +94,24 @@
 #ifdef CONFIG_CONVOLUTION
 #include <FFTConvolver/convolver.h>
 #endif
+
+static inline int config_set_lookup_bool(config_t* cfg, char* where, int* dst) {
+  const char *str = 0;
+  if (config_lookup_string(cfg, where, &str)) {
+    if (strcasecmp(str, "no") == 0){
+      (*dst)=0;
+      return 1;
+    }else if (strcasecmp(str, "yes") == 0){
+      (*dst)=1;
+      return 1;
+    }else{
+      die("Invalid %s option choice \"%s\". It should be \"yes\" or \"no\"", where, str);
+      return 0;
+    }
+  }else{
+    return 0;
+  }
+}
 
 static int shutting_down = 0;
 char configuration_file_path[4096 + 1];
@@ -379,26 +401,11 @@ int parse_options(int argc, char **argv) {
       int daemonisewithout = 0;
       int daemonisewith = 0;
       /* Get the Daemonize setting. */
-      if (config_lookup_string(config.cfg, "sessioncontrol.daemonize_with_pid_file", &str)) {
-        if (strcasecmp(str, "no") == 0)
-          daemonisewith = 0;
-        else if (strcasecmp(str, "yes") == 0)
-          daemonisewith = 1;
-        else
-          die("Invalid daemonize_with_pid_file option choice \"%s\". It should be \"yes\" or "
-              "\"no\"");
-      }
+      config_set_lookup_bool(config.cfg, "sessioncontrol.daemonize_with_pid_file", &daemonisewith);
 
       /* Get the Just_Daemonize setting. */
-      if (config_lookup_string(config.cfg, "sessioncontrol.daemonize_without_pid_file", &str)) {
-        if (strcasecmp(str, "no") == 0)
-          daemonisewithout = 0;
-        else if (strcasecmp(str, "yes") == 0)
-          daemonisewithout = 1;
-        else
-          die("Invalid daemonize_without_pid_file option choice \"%s\". It should be \"yes\" or "
-              "\"no\"");
-      }
+      config_set_lookup_bool(config.cfg, "sessioncontrol.daemonize_without_pid_file", &daemonisewithout);
+
       if ((daemonisewith) && (daemonisewithout))
         die("Select either daemonize_with_pid_file or daemonize_without_pid_file -- you have "
             "selected both!");
@@ -467,15 +474,9 @@ int parse_options(int argc, char **argv) {
       }
 
       /* Get the statistics setting. */
-      if (config_lookup_string(config.cfg, "general.statistics", &str)) {
+      if (!config_set_lookup_bool(config.cfg, "general.statistics", &(config.statistics_requested))) {
         warn("The \"general\" \"statistics\" setting is deprecated. Please use the \"diagnostics\" "
              "\"statistics\" setting instead.");
-        if (strcasecmp(str, "no") == 0)
-          config.statistics_requested = 0;
-        else if (strcasecmp(str, "yes") == 0)
-          config.statistics_requested = 1;
-        else
-          die("Invalid statistics option choice \"%s\". It should be \"yes\" or \"no\"");
       }
 
       /* The old drift tolerance setting. */
@@ -879,6 +880,63 @@ int parse_options(int argc, char **argv) {
     }
 #endif
 
+#ifdef CONFIG_MQTT
+      int tmpval=0;
+      config_set_lookup_bool(config.cfg, "mqtt.enabled", &config.mqtt_enabled);
+      if(config.mqtt_enabled && !config.metadata_enabled){
+        die("You need to have metadata enabled in order to use mqtt");
+      }
+      if (config_lookup_string(config.cfg, "mqtt.hostname", &str)) {
+        config.mqtt_hostname = (char *)str;
+        //TODO: Document that, if this is false, whole mqtt func is disabled
+      }
+      if (config_lookup_int(config.cfg, "mqtt.port", &tmpval)) {
+        config.mqtt_port = tmpval;
+      }else{
+        //TODO: Is this the correct way to set a default value?
+        config.mqtt_port = 1883;
+      }
+      
+      if (config_lookup_string(config.cfg, "mqtt.username", &str)) {
+        config.mqtt_username = (char *)str;
+      }
+      if (config_lookup_string(config.cfg, "mqtt.password", &str)) {
+        config.mqtt_password = (char *)str;
+      }
+      int capath=0;
+      if (config_lookup_string(config.cfg, "mqtt.capath", &str)) {
+        config.mqtt_capath = (char *)str;
+        capath=1;
+      }
+      if (config_lookup_string(config.cfg, "mqtt.cafile", &str)) {
+        if(capath)
+          die("Supply either mqtt cafile or mqtt capath -- you have supplied both!");
+        config.mqtt_cafile = (char *)str;
+      }
+      int certkeynum=0;
+      if (config_lookup_string(config.cfg, "mqtt.certfile", &str)) {
+        config.mqtt_certfile = (char *)str;
+        certkeynum++;
+      }
+      if (config_lookup_string(config.cfg, "mqtt.keyfile", &str)) {
+        config.mqtt_keyfile = (char *)str;
+        certkeynum++;
+      }
+      if( certkeynum!=0 && certkeynum!=2){
+        die("If you want to use TLS Client Authentication, you have to specify "
+            "mqtt.certfile AND mqtt.keyfile.\nYou have supplied only one of them.\n"
+            "If you do not want to use TLS Client Authentication, leave both empty."
+        );
+      }
+      
+      if(config_lookup_string(config.cfg, "mqtt.topic", &str)){
+        config.mqtt_topic = (char *)str;
+      }
+      config_set_lookup_bool(config.cfg, "mqtt.publish_raw", &config.mqtt_publish_raw);
+      config_set_lookup_bool(config.cfg, "mqtt.publish_parsed", &config.mqtt_publish_parsed);
+      config_set_lookup_bool(config.cfg, "mqtt.publish_cover", &config.mqtt_publish_cover);
+      config_set_lookup_bool(config.cfg, "mqtt.enable_remote", &config.mqtt_enable_remote);
+#endif
     free(config_file_real_path);
   }
 
@@ -977,6 +1035,16 @@ int parse_options(int argc, char **argv) {
   free(i2);
   free(i3);
   free(vs);
+  
+#ifdef CONFIG_MQTT
+  // mqtt topic was not set. As we have the service name just now, set it
+  if(config.mqtt_topic==NULL){
+    int topic_length=1+strlen(config.service_name)+1;
+    char* topic=malloc(topic_length+1);
+    snprintf(topic,topic_length,"/%s/",config.service_name);
+    config.mqtt_topic = topic;
+  }
+#endif
 
 // now, check and calculate the pid directory
 #ifdef USE_CUSTOM_PID_DIR
@@ -1506,6 +1574,12 @@ int main(int argc, char **argv) {
 #ifdef HAVE_MPRIS
   start_mpris_service();
 #endif
+#endif
+
+#ifdef HAVE_MQTT
+  if(config.mqtt_enabled){
+    initialise_mqtt();
+  }
 #endif
 
   // daemon_log(LOG_INFO, "Successful Startup");

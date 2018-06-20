@@ -314,7 +314,25 @@ AM_CONDITIONAL([USE_MPRIS_CLIENT], [test "x$HAS_MPRIS_CLIENT" = "x1"])
 
 #AM_CONDITIONAL([USE_DBUS_CORE_AND_DACP], [test "x$HAS_MPRIS" = "x1" -o "x$HAS_DBUS" = "x1"])
 
-if test "x$HAS_MPRIS" = "x1" -o "x$HAS_DBUS" = "x1" ; then
+# Look for mqtt flag
+AC_ARG_WITH(mqtt-client, [  --with-mqtt-client = include support for the native Shairport Sync MQTT interface], [
+  AC_MSG_RESULT(>>Including MQTT support)
+  HAS_MQTT=1
+  AC_DEFINE([HAVE_MQTT], 1, [Needed by the compiler.])
+  AC_DEFINE([CONFIG_MQTT], 1, [Needed by the compiler.])
+  AC_CHECK_LIB([mosquitto], [mosquitto_lib_init], , AC_MSG_ERROR(MQTT support requires the mosquitto library!))
+  AC_CHECK_HEADERS([mosquitto.h],,[AC_MSG_ERROR([<mosquitto.h> header missing])])
+  AC_DEFINE([HAVE_MOSQUITTO],[1],[Define to 1 if you have the mosquitto library])
+  
+  AC_MSG_RESULT(>>Enabling metadata as it is required by mqtt)
+  AC_DEFINE([CONFIG_METADATA], 1, [Needed by the compiler.])
+  AC_DEFINE([USE_METADATA], 1, [Needed by the compiler.])
+  PKG_CHECK_MODULES([GIO_UNIX], [gio-unix-2.0 >= 2.30.0],[CFLAGS="${GIO_UNIX_CFLAGS} ${CFLAGS}" LIBS="${GIO_UNIX_LIBS} ${LIBS}"],[AC_MSG_ERROR(dbus messaging support for mpris requires the glib 2.0 library -- libglib2.0-dev suggested!)])
+  ],)
+AM_CONDITIONAL([USE_MQTT], [test "x$HAS_MQTT" = "x1"])
+
+
+if test "x$HAS_MPRIS" = "x1" || test "x$HAS_DBUS" = "x1" || test "x$HAS_MQTT" = "x1"; then
   AC_MSG_RESULT(>>Including the metadata hub)
   HAS_METADATA_HUB=1
   AC_DEFINE([HAVE_METADATA_HUB], 1, [Needed by the compiler.])

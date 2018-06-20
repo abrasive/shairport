@@ -79,6 +79,10 @@ if USE_METADATA_HUB
 shairport_sync_SOURCES += metadata_hub.c 
 endif
 
+if USE_MQTT
+shairport_sync_SOURCES += mqtt.c 
+endif
+
 if USE_DACP_CLIENT
 shairport_sync_SOURCES += dacp.c tinyhttp/chunk.c tinyhttp/header.c tinyhttp/http.c 
 endif
