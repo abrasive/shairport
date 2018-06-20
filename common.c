@@ -1128,6 +1128,9 @@ char *get_version_string() {
 #ifdef CONFIG_METADATA
     strcat(version_string, "-metadata");
 #endif
+#ifdef CONFIG_MQTT
+    strcat(version_string, "-mqtt");
+#endif
 #ifdef HAVE_DBUS
     strcat(version_string, "-dbus");
 #endif

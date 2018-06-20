@@ -17,6 +17,7 @@
 //this holds the mosquitto client
 struct mosquitto *global_mosq = NULL;
 char *topic = NULL;
+int connected = 0;
 
 //mosquitto logging
 void _cb_log( __attribute__((unused)) struct mosquitto *mosq, 
@@ -74,12 +75,14 @@ void on_message( __attribute__((unused)) struct mosquitto* mosq,
 void on_disconnect( __attribute__((unused)) struct mosquitto* mosq, 
                     __attribute__((unused)) void* userdata, 
                     __attribute__((unused)) int rc){
+  connected = 0;
   debug(1, "[MQTT]: disconnected");
 }
 
 void on_connect(struct mosquitto* mosq, 
                 __attribute__((unused)) void* userdata, 
                 __attribute__((unused)) int rc){
+  connected = 1;
   debug(1, "[MQTT]: connected");
   
   //subscribe if requested
@@ -95,11 +98,26 @@ void mqtt_publish(char* topic, char* data, uint32_t length){
   char fulltopic[strlen(config.mqtt_topic)+strlen(topic)+3];
   snprintf(fulltopic, strlen(config.mqtt_topic)+strlen(topic)+2, "%s/%s", config.mqtt_topic, topic);
   debug(1, "[MQTT]: publishing under %s",fulltopic);
-  mosquitto_publish(global_mosq, NULL, fulltopic, length, data, 0, 0);
+  
+  int rc;
+  if((rc=mosquitto_publish(global_mosq, NULL, fulltopic, length, data, 0, 0))!=MOSQ_ERR_SUCCESS) {
+    switch(rc){
+      case MOSQ_ERR_NO_CONN:
+        debug(1, "[MQTT]: Publish failed: not connected to broker");
+        break;
+      default:
+        debug(1, "[MQTT]: Publish failed: unknown error");
+        break;
+    }
+  }
 }
 
 //handler for incoming metadata
 void mqtt_process_metadata(uint32_t type, uint32_t code, char *data, uint32_t length){
+  if(global_mosq==NULL || connected!=1){
+    debug(3, "[MQTT]: Client not connected, skipping metadata handling");
+    return;
+  }
   if(config.mqtt_publish_raw){
     uint32_t val;
     char topic[] = "____/____";
