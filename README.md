@@ -37,9 +37,9 @@ What else?
 * Fast Response — With hardware volume control, response is instantaneous; otherwise the response time is 0.15 seconds with `alsa`, 0.35 seconds with `sndio`.
 * Non-Interruptible — Shairport Sync sends back a "busy" signal if it's already playing audio from another source, so other sources can't disrupt an existing Shairport Sync session. (If a source disappears without warning, the session automatically terminates after two minutes and the device becomes available again.)
 * Metadata — Shairport Sync can deliver metadata supplied by the source, such as Album Name, Artist Name, Cover Art, etc. through a pipe or UDP socket to a recipient application program — see https://github.com/mikebrady/shairport-sync-metadata-reader for a sample recipient. Sources that supply metadata include iTunes and the Music app in iOS.
+* A native [MQTT](https://en.wikipedia.org/wiki/MQTT) interface for metadata and/or controls.
 * Raw Audio — Shairport Sync can deliver raw PCM audio to standard output or to a pipe. This output is delivered synchronously with the source after the appropriate latency and is not interpolated or "stuffed" on its way through Shairport Sync.
 * Autotools and Libtool Support — the Shairport Sync build process uses GNU `autotools` and `libtool` to examine and configure the build environment — important for portability and for cross compilation. Previous versions of Shairport looked at the current system to determine which packages were available, instead of looking at the target system for what packages were available.
-* A native [MQTT](https://en.wikipedia.org/wiki/MQTT) interface for metadata and/or controls.
 
 Heritage
 -------
@@ -125,7 +125,7 @@ The following libraries are required:
 Optional:
 * libsoxr
 * libalac (This is a library containing the Apple ALAC decoder.)
-* libmosquitto (To enable the mqtt-metadata-interface)
+* libmosquitto (This is to enable the mqtt-metadata-interface.)
 
 Many Linux distributions have Avahi and OpenSSL already in place, so normally it probably makes sense to choose those options rather than tinysvcmdns or mbed TLS. The `libsoxr` library is available in recent Linux distributions, but it requires lots of processor power — chances are an embedded processor won't be able to keep up.
 
@@ -168,7 +168,7 @@ $ autoreconf -i -f
 - `--with-soxr` for libsoxr-based resampling.
 - `--with-piddir` for specifying where the PID file should be stored. This directory is normally chosen automatically. The directory must be writable. If you use this option, you may have to edit the init script to search for the PID file in your new location.
 - `--with-metadata` to add support for Shairport Sync to pipe metadata to a compatible application of your choice. See https://github.com/mikebrady/shairport-sync-metadata-reader for a sample metadata reader.
-- `--with-mqtt-client` to add support for publishing metadata and remote control via [MQTT](https://en.wikipedia.org/wiki/MQTT)
+- `--with-mqtt-client` to add support for publishing metadata and remote control via [MQTT](https://en.wikipedia.org/wiki/MQTT).
 - `--with-configfiles` to install a configuration file and a separate sample file at the `make install` stage. Default is to install. An existing `/etc/shairport-sync.conf` will not be overwritten.
 - `--with-pkg-config` to use pkg-config to find libraries. Default is to use pkg-config — this option is for special purpose use.
 - `--with-apple-alac` to include the Apple ALAC Decoder.
