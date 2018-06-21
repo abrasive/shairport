@@ -1,3 +1,11 @@
+Version 3.2.d64
+====
+**Enhancement**
+* An extra property has been added to the RemoteControl section of the native Shairport Sync D-Bus interface. It is the "progress" metadata emitted from time to time by the AirPlay source and consisting of RTP timestamps for the start of the current play sequence, the current play point and the end of the play sequence.
+
+**Bug Fix**
+* Code to monitor the amount of time a mutex lock request took is improved.
+
 Version 3.2.d63
 ====
 **Enhancement**
