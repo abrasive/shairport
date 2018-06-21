@@ -1013,22 +1013,47 @@ void sps_nanosleep(const time_t sec, const long nanosec) {
     debug(1, "Error in sps_nanosleep of %d sec and %ld nanoseconds: %d.", sec, nanosec, errno);
 }
 
+// Mac OS X doesn't have pthread_mutex_timedlock
+// Also note that timing must be relative to CLOCK_REALTIME
+
+#ifdef COMPILE_FOR_LINUX_AND_FREEBSD_AND_CYGWIN_AND_OPENBSD
 int sps_pthread_mutex_timedlock(pthread_mutex_t *mutex, useconds_t dally_time,
                                 const char *debugmessage, int debuglevel) {
 
-  useconds_t time_to_wait = dally_time;
-  int r = pthread_mutex_trylock(mutex);
-  while ((r == EBUSY) && (time_to_wait > 0)) {
-    useconds_t st = time_to_wait;
-    if (st > 20000)
-      st = 20000;
-    sps_nanosleep(0, st * 1000);
-    time_to_wait -= st;
-    r = pthread_mutex_trylock(mutex);
-  }
+  struct timespec tn;
+  clock_gettime(CLOCK_REALTIME, &tn);
+  uint64_t tnfpsec = tn.tv_sec;
+  if (tnfpsec > 0x100000000)
+    warn("clock_gettime seconds overflow!");
+  uint64_t tnfpnsec = tn.tv_nsec;
+  if (tnfpnsec > 0x100000000)
+    warn("clock_gettime nanoseconds seconds overflow!");
+  tnfpsec = tnfpsec << 32;
+  tnfpnsec = tnfpnsec << 32;
+  tnfpnsec = tnfpnsec / 1000000000;
+
+  uint64_t time_now_in_fp = tnfpsec + tnfpnsec; // types okay
+
+  uint64_t dally_time_in_fp = dally_time;                // microseconds
+  dally_time_in_fp = (dally_time_in_fp << 32) / 1000000; // convert to fp format
+  uint64_t time_then = time_now_in_fp + dally_time_in_fp;
+
+  uint64_t time_then_nsec = time_then & 0xffffffff; // remove integral part
+  time_then_nsec = time_then_nsec * 1000000000;     // multiply fractional part to nanoseconds
+
+  struct timespec timeoutTime;
+
+  time_then = time_then >> 32;           // get the seconds
+  time_then_nsec = time_then_nsec >> 32; // and the nanoseconds
+
+  timeoutTime.tv_sec = time_then;
+  timeoutTime.tv_nsec = time_then_nsec;
+
+  int r = pthread_mutex_timedlock(mutex, &timeoutTime);
+
   if ((r != 0) && (debugmessage != NULL)) {
     char errstr[1000];
-    if (r == EBUSY)
+    if (r == ETIMEDOUT)
       debug(debuglevel,
             "waiting for a mutex, maximum expected time of %d microseconds exceeded \"%s\".",
             dally_time, debugmessage);
@@ -1038,6 +1063,36 @@ int sps_pthread_mutex_timedlock(pthread_mutex_t *mutex, useconds_t dally_time,
   }
   return r;
 }
+#endif
+#ifdef COMPILE_FOR_OSX
+int sps_pthread_mutex_timedlock(pthread_mutex_t *mutex, useconds_t dally_time,
+                                const char *debugmessage, int debuglevel) {
+
+  useconds_t time_to_wait = dally_time;
+  int r = pthread_mutex_trylock(mutex);
+  while ((r == EBUSY) && (time_to_wait > 0)) {
+    useconds_t st = time_to_wait;
+    if (st > 1000)
+      st = 1000;
+    sps_nanosleep(0, st * 1000);
+    time_to_wait -= st;
+    r = pthread_mutex_trylock(mutex);
+  }
+  if ((r != 0) && (debugmessage != NULL)) {
+    char errstr[1000];
+    if (r == EBUSY) {
+      debug(debuglevel,
+            "waiting for a mutex, maximum expected time of %d microseconds exceeded \"%s\".",
+            dally_time, debugmessage);
+      r = ETIMEDOUT; // for compatibility
+    } else {
+      debug(debuglevel, "error %d: \"%s\" waiting for a mutex: \"%s\".", r,
+            strerror_r(r, errstr, sizeof(errstr)), debugmessage);
+    }
+  }
+  return r;
+}
+#endif
 
 int _debug_mutex_lock(pthread_mutex_t *mutex, useconds_t dally_time, const char *filename,
                       const int line, int debuglevel) {
@@ -1047,7 +1102,7 @@ int _debug_mutex_lock(pthread_mutex_t *mutex, useconds_t dally_time, const char 
   snprintf(dstring, sizeof(dstring), "%s:%d", filename, line);
   debug(3, "debug_mutex_lock at \"%s\".", dstring);
   int result = sps_pthread_mutex_timedlock(mutex, dally_time, dstring, debuglevel);
-  if (result == EBUSY) {
+  if (result == ETIMEDOUT) {
     result = pthread_mutex_lock(mutex);
     uint64_t time_delay = get_absolute_time_in_fp() - time_at_start;
     uint64_t divisor = (uint64_t)1 << 32;
