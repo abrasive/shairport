@@ -523,7 +523,7 @@ void metadata_hub_process_metadata(uint32_t type, uint32_t code, char *data, uin
         metadata_hub_modify_prolog();
         release_char_string(&metadata_store.progress_string);
         metadata_store.progress_string = strndup(data, length);
-        debug(1, "MH Progress String set to: \"%s\"", metadata_store.progress_string);
+        debug(2, "MH Progress String set to: \"%s\"", metadata_store.progress_string);
         metadata_hub_modify_epilog(1);
       }
       break;

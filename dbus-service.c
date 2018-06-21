@@ -45,11 +45,11 @@ void dbus_metadata_watcher(struct metadata_bundle *argc, __attribute__((unused))
   }
   
   if (argc->progress_string) {
-  	debug(1, "Check progress string");
+  	// debug(1, "Check progress string");
 		th = shairport_sync_remote_control_get_progress_string(
 				shairportSyncRemoteControlSkeleton);
 		if ((th == NULL) || (strcasecmp(th, argc->progress_string) != 0)) {
-			debug(1, "Progress string should be changed");
+			// debug(1, "Progress string should be changed");
 			shairport_sync_remote_control_set_progress_string(
 					shairportSyncRemoteControlSkeleton, argc->progress_string);
 		}  	
