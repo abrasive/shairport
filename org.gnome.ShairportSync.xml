@@ -33,6 +33,7 @@
 		<method name='VolumeUp'/>
 		<method name='VolumeDown'/>
 		<property name='PlayerState' type='s' access='read'/>
+		<property name='ProgressString' type='s' access='read'/>
 		<property name='Server' type='s' access='read'/>
 		<property name='AirplayVolume' type='d' access='read'/>
 		<property name='Metadata' type='a{sv}' access='read'>
