@@ -1,4 +1,4 @@
-Version 3.2RC11
+Version 3.2RC12
 ====
 **Enhancement**
 * Add a "ProgressString" property to the native D-Bus interface.
