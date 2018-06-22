@@ -1,10 +1,10 @@
 Version 3.2RC11
 ====
 **Enhancement**
-Add a "ProgressString" property to the native D-Bus interface.
+* Add a "ProgressString" property to the native D-Bus interface.
 
 **Bug Fix**
-Some code added in RC11 to monitor mutex lock times was causing some annoying issues -- fixed.
+* Some code added in RC11 to monitor mutex lock times was causing some annoying issues -- fixed.
 
 Version 3.2RC11
 ====
