@@ -320,7 +320,7 @@ AC_ARG_WITH(mqtt-client, [  --with-mqtt-client = include support for the native 
   HAS_MQTT=1
   AC_DEFINE([HAVE_MQTT], 1, [Needed by the compiler.])
   AC_DEFINE([CONFIG_MQTT], 1, [Needed by the compiler.])
-  AC_CHECK_LIB([mosquitto], [mosquitto_lib_init], , AC_MSG_ERROR(MQTT support requires the mosquitto library!))
+  AC_CHECK_LIB([mosquitto], [mosquitto_lib_init], , AC_MSG_ERROR(MQTT support requires the mosquitto library -- libmosquitto-dev suggested!))
   AC_CHECK_HEADERS([mosquitto.h],,[AC_MSG_ERROR([<mosquitto.h> header missing])])
   AC_DEFINE([HAVE_MOSQUITTO],[1],[Define to 1 if you have the mosquitto library])
   
