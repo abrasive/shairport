@@ -1,3 +1,8 @@
+Version 3.2.d65
+====
+**Modification**
+* The algorithm for generating resend requests has been made somewhat more gentle -- a little less insistent.
+
 Version 3.2.d64
 ====
 **Enhancement**
