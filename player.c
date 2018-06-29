@@ -607,10 +607,11 @@ void player_put_packet(seq_t seqno, uint32_t actual_timestamp, int64_t timestamp
             int j;
             for (j = 1; j <= number_of_resend_attempts; j++) {
               // check j times, after a short period of has elapsed, assuming 352 frames per packet
-
-              int back_step = resend_interval * j;
+              // the higher the step_exponent, the less it will try. 1 means it will try very hard. 2.0 seems good.
+              float step_exponent = 2.0;
+              int back_step = (int)(resend_interval * pow(j,step_exponent));
               int k;
-              for (k = -2; k <= 2; k++) {
+              for (k = -1; k <= 1; k++) {
                 if ((back_step + k) <
                     seq_diff(conn->ab_read, conn->ab_write,
                              conn->ab_read)) { // if it's within the range of frames in use...
@@ -622,7 +623,7 @@ void player_put_packet(seq_t seqno, uint32_t actual_timestamp, int64_t timestamp
                        j)) { // prevent multiple requests from the same level of lookback
                     check_buf->resend_level = j;
                     if (config.disable_resend_requests == 0) {
-                      if ((back_step + k + resend_interval) >=
+                      if (((int)(resend_interval * pow(j+1,step_exponent)) + k) >=
                           seq_diff(conn->ab_read, conn->ab_write, conn->ab_read))
                         debug(3, "Last-ditch (#%d) resend request for packet %u in range %u to %u. "
                                  "Looking back %d packets.",
