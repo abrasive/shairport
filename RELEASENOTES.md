@@ -3,6 +3,10 @@ Version 3.2.d65
 **Modification**
 * The algorithm for generating resend requests has been made somewhat more gentle -- a little less insistent.
 
+
+**Bug Chasing**
+* Some very elementary bounds checking on the ANNOUNCE packet is performed: that it is 1024 bytes or less in size and that line lengths remaining after parsing do not turn negative when they should remain positive or be exactly zero.
+
 Version 3.2.d64
 ====
 **Enhancement**
