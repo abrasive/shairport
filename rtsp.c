@@ -714,10 +714,9 @@ static void handle_options(rtsp_conn_info *conn, __attribute__((unused)) rtsp_me
                            rtsp_message *resp) {
   debug(3, "Connection %d: OPTIONS", conn->connection_number);
   resp->respcode = 200;
-  msg_add_header(resp, "Public",
-                 "ANNOUNCE, SETUP, RECORD, "
-                 "PAUSE, FLUSH, TEARDOWN, "
-                 "OPTIONS, GET_PARAMETER, SET_PARAMETER");
+  msg_add_header(resp, "Public", "ANNOUNCE, SETUP, RECORD, "
+                                 "PAUSE, FLUSH, TEARDOWN, "
+                                 "OPTIONS, GET_PARAMETER, SET_PARAMETER");
 }
 
 static void handle_teardown(rtsp_conn_info *conn, __attribute__((unused)) rtsp_message *req,
@@ -849,11 +848,10 @@ static void handle_setup(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *
   }
 
   char resphdr[256] = "";
-  snprintf(resphdr, sizeof(resphdr),
-           "RTP/AVP/"
-           "UDP;unicast;interleaved=0-1;mode=record;control_port=%d;"
-           "timing_port=%d;server_"
-           "port=%d",
+  snprintf(resphdr, sizeof(resphdr), "RTP/AVP/"
+                                     "UDP;unicast;interleaved=0-1;mode=record;control_port=%d;"
+                                     "timing_port=%d;server_"
+                                     "port=%d",
            conn->local_control_port, conn->local_timing_port, conn->local_audio_port);
 
   msg_add_header(resp, "Transport", resphdr);
@@ -1246,9 +1244,9 @@ void *metadata_thread_function(__attribute__((unused)) void *ignore) {
       metadata_hub_process_metadata(pack.type, pack.code, pack.data, pack.length);
 #endif
 #ifdef HAVE_MQTT
-    if(config.mqtt_enabled){
-      mqtt_process_metadata(pack.type, pack.code, pack.data, pack.length);
-    }
+      if (config.mqtt_enabled) {
+        mqtt_process_metadata(pack.type, pack.code, pack.data, pack.length);
+      }
 #endif
     }
     if (pack.carrier)
@@ -1376,7 +1374,7 @@ static void handle_set_parameter(rtsp_conn_info *conn, rtsp_message *req, rtsp_m
   char *ct = msg_get_header(req, "Content-Type");
 
   if (ct) {
-    // debug(2, "SET_PARAMETER Content-Type:\"%s\".", ct);
+// debug(2, "SET_PARAMETER Content-Type:\"%s\".", ct);
 
 #ifdef CONFIG_METADATA
     // It seems that the rtptime of the message is used as a kind of an ID that
@@ -1513,10 +1511,20 @@ static void handle_announce(rtsp_conn_info *conn, rtsp_message *req, rtsp_messag
     char *pmaxlatency = NULL;
     char *cp = req->content;
     int cp_left = req->contentlength;
+    if (cp_left > 1024) {
+      debug(1, "Error -- RTSP conversation thread %d ANNOUNCE content length is strange, at %d.",
+            conn->connection_number, cp_left);
+      goto out;
+    }
     char *next;
     while (cp_left && cp) {
       next = nextline(cp, cp_left);
       cp_left -= next - cp;
+      if (cp_left < 0) {
+        debug(1, "Error -- RTSP conversation thread %d ANNOUNCE content remaining is negative.",
+              conn->connection_number);
+        goto out;
+      }
 
       if (!strncmp(cp, "a=fmtp:", 7))
         pfmtp = cp + 7;
@@ -1901,9 +1909,8 @@ static void *rtsp_conversation_thread_func(void *pconn) {
       if (strcmp(req->method, "OPTIONS") !=
           0) // the options message is very common, so don't log it until level 3
         debug_level = 2;
-      debug(debug_level,
-            "RTSP thread %d received an RTSP Packet of type \"%s\":", conn->connection_number,
-            req->method),
+      debug(debug_level, "RTSP thread %d received an RTSP Packet of type \"%s\":",
+            conn->connection_number, req->method),
           debug_print_msg_headers(debug_level, req);
       resp = msg_init();
       resp->respcode = 400;
