@@ -1,7 +1,7 @@
 Version 3.2RC13
 ====
 **Adjustment**
-* Reduce the number of attempts that will be made to have a packet resent. It seems that in some situations on poor networks, the number of resend requests was causing problems.
+* Reduce the number of attempts that will be made to have a missing packet resent. It seems that in some situations on poor networks, the number of resend requests was causing problems.
 
 Version 3.2RC12
 ====
