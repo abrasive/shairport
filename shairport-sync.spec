@@ -1,5 +1,5 @@
 Name:           shairport-sync
-Version:        3.1.7
+Version:        3.2
 Release:        1%{?dist}
 Summary:        AirTunes emulator. Multi-Room with Audio Synchronisation
 # MIT licensed except for tinysvcmdns under BSD, 
@@ -67,6 +67,8 @@ getent passwd %{name} &> /dev/null || useradd --system -c "%{name} User" \
 %license LICENSES
 
 %changelog
+* Mon Jul 09 2018 Mike Brady <mikebrady@eircom.net) 3.2
+- New D-Bus and MPRIS Interfaces, Bug Fixes and Enhancements.
 * Thu Dec 21 2017 Mike Brady <mikebrady@eircom.net> 3.1.7
 - Bug fix for unexpectedly resuming play at full volume from iOS 11.2 and macOS 10.3.2.
 * Mon Dec 11 2017 Mike Brady <mikebrady@eircom.net> 3.1.5
