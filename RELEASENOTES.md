@@ -1,3 +1,7 @@
+Version 3.2
+====
+Version 3.2 is equivalent to 3.2RC13.
+
 Version 3.2RC13
 ====
 **Adjustment**
