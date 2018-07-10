@@ -1,6 +1,8 @@
 Simple Installation Instructions
 ==
-Here are really simple instructions for building and installing Shairport Sync on a Raspberry Pi B, 2B, 3B or 3B+. It is assumed that the Pi is running Raspbian Stretch Lite – a GUI isn't needed, since Shairport Sync runs as a daemon program.
+Here are simple instructions for building and installing Shairport Sync on a Raspberry Pi B, 2B, 3B or 3B+. It is assumed that the Pi is running Raspbian Stretch Lite – a GUI isn't needed, since Shairport Sync runs as a daemon program. For a more thorough treatment, please go to the [README.md](https://github.com/mikebrady/shairport-sync/blob/master/README.md#building-and-installing) page.
+
+In the commands below, note the convention that a `#` prompt means you are in superuser mode and a `$` prompt means you are in a regular non-priviliged user mode. You can use `sudo` *("SUperuser DO")* to temporarily promote yourself from user to superuser, if permitted. For example, if you want to execute `apt-get update` in superuser mode and you are in user mode, enter `sudo apt-get update`.
 
 ### Configure and Update
 Do the usual update and upgrade:
@@ -16,24 +18,35 @@ Check the file `/boot/config.txt` and, if it's not there already, add the follow
 ```
 audio_pwm_mode=2
 ```
-Reboot.
+
+### Turn Off WiFi Power Management
+If you are using WiFi, you should turn off WiFi Power Management:
+```
+# iwconfig wlan0 power off
+```
+WiFi Power Management will put the WiFi system in low-power mode when the WiFi system considered inactive, and in this mode it may not respond to events initiated from the network, such as AirPlay requests. Hence, WiFi Power Management should be turned off. (See [TROUBLESHOOTING.md](https://github.com/mikebrady/shairport-sync/blob/master/TROUBLESHOOTING.md#wifi-adapter-running-in-power-saving--low-power-mode) for more details.)
+
+Reboot the Pi.
 
 ### Remove Old Copies
-Before you begin building Shairport Sync, it's best to search for and remove any existing copies of the applicatioon, called `shairport-sync`. Use the command `$ which shairport-sync` to find them. For example, if `shairport-sync` has been installed previously, this might happen:
+Before you begin building Shairport Sync, it's best to search for and remove any existing copies of the application, called `shairport-sync`. Use the command `$ which shairport-sync` to find them. For example, if `shairport-sync` has been installed previously, this might happen:
 ```
 $ which shairport-sync
 /usr/local/bin/shairport-sync
-$ sudo rm /usr/local/bin/shairport-sync
-...
 ```
-You can see that the `which` command located a copy of `shairports-sync` in the direcotry `/usr/local/bin` and then we removed it with the `rm` command. Do this until no more copies of `shairport-sync` are found.
+Remove it as follows:
+```
+# rm /usr/local/bin/shairport-sync
+```
+Do this until no more copies of `shairport-sync` are found.
 
 ### Build and Install
 Okay, now let's get the tools and sources for building and installing Shairport Sync.
 
 First, install the packages needed by Shairport Sync:
 ```
-# apt-get install build-essential git xmltoman autoconf automake libtool libdaemon-dev libpopt-dev libconfig-dev libasound2-dev avahi-daemon libavahi-client-dev libssl-dev
+# apt-get install build-essential git xmltoman autoconf automake libtool libdaemon-dev \
+    libpopt-dev libconfig-dev libasound2-dev avahi-daemon libavahi-client-dev libssl-dev
 ```
 Next, download Shairport Sync, configure it, compile and install it:
 ```
@@ -44,6 +57,7 @@ $ ./configure --sysconfdir=/etc --with-alsa --with-avahi --with-ssl=openssl --wi
 $ make
 $ sudo make install
 ```
+By the way, the `autoreconf` step may take quite a while on a Raspberry Pi -- be patient!
 
 Now to configure Shairport Sync. Here are the important options for the Shairport Sync configuration file at `/etc/shairport-sync.conf`:
 ```
@@ -63,10 +77,12 @@ alsa =
 ```
 The next step is to enable Shairport Sync to start automatically on boot up:
 ```
-$ sudo systemctl enable shairport-sync
+# systemctl enable shairport-sync
 ```
 Finally, either reboot the Pi or start the `shairport-sync` service:
 ```
-$ sudo systemctl start shairport-sync
+# systemctl start shairport-sync
 ```
-The Shairport Sync AirPlay service should now appear on the network with a service name make from the Pi's `hostname` with the first letter capitalised, e.g. hostname `raspberrypi` give a service name `Raspberrypi`. Connect to it and enjoy...
+The Shairport Sync AirPlay service should now appear on the network with a service name made from the Pi's hostname with the first letter capitalised, e.g. hostname `raspberrypi` gives a service name `Raspberrypi`. You can change the service name and set a password in the configuration file.
+
+Connect and enjoy...

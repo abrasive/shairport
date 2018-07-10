@@ -36,6 +36,22 @@ wireless-power off
 ```
 to the file `/etc/network/interfaces`.
 
+Here is another option, suggested by [davidhq](https://github.com/davidhq) in [#653](https://github.com/mikebrady/shairport-sync/issues/653#issuecomment-391100620):
+
+```
+$ sudo nano /etc/network/if-up.d/off-power-manager
+```
+
+Type:
+```
+#!/bin/sh
+/sbin/iwconfig wlan0 power off
+```
+Then:
+```
+sudo chmod +x /etc/network/if-up.d/off-power-manager
+```
+
 There are some more details in some the closed issues on this repository.
 
 ### Faulty WiFi
