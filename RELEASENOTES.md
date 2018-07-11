@@ -1,3 +1,12 @@
+Version 3.2d67
+====
+**Bug Fix**
+* Fix a bug causing a crash when `soxr` interpolation was enabled and a play session was stopped. This bug overwrote incorrect memory locations, so depending on what it overwrote, may have been responsible for other inexplicable crashes.
+
+Version 3.2.d66
+====
+* This is equivalent to 3.2.
+
 Version 3.2.d65
 ====
 **Modification**
