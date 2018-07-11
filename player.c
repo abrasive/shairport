@@ -1399,11 +1399,12 @@ static int stuff_buffer_soxr_32(int32_t *inptr, int32_t *scratchBuffer, int leng
     }
 
     // keep the last (dpm) samples, to mitigate the Gibbs phenomenon
-    op = scratchBuffer + (length + tstuff - gpm) * sizeof(int32_t);
-    ip = inptr + (length - gpm) * sizeof(int32_t);
+    op = scratchBuffer + (length + tstuff - gpm) * sizeof(int32_t) * 2;
+    ip = inptr + (length - gpm) * sizeof(int32_t) * 2;
+
     for (i = 0; i < gpm; i++) {
       *op++ = *ip++;
-      *op++ = *ip++;
+      *op++ = *ip++; 
     }
 
     // now, do the volume, dither and formatting processing
@@ -1671,7 +1672,10 @@ static void *player_thread_func(void *arg) {
   // this is only used for compatability, if dacp stuff isn't enabled.
   // start an mdns/zeroconf thread to look for DACP messages containing our DACP_ID and getting the
   // port number
-  conn->dapo_private_storage = mdns_dacp_monitor(conn->dacp_id);
+  if (conn->dapo_private_storage)
+    debug(1,"DACP monitor already initialised?");
+  else
+    conn->dapo_private_storage = mdns_dacp_monitor(conn->dacp_id);
 #endif
 
   conn->framesProcessedInThisEpoch = 0;
@@ -2335,7 +2339,12 @@ static void *player_thread_func(void *arg) {
 #ifndef HAVE_DACP_CLIENT
   // stop watching for DACP port number stuff
   // this is only used for compatability, if dacp stuff isn't enabled.
-  mdns_dacp_dont_monitor(conn->dapo_private_storage);
+  if (conn->dapo_private_storage) {
+    mdns_dacp_dont_monitor(conn->dapo_private_storage);
+    conn->dapo_private_storage = NULL;
+  } else {
+    debug(2,"DACP Monitor already stopped");
+  }
 #endif
 
   debug(3, "Connection %d: stopping output device.", conn->connection_number);
