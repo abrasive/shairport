@@ -25,7 +25,7 @@ Configure your Raspberry Pi with only one WiFi network. Through experimentation 
 the Pi would not reliably choose the iPhone's WiFi network even though it was prioritized over the home network.
 And it seems `wpa-supplicant` in general is a bit difficult to get to roam between different WiFi networks once it's decided on one.
 
-Example of `/etc/wpa\_supplicant/wpa\_supplicant.conf`
+Example of `/etc/wpa_supplicant/wpa_supplicant.conf`
 
 ```
 ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
