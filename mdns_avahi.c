@@ -84,33 +84,34 @@ static void resolve_callback(AvahiServiceResolver *r, AVAHI_GCC_UNUSED AvahiIfIn
 
   /* Called whenever a service has been resolved successfully or timed out */
   switch (event) {
-  case AVAHI_RESOLVER_FAILURE:
-    debug(2, "(Resolver) Failed to resolve service '%s' of type '%s' in domain '%s': %s.", name,
-          type, domain, avahi_strerror(avahi_client_errno(avahi_service_resolver_get_client(r))));
-    break;
-  case AVAHI_RESOLVER_FOUND: {
-    //    char a[AVAHI_ADDRESS_STR_MAX], *t;
-    // debug(1, "Resolve callback: Service '%s' of type '%s' in domain '%s':", name, type, domain);
-    char *dacpid = strstr(name, "iTunes_Ctrl_");
-    if (dacpid) {
-      dacpid += strlen("iTunes_Ctrl_");
-      if (strcmp(dacpid, dbs->dacp_id) == 0) {
-        debug(3, "Client's DACP port: %u.", port);
-#ifdef HAVE_DACP_CLIENT
-        dacp_monitor_port_update_callback(dacpid, port);
-#endif
-#ifdef CONFIG_METADATA
-        char portstring[20];
-        memset(portstring, 0, sizeof(portstring));
-        snprintf(portstring, sizeof(portstring), "%u", port);
-        send_ssnc_metadata('dapo', strdup(portstring), strlen(portstring), 0);
-#endif
+    case AVAHI_RESOLVER_FAILURE:
+      debug(2, "(Resolver) Failed to resolve service '%s' of type '%s' in domain '%s': %s.", name,
+            type, domain, avahi_strerror(avahi_client_errno(avahi_service_resolver_get_client(r))));
+      break;
+    case AVAHI_RESOLVER_FOUND: {
+      //    char a[AVAHI_ADDRESS_STR_MAX], *t;
+      // debug(1, "Resolve callback: Service '%s' of type '%s' in domain '%s':", name, type, domain);
+      char *dacpid = strstr(name, "iTunes_Ctrl_");
+      if (dacpid) {
+        dacpid += strlen("iTunes_Ctrl_");
+        if (strcmp(dacpid, dbs->dacp_id) == 0) {
+          debug(3, "Client's DACP port: %u.", port);
+  #ifdef HAVE_DACP_CLIENT
+          dacp_monitor_port_update_callback(dacpid, port);
+  #endif
+  #ifdef CONFIG_METADATA
+          char portstring[20];
+          memset(portstring, 0, sizeof(portstring));
+          snprintf(portstring, sizeof(portstring), "%u", port);
+          send_ssnc_metadata('dapo', strdup(portstring), strlen(portstring), 0);
+  #endif
+        }
+      } else {
+        debug(1, "Resolve callback: Can't see a DACP string in a DACP Record!");
       }
-    } else {
-      debug(1, "Resolve callback: Can't see a DACP string in a DACP Record!");
     }
   }
-  }
+  // debug(1,"service resolver freed by resolve_callback");
   check_avahi_response(1, avahi_service_resolver_free(r));
 }
 static void browse_callback(AvahiServiceBrowser *b, AvahiIfIndex interface, AvahiProtocol protocol,
@@ -163,47 +164,47 @@ static void register_service(AvahiClient *c);
 static void egroup_callback(AvahiEntryGroup *g, AvahiEntryGroupState state,
                             AVAHI_GCC_UNUSED void *userdata) {
   switch (state) {
-  case AVAHI_ENTRY_GROUP_ESTABLISHED:
-    /* The entry group has been established successfully */
-    debug(1, "avahi: service '%s' successfully added.", service_name);
-    break;
+    case AVAHI_ENTRY_GROUP_ESTABLISHED:
+      /* The entry group has been established successfully */
+      debug(1, "avahi: service '%s' successfully added.", service_name);
+      break;
 
-  case AVAHI_ENTRY_GROUP_COLLISION: {
-    char *n;
+    case AVAHI_ENTRY_GROUP_COLLISION: {
+      char *n;
 
-    /* A service name collision with a remote service
-     * happened. Let's pick a new name */
-    debug(1, "avahi name collision -- look for another");
-    n = avahi_alternative_service_name(service_name);
-    if (service_name)
-      avahi_free(service_name);
-    else
-      debug(1, "avahi attempt to free a NULL service name");
-    service_name = n;
+      /* A service name collision with a remote service
+       * happened. Let's pick a new name */
+      debug(1, "avahi name collision -- look for another");
+      n = avahi_alternative_service_name(service_name);
+      if (service_name)
+        avahi_free(service_name);
+      else
+        debug(1, "avahi attempt to free a NULL service name");
+      service_name = n;
 
-    debug(2, "avahi: service name collision, renaming service to '%s'", service_name);
+      debug(2, "avahi: service name collision, renaming service to '%s'", service_name);
 
-    /* And recreate the services */
-    register_service(avahi_entry_group_get_client(g));
-    break;
-  }
+      /* And recreate the services */
+      register_service(avahi_entry_group_get_client(g));
+      break;
+    }
 
-  case AVAHI_ENTRY_GROUP_FAILURE:
-    debug(1, "avahi: entry group failure: %s",
-          avahi_strerror(avahi_client_errno(avahi_entry_group_get_client(g))));
-    break;
+    case AVAHI_ENTRY_GROUP_FAILURE:
+      debug(1, "avahi: entry group failure: %s",
+            avahi_strerror(avahi_client_errno(avahi_entry_group_get_client(g))));
+      break;
 
-  case AVAHI_ENTRY_GROUP_UNCOMMITED:
-    debug(2, "avahi: service '%s' group is not yet committed.", service_name);
-    break;
+    case AVAHI_ENTRY_GROUP_UNCOMMITED:
+      debug(2, "avahi: service '%s' group is not yet committed.", service_name);
+      break;
 
-  case AVAHI_ENTRY_GROUP_REGISTERING:
-    debug(2, "avahi: service '%s' group is registering.", service_name);
-    break;
+    case AVAHI_ENTRY_GROUP_REGISTERING:
+      debug(2, "avahi: service '%s' group is registering.", service_name);
+      break;
 
-  default:
-    debug(1, "avahi: unhandled egroup state: %d", state);
-    break;
+    default:
+      debug(1, "avahi: unhandled egroup state: %d", state);
+      break;
   }
 }
 
@@ -458,28 +459,35 @@ void *avahi_dacp_monitor(char *dacp_id) {
     free((char *)dbs);
     return NULL;
   }
-  debug(3, "DACP monitor successfully started");
+  debug(3, "Avahi DACP monitor successfully started");
   return (void *)dbs;
 }
 
 void avahi_dacp_dont_monitor(void *userdata) {
+  debug(3,"avahi_dacp_dont_monitor");
   if (userdata) {
     dacp_browser_struct *dbs = (dacp_browser_struct *)userdata;
     // stop and dispose of everything
-    if ((dbs)->service_poll)
+    /*if (dbs->service_poll)
       avahi_threaded_poll_stop((dbs)->service_poll);
-    if ((dbs)->service_browser)
-      avahi_service_browser_free((dbs)->service_browser);
-    if ((dbs)->service_client)
-      avahi_client_free((dbs)->service_client);
-    if ((dbs)->service_poll)
-      avahi_threaded_poll_free((dbs)->service_poll);
+    */
+    if (dbs->service_poll) {
+      avahi_threaded_poll_stop(dbs->service_poll);     
+      avahi_threaded_poll_lock(dbs->service_poll);
+      if (dbs->service_browser)
+        avahi_service_browser_free(dbs->service_browser);
+      if (dbs->service_client)
+        avahi_client_free(dbs->service_client);
+      avahi_threaded_poll_unlock(dbs->service_poll); 
+      avahi_threaded_poll_free(dbs->service_poll);
+    }
     free(dbs->dacp_id);
-    free((char *)(dbs));
-    debug(3, "DACP monitor successfully stopped");
+    free(userdata);
+    debug(3, "Avahi DACP monitor successfully stopped");
   } else {
-    debug(1, "DACP Monitor is not running.");
+    debug(1, "Avahi DACP Monitor is not running.");
   }
+  debug(3,"avahi_dacp_dont_monitor exit");
 }
 
 mdns_backend mdns_avahi = {.name = "avahi",
