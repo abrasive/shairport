@@ -1,7 +1,7 @@
 Version 3.2.1
 ====
 **Bug Fix**
-* Fix a bug that was causing problems when `soxr` interpolation was chosen. Problems included instability during or after a play session and possibly an extremely slight click on very loud audio. Thanks are due to [hanaguro](https://github.com/hanaguro), [FnasBas](https://github.com/FnasBas), [priitohlo](https://github.com/priitohlo) and [David Krmpotić]https://github.com/davidhq.
+* Fix a bug that was causing problems when `soxr` interpolation was chosen. Problems included instability during or after a play session and possibly an extremely slight click on very loud audio. Thanks are due to [hanaguro](https://github.com/hanaguro), [FnasBas](https://github.com/FnasBas), [priitohlo](https://github.com/priitohlo) and [David Krmpotić](https://github.com/davidhq).
 
 Version 3.2
 ====
