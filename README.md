@@ -94,7 +94,7 @@ If you wish to build and install the latest version of Shairport Sync on Debian,
 
 **Remove Old Versions Of Shairport Sync**
 
-You should check to see if `shairport-sync` is already installed – you can use the command `$ which shairport-sync` to find where it is located, if installed. If it is installed you should delete it – you may need superuser privileges. After deleting, check again in case further copies are installed elsewhere.
+You should check to see if `shairport-sync` is already installed – you can use the command `$ which shairport-sync` to find where it is located, if installed. If it is installed you should delete it – you may need superuser privileges. After deleting, check again in case further copies are installed elsewhere. You should also remove the file `/etc/systemd/system/shairport-sync.service` if it exists.
 
 
 **Determine The Configuration Needed**
