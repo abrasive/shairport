@@ -7,6 +7,8 @@ In this brief document will be listed some problems and some solutions, some pro
 1. Before starting, ensure that your software is up-to-date.
 2. Set the `interpolation` in the `general` section of the configuration file to `basic` as the `soxr` setting can cause lower-powered devices to bog down at critical times, e.g. see [this report](https://github.com/mikebrady/shairport-sync/issues/631#issuecomment-366305203).
 
+### WiFi and Microwaves
+Microwaves can interfere with WiFi -- see [here](http://sciabc.us/F6Gaa) for example.
 
 ### WiFi adapter running in power-saving / low-power mode
 
