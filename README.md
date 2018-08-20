@@ -285,9 +285,10 @@ $ sudo systemctl enable shairport-sync
 
 **Complete installation into a System V system**
 
-If you have chosen the `--with-systemv` configuration option, enter:
+If you have chosen the `--with-systemv` configuration option, then, to enable Shairport Sync to start automatically at system startup, enter:
 ```
 $ sudo update-rc.d shairport-sync defaults 90 10
+$ sudo update-rc.d shairport-sync enable
 ```
 
 **Man Page**
