@@ -14,11 +14,11 @@ On FreeBSD:
 
 * Download the `libsoxr source`:
 ```
-$ git clone git://git.code.sf.net/p/soxr/code libsoxr
+$ git clone git://git.code.sf.net/p/soxr/code soxr-code
 ```
-* `cd` into the `libsoxr` directory and start the build process:
+* `cd` into the `soxr-code` directory and start the build process:
 ```
-$ cd libsoxr
+$ cd soxr-code
 $ ./go
 ```
 Be patient! This takes a long time on a Raspberry Pi -- it looks like it gets stuck around 40% or 50%, but it will finish if you let it.
