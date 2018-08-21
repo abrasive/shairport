@@ -32,7 +32,7 @@ Finally, for Shairport Sync to be able to locate `libsoxr` during compilation, y
 
 On Linuxes such as Debian/Ubuntu/Raspbian: 
 ```
-# ldconfig -v
+# ldconfig
 ```
 On FreeBSD you must add the location of the `soxr.pc` file to the `PKG_CONFIG_PATH`, if it exists, and define it otherwise. Here is what you do if it doesn't already exist:
 ```
