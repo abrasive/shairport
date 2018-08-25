@@ -11,6 +11,8 @@ Do the usual update and upgrade:
 # apt-get upgrade
 # rpi-update
 ``` 
+**Note:** it is a particularly good idea to update the Pi's firmware using `rpi-update` because, at this time of writing (September 2018), a [significant improvement](https://github.com/raspberrypi/firmware/commit/200c2f4dd54b2048b5dcb8661ea3f232beb7d81e) has been made to the [timing software](https://github.com/raspberrypi/firmware/issues/1026) of the built-in audio DAC's drivers.
+
 (Separately, if you haven't done so already, consider using the `raspi-config` tool to expand the file system to use the entire card.)
 
 ### Activate the Improved Audio Driver
@@ -64,7 +66,7 @@ Now to configure Shairport Sync. Here are the important options for the Shairpor
 // Sample Configuration File for Shairport Sync on a Raspberry Pi using the built-in audio DAC
 general =
 {
-  drift_tolerance_in_seconds = 0.010;
+  // drift_tolerance_in_seconds = 0.010; // this is no longer necessary if you have updated the Pi's firmware using rpi-update (see above).
   volume_range_db = 50;
 };
 
