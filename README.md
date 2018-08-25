@@ -357,11 +357,30 @@ Note: Shairport Sync can take configuration settings from command line options. 
 
 **Raspberry Pi**
 
-The Raspberry Pi Models A and B have a built-in audio DAC that is connected to the device's headphone jack. An updated audio driver has greatly improved the quality of the output – see [#525](https://github.com/mikebrady/shairport-sync/issues/525) for details. To activate the updated driver, add the line:
+The Raspberry Pi Models A and B have a built-in audio DAC that is connected to the device's headphone jack. To get the full benefits of recent improvements in the Pi's software and firmware, you should update the Raspberry Pi as follows:
+
+Do the usual update and upgrade:
+```
+# apt-get update
+# apt-get upgrade
+```
+Update the Pi's firmware:
+```
+# rpi-update
+``` 
+Recent improvements include:
+* An updated audio driver has greatly improved the quality of the output – see [#525](https://github.com/mikebrady/shairport-sync/issues/525) for details.
+* A [significant improvement](https://github.com/raspberrypi/firmware/commit/200c2f4dd54b2048b5dcb8661ea3f232beb7d81e) has been made to the [timing software](https://github.com/raspberrypi/firmware/issues/1026) of the built-in audio DAC's drivers.
+
+Separately, if you haven't done so already, consider using the `raspi-config` tool to expand the file system to use the entire card.
+
+To activate the updated audio driver referred to above, add the line:
 ```
 audio_pwm_mode=2
 ```
-to `/boot/config.txt`. To make Shairport Sync output to the built-in audio DAC and use its hardware mixer, in the `alsa` section of the configuration file, set the output device and mixer as follows:
+to `/boot/config.txt`.
+
+To make Shairport Sync output to the built-in audio DAC and use its hardware mixer, in the `alsa` section of the configuration file, set the output device and mixer as follows:
 ```
 alsa =
 {
