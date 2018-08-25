@@ -357,7 +357,7 @@ Note: Shairport Sync can take configuration settings from command line options. 
 
 **Raspberry Pi**
 
-The Raspberry Pi Models A and B have a built-in audio DAC that is connected to the device's headphone jack. To get the full benefits of recent improvements in the Pi's software and firmware, you should update the Raspberry Pi as follows:
+The Raspberry Pi Models A and B have a built-in audio DAC that is connected to the device's headphone jack. To get the benefits of improvements in the Pi's software and firmware, you should update the Raspberry Pi as follows:
 
 Do the usual update and upgrade:
 ```
@@ -368,9 +368,9 @@ Update the Pi's firmware:
 ```
 # rpi-update
 ``` 
-Recent improvements include:
+Recent (September 2018) improvements include:
 * An updated audio driver has greatly improved the quality of the output – see [#525](https://github.com/mikebrady/shairport-sync/issues/525) for details.
-* A [significant improvement](https://github.com/raspberrypi/firmware/commit/200c2f4dd54b2048b5dcb8661ea3f232beb7d81e) has been made to the [timing software](https://github.com/raspberrypi/firmware/issues/1026) of the built-in audio DAC's drivers.
+* A [significant improvement](https://github.com/raspberrypi/firmware/commit/200c2f4dd54b2048b5dcb8661ea3f232beb7d81e) has been made to the [timing software](https://github.com/raspberrypi/firmware/issues/1026) of the built-in audio DAC's drivers. It should be incorporated in firmware from Raspbian 4.14.66-v7 onwards.
 
 Separately, if you haven't done so already, consider using the `raspi-config` tool to expand the file system to use the entire card.
 
@@ -394,7 +394,7 @@ Apart from a loud click when used for the first time after power-up, it is quite
 
 From a user's point of view, the effect of using this setting is to move the minimum usable volume all the way down to the bottom of the user's volume control, rather than have the minimum usable volume concentrated very close to the maximum volume.
 
-Another setting to consider is the `general` `drift_tolerance_in_seconds` setting: you should set it to a larger tolerance, say 10 milliseconds – `drift_tolerance_in_seconds=0.010;` – to reduce the amount of overcorrection that seems to occur when using the Raspberry Pi's built-in DAC. 
+If you have not updated the Pi's firmware as discussed above, then another setting to consider is the `general` `drift_tolerance_in_seconds` setting: you should set it to a larger tolerance, say 10 milliseconds – `drift_tolerance_in_seconds=0.010;` – to reduce the amount of overcorrection that seems to occur when using the Raspberry Pi's built-in DAC.
 
 *Command Line Arguments*
 
