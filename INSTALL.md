@@ -11,7 +11,7 @@ Do the usual update and upgrade:
 # apt-get upgrade
 # rpi-update
 ``` 
-**Note:** it is a particularly good idea to update the Pi's firmware using `rpi-update` because, at this time of writing (September 2018), a [significant improvement](https://github.com/raspberrypi/firmware/commit/200c2f4dd54b2048b5dcb8661ea3f232beb7d81e) has been made to the [timing software](https://github.com/raspberrypi/firmware/issues/1026) of the built-in audio DAC's drivers. It should be incorporated in firmware from Raspbian 4.14.66-v7 onwards.
+**Note:** At this time of writing (September 2018), it is a good idea to update the Pi's firmware using `rpi-update` because a [significant improvement](https://github.com/raspberrypi/firmware/commit/200c2f4dd54b2048b5dcb8661ea3f232beb7d81e) has been made to the [timing software](https://github.com/raspberrypi/firmware/issues/1026) of the built-in audio DAC's drivers. It should be incorporated in firmware from Raspbian 4.14.66-v7 onwards.
 
 (Separately, if you haven't done so already, consider using the `raspi-config` tool to expand the file system to use the entire card.)
 
