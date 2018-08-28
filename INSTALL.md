@@ -42,6 +42,8 @@ Remove it as follows:
 ```
 Do this until no more copies of `shairport-sync` are found.
 
+You should also remove the file `/etc/systemd/system/shairport-sync.service` if it exists.
+
 ### Build and Install
 Okay, now let's get the tools and sources for building and installing Shairport Sync.
 
