@@ -30,7 +30,7 @@ WiFi Power Management will put the WiFi system in low-power mode when the WiFi s
 
 Reboot the Pi.
 
-### Remove Old Copies
+### Remove Old Copies and Old Startup Scripts
 Before you begin building Shairport Sync, it's best to search for and remove any existing copies of the application, called `shairport-sync`. Use the command `$ which shairport-sync` to find them. For example, if `shairport-sync` has been installed previously, this might happen:
 ```
 $ which shairport-sync
@@ -42,7 +42,7 @@ Remove it as follows:
 ```
 Do this until no more copies of `shairport-sync` are found.
 
-You should also remove the initialisation script file `/etc/systemd/system/shairport-sync.service` if it exists – a new one will be installed that will point to the version you will have compiled.
+You should also remove the initialisation script files `/etc/systemd/system/shairport-sync.service` and `/etc/init.d/shairport-sync` if they exist – new ones will be installed in necessary.
 
 ### Build and Install
 Okay, now let's get the tools and sources for building and installing Shairport Sync.
