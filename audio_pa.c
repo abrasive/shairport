@@ -147,6 +147,7 @@ static void deinit(void) {
 static void start(__attribute__((unused)) int sample_rate,
                   __attribute__((unused)) int sample_format) {
 
+  debug(1,"pa start");
   uint32_t buffer_size_in_bytes = (uint32_t)2 * 2 * RATE * 0.1; // hard wired in here
   // debug(1, "pa_buffer size is %u bytes.", buffer_size_in_bytes);
 
@@ -275,7 +276,8 @@ static void stop(void) {
   audio_umb = audio_lmb + audio_size;
   audio_occupancy = 0;
 
-  // debug(1, "finish with stream");
+  debug(1,"pa stop");
+  pa_stream_unref(stream);
   pa_stream_disconnect(stream);
 }
 
