@@ -138,7 +138,6 @@ static int init(__attribute__((unused)) int argc, __attribute__((unused)) char *
 }
 
 static void deinit(void) {
-  // debug(1, "pa deinit start");
   pa_threaded_mainloop_stop(mainloop);
   pa_threaded_mainloop_free(mainloop);
   // debug(1, "pa deinit done");
@@ -147,7 +146,6 @@ static void deinit(void) {
 static void start(__attribute__((unused)) int sample_rate,
                   __attribute__((unused)) int sample_format) {
 
-  // debug(1,"pa start");
   uint32_t buffer_size_in_bytes = (uint32_t)2 * 2 * RATE * 0.1; // hard wired in here
   // debug(1, "pa_buffer size is %u bytes.", buffer_size_in_bytes);
 
@@ -277,7 +275,6 @@ static void stop(void) {
   audio_occupancy = 0;
 
   // debug(1,"pa stop");
-  pa_stream_unref(stream);
   pa_stream_disconnect(stream);
 }
 
