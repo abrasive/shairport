@@ -19,6 +19,8 @@ Do the usual update and upgrade:
 Check the file `/boot/config.txt` and, if it's not there already, add the following line:
 ```
 audio_pwm_mode=2
+
+(Note that this isn't needed in the most recent versions of Raspbian as it will enable this driver mode by default)
 ```
 
 ### Turn Off WiFi Power Management
