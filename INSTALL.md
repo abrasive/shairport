@@ -16,7 +16,7 @@ Do the usual update and upgrade:
 (Separately, if you haven't done so already, consider using the `raspi-config` tool to expand the file system to use the entire card.)
 
 ### Activate the Improved Audio Driver
-Check the file `/boot/config.txt` and, if it's not there already, add the following line:
+Check the file `/boot/config.txt` and, if it's not there already, add the following line and reboot afterwards:
 ```
 audio_pwm_mode=2
 
