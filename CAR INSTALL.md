@@ -90,7 +90,7 @@ The `alsa` settings are specific to the Pimoroni PHAT -- it does not have a hard
 ### Extra Packages
 A number of packages to enable the Pi to work as a WiFi base station are needed:
 ```
-# apt-get install hostapd isc-dhcp-server
+# apt install hostapd isc-dhcp-server
 ```
 Disable both of these services from starting at boot time (this is because we will launch them sequentially later on):
 ```
