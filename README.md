@@ -153,15 +153,15 @@ Many Linux distributions have Avahi and OpenSSL already in place, so normally it
 
 Debian, Ubuntu and Raspbian users can get the basics with:
 
-- `# apt-get install build-essential git xmltoman` – these may already be installed.
-- `# apt-get install autoconf automake libtool libdaemon-dev libpopt-dev libconfig-dev`
-- `# apt-get install libasound2-dev` for the ALSA libraries
-- `# apt-get install libpulse-dev` for the PulseAudio libraries
-- `# apt-get install avahi-daemon libavahi-client-dev` if you want to use Avahi (recommended).
-- `# apt-get install libssl-dev` if you want to use OpenSSL and libcrypto, or use mbed TLS otherwise.
-- `# apt-get install libmbedtls-dev` if you want to use mbed TLS, or use OpenSSL/libcrypto otherwise. You can still use PolarSSL with `apt-get install libpolarssl-dev` if you want to use PolarSSL, but it is deprecated as it's not longer being supported.
-- `# apt-get install libsoxr-dev` if you want support for libsoxr-based resampling. This library is in many recent distributions; if not, instructions for how to build it from source for Rasbpian/Debian Wheezy are available at [LIBSOXR.md](https://github.com/mikebrady/shairport-sync/blob/master/LIBSOXR.md).
-- `# apt-get install libsndfile1-dev` if you want to use the convolution filter.
+- `# apt install build-essential git xmltoman` – these may already be installed.
+- `# apt install autoconf automake libtool libdaemon-dev libpopt-dev libconfig-dev`
+- `# apt install libasound2-dev` for the ALSA libraries
+- `# apt install libpulse-dev` for the PulseAudio libraries
+- `# apt install avahi-daemon libavahi-client-dev` if you want to use Avahi (recommended).
+- `# apt install libssl-dev` if you want to use OpenSSL and libcrypto, or use mbed TLS otherwise.
+- `# apt install libmbedtls-dev` if you want to use mbed TLS, or use OpenSSL/libcrypto otherwise. You can still use PolarSSL with `apt install libpolarssl-dev` if you want to use PolarSSL, but it is deprecated as it's not longer being supported.
+- `# apt install libsoxr-dev` if you want support for libsoxr-based resampling. This library is in many recent distributions; if not, instructions for how to build it from source for Rasbpian/Debian Wheezy are available at [LIBSOXR.md](https://github.com/mikebrady/shairport-sync/blob/master/LIBSOXR.md).
+- `# apt install libsndfile1-dev` if you want to use the convolution filter.
 
 If you wish to include the Apple ALAC decoder, you need install it first – please refer to the [ALAC](https://github.com/mikebrady/alac) repository for more information.
 
@@ -362,8 +362,8 @@ The Raspberry Pi Models A and B have a built-in audio DAC that is connected to t
 
 Do the usual update and upgrade:
 ```
-# apt-get update
-# apt-get upgrade
+# apt update
+# apt upgrade
 ```
 Update the Pi's firmware:
 ```
@@ -378,6 +378,8 @@ Separately, if you haven't done so already, consider using the `raspi-config` to
 To activate the updated audio driver referred to above, add the line:
 ```
 audio_pwm_mode=2
+
+(Note that this isn't needed in the most recent versions of Raspbian as it will enable this driver mode by default)
 ```
 to `/boot/config.txt`.
 
