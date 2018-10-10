@@ -51,7 +51,7 @@ The first thing to do on a Pi would be to use the `raspi-config` tool to expand 
 ### Shairport Sync
 First, install the packages needed by Shairport Sync:
 ```
-# apt-get install build-essential git xmltoman autoconf automake libtool libdaemon-dev libpopt-dev libconfig-dev libasound2-dev avahi-daemon libavahi-client-dev libssl-dev
+# apt install build-essential git xmltoman autoconf automake libtool libdaemon-dev libpopt-dev libconfig-dev libasound2-dev avahi-daemon libavahi-client-dev libssl-dev
 ```
 Next, download Shairport Sync, configure it, compile and install it:
 ```
