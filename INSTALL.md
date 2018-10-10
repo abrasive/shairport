@@ -51,7 +51,7 @@ Okay, now let's get the tools and sources for building and installing Shairport 
 
 First, install the packages needed by Shairport Sync:
 ```
-# apt-get install build-essential git xmltoman autoconf automake libtool libdaemon-dev \
+# apt install build-essential git xmltoman autoconf automake libtool libdaemon-dev \
     libpopt-dev libconfig-dev libasound2-dev avahi-daemon libavahi-client-dev libssl-dev
 ```
 Next, download Shairport Sync, configure it, compile and install it:
