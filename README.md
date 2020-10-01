@@ -80,8 +80,7 @@ To enable the output of metadata, the `-M <directory name>` flag must be set to
 instruct `shairport` where to save the output. This directory must exist. A
 fifo named `now_playing` will be created, and records will be written to it
 when tracks are changed. The end of a set of metadata is delimited by a
-zero-length line. Cover filenames are relative to the cover directory. Files
-are not deleted.
+zero-length line. Cover filenames are relative to the cover directory. Files will not be deleted.
 
 An example::
 
