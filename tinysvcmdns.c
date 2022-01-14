@@ -437,7 +437,7 @@ struct rr_entry *rr_create(uint8_t *name, enum rr_type type) {
 }
 
 void rr_set_nsec(struct rr_entry *rr_nsec, enum rr_type type) {
-        assert(rr_nsec->type = RR_NSEC);
+        assert(rr_nsec->type == RR_NSEC);
         assert((type / 8) < sizeof(rr_nsec->data.NSEC.bitmap));
 
         rr_nsec->data.NSEC.bitmap[ type / 8 ] = 1 << (7 - (type % 8));
